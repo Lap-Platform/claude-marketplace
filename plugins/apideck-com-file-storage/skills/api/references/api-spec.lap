@@ -1,0 +1,239 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api File storage API
+@base https://unify.apideck.com
+@version 10.24.0
+@auth ApiKey Authorization in header
+@common_fields {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, x-apideck-service-id: str # Provide the service id you want to call (e.g., pipedrive). Only needed when a consumer has activated multiple integrations for a Unified API.}
+@endpoints 33
+@hint download_for_search
+@toc file-storage(33)
+
+@endpoint GET /file-storage/files
+@desc List Files
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, filter: map # Apply filters, sort: map # Apply sorting, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # Files
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/files
+@desc Upload file
+@required {x-apideck-metadata: any # Metadata to attach to the file}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Files
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/files/search
+@desc Search Files
+@required {query: str # The query to search for. May match across multiple fields.}
+@optional {pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded., cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, raw: bool=False # Include raw response. Mostly used for debugging purposes, filter: map # Apply filters, drive_id: str # ID of the drive to filter on, pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # Files
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/files/{id}
+@desc Get File
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, downstream_id: str?, name: str?, description: str?, type: str?, path: str?, mime_type: str?, downloadable: bool, size: int?, owner: map{id: str, email: str?, name: str?}, parent_folders: [map], parent_folders_complete: bool, permissions: map{download: bool}, exportable: bool, export_formats: [str]?, custom_mappings: map?, updated_by: str?, created_by: str?, updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # File
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /file-storage/files/{id}
+@desc Rename or move File
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, name: str # The name of the file., description: str # Optional description of the file., parent_folder_id: str # The parent folder to create the new file within. This can be an ID or a path depending on the downstream folder. Please see the connector section below to see downstream specific gotchas., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Files
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /file-storage/files/{id}
+@desc Delete File
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Files
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/files/{id}/download
+@desc Download File
+@required {id: str # ID of the record you are acting upon.}
+@optional {fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) File Download
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/files/{id}/export
+@desc Export File
+@required {id: str # ID of the record you are acting upon., format: str # File format to export this file to. A list of available file formats for the current file is available as `export_formats` on the File resource.}
+@optional {fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) File Download
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/folders
+@desc Create Folder
+@required {name: str # The name of the folder., parent_folder_id: str # The parent folder to create the new file within. This can be an ID or a path depending on the downstream folder. Please see the connector section below to see downstream specific gotchas.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded., id: str # A unique identifier for an object., description: str # Optional description of the folder., drive_id: str # ID of the drive to create the folder in., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Folders
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/folders/{id}
+@desc Get Folder
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, downstream_id: str?, name: str, description: str?, path: str?, size: int?, downloadable: bool?, owner: map{id: str, email: str?, name: str?}, parent_folders: [map], parent_folders_complete: bool, custom_mappings: map?, updated_by: str?, created_by: str?, updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # Folders
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /file-storage/folders/{id}
+@desc Rename or move Folder
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, id: str # A unique identifier for an object., name: str # The name of the folder., description: str # Optional description of the folder., parent_folder_id: str # The parent folder to create the new file within. This can be an ID or a path depending on the downstream folder. Please see the connector section below to see downstream specific gotchas., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Folders
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /file-storage/folders/{id}
+@desc Delete Folder
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Folders
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/folders/{id}/copy
+@desc Copy Folder
+@required {id: str # ID of the record you are acting upon., parent_folder_id: str # The parent folder to create the new file within. This can be an ID or a path depending on the downstream folder. Please see the connector section below to see downstream specific gotchas.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded., id: str # A unique identifier for an object., name: str # The name of the folder., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Folders
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/shared-links
+@desc List Shared Links
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], _raw: map?, meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}} # Shared Links
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/shared-links
+@desc Create Shared Link
+@required {target_id: str # The ID of the file or folder to link.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, url: str # The URL that can be used to view the file., download_url: str # The URL that can be used to download the file., target: map{id!: str, name: str, type: str}, scope: str(public/company) # The scope of the shared link., password_protected: bool # Indicated if the shared link is password protected., password: str # Optional password for the shared link., expires_at: str(date-time), updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Shared Links
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/shared-links/{id}
+@desc Get Shared Link
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{url: str?, download_url: str?, target_id: str?, target: map{id: str, name: str?, type: str?}, scope: str?, password_protected: bool?, password: str?, expires_at: str(date-time)?, updated_at: str(date-time)?, created_at: str(date-time)?, pass_through: [map]}, _raw: map?} # Shared Link
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /file-storage/shared-links/{id}
+@desc Update Shared Link
+@required {id: str # ID of the record you are acting upon., target_id: str # The ID of the file or folder to link.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, url: str # The URL that can be used to view the file., download_url: str # The URL that can be used to download the file., target: map{id!: str, name: str, type: str}, scope: str(public/company) # The scope of the shared link., password_protected: bool # Indicated if the shared link is password protected., password: str # Optional password for the shared link., expires_at: str(date-time), updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Shared Links
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /file-storage/shared-links/{id}
+@desc Delete Shared Link
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Shared Links
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/upload-sessions
+@desc Start Upload Session
+@required {name: str # The name of the file., parent_folder_id: str # The parent folder to create the new file within. This can be an ID or a path depending on the downstream folder. Please see the connector section below to see downstream specific gotchas., size: int # The size of the file in bytes}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, drive_id: str # ID of the drive to upload to., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # UploadSessions
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/upload-sessions/{id}
+@desc Get Upload Session
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, success: bool, part_size: num, parallel_upload_supported: bool, uploaded_byte_range: str, expires_at: str(date-time)?}, _raw: map?} # UploadSessions
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PUT /file-storage/upload-sessions/{id}
+@desc Upload part of File to Upload Session
+@required {id: str # ID of the record you are acting upon., part_number: num # Part number of the file part being uploaded.}
+@optional {digest: str # The RFC3230 message digest of the uploaded part. Only required for the Box connector. More information on the Box API docs [here](https://developer.box.com/reference/put-files-upload-sessions-id/#param-digest), raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # UploadSessions
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /file-storage/upload-sessions/{id}
+@desc Abort Upload Session
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # UploadSessions
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/upload-sessions/{id}/finish
+@desc Finish Upload Session
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, digest: str # The RFC3230 message digest of the uploaded part. Only required for the Box connector. More information on the Box API docs [here](https://developer.box.com/reference/put-files-upload-sessions-id/#param-digest)}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, downstream_id: str?, name: str?, description: str?, type: str?, path: str?, mime_type: str?, downloadable: bool, size: int?, owner: map{id: str, email: str?, name: str?}, parent_folders: [map], parent_folders_complete: bool, permissions: map{download: bool}, exportable: bool, export_formats: [str]?, custom_mappings: map?, updated_by: str?, created_by: str?, updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # File
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/drives
+@desc List Drives
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, filter: map # Apply filters, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], _raw: map?, meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}} # Drives
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/drives
+@desc Create Drive
+@required {id: str # A unique identifier for an object., name: str # The name of the drive}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, description: str # A description of the object., custom_mappings: map # When custom mappings are configured on the resource, the result is included here., updated_by: str # The user who last updated the object., created_by: str # The user who created the object., updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Drives
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/drives/{id}
+@desc Get Drive
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, name: str, description: str?, custom_mappings: map?, updated_by: str?, created_by: str?, updated_at: str(date-time)?, created_at: str(date-time)?, pass_through: [map]}, _raw: map?} # Drives
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /file-storage/drives/{id}
+@desc Update Drive
+@required {id: str # ID of the record you are acting upon., id: str # A unique identifier for an object., name: str # The name of the drive}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, description: str # A description of the object., custom_mappings: map # When custom mappings are configured on the resource, the result is included here., updated_by: str # The user who last updated the object., created_by: str # The user who created the object., updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Drives
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /file-storage/drives/{id}
+@desc Delete Drive
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Drives
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/drive-groups
+@desc List DriveGroups
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, filter: map # Apply filters, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], _raw: map?, meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}} # DriveGroups
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /file-storage/drive-groups
+@desc Create DriveGroup
+@required {id: str # A unique identifier for an object., name: str # The name of the drive group}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, display_name: str # The display name of the drive group, description: str # A description of the object., custom_mappings: map # When custom mappings are configured on the resource, the result is included here., updated_by: str # The user who last updated the object., created_by: str # The user who created the object., updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # DriveGroups
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /file-storage/drive-groups/{id}
+@desc Get DriveGroup
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, name: str, display_name: str?, description: str?, custom_mappings: map?, updated_by: str?, created_by: str?, updated_at: str(date-time)?, created_at: str(date-time)?, pass_through: [map]}, _raw: map?} # DriveGroups
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /file-storage/drive-groups/{id}
+@desc Update DriveGroup
+@required {id: str # ID of the record you are acting upon., id: str # A unique identifier for an object., name: str # The name of the drive group}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes, display_name: str # The display name of the drive group, description: str # A description of the object., custom_mappings: map # When custom mappings are configured on the resource, the result is included here., updated_by: str # The user who last updated the object., created_by: str # The user who created the object., updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # DriveGroups
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /file-storage/drive-groups/{id}
+@desc Delete DriveGroup
+@required {id: str # ID of the record you are acting upon.}
+@optional {raw: bool=False # Include raw response. Mostly used for debugging purposes}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # DriveGroups
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@end

@@ -1,0 +1,474 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Snyk API
+@base https://api.snyk.io/v1
+@version 1.0
+@auth ApiKey Authorization in header
+@endpoints 100
+@hint download_for_search
+@toc user(6), group(8), orgs(1), org(60), test(17), monitor(1), reporting(7)
+
+@group user
+@endpoint GET /user/{userId}
+@required {userId: str}
+@returns(200)
+@errors {400, 401, 404}
+
+@endpoint GET /user/me
+@returns(200)
+@errors {401}
+
+@endpoint GET /user/me/notification-settings/org/{orgId}
+@required {orgId: str}
+@returns(200)
+
+@endpoint PUT /user/me/notification-settings/org/{orgId}
+@required {orgId: str}
+@returns(200)
+
+@endpoint GET /user/me/notification-settings/org/{orgId}/project/{projectId}
+@required {orgId: str, projectId: str}
+@returns(200)
+
+@endpoint PUT /user/me/notification-settings/org/{orgId}/project/{projectId}
+@required {orgId: str, projectId: str}
+@returns(200)
+
+@endgroup
+
+@group group
+@endpoint GET /group/{groupId}/settings
+@required {groupId: str}
+@returns(200) {requestAccess: any, sessionLength: num}
+
+@endpoint PUT /group/{groupId}/settings
+@required {groupId: str}
+@returns(200)
+
+@endpoint GET /group/{groupId}/members
+@required {groupId: str}
+@returns(200)
+
+@endpoint POST /group/{groupId}/org/{orgId}/members
+@required {groupId: str, orgId: str}
+@returns(200)
+
+@endpoint GET /group/{groupId}/tags
+@required {groupId: str}
+@optional {perPage: num(double), page: num(double)}
+@returns(200)
+
+@endpoint POST /group/{groupId}/tags/delete
+@required {groupId: str}
+@returns(200)
+
+@endpoint GET /group/{groupId}/orgs
+@required {groupId: str}
+@optional {perPage: num(double), page: num(double), name: str}
+@returns(200)
+
+@endpoint GET /group/{groupId}/roles
+@required {groupId: str}
+@returns(200)
+
+@endgroup
+
+@group orgs
+@endpoint GET /orgs
+@returns(200) {orgs: [map]}
+
+@endgroup
+
+@group org
+@endpoint POST /org
+@returns(201)
+@errors {401, 400, 422}
+
+@endpoint GET /org/{orgId}/notification-settings
+@required {orgId: str}
+@returns(200)
+
+@endpoint PUT /org/{orgId}/notification-settings
+@required {orgId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/invite
+@required {orgId: str}
+@returns(200)
+
+@endpoint GET /org/{orgId}/members
+@required {orgId: str}
+@optional {includeGroupAdmins: bool}
+@returns(200)
+
+@endpoint GET /org/{orgId}/settings
+@required {orgId: str}
+@returns(200)
+
+@endpoint PUT /org/{orgId}/settings
+@required {orgId: str}
+@returns(200)
+@errors {403}
+
+@endpoint PUT /org/{orgId}/members/{userId}
+@required {orgId: str, userId: str}
+@returns(200)
+
+@endpoint DELETE /org/{orgId}/members/{userId}
+@required {orgId: str, userId: str}
+@returns(200)
+
+@endpoint PUT /org/{orgId}/members/update/{userId}
+@required {orgId: str, userId: str}
+@returns(200)
+
+@endpoint DELETE /org/{orgId}
+@required {orgId: str}
+@returns(204)
+
+@endpoint POST /org/{orgId}/provision
+@required {orgId: str, email: str}
+@optional {rolePublicId: str, role: str}
+@returns(200) {email: str, role: str, rolePublicId: str, created: str}
+@errors {403}
+
+@endpoint GET /org/{orgId}/provision
+@required {orgId: str}
+@returns(200)
+@errors {403}
+
+@endpoint DELETE /org/{orgId}/provision
+@required {orgId: str}
+@returns(200) {ok: bool}
+@errors {403}
+
+@endpoint GET /org/{orgId}/integrations
+@required {orgId: str}
+@returns(200) {github: str, gitlab: str, bitbucket-cloud: str}
+
+@endpoint POST /org/{orgId}/integrations
+@required {orgId: str}
+@returns(200) {id: str}
+
+@endpoint PUT /org/{orgId}/integrations/{integrationId}
+@required {orgId: str, integrationId: str}
+@returns(200)
+
+@endpoint DELETE /org/{orgId}/integrations/{integrationId}/authentication
+@required {orgId: str, integrationId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/integrations/{integrationId}/authentication/provision-token
+@required {orgId: str, integrationId: str}
+@returns(200) {id: str, provisionalBrokerToken: str}
+
+@endpoint POST /org/{orgId}/integrations/{integrationId}/authentication/switch-token
+@required {orgId: str, integrationId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/integrations/{integrationId}/clone
+@required {orgId: str, integrationId: str, destinationOrgPublicId: str}
+@returns(200) {newIntegrationId: str}
+
+@endpoint GET /org/{orgId}/integrations/{type}
+@required {orgId: str, type: str}
+@returns(200) {id: str}
+
+@endpoint GET /org/{orgId}/integrations/{integrationId}/settings
+@required {orgId: str, integrationId: str}
+@returns(200) {autoDepUpgradeLimit: num, autoDepUpgradeIgnoredDependencies: [str], autoDepUpgradeEnabled: bool, autoDepUpgradeMinAge: num, pullRequestFailOnAnyVulns: bool, pullRequestFailOnlyForHighSeverity: bool, pullRequestTestCodeEnabled: bool, pullRequestTestCodeSeverity: str, pullRequestTestEnabled: bool, pullRequestAssignment: str, autoRemediationPrs: any, manualRemediationPrs: any, dockerfileSCMEnabled: bool}
+
+@endpoint PUT /org/{orgId}/integrations/{integrationId}/settings
+@required {orgId: str, integrationId: str}
+@optional {autoDepUpgradeLimit: num, autoDepUpgradeIgnoredDependencies: [str], autoDepUpgradeEnabled: bool, autoDepUpgradeMinAge: num, pullRequestFailOnAnyVulns: bool, pullRequestFailOnlyForHighSeverity: bool, pullRequestTestCodeEnabled: bool, pullRequestTestCodeSeverity: str, pullRequestTestEnabled: bool, pullRequestAssignment: str, autoRemediationPrs: any, manualRemediationPrs: any, dockerfileSCMEnabled: bool}
+@returns(200) {autoDepUpgradeLimit: num, autoDepUpgradeIgnoredDependencies: [str], autoDepUpgradeEnabled: bool, autoDepUpgradeMinAge: num, pullRequestFailOnAnyVulns: bool, pullRequestFailOnlyForHighSeverity: bool, pullRequestTestCodeEnabled: bool, pullRequestTestCodeSeverity: str, pullRequestTestEnabled: bool, pullRequestAssignment: str, autoRemediationPrs: any, manualRemediationPrs: any, dockerfileSCMEnabled: bool}
+
+@endpoint POST /org/{orgId}/integrations/{integrationId}/import
+@required {orgId: str, integrationId: str}
+@returns(201)
+
+@endpoint GET /org/{orgId}/integrations/{integrationId}/import/{jobId}
+@required {orgId: str, integrationId: str, jobId: str}
+@returns(200) {id: str, status: str, created: str, logs: [map]}
+
+@endpoint GET /org/{orgId}/project/{projectId}
+@required {orgId: str, projectId: str}
+@returns(200) {name: str, id: str, created: str, origin: str, type: str, readOnly: bool, testFrequency: str, totalDependencies: num, issueCountsBySeverity: any, imageId: str, imageTag: str, imageBaseImage: str, imagePlatform: str, imageCluster: str, hostname: str?, remoteRepoUrl: str, lastTestedDate: str, owner: map?, browseUrl: str, importingUser: any, isMonitored: bool, branch: str?, targetReference: str?, tags: [str], attributes: str, remediation: any}
+
+@endpoint PUT /org/{orgId}/project/{projectId}
+@required {orgId: str, projectId: str}
+@optional {owner: map{id: str}, branch: str}
+@returns(200) {name: str, id: str, created: str, origin: str, type: str, readOnly: bool, testFrequency: str, totalDependencies: num, issueCountsBySeverity: any, imageId: str, imageTag: str, imageBaseImage: str, imagePlatform: str, imageCluster: str, hostname: str?, remoteRepoUrl: str, lastTestedDate: str, owner: map?, browseUrl: str, importingUser: any, isMonitored: bool, branch: str?, targetReference: str?, tags: [str], attributes: str, remediation: any}
+
+@endpoint DELETE /org/{orgId}/project/{projectId}
+@required {orgId: str, projectId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/project/{projectId}/deactivate
+@required {orgId: str, projectId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/project/{projectId}/activate
+@required {orgId: str, projectId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/project/{projectId}/aggregated-issues
+@required {orgId: str, projectId: str}
+@optional {includeDescription: bool, includeIntroducedThrough: bool, filters: map{severities: [str], exploitMaturity: [str], types: [str], ignored: bool, patched: bool, priority: map{score: map}}}
+@returns(200) {issues: [map]}
+
+@endpoint GET /org/{orgId}/project/{projectId}/issue/{issueId}/paths
+@required {orgId: str, projectId: str, issueId: str}
+@optional {snapshotId: str, perPage: num(double), page: num(double)}
+@returns(200) {snapshotId: str, paths: [[any]], total: num, links: map{prev: str, next: str, last: str}}
+
+@endpoint POST /org/{orgId}/project/{projectId}/history
+@required {orgId: str, projectId: str}
+@optional {perPage: num(double), page: num(double), filters: map{imageId: str}}
+@returns(200) {snapshots: [map], total: num}
+
+@endpoint POST /org/{orgId}/project/{projectId}/history/{snapshotId}/aggregated-issues
+@required {orgId: str, projectId: str, snapshotId: str}
+@optional {includeDescription: bool, includeIntroducedThrough: bool, filters: map{severities: [str], exploitMaturity: [str], types: [str], ignored: bool, patched: bool, priority: map{score: map}}}
+@returns(200) {issues: [map]}
+
+@endpoint GET /org/{orgId}/project/{projectId}/history/{snapshotId}/issue/{issueId}/paths
+@required {orgId: str, projectId: str, snapshotId: str, issueId: str}
+@optional {perPage: num(double), page: num(double)}
+@returns(200) {snapshotId: str, paths: [[any]], total: num, links: map{prev: str, next: str, last: str}}
+
+@endpoint GET /org/{orgId}/project/{projectId}/dep-graph
+@required {orgId: str, projectId: str}
+@returns(200) {depGraph: map{schemaVersion: str, pkgManager: map{name: str, version: str, repositories: [map]}, pkgs: [map], graph: map{rootNodeId: str, nodes: [map]}}}
+
+@endpoint GET /org/{orgId}/project/{projectId}/ignores
+@required {orgId: str, projectId: str}
+@returns(200) {issueId: [map]}
+
+@endpoint GET /org/{orgId}/project/{projectId}/ignore/{issueId}
+@required {orgId: str, projectId: str, issueId: str}
+@returns(200) {ignorePath: map{reason: str, reasonType: str, ignoredBy: map{name: str, email: str, id: str}, disregardIfFixable: bool, expires: str, created: str}}
+
+@endpoint POST /org/{orgId}/project/{projectId}/ignore/{issueId}
+@required {orgId: str, projectId: str, issueId: str, reasonType: any, disregardIfFixable: bool}
+@optional {ignorePath: str, reason: str, expires: str}
+@returns(200) {ignorePath: map{reason: str, reasonType: str, ignoredBy: map{name: str, email: str, id: str}, disregardIfFixable: bool, expires: str, created: str}}
+
+@endpoint PUT /org/{orgId}/project/{projectId}/ignore/{issueId}
+@required {orgId: str, projectId: str, issueId: str}
+@returns(200)
+
+@endpoint DELETE /org/{orgId}/project/{projectId}/ignore/{issueId}
+@required {orgId: str, projectId: str, issueId: str}
+@returns(200)
+
+@endpoint GET /org/{orgId}/project/{projectId}/jira-issues
+@required {orgId: str, projectId: str}
+@returns(200) {issueId: [map]}
+
+@endpoint POST /org/{orgId}/project/{projectId}/issue/{issueId}/jira-issue
+@required {orgId: str, projectId: str, issueId: str}
+@optional {fields: map{project: map, issuetype: map, summary: str}}
+@returns(200) {jiraIssue: map{id: str, key: str}}
+
+@endpoint GET /org/{orgId}/project/{projectId}/settings
+@required {orgId: str, projectId: str}
+@returns(200) {autoDepUpgradeEnabled: bool, autoDepUpgradeIgnoredDependencies: [str], autoDepUpgradeMinAge: num, autoDepUpgradeLimit: num, pullRequestFailOnAnyVulns: bool, pullRequestFailOnlyForHighSeverity: bool, pullRequestTestEnabled: bool, pullRequestAssignment: str, autoRemediationPrs: str}
+
+@endpoint PUT /org/{orgId}/project/{projectId}/settings
+@required {orgId: str, projectId: str}
+@optional {autoDepUpgradeEnabled: bool, autoDepUpgradeIgnoredDependencies: [str], autoDepUpgradeMinAge: num, autoDepUpgradeLimit: num, pullRequestFailOnAnyVulns: bool, pullRequestFailOnlyForHighSeverity: bool, pullRequestTestEnabled: bool, pullRequestAssignment: str, autoRemediationPrs: str}
+@returns(200) {autoDepUpgradeEnabled: bool, autoDepUpgradeIgnoredDependencies: [str], autoDepUpgradeMinAge: num, autoDepUpgradeLimit: num, pullRequestFailOnAnyVulns: bool, pullRequestFailOnlyForHighSeverity: bool, pullRequestTestEnabled: bool, pullRequestAssignment: str, autoRemediationPrs: str}
+
+@endpoint DELETE /org/{orgId}/project/{projectId}/settings
+@required {orgId: str, projectId: str}
+@returns(204)
+
+@endpoint PUT /org/{orgId}/project/{projectId}/move
+@required {orgId: str, projectId: str}
+@optional {targetOrgId: str}
+@returns(200) {originOrg: str, destinationOrg: str, movedProject: str}
+
+@endpoint POST /org/{orgId}/project/{projectId}/tags
+@required {orgId: str, projectId: str}
+@optional {key: str, value: str}
+@returns(200) {tags: [map]}
+
+@endpoint POST /org/{orgId}/project/{projectId}/tags/remove
+@required {orgId: str, projectId: str}
+@optional {key: str, value: str}
+@returns(200) {tags: [map]}
+
+@endpoint POST /org/{orgId}/project/{projectId}/attributes
+@required {orgId: str, projectId: str}
+@optional {criticality: [str], environment: [str], lifecycle: [str]}
+@returns(200) {attributes: map{criticality: [str], environment: [str], lifecycle: [str]}}
+
+@endpoint POST /org/{orgId}/dependencies
+@required {orgId: str}
+@optional {sortBy: str, order: str, page: num(double), perPage: num(double), filters: map{languages: [str], projects: [str], dependencies: [str], licenses: [str], severity: [str], depStatus: str}}
+@returns(200) {results: [map], total: num}
+
+@endpoint POST /org/{orgId}/licenses
+@required {orgId: str}
+@optional {sortBy: any, order: any, filters: map{languages: [str], projects: [str], dependencies: [str], licenses: [str], severity: [str]}}
+@returns(200)
+
+@endpoint GET /org/{orgId}/entitlements
+@required {orgId: str}
+@returns(200)
+
+@endpoint GET /org/{orgId}/entitlement/{entitlementKey}
+@required {orgId: str, entitlementKey: any}
+@returns(200)
+
+@endgroup
+
+@group test
+@endpoint GET /test/maven/{groupId}/{artifactId}/{version}
+@required {groupId: str, artifactId: str, version: str}
+@optional {org: str, repository: str}
+@returns(200)
+
+@endpoint POST /test/maven
+@optional {org: str, repository: str}
+@returns(200) {ok: bool, issues: map{vulnerabilities: [map], licenses: [str]}, dependencyCount: int(int32), org: map{name: str, id: str}, licensesPolicy: str?, packageManager: str}
+
+@endpoint GET /test/npm/{packageName}/{version}
+@required {packageName: str, version: str}
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/npm
+@optional {org: str}
+@returns(200) {ok: bool, issues: map{vulnerabilities: [map], licenses: [str]}, dependencyCount: int(int32), org: map{name: str, id: str}, licensesPolicy: str?, packageManager: str}
+
+@endpoint POST /test/golangdep
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/govendor
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/yarn
+@optional {org: str}
+@returns(200) {ok: bool, issues: map{vulnerabilities: [map], licenses: [str]}, dependencyCount: int(int32), org: map{name: str, id: str}, licensesPolicy: str?, packageManager: str}
+
+@endpoint GET /test/rubygems/{gemName}/{version}
+@required {gemName: str, version: str}
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/rubygems
+@optional {org: str}
+@returns(200)
+
+@endpoint GET /test/gradle/{group}/{name}/{version}
+@required {group: str, name: str, version: str}
+@optional {org: str, repository: str}
+@returns(200)
+
+@endpoint POST /test/gradle
+@optional {org: str, repository: str}
+@returns(200)
+
+@endpoint GET /test/sbt/{groupId}/{artifactId}/{version}
+@required {groupId: str, artifactId: str, version: str}
+@optional {org: str, repository: str}
+@returns(200)
+
+@endpoint POST /test/sbt
+@optional {org: str, repository: str}
+@returns(200) {ok: bool, issues: map{vulnerabilities: [map], licenses: [map]}, dependencyCount: int(int32), org: map{name: str, id: str}, licensesPolicy: str?, packageManager: str}
+
+@endpoint GET /test/pip/{packageName}/{version}
+@required {packageName: str, version: str}
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/pip
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/composer
+@optional {org: str}
+@returns(200)
+
+@endpoint POST /test/dep-graph
+@optional {org: str}
+@returns(200)
+
+@endgroup
+
+@group monitor
+@endpoint POST /monitor/dep-graph
+@optional {org: str, prune-dep-graph: bool}
+@returns(200)
+
+@endgroup
+
+@group reporting
+@endpoint POST /reporting/issues/latest
+@optional {page: num(double), perPage: num(double), sortBy: any, order: str, groupBy: any}
+@returns(200) {results: [any], total: num}
+@errors {400}
+
+@endpoint POST /reporting/issues
+@required {from: str, to: str}
+@optional {page: num(double), perPage: num(double), sortBy: any, order: str, groupBy: any}
+@returns(200) {results: [any], total: num}
+@errors {400}
+
+@endpoint POST /reporting/counts/issues/latest
+@optional {groupBy: any}
+@returns(200)
+@errors {400}
+
+@endpoint POST /reporting/counts/issues
+@required {from: str, to: str}
+@optional {groupBy: any}
+@returns(200)
+@errors {400}
+
+@endpoint POST /reporting/counts/projects/latest
+@returns(200)
+@errors {400}
+
+@endpoint POST /reporting/counts/projects
+@required {from: str, to: str}
+@returns(200)
+@errors {400}
+
+@endpoint POST /reporting/counts/tests
+@required {from: str, to: str}
+@optional {groupBy: any}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group org
+@endpoint POST /org/{orgId}/webhooks
+@required {orgId: str}
+@returns(200)
+
+@endpoint GET /org/{orgId}/webhooks
+@required {orgId: str}
+@returns(200)
+
+@endpoint GET /org/{orgId}/webhooks/{webhookId}
+@required {orgId: str, webhookId: str}
+@returns(200)
+
+@endpoint DELETE /org/{orgId}/webhooks/{webhookId}
+@required {orgId: str, webhookId: str}
+@returns(200)
+
+@endpoint POST /org/{orgId}/webhooks/{webhookId}/ping
+@required {orgId: str, webhookId: str}
+@returns(200)
+
+@endgroup
+
+@end

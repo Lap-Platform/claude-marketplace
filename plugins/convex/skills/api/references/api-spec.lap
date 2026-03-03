@@ -1,0 +1,143 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Convex Management API
+@base https://api.convex.dev/v1
+@version 1.0.0
+@auth Bearer bearer | Bearer bearer | Bearer bearer
+@endpoints 20
+@toc teams(6), projects(4), deployments(9), token_details(1)
+
+@group teams
+@endpoint POST /teams/{team_id}/create_project
+@desc Create project
+@required {team_id: int(int64) # Team ID, projectName: str}
+@optional {deploymentClass: str # When creating a deployment, the class to use for the deployment. If not provided, the default deployment class for your team will be used., deploymentRegion: any, deploymentType: any}
+@returns(200) {deploymentName: str?, deploymentUrl: str?, projectId: int(int64)}
+
+@endpoint GET /teams/{team_id}/list_projects
+@desc List projects
+@required {team_id: int(int64) # Team ID}
+@returns(200)
+
+@endgroup
+
+@group projects
+@endpoint GET /projects/{project_id}/list_deployments
+@desc List deployments
+@required {project_id: int(int64) # Project ID}
+@optional {includeLocal: bool # If true, include local deployments in the response (filtered to only show local deployments created by the requesting team member)., isDefault: bool # If true, only include default deployments. If false, only include non-default deployments., deploymentType: any # Only include deployments of the given deployment type.}
+@returns(200)
+
+@endpoint POST /projects/{project_id}/delete
+@desc Delete project
+@required {project_id: int(int64) # Project ID}
+@returns(200)
+
+@endpoint GET /projects/{project_id}
+@desc Get project by ID
+@required {project_id: int(int64) # Project ID}
+@returns(200) {createTime: int(int64), id: int(int64), name: str, slug: str, teamId: int(int64), teamSlug: str}
+
+@endgroup
+
+@group teams
+@endpoint GET /teams/{team_id_or_slug}/projects/{project_slug}
+@desc Get project by slug
+@required {team_id_or_slug: str # Team ID or slug, project_slug: str # Project slug}
+@returns(200) {createTime: int(int64), id: int(int64), name: str, slug: str, teamId: int(int64), teamSlug: str}
+
+@endgroup
+
+@group projects
+@endpoint POST /projects/{project_id}/create_deployment
+@desc Create deployment
+@required {project_id: int(int64) # Project ID, type: str(dev/prod/custom)}
+@optional {class: str # The class to use for this deployment. If not provided, the default deployment class for your team will be used., reference: str # An identifier that uniquely identifies this deployment within the project. By providing a reference, you can create multiple dev and prod deployments in the project. If you don’t provide a reference, the endpoint will create the default production deployment for the project, or the default development deployment for the member that creates it (i.e. the deployment used by default when running `npx convex deploy` or `npx convex dev` respectively). When not providing a reference, a reference will be automatically generated., region: any}
+@returns(200)
+
+@endgroup
+
+@group deployments
+@endpoint POST /deployments/{deployment_name}/delete
+@desc Delete deployment
+@required {deployment_name: any # Deployment Name}
+@returns(200)
+
+@endpoint GET /deployments/{deployment_name}
+@desc Get deployment
+@required {deployment_name: str # Deployment Name}
+@returns(200)
+
+@endpoint PATCH /deployments/{deployment_name}
+@desc Update deployment
+@required {deployment_name: str # Deployment Name}
+@optional {dashboardEditConfirmation: bool # Controls whether the dashboard requires a confirmation before allowing edits during a browser session for this deployment. If set to `null`, the setting is reset to the default behavior (true for prod deployments, false for dev and preview deployments). If set to `true` or `false`, the setting is explicitly overridden., reference: str # The reference of the deployment. When provided, must match the following rules:   - be unique across deployment references in the project   - 3 to 100 characters (included)   - only lowercase letters, numbers, "-"" and "/"   - not follow the deployment name format [a-z]+-[a-z]+-[0-9]+ (e.g.     "happy-capybara-123")   - not start with "local-""   - not be one of the following reserved keywords: "prod", "dev",     "cloud", "local", "default", "name", "new", "existing",     "deployment", "preview"}
+@returns(200)
+
+@endgroup
+
+@group teams
+@endpoint GET /teams/{team_id}/list_deployment_classes
+@desc List deployment classes
+@required {team_id: any # Team ID}
+@returns(200) {items: [map]}
+
+@endpoint GET /teams/{team_id}/list_deployment_regions
+@desc List deployment regions
+@required {team_id: any # Team ID}
+@returns(200) {items: [map]}
+
+@endgroup
+
+@group deployments
+@endpoint POST /deployments/{deployment_name}/create_deploy_key
+@desc Create deploy key
+@required {deployment_name: any # Deployment name, name: str # Name for the deploy key.}
+@returns(200) {deployKey: str}
+
+@endpoint GET /deployments/{deployment_name}/list_deploy_keys
+@desc List deploy keys
+@required {deployment_name: any # Deployment name}
+@returns(200)
+
+@endpoint POST /deployments/{deployment_name}/delete_deploy_key
+@desc Delete deploy key
+@required {deployment_name: any # Deployment name, id: str # The token to delete. This can be the secret value of the token or the token's unique name.}
+@returns(200)
+
+@endgroup
+
+@group token_details
+@endpoint GET /token_details
+@desc Get token details
+@returns(200)
+
+@endgroup
+
+@group deployments
+@endpoint POST /deployments/{deployment_name}/create_custom_domain
+@desc Create custom domain
+@required {deployment_name: any # Deployment name, domain: str # The custom domain name to delete., requestDestination: str(convexCloud/convexSite)}
+@returns(200)
+
+@endpoint POST /deployments/{deployment_name}/delete_custom_domain
+@desc Delete custom domain
+@required {deployment_name: any # Deployment name, domain: str # The custom domain name to delete., requestDestination: str(convexCloud/convexSite)}
+@returns(200)
+
+@endpoint GET /deployments/{deployment_name}/custom_domains
+@desc List custom domains
+@required {deployment_name: any # Deployment name}
+@returns(200) {domains: [map]}
+
+@endgroup
+
+@group teams
+@endpoint GET /teams/{team_id}/list_members
+@desc List team members
+@required {team_id: any # Team ID}
+@returns(200) {items: [map]}
+
+@endgroup
+
+@end

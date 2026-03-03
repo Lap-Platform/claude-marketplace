@@ -1,0 +1,192 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Appflow
+@version 2020-08-23
+@auth AWS SigV4
+@endpoints 25
+@hint download_for_search
+@toc cancel-flow-executions(1), create-connector-profile(1), create-flow(1), delete-connector-profile(1), delete-flow(1), describe-connector(1), describe-connector-entity(1), describe-connector-profiles(1), describe-connectors(1), describe-flow(1), describe-flow-execution-records(1), list-connector-entities(1), list-connectors(1), list-flows(1), tags(3), register-connector(1), reset-connector-metadata-cache(1), start-flow(1), stop-flow(1), unregister-connector(1), update-connector-profile(1), update-connector-registration(1), update-flow(1)
+
+@group cancel-flow-executions
+@endpoint POST /cancel-flow-executions
+@required {flowName: str}
+@optional {executionIds: [str]}
+@returns(200) {invalidExecutions: [str]?}
+
+@endgroup
+
+@group create-connector-profile
+@endpoint POST /create-connector-profile
+@required {connectorProfileName: str, connectorType: str, connectionMode: str, connectorProfileConfig: ConnectorProfileConfig}
+@optional {kmsArn: str, connectorLabel: str, clientToken: str}
+@returns(200) {connectorProfileArn: str?}
+
+@endgroup
+
+@group create-flow
+@endpoint POST /create-flow
+@required {flowName: str, triggerConfig: TriggerConfig, sourceFlowConfig: SourceFlowConfig, destinationFlowConfigList: [DestinationFlowConfig], tasks: [Task]}
+@optional {description: str, kmsArn: str, tags: map<str,str>, metadataCatalogConfig: MetadataCatalogConfig, clientToken: str}
+@returns(200) {flowArn: str?, flowStatus: str?}
+
+@endgroup
+
+@group delete-connector-profile
+@endpoint POST /delete-connector-profile
+@required {connectorProfileName: str}
+@optional {forceDelete: bool}
+
+@endgroup
+
+@group delete-flow
+@endpoint POST /delete-flow
+@required {flowName: str}
+@optional {forceDelete: bool}
+
+@endgroup
+
+@group describe-connector
+@endpoint POST /describe-connector
+@required {connectorType: str}
+@optional {connectorLabel: str}
+@returns(200) {connectorConfiguration: ConnectorConfiguration?{canUseAsSource: bool?, canUseAsDestination: bool?, supportedDestinationConnectors: [str]?, supportedSchedulingFrequencies: [str]?, isPrivateLinkEnabled: bool?, isPrivateLinkEndpointUrlRequired: bool?, supportedTriggerTypes: [str]?, connectorMetadata: ConnectorMetadata?{Amplitude: AmplitudeMetadata?, Datadog: DatadogMetadata?, Dynatrace: DynatraceMetadata?, GoogleAnalytics: GoogleAnalyticsMetadata?{oAuthScopes: [str]?}, InforNexus: InforNexusMetadata?, Marketo: MarketoMetadata?, Redshift: RedshiftMetadata?, S3: S3Metadata?, Salesforce: SalesforceMetadata?{oAuthScopes: [str]?, dataTransferApis: [str]?, oauth2GrantTypesSupported: [str]?}, ServiceNow: ServiceNowMetadata?, Singular: SingularMetadata?, Slack: SlackMetadata?{oAuthScopes: [str]?}, Snowflake: SnowflakeMetadata?{supportedRegions: [str]?}, Trendmicro: TrendmicroMetadata?, Veeva: VeevaMetadata?, Zendesk: ZendeskMetadata?{oAuthScopes: [str]?}, EventBridge: EventBridgeMetadata?, Upsolver: UpsolverMetadata?, CustomerProfiles: CustomerProfilesMetadata?, Honeycode: HoneycodeMetadata?{oAuthScopes: [str]?}, SAPOData: SAPODataMetadata?, Pardot: PardotMetadata?}, connectorType: str?, connectorLabel: str?, connectorDescription: str?, connectorOwner: str?, connectorName: str?, connectorVersion: str?, connectorArn: str?, connectorModes: [str]?, authenticationConfig: AuthenticationConfig?{isBasicAuthSupported: bool?, isApiKeyAuthSupported: bool?, isOAuth2Supported: bool?, isCustomAuthSupported: bool?, oAuth2Defaults: OAuth2Defaults?{oauthScopes: [str]?, tokenUrls: [str]?, authCodeUrls: [str]?, oauth2GrantTypesSupported: [str]?, oauth2CustomProperties: [OAuth2CustomParameter]?}, customAuthConfigs: [CustomAuthConfig]?}, connectorRuntimeSettings: [ConnectorRuntimeSetting]?, supportedApiVersions: [str]?, supportedOperators: [str]?, supportedWriteOperations: [str]?, connectorProvisioningType: str?, connectorProvisioningConfig: ConnectorProvisioningConfig?{lambda: LambdaConnectorProvisioningConfig?{lambdaArn: str}}, logoURL: str?, registeredAt: str(timestamp)?, registeredBy: str?, supportedDataTransferTypes: [str]?, supportedDataTransferApis: [DataTransferApi]?}}
+
+@endgroup
+
+@group describe-connector-entity
+@endpoint POST /describe-connector-entity
+@required {connectorEntityName: str}
+@optional {connectorType: str, connectorProfileName: str, apiVersion: str}
+@returns(200) {connectorEntityFields: [ConnectorEntityField]}
+
+@endgroup
+
+@group describe-connector-profiles
+@endpoint POST /describe-connector-profiles
+@optional {connectorProfileNames: [str], connectorType: str, connectorLabel: str, maxResults: int, nextToken: str}
+@returns(200) {connectorProfileDetails: [ConnectorProfile]?, nextToken: str?}
+
+@endgroup
+
+@group describe-connectors
+@endpoint POST /describe-connectors
+@optional {connectorTypes: [str], maxResults: int, nextToken: str}
+@returns(200) {connectorConfigurations: map<str,ConnectorConfiguration>?, connectors: [ConnectorDetail]?, nextToken: str?}
+
+@endgroup
+
+@group describe-flow
+@endpoint POST /describe-flow
+@required {flowName: str}
+@returns(200) {flowArn: str?, description: str?, flowName: str?, kmsArn: str?, flowStatus: str?, flowStatusMessage: str?, sourceFlowConfig: SourceFlowConfig?{connectorType: str, apiVersion: str?, connectorProfileName: str?, sourceConnectorProperties: SourceConnectorProperties{Amplitude: AmplitudeSourceProperties?{object: str}, Datadog: DatadogSourceProperties?{object: str}, Dynatrace: DynatraceSourceProperties?{object: str}, GoogleAnalytics: GoogleAnalyticsSourceProperties?{object: str}, InforNexus: InforNexusSourceProperties?{object: str}, Marketo: MarketoSourceProperties?{object: str}, S3: S3SourceProperties?{bucketName: str, bucketPrefix: str?, s3InputFormatConfig: S3InputFormatConfig?}, Salesforce: SalesforceSourceProperties?{object: str, enableDynamicFieldUpdate: bool?, includeDeletedRecords: bool?, dataTransferApi: str?}, ServiceNow: ServiceNowSourceProperties?{object: str}, Singular: SingularSourceProperties?{object: str}, Slack: SlackSourceProperties?{object: str}, Trendmicro: TrendmicroSourceProperties?{object: str}, Veeva: VeevaSourceProperties?{object: str, documentType: str?, includeSourceFiles: bool?, includeRenditions: bool?, includeAllVersions: bool?}, Zendesk: ZendeskSourceProperties?{object: str}, SAPOData: SAPODataSourceProperties?{objectPath: str?, parallelismConfig: SAPODataParallelismConfig?, paginationConfig: SAPODataPaginationConfig?}, CustomConnector: CustomConnectorSourceProperties?{entityName: str, customProperties: map<str,str>?, dataTransferApi: DataTransferApi?}, Pardot: PardotSourceProperties?{object: str}}, incrementalPullConfig: IncrementalPullConfig?{datetimeTypeFieldName: str?}}, destinationFlowConfigList: [DestinationFlowConfig]?, lastRunExecutionDetails: ExecutionDetails?{mostRecentExecutionMessage: str?, mostRecentExecutionTime: str(timestamp)?, mostRecentExecutionStatus: str?}, triggerConfig: TriggerConfig?{triggerType: str, triggerProperties: TriggerProperties?{Scheduled: ScheduledTriggerProperties?{scheduleExpression: str, dataPullMode: str?, scheduleStartTime: str(timestamp)?, scheduleEndTime: str(timestamp)?, timezone: str?, scheduleOffset: int(i64)?, firstExecutionFrom: str(timestamp)?, flowErrorDeactivationThreshold: int?}}}, tasks: [Task]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?, metadataCatalogConfig: MetadataCatalogConfig?{glueDataCatalog: GlueDataCatalogConfig?{roleArn: str, databaseName: str, tablePrefix: str}}, lastRunMetadataCatalogDetails: [MetadataCatalogDetail]?, schemaVersion: int(i64)?}
+
+@endgroup
+
+@group describe-flow-execution-records
+@endpoint POST /describe-flow-execution-records
+@required {flowName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {flowExecutions: [ExecutionRecord]?, nextToken: str?}
+
+@endgroup
+
+@group list-connector-entities
+@endpoint POST /list-connector-entities
+@optional {connectorProfileName: str, connectorType: str, entitiesPath: str, apiVersion: str, maxResults: int, nextToken: str}
+@returns(200) {connectorEntityMap: map<str,[ConnectorEntity]>, nextToken: str?}
+
+@endgroup
+
+@group list-connectors
+@endpoint POST /list-connectors
+@optional {maxResults: int, nextToken: str}
+@returns(200) {connectors: [ConnectorDetail]?, nextToken: str?}
+
+@endgroup
+
+@group list-flows
+@endpoint POST /list-flows
+@optional {maxResults: int, nextToken: str}
+@returns(200) {flows: [FlowDefinition]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group register-connector
+@endpoint POST /register-connector
+@optional {connectorLabel: str, description: str, connectorProvisioningType: str, connectorProvisioningConfig: ConnectorProvisioningConfig, clientToken: str}
+@returns(200) {connectorArn: str?}
+
+@endgroup
+
+@group reset-connector-metadata-cache
+@endpoint POST /reset-connector-metadata-cache
+@optional {connectorProfileName: str, connectorType: str, connectorEntityName: str, entitiesPath: str, apiVersion: str}
+
+@endgroup
+
+@group start-flow
+@endpoint POST /start-flow
+@required {flowName: str}
+@optional {clientToken: str}
+@returns(200) {flowArn: str?, flowStatus: str?, executionId: str?}
+
+@endgroup
+
+@group stop-flow
+@endpoint POST /stop-flow
+@required {flowName: str}
+@returns(200) {flowArn: str?, flowStatus: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endgroup
+
+@group unregister-connector
+@endpoint POST /unregister-connector
+@required {connectorLabel: str}
+@optional {forceDelete: bool}
+
+@endgroup
+
+@group tags
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group update-connector-profile
+@endpoint POST /update-connector-profile
+@required {connectorProfileName: str, connectionMode: str, connectorProfileConfig: ConnectorProfileConfig}
+@optional {clientToken: str}
+@returns(200) {connectorProfileArn: str?}
+
+@endgroup
+
+@group update-connector-registration
+@endpoint POST /update-connector-registration
+@required {connectorLabel: str}
+@optional {description: str, connectorProvisioningConfig: ConnectorProvisioningConfig, clientToken: str}
+@returns(200) {connectorArn: str?}
+
+@endgroup
+
+@group update-flow
+@endpoint POST /update-flow
+@required {flowName: str, triggerConfig: TriggerConfig, sourceFlowConfig: SourceFlowConfig, destinationFlowConfigList: [DestinationFlowConfig], tasks: [Task]}
+@optional {description: str, metadataCatalogConfig: MetadataCatalogConfig, clientToken: str}
+@returns(200) {flowStatus: str?}
+
+@endgroup
+
+@end

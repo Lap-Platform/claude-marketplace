@@ -1,0 +1,233 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Neblio REST API Suite
+@base https://ntp1node.nebl.io/
+@version 1.3.0
+@auth Bearer basic
+@endpoints 50
+@hint download_for_search
+@toc ntp1(10), ins(14), testnet(25), root(1)
+
+@group ntp1
+@endpoint GET /ntp1/tokenid/{tokensymbol}
+@required {tokensymbol: str}
+@returns(200) {tokenId: str, tokenName: str}
+
+@endpoint POST /ntp1/broadcast
+@required {txHex: str}
+@returns(200) {txid: str}
+
+@endpoint GET /ntp1/addressinfo/{address}
+@required {address: str}
+@returns(200) {address: str, utxos: [map]}
+
+@endpoint GET /ntp1/transactioninfo/{txid}
+@required {txid: str}
+@returns(200) {hex: str, txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num}
+
+@endpoint GET /ntp1/tokenmetadata/{tokenid}
+@required {tokenid: str}
+@optional {verbosity: num}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+
+@endpoint GET /ntp1/tokenmetadata/{tokenid}/{utxo}
+@required {tokenid: str, utxo: str}
+@optional {verbosity: num}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+
+@endpoint GET /ntp1/stakeholders/{tokenid}
+@required {tokenid: str}
+@returns(200) {tokenId: str, holders: [map], divibility: num, lockStatus: bool, aggregationPolicy: str, someUtxo: str}
+
+@endpoint POST /ntp1/issue
+@required {issueAddress: str, amount: num, divisibility: num, fee: num, reissuable: bool, transfer: [map{address: str, amount: num}]}
+@optional {flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
+@returns(200) {tokenId: str, txHex: str}
+
+@endpoint POST /ntp1/sendtoken
+@required {fee: num, to: [map{address: str, amount: num, tokenId: str}]}
+@optional {from: [str], sendutxo: [str], flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+
+@endpoint POST /ntp1/burntoken
+@required {fee: num, burn: [map{amount: num, tokenId: str}]}
+@optional {from: [str], transfer: [map{address: str, amount: num, tokenId: str}]}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+
+@endgroup
+
+@group ins
+@endpoint POST /ins/tx/send
+@required {rawtx: str}
+@returns(200) {txid: str}
+
+@endpoint GET /ins/block/{blockhash}
+@required {blockhash: str}
+@returns(200) {hash: str, confirmations: num, size: num, height: num, version: num, merkleroot: str, tx: [str], time: num, nonce: num, bits: str, difficulty: num, previousblockhash: str, nextblockhash: str, reward: num}
+
+@endpoint GET /ins/block-index/{blockindex}
+@required {blockindex: num}
+@returns(200) {blockHash: str}
+
+@endpoint GET /ins/tx/{txid}
+@required {txid: str}
+@returns(200) {txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num, valueOut: num, valueIn: num, fees: num, size: num}
+
+@endpoint GET /ins/rawtx/{txid}
+@required {txid: str}
+@returns(200) {rawtx: str}
+
+@endpoint GET /ins/addr/{address}
+@required {address: str}
+@returns(200) {addrStr: str, balance: num, balanceSat: num, totalReceived: num, totalReceivedSat: num, totalSent: num, totalSentSat: num, unconfirmedBalance: num, unconfirmedBalanceSat: num, unconfirmedTxAppearances: num, txAppearances: num, transactions: [str]}
+
+@endpoint GET /ins/addr/{address}/balance
+@required {address: str}
+@returns(200)
+
+@endpoint GET /ins/addr/{address}/unconfirmedBalance
+@required {address: str}
+@returns(200)
+
+@endpoint GET /ins/addr/{address}/totalReceived
+@required {address: str}
+@returns(200)
+
+@endpoint GET /ins/addr/{address}/utxo
+@required {address: str}
+@returns(200)
+
+@endpoint GET /ins/addr/{address}/totalSent
+@required {address: str}
+@returns(200)
+
+@endpoint GET /ins/txs
+@optional {address: str, block: str, pageNum: num}
+@returns(200) {pagesTotal: num, txs: [map]}
+
+@endpoint GET /ins/sync
+@returns(200) {status: str, blockChainHeight: num, syncPercentage: num, height: num, error: str, type: str}
+
+@endpoint GET /ins/status
+@optional {q: str}
+@returns(200)
+
+@endgroup
+
+@group testnet
+@endpoint POST /testnet/ins/tx/send
+@required {rawtx: str}
+@returns(200) {txid: str}
+
+@endpoint GET /testnet/ins/block/{blockhash}
+@required {blockhash: str}
+@returns(200) {hash: str, confirmations: num, size: num, height: num, version: num, merkleroot: str, tx: [str], time: num, nonce: num, bits: str, difficulty: num, previousblockhash: str, nextblockhash: str, reward: num}
+
+@endpoint GET /testnet/ins/block-index/{blockindex}
+@required {blockindex: num}
+@returns(200) {blockHash: str}
+
+@endpoint GET /testnet/ins/tx/{txid}
+@required {txid: str}
+@returns(200) {txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num, valueOut: num, valueIn: num, fees: num, size: num}
+
+@endpoint GET /testnet/ins/rawtx/{txid}
+@required {txid: str}
+@returns(200) {rawtx: str}
+
+@endpoint GET /testnet/ins/addr/{address}
+@required {address: str}
+@returns(200) {addrStr: str, balance: num, balanceSat: num, totalReceived: num, totalReceivedSat: num, totalSent: num, totalSentSat: num, unconfirmedBalance: num, unconfirmedBalanceSat: num, unconfirmedTxAppearances: num, txAppearances: num, transactions: [str]}
+
+@endpoint GET /testnet/ins/addr/{address}/balance
+@required {address: str}
+@returns(200)
+
+@endpoint GET /testnet/ins/addr/{address}/unconfirmedBalance
+@required {address: str}
+@returns(200)
+
+@endpoint GET /testnet/ins/addr/{address}/totalReceived
+@required {address: str}
+@returns(200)
+
+@endpoint GET /testnet/ins/addr/{address}/utxo
+@required {address: str}
+@returns(200)
+
+@endpoint GET /testnet/ins/addr/{address}/totalSent
+@required {address: str}
+@returns(200)
+
+@endpoint GET /testnet/ins/txs
+@optional {address: str, block: str, pageNum: num}
+@returns(200) {pagesTotal: num, txs: [map]}
+
+@endpoint GET /testnet/ins/sync
+@returns(200) {status: str, blockChainHeight: num, syncPercentage: num, height: num, error: str, type: str}
+
+@endpoint GET /testnet/ins/status
+@optional {q: str}
+@returns(200)
+
+@endpoint GET /testnet/ntp1/tokenid/{tokensymbol}
+@required {tokensymbol: str}
+@returns(200) {tokenId: str, tokenName: str}
+
+@endpoint POST /testnet/ntp1/broadcast
+@required {txHex: str}
+@returns(200) {txid: str}
+
+@endpoint GET /testnet/ntp1/addressinfo/{address}
+@required {address: str}
+@returns(200) {address: str, utxos: [map]}
+
+@endpoint GET /testnet/ntp1/transactioninfo/{txid}
+@required {txid: str}
+@returns(200) {hex: str, txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num}
+
+@endpoint GET /testnet/ntp1/tokenmetadata/{tokenid}
+@required {tokenid: str}
+@optional {verbosity: num}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+
+@endpoint GET /testnet/ntp1/tokenmetadata/{tokenid}/{utxo}
+@required {tokenid: str, utxo: str}
+@optional {verbosity: num}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+
+@endpoint GET /testnet/ntp1/stakeholders/{tokenid}
+@required {tokenid: str}
+@returns(200) {tokenId: str, holders: [map], divibility: num, lockStatus: bool, aggregationPolicy: str, someUtxo: str}
+
+@endpoint POST /testnet/ntp1/issue
+@required {issueAddress: str, amount: num, divisibility: num, fee: num, reissuable: bool, transfer: [map{address: str, amount: num}]}
+@optional {flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
+@returns(200) {tokenId: str, txHex: str}
+
+@endpoint POST /testnet/ntp1/sendtoken
+@required {fee: num, to: [map{address: str, amount: num, tokenId: str}]}
+@optional {from: [str], sendutxo: [str], flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+
+@endpoint POST /testnet/ntp1/burntoken
+@required {fee: num, burn: [map{amount: num, tokenId: str}]}
+@optional {from: [str], transfer: [map{address: str, amount: num, tokenId: str}]}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+
+@endpoint GET /testnet/faucet
+@required {address: str}
+@optional {amount: num}
+@returns(200) {status: str, data: map{txId: str}}
+
+@endgroup
+
+@group root
+@endpoint POST /
+@required {jsonrpc: str=1.0, id: str=neblio-apis, method: str, params: [str]}
+@returns(200) {result: map, id: str, error: map}
+@errors {401}
+
+@endgroup
+
+@end

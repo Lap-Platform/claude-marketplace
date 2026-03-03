@@ -1,0 +1,1329 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Authentication and Identity Management
+@base https://api.frontegg.com/identity
+@auth Bearer bearer
+@endpoints 305
+@hint download_for_search
+@toc resources(305)
+
+@endpoint POST /resources/auth/v2/api-token
+@required {clientId: str, secret: str}
+@returns(200) {access_token: str, refresh_token: str, expires_in: num, expires: str}
+
+@endpoint POST /resources/auth/v2/api-token/token/refresh
+@required {refreshToken: str}
+@returns(200) {access_token: str, refresh_token: str, expires_in: num, expires: str}
+
+@endpoint POST /resources/tenants/access-tokens/v1
+@required {frontegg-tenant-id: str}
+@optional {description: str, expiresInMinutes: num, roleIds: [str]}
+@returns(201) {id: str, description: str, createdAt: str(date-time), secret: str, expires: str(date-time), roleIds: [str], createdByUserId: str?}
+
+@endpoint GET /resources/tenants/access-tokens/v1
+@required {frontegg-tenant-id: str}
+@returns(200) {accessTokens: [map]}
+
+@endpoint DELETE /resources/tenants/access-tokens/v1/{id}
+@required {frontegg-tenant-id: str, id: str}
+@returns(200)
+
+@endpoint POST /resources/tenants/api-tokens/v1
+@required {frontegg-tenant-id: str}
+@optional {metadata: map, description: str, roleIds: [str], permissionIds: [str], expiresInMinutes: num}
+@returns(201) {clientId: str, description: str?, tenantId: str, secret: str, createdByUserId: str?, metadata: map, createdAt: str(date-time), permissionIds: [str], roleIds: [str], expires: str(date-time)}
+
+@endpoint GET /resources/tenants/api-tokens/v1
+@required {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint DELETE /resources/tenants/api-tokens/v1/{id}
+@required {id: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint PATCH /resources/tenants/api-tokens/v1/{id}
+@required {id: str, frontegg-tenant-id: str}
+@optional {metadata: map, description: str, roleIds: [str], permissionIds: [str]}
+@returns(200) {clientId: str, description: str?, tenantId: str, createdByUserId: str?, metadata: map, createdAt: str(date-time), permissionIds: [str], roleIds: [str], expires: str(date-time)}
+
+@endpoint POST /resources/tenants/api-tokens/v2
+@required {frontegg-tenant-id: str}
+@optional {metadata: map, description: str, roleIds: [str], permissionIds: [str], expiresInMinutes: num}
+@returns(201) {clientId: str, description: str?, tenantId: str, secret: str, createdByUserId: str?, metadata: map, createdAt: str(date-time), permissionIds: [str], roleIds: [str], expires: str(date-time)}
+
+@endpoint GET /resources/tenants/invites/v1/user
+@required {frontegg-user-id: str, frontegg-tenant-id: str}
+@returns(200) {id: str, vendorId: str, tenantId: str, userId: str, token: str, expires: str(date-time), shouldSendEmail: bool, name: str, roleIds: [str]}
+
+@endpoint POST /resources/tenants/invites/v1/user
+@required {frontegg-user-id: str, frontegg-tenant-id: str, expiresInMinutes: num, shouldSendEmail: bool}
+@returns(201) {id: str, vendorId: str, tenantId: str, userId: str, token: str, expires: str(date-time), shouldSendEmail: bool, name: str, roleIds: [str]}
+
+@endpoint DELETE /resources/tenants/invites/v1/user
+@required {frontegg-user-id: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint PATCH /resources/tenants/invites/v1/user
+@required {frontegg-user-id: str, frontegg-tenant-id: str}
+@optional {expiresInMinutes: num, shouldSendEmail: bool}
+@returns(200) {id: str, vendorId: str, tenantId: str, userId: str, token: str, expires: str(date-time), shouldSendEmail: bool, name: str, roleIds: [str]}
+
+@endpoint POST /resources/tenants/invites/v1/verify
+@required {token: str}
+@returns(200) {id: str, vendorId: str, tenantId: str, userId: str, token: str, expires: str(date-time), shouldSendEmail: bool, name: str, roleIds: [str]}
+
+@endpoint GET /resources/tenants/invites/v1/configuration
+@returns(200) {tenantInvitationsAllowed: bool, emailsEnabled: bool}
+
+@endpoint POST /resources/tenants/invites/v2/user
+@required {expiresInMinutes: num, shouldSendEmail: bool, roleIds: [str]}
+@optional {frontegg-tenant-id: str, frontegg-user-id: str}
+@returns(200)
+@returns(201) {id: str, vendorId: str, tenantId: str, userId: str, token: str, expires: str(date-time), shouldSendEmail: bool, name: str, roleIds: [str]}
+
+@endpoint POST /resources/tenants/invites/v1
+@required {tenantId: str}
+@optional {userId: str, expiresInMinutes: num, shouldSendEmail: bool, roleIds: [str]}
+@returns(201) {id: str, vendorId: str, tenantId: str, userId: str, token: str, expires: str(date-time), shouldSendEmail: bool, name: str, roleIds: [str]}
+
+@endpoint GET /resources/tenants/invites/v1/all
+@returns(200)
+
+@endpoint DELETE /resources/tenants/invites/v1/token/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/activation/strategies
+@returns(200) {strategy: str, codeExpiration: num}
+
+@endpoint POST /resources/configurations/v1/activation/strategies
+@required {strategy: str(code/link)}
+@optional {codeExpiration: num}
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/invitation/strategies
+@returns(200) {strategy: str, codeExpiration: num}
+
+@endpoint POST /resources/configurations/v1/invitation/strategies
+@optional {codeExpiration: num}
+@returns(200)
+
+@endpoint GET /resources/roles/v2
+@required {_sortBy: str(key/name/description/isDefault/firstUserRole/level/updatedAt/createdAt/permissions/userTenants/groups)}
+@optional {_limit: num=50, _levels: [num], _tenantIds: [str], _offset: num=0, _order: str(ASC/DESC), _filter: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/roles/v2
+@required {key: str, name: str, baseRoleId: str, permissionIds: [str]}
+@optional {frontegg-tenant-id: str, description: str, isDefault: bool}
+@returns(200) {id: str, vendorId: str, tenantId: str, key: str, name: str, description: str, isDefault: bool, permissions: [str]}
+
+@endpoint GET /resources/roles/v2/distinct-levels
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/roles/v2/distinct-tenants
+@returns(200)
+
+@endpoint POST /resources/approval-flows/v1
+@required {name: str, channels: map{email!: bool, sms!: bool}, configuration: map{autoApproveInMinutes: num, reminderIntervalMinutes: num, notifyOnDecisions: bool, timeoutMinutes: num, webhookUrl: str}, steps: [map{approverSelectors!: map{roleKeys: [str], emails: [str], phoneNumbers: [str]}, configuration!: map{minApprovals!: num}, stepOrder!: num}]}
+@optional {description: str, isActive: bool}
+@returns(200) {id: str, vendorId: str, tenantId: str, name: str, description: str, isActive: bool, channels: map, configuration: map{autoApproveInMinutes: num, reminderIntervalMinutes: num, notifyOnDecisions: bool, logging: bool, timeoutMinutes: num, webhookUrl: str}, steps: [map], createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(201) {id: str, vendorId: str, tenantId: str, name: str, description: str, isActive: bool, channels: map, configuration: map{autoApproveInMinutes: num, reminderIntervalMinutes: num, notifyOnDecisions: bool, logging: bool, timeoutMinutes: num, webhookUrl: str}, steps: [map], createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint GET /resources/approval-flows/v1
+@returns(200) {items: [map], total: num}
+
+@endpoint GET /resources/approval-flows/v1/{id}
+@required {id: str}
+@returns(200) {id: str, vendorId: str, tenantId: str, name: str, description: str, isActive: bool, channels: map, configuration: map{autoApproveInMinutes: num, reminderIntervalMinutes: num, notifyOnDecisions: bool, logging: bool, timeoutMinutes: num, webhookUrl: str}, steps: [map], createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint PATCH /resources/approval-flows/v1/{id}
+@required {id: str}
+@optional {name: str, description: str, isActive: bool, channels: map{email!: bool, sms!: bool}, configuration: map{autoApproveInMinutes: num, reminderIntervalMinutes: num, notifyOnDecisions: bool, timeoutMinutes: num, webhookUrl: str}, steps: [map{approverSelectors!: map{roleKeys: [str], emails: [str], phoneNumbers: [str]}, configuration!: map{minApprovals!: num}, stepOrder!: num}]}
+@returns(200) {id: str, vendorId: str, tenantId: str, name: str, description: str, isActive: bool, channels: map, configuration: map{autoApproveInMinutes: num, reminderIntervalMinutes: num, notifyOnDecisions: bool, logging: bool, timeoutMinutes: num, webhookUrl: str}, steps: [map], createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint DELETE /resources/approval-flows/v1/{id}
+@required {id: str}
+@returns(200)
+@returns(204)
+
+@endpoint POST /resources/approval-flows/v1/approver-action
+@required {approved: bool, approvalFlowExecutionId: str, approverId: str, approvalFlowStepId: str}
+@returns(200)
+
+@endpoint GET /resources/approval-flows/v1/execution-data
+@required {approvalFlowExecutionId: str, approverId: str, approvalFlowStepId: str}
+@returns(200) {approvalFlowName: str, approvalFlowDescription: str, requester: str, approvalFlowRequestDate: str(date-time), executionData: map}
+
+@endpoint POST /resources/approval-flows/v1/{id}/execute
+@required {id: str, frontegg-user-id: str}
+@optional {frontegg-tenant-id: str, executionData: map, webhookUrl: str}
+@returns(200)
+
+@endpoint POST /resources/approval-flows/v1/step-up/execute
+@required {frontegg-user-id: str}
+@optional {frontegg-tenant-id: str, executionData: map, webhookUrl: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/v1
+@optional {defaultTokenExpiration: num, defaultRefreshTokenExpiration: num, cookieSameSite: str(STRICT/LAX/NONE), machineToMachineAuthStrategy: str(ClientCredentials/AccessToken), allowSignups: bool, apiTokensEnabled: bool, allowOverridePasswordComplexity: bool, allowOverridePasswordExpiration: bool, allowOverrideEnforcePasswordHistory: bool, jwtAlgorithm: str(HS256/RS256), allowNotVerifiedUsersLogin: bool, forcePermissions: bool, addSamlAttributesToJwt: bool, authStrategy: str(Code/EmailAndPassword/MagicLink/NoLocalAuthentication/SmsCode), defaultPasswordlessTokenExpiration: num, forceSameDeviceOnAuth: bool, allowTenantInvitations: bool, rotateRefreshTokens: bool, skipTenantValidation: bool, addRolesToJwt: bool, addPermissionsToJwt: bool, allowCustomLoginTenantSwitch: bool}
+@returns(201) {id: str, defaultTokenExpiration: num, defaultRefreshTokenExpiration: num, publicKey: str, cookieSameSite: str, allowSignups: bool, apiTokensEnabled: bool, allowOverridePasswordComplexity: bool, allowOverridePasswordExpiration: bool, allowOverrideEnforcePasswordHistory: bool, jwtAlgorithm: str, jwtSecret: str, allowNotVerifiedUsersLogin: bool, forcePermissions: bool, authStrategy: str, defaultPasswordlessTokenExpiration: num, forceSameDeviceOnAuth: bool, allowTenantInvitations: bool, rotateRefreshTokens: bool, machineToMachineAuthStrategy: str, addRolesToJwt: bool, addPermissionsToJwt: bool, refreshTokensRotationLimit: num, addSamlAttributesToJwt: bool, allowCustomLoginTenantSwitch: bool}
+
+@endpoint GET /resources/configurations/v1
+@returns(200) {id: str, defaultTokenExpiration: num, defaultRefreshTokenExpiration: num, publicKey: str, cookieSameSite: str, allowSignups: bool, apiTokensEnabled: bool, allowOverridePasswordComplexity: bool, allowOverridePasswordExpiration: bool, allowOverrideEnforcePasswordHistory: bool, jwtAlgorithm: str, jwtSecret: str, allowNotVerifiedUsersLogin: bool, forcePermissions: bool, authStrategy: str, defaultPasswordlessTokenExpiration: num, forceSameDeviceOnAuth: bool, allowTenantInvitations: bool, rotateRefreshTokens: bool, machineToMachineAuthStrategy: str, addRolesToJwt: bool, addPermissionsToJwt: bool, refreshTokensRotationLimit: num, addSamlAttributesToJwt: bool, allowCustomLoginTenantSwitch: bool}
+
+@endpoint POST /resources/configurations/v1/captcha-policy
+@required {enabled: bool, siteKey: str, secretKey: str, minScore: num}
+@optional {ignoredEmails: [str]}
+@returns(201) {id: str, siteKey: str, secretKey: str, enabled: bool, minScore: num, ignoredEmails: [str], createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint PUT /resources/configurations/v1/captcha-policy
+@required {enabled: bool, siteKey: str, secretKey: str, minScore: num}
+@optional {ignoredEmails: [str]}
+@returns(200) {id: str, siteKey: str, secretKey: str, enabled: bool, minScore: num, ignoredEmails: [str], createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint GET /resources/configurations/v1/captcha-policy
+@returns(200) {id: str, siteKey: str, secretKey: str, enabled: bool, minScore: num, ignoredEmails: [str], createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint GET /resources/configurations/v1/jwt-template-targeting
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), targeting: map}
+
+@endpoint POST /resources/configurations/v1/jwt-template-targeting
+@optional {rules: [map{conditionLogic!: str, conditions!: [map{attribute!: str, op!: str, value!: map, negate!: bool}], treatment!: str}]}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), targeting: map}
+
+@endpoint PUT /resources/configurations/v1/jwt-template-targeting
+@optional {rules: [map{conditionLogic!: str, conditions!: [map{attribute!: str, op!: str, value!: map, negate!: bool}], treatment!: str}]}
+@returns(200)
+
+@endpoint PATCH /resources/configurations/v1/jwt-template-targeting/{id}
+@required {id: str}
+@optional {rules: [map{conditionLogic!: str, conditions!: [map{attribute!: str, op!: str, value!: map, negate!: bool}], treatment!: str}]}
+@returns(200)
+
+@endpoint DELETE /resources/configurations/v1/jwt-template-targeting/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint POST /resources/jwt-templates/v1
+@required {key: str, name: str, expiration: num, algorithm: str(RS256/HS256), templateSchema: any}
+@optional {description: str}
+@returns(201) {id: str, vendorId: str, key: str, name: str, description: str?, expiration: num, algorithm: str, templateSchema: any, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint GET /resources/jwt-templates/v1
+@optional {keys: [str], ids: [str], _limit: num, _offset: num, _sortBy: str(id/key/name/createdAt/updatedAt), _order: str(ASC/DESC)}
+@returns(200)
+
+@endpoint GET /resources/jwt-templates/v1/{id}
+@required {id: str}
+@returns(200) {id: str, vendorId: str, key: str, name: str, description: str?, expiration: num, algorithm: str, templateSchema: any, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint PUT /resources/jwt-templates/v1/{id}
+@required {id: str}
+@optional {key: str, name: str, description: str, expiration: num, algorithm: str(RS256/HS256), templateSchema: any}
+@returns(200) {id: str, vendorId: str, key: str, name: str, description: str?, expiration: num, algorithm: str, templateSchema: any, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint DELETE /resources/jwt-templates/v1/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint GET /resources/configurations/v1/basic
+@returns(200) {forcePermissions: bool, machineToMachineAuthStrategy: str}
+
+@endpoint POST /resources/sso/custom/v1
+@required {type: str, clientId: str, secret: str, redirectUrl: str, authorizationUrl: str, tokenUrl: str, userInfoUrl: str, scopes: str, ssoLogoUrl: str, displayName: str, active: bool}
+@returns(200)
+
+@endpoint GET /resources/sso/custom/v1
+@returns(200)
+
+@endpoint PATCH /resources/sso/custom/v1/{id}
+@required {id: str}
+@optional {type: str, clientId: str, secret: str, redirectUrl: str, authorizationUrl: str, tokenUrl: str, userInfoUrl: str, scopes: str, ssoLogoUrl: str, displayName: str, active: bool}
+@returns(200)
+
+@endpoint DELETE /resources/sso/custom/v1/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint POST /resources/migrations/v1/auth0
+@required {domain: str, clientId: str, secret: str, tenantIdFieldName: str}
+@optional {isTenantIdOnUserMetadata: bool}
+@returns(201)
+
+@endpoint POST /resources/migrations/v1/local
+@required {tenantId: str, email: str}
+@optional {name: str, profilePictureUrl: str, passwordHash: str, passwordHashType: str(bcrypt/scrypt/firebase-scrypt/pbkdf2/argon2/sha256/sha1), passwordHashConfig: str, authenticatorAppMfaSecret: str, phoneNumber: str, phoneNumberType: str(auth/mfa), provider: str(local/saml/google/github/facebook/microsoft/scim2/slack/apple)=local, metadata: str, roleIds: [str]=[], vendorMetadata: str, externalId: str, username: str, verifyUser: bool=False}
+@returns(201) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/migrations/v1/local/bulk
+@required {users: [map{tenantId!: str, name: str, profilePictureUrl: str, passwordHash: str, passwordHashType: str, passwordHashConfig: str, authenticatorAppMfaSecret: str, phoneNumber: str, phoneNumberType: str, provider: str, metadata: str, roleIds: [str], vendorMetadata: str, externalId: str, username: str, email!: str, verifyUser: bool}]}
+@returns(202) {migrationId: str}
+
+@endpoint GET /resources/migrations/v1/local/bulk/status/{migrationId}
+@required {migrationId: str}
+@returns(200)
+
+@endpoint POST /resources/migrations/v2/local/bulk
+@required {users: [map{tenantId!: str, name: str, profilePictureUrl: str, passwordHash: str, passwordHashType: str, passwordHashConfig: str, authenticatorAppMfaSecret: str, phoneNumber: str, phoneNumberType: str, provider: str, metadata: str, roleIds: [str], vendorMetadata: str, externalId: str, username: str, emails: [map{email!: str(email), primary!: bool, verified!: bool}]}]}
+@returns(202) {migrationId: str}
+
+@endpoint GET /resources/configurations/v1/delegation
+@returns(200) {enabled: bool}
+
+@endpoint POST /resources/configurations/v1/delegation
+@optional {enabled: bool}
+@returns(200)
+
+@endpoint POST /resources/configurations/restrictions/v1/email-domain
+@required {domain: str, type: str(ALLOW/BLOCK)}
+@returns(201) {id: str, domain: str, type: str}
+
+@endpoint GET /resources/configurations/restrictions/v1/email-domain
+@returns(200)
+
+@endpoint GET /resources/configurations/restrictions/v1/email-domain/config
+@returns(200) {active: bool, listType: str, blockPublicDomains: bool}
+
+@endpoint POST /resources/configurations/restrictions/v1/email-domain/config
+@required {active: bool}
+@optional {blockPublicDomains: bool, type: str(ALLOW/BLOCK)}
+@returns(201) {active: bool, listType: str, blockPublicDomains: bool}
+
+@endpoint DELETE /resources/configurations/restrictions/v1/email-domain/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/restrictions/v1/email-domain/replace-bulk
+@required {type: str(ALLOW/BLOCK), domains: [str]}
+@returns(201)
+
+@endpoint POST /resources/mail/v1/configurations
+@required {secret: str}
+@returns(200)
+@returns(201)
+
+@endpoint GET /resources/mail/v1/configurations
+@returns(200) {secret: str, createdAt: str(date-time), updatedAt: str(date-time), extension: [map], provider: str}
+
+@endpoint DELETE /resources/mail/v1/configurations
+@returns(200)
+
+@endpoint POST /resources/mail/v2/configurations
+@optional {payload: any}
+@returns(201)
+
+@endpoint POST /resources/mail/v1/configs/templates
+@required {type: str(ResetPassword/ActivateUser/InviteToTenant/PwnedPassword/MagicLink/OTC/ConnectNewDevice/UserUsedInvitation/ResetPhoneNumber/BulkInvitesToTenant/MFAEnroll/MFAUnenroll/NewMFAMethod/MFARecoveryCode/RemoveMFAMethod/EmailVerification/BruteForceProtection/SuspiciousIP/MFAOTC/ImpossibleTravel/BotDetection/SmsAuthenticationEnabled/UnlockUser/UnlockUserSuccess/ActivateUserWithCode/InviteToTenantWithCode/VerifyNewEmail/EmailAddressChanged/ApprovalFlowApprove)}
+@optional {senderEmail: str, subject: str, fromName: str, redirectURL: str, htmlTemplate: str, successRedirectUrl: str, active: bool}
+@returns(201)
+
+@endpoint GET /resources/mail/v1/configs/templates
+@optional {type: str(ResetPassword/ActivateUser/InviteToTenant/PwnedPassword/MagicLink/OTC/ConnectNewDevice/UserUsedInvitation/ResetPhoneNumber/BulkInvitesToTenant/MFAEnroll/MFAUnenroll/NewMFAMethod/MFARecoveryCode/RemoveMFAMethod/EmailVerification/BruteForceProtection/SuspiciousIP/MFAOTC/ImpossibleTravel/BotDetection/SmsAuthenticationEnabled/UnlockUser/UnlockUserSuccess/ActivateUserWithCode/InviteToTenantWithCode/VerifyNewEmail/EmailAddressChanged/ApprovalFlowApprove)}
+@returns(200)
+
+@endpoint DELETE /resources/mail/v1/configs/templates/{templateId}
+@required {templateId: str}
+@returns(200)
+
+@endpoint GET /resources/mail/v1/configs/{type}/default
+@required {type: str(ResetPassword/ActivateUser/InviteToTenant/PwnedPassword/MagicLink/OTC/ConnectNewDevice/UserUsedInvitation/ResetPhoneNumber/BulkInvitesToTenant/MFAEnroll/MFAUnenroll/NewMFAMethod/MFARecoveryCode/RemoveMFAMethod/EmailVerification/BruteForceProtection/SuspiciousIP/MFAOTC/ImpossibleTravel/BotDetection/SmsAuthenticationEnabled/UnlockUser/UnlockUserSuccess/ActivateUserWithCode/InviteToTenantWithCode/VerifyNewEmail/EmailAddressChanged/ApprovalFlowApprove)}
+@returns(200) {htmlTemplate: str, senderEmail: str, redirectURL: str, successRedirectUrl: str, subject: str, fromName: str, active: bool, type: map, redirectURLPattern: str, successRedirectUrlPattern: str}
+
+@endpoint POST /resources/auth/v1/user
+@required {password: str}
+@optional {frontegg-vendor-host: str, email: str, username: str, recaptchaToken: str, invitationToken: str}
+@returns(200) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/token/refresh
+@required {frontegg-vendor-host: str}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/logout
+@required {frontegg-vendor-host: str}
+@returns(201)
+
+@endpoint POST /resources/users/v1/signUp
+@required {frontegg-vendor-host: str, frontegg-application-id: str, provider: str(local/saml/google/github/facebook/microsoft/scim2/slack/apple), email: str, companyName: str}
+@optional {metadata: str, username: str, name: str, profilePictureUrl: str, password: str, skipInviteEmail: bool, roleIds: [str], emailMetadata: map, recaptchaToken: str, invitationToken: str, phoneNumber: str}
+@returns(200)
+@returns(201) {provider: str, metadata: str, email: str, username: str, name: str, profilePictureUrl: str, password: str, skipInviteEmail: bool, roleIds: [str], emailMetadata: map, companyName: str, recaptchaToken: str, invitationToken: str, phoneNumber: str}
+
+@endpoint POST /resources/users/v1/signUp/username
+@required {frontegg-vendor-host: str, frontegg-application-id: str, provider: str(local/saml/google/github/facebook/microsoft/scim2/slack/apple), username: str, companyName: str}
+@optional {metadata: str, name: str, profilePictureUrl: str, password: str, skipInviteEmail: bool, roleIds: [str], emailMetadata: map, recaptchaToken: str, invitationToken: str, email: str, phoneNumber: str}
+@returns(200)
+@returns(201) {shouldActivate: bool, userId: str, tenantId: str, authResponse: map{tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}, activationToken: str}
+
+@endpoint POST /resources/configurations/v1/restrictions/ip/config
+@optional {frontegg-tenant-id: str, strategy: str(ALLOW/BLOCK), isActive: bool}
+@returns(201)
+
+@endpoint GET /resources/configurations/v1/restrictions/ip/config
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/restrictions/ip
+@optional {_limit: num, _offset: num, _filter: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/v1/restrictions/ip
+@required {ip: str, strategy: str(ALLOW/BLOCK)}
+@optional {frontegg-tenant-id: str, description: str, isActive: bool}
+@returns(201)
+
+@endpoint POST /resources/configurations/v1/restrictions/ip/verify
+@optional {frontegg-tenant-id: str}
+@returns(201)
+
+@endpoint POST /resources/configurations/v1/restrictions/ip/verify/allow
+@optional {frontegg-tenant-id: str}
+@returns(201)
+
+@endpoint DELETE /resources/configurations/v1/restrictions/ip/{id}
+@required {id: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/v1/lockout-policy
+@required {enabled: bool, maxAttempts: num}
+@optional {frontegg-tenant-id: str}
+@returns(201) {id: str, enabled: bool, maxAttempts: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {409}
+
+@endpoint PATCH /resources/configurations/v1/lockout-policy
+@required {enabled: bool, maxAttempts: num}
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, enabled: bool, maxAttempts: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {404}
+
+@endpoint GET /resources/configurations/v1/lockout-policy
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, enabled: bool, maxAttempts: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {404}
+
+@endpoint GET /resources/vendor-only/users/access-tokens/v1/active
+@required {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/vendor-only/users/access-tokens/v1/{id}
+@required {frontegg-tenant-id: str, id: str}
+@returns(200) {userId: str, id: str, tenantId: str, permissions: [str], roles: [str], expires: str(date-time)}
+
+@endpoint GET /resources/vendor-only/tenants/access-tokens/v1/{id}
+@required {frontegg-tenant-id: str, id: str}
+@returns(200) {id: str, tenantId: str, permissions: [str], roles: [str], expires: str(date-time)}
+
+@endpoint POST /resources/auth/v1/user/mfa/recover
+@required {recoveryCode: str, email: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/mfa/disable
+@required {frontegg-user-id: str}
+@optional {token: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/mfa/authenticator/{deviceId}/disable/verify
+@required {deviceId: str, frontegg-user-id: str}
+@optional {token: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/mfa/sms/{deviceId}/disable
+@required {deviceId: str, frontegg-user-id: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/mfa/sms/{deviceId}/disable/verify
+@required {deviceId: str, frontegg-user-id: str, otcToken: str, code: str}
+@returns(200)
+
+@endpoint POST /resources/auth/v1/user/mfa/verify
+@required {value: str, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201)
+
+@endpoint POST /resources/auth/v1/user/mfa/emailcode
+@required {mfaToken: str}
+@returns(201)
+
+@endpoint POST /resources/auth/v1/user/mfa/emailcode/verify
+@required {otcToken: str, code: str, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/mfa/authenticator/enroll
+@required {mfaToken: str}
+@returns(201) {qrCode: str}
+
+@endpoint POST /resources/auth/v1/user/mfa/authenticator/enroll/verify
+@required {token: str, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/mfa/authenticator/{deviceId}/verify
+@required {deviceId: str, value: str, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/mfa/sms/enroll
+@required {phoneNumber: str}
+@returns(201)
+
+@endpoint POST /resources/auth/v1/user/mfa/sms/enroll/verify
+@required {otcToken: str, code: str}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/mfa/sms/{deviceId}
+@required {deviceId: str, mfaToken: str}
+@returns(201)
+
+@endpoint POST /resources/auth/v1/user/mfa/sms/{deviceId}/verify
+@required {deviceId: str, otcToken: str, code: str, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/mfa/webauthn/enroll
+@required {mfaToken: str}
+@returns(201) {options: map}
+
+@endpoint POST /resources/auth/v1/user/mfa/webauthn/enroll/verify
+@required {deviceType: str(Platform/CrossPlatform), webauthnToken: str, options: map{id!: str, response!: map{clientDataJSON!: str, attestationObject!: str}, deviceType: str}, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/user/mfa/webauthn/{deviceId}
+@required {deviceId: str, mfaToken: str}
+@returns(201)
+
+@endpoint POST /resources/auth/v1/user/mfa/webauthn/{deviceId}/verify
+@required {deviceId: str, webauthnToken: str, options: map{id!: str, response!: map{clientDataJSON!: str, authenticatorData!: str, signature!: str, userHandle!: str}, recaptchaToken: str, invitationToken: str}, mfaToken: str}
+@optional {rememberDevice: bool}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint GET /resources/configurations/v1/mfa-policy/allow-remember-device
+@required {mfaToken: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/mfa/enroll
+@required {frontegg-user-id: str}
+@returns(200) {qrCode: str}
+
+@endpoint POST /resources/users/v1/mfa/authenticator/enroll
+@required {frontegg-user-id: str}
+@returns(200) {qrCode: str}
+
+@endpoint POST /resources/users/v1/mfa/enroll/verify
+@required {frontegg-user-id: str, token: str}
+@returns(200) {recoveryCode: str}
+
+@endpoint POST /resources/users/v1/mfa/authenticator/enroll/verify
+@required {frontegg-user-id: str, token: str}
+@returns(200) {recoveryCode: str}
+
+@endpoint POST /resources/users/v1/mfa/sms/enroll
+@required {frontegg-user-id: str, phoneNumber: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/mfa/sms/enroll/verify
+@required {frontegg-user-id: str, otcToken: str, code: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/v1/mfa
+@optional {authenticationApp: map{active!: bool, serviceName!: str}, sms: map{active!: bool, tokenLifetimeSeconds!: num}, email: map{active!: bool, tokenLifetimeSeconds!: num, sender!: str}}
+@returns(201) {authenticationApp: map{active: bool, serviceName: str}, sms: map{active: bool, tokenLifetimeSeconds: num}, email: map{active: bool, tokenLifetimeSeconds: num, sender: str}}
+
+@endpoint GET /resources/configurations/v1/mfa
+@returns(200) {authenticationApp: map{active: bool, serviceName: str}, sms: map{active: bool, tokenLifetimeSeconds: num}, email: map{active: bool, tokenLifetimeSeconds: num, sender: str}}
+
+@endpoint POST /resources/configurations/v1/mfa-policy
+@optional {frontegg-tenant-id: str, enforceMFAType: str(DontForce/Force/ForceExceptSAML)=Force, allowRememberMyDevice: bool=False, mfaDeviceExpiration: num=1209600}
+@returns(201) {id: str, enforceMFAType: str, allowRememberMyDevice: bool, mfaDeviceExpiration: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {409}
+
+@endpoint PATCH /resources/configurations/v1/mfa-policy
+@optional {frontegg-tenant-id: str, enforceMFAType: str(DontForce/Force/ForceExceptSAML)=Force, allowRememberMyDevice: bool=False, mfaDeviceExpiration: num=1209600}
+@returns(200) {id: str, enforceMFAType: str, allowRememberMyDevice: bool, mfaDeviceExpiration: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 404}
+
+@endpoint PUT /resources/configurations/v1/mfa-policy
+@optional {frontegg-tenant-id: str, enforceMFAType: str(DontForce/Force/ForceExceptSAML)=Force, allowRememberMyDevice: bool=False, mfaDeviceExpiration: num=1209600}
+@returns(200) {id: str, enforceMFAType: str, allowRememberMyDevice: bool, mfaDeviceExpiration: num, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint GET /resources/configurations/v1/mfa-policy
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, enforceMFAType: str, allowRememberMyDevice: bool, mfaDeviceExpiration: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {404}
+
+@endpoint GET /resources/configurations/v1/mfa/strategies
+@returns(200) {strategies: [map]}
+
+@endpoint POST /resources/configurations/v1/mfa/strategies
+@required {isActive: bool, strategy: str(AuthenticatorApp/WebAuthnPlatform/WebAuthnCrossPlatform/SMS/EmailCode)}
+@returns(201)
+
+@endpoint POST /resources/configurations/v1/password
+@optional {frontegg-tenant-id: str, allowPassphrases: bool, maxLength: num, minLength: num, minPhraseLength: num, minOptionalTestsToPass: num, blockPwnedPasswords: bool, optionalTests: map{requireLowercase: bool, requireUppercase: bool, requireNumbers: bool, requireSpecialChars: bool}, requiredTests: map{checkThreeRepeatedChars: bool}}
+@returns(201) {allowPassphrases: bool, maxLength: num, minLength: num, minPhraseLength: num, minOptionalTestsToPass: num, blockPwnedPasswords: bool, optionalTests: map, requiredTests: map}
+
+@endpoint GET /resources/configurations/v1/password
+@optional {frontegg-tenant-id: str}
+@returns(200) {allowPassphrases: bool, maxLength: num, minLength: num, minPhraseLength: num, minOptionalTestsToPass: num, blockPwnedPasswords: bool, optionalTests: map, requiredTests: map}
+
+@endpoint POST /resources/configurations/v1/password-history-policy
+@required {enabled: bool=False, historySize: num=1}
+@optional {frontegg-tenant-id: str}
+@returns(201) {id: str, enabled: bool, historySize: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {409}
+
+@endpoint PATCH /resources/configurations/v1/password-history-policy
+@required {enabled: bool=False, historySize: num=1}
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, enabled: bool, historySize: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {404}
+
+@endpoint GET /resources/configurations/v1/password-history-policy
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, enabled: bool, historySize: num, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {404}
+
+@endpoint POST /resources/users/v1/passwords/reset
+@required {identifier: str, identifierType: str(email/phoneNumber/username)}
+@optional {emailMetadata: map}
+@returns(201)
+
+@endpoint POST /resources/users/v1/passwords/reset/verify
+@required {userId: str, token: str, password: str}
+@returns(201)
+
+@endpoint POST /resources/users/v1/passwords/change
+@required {frontegg-user-id: str, password: str, newPassword: str}
+@returns(201)
+
+@endpoint GET /resources/users/v1/passwords/config
+@optional {userId: str}
+@returns(200) {allowPassphrases: bool, maxLength: num, minLength: num, minPhraseLength: num, minOptionalTestsToPass: num, blockPwnedPasswords: bool, optionalTests: map, requiredTests: map}
+
+@endpoint POST /resources/users/v2/passwords/reset/email
+@required {identifier: str, identifierType: str(email/phoneNumber/username)}
+@optional {emailMetadata: map}
+@returns(200) {sessionId: str}
+
+@endpoint POST /resources/users/v2/passwords/reset/sms
+@required {identifier: str, identifierType: str(email/phoneNumber/username)}
+@optional {emailMetadata: map}
+@returns(200) {sessionId: str}
+
+@endpoint POST /resources/users/v2/passwords/reset/sms/verify
+@required {otcToken: str, sessionId: str}
+@returns(200) {userId: str, token: str}
+
+@endpoint GET /resources/configurations/v1/password-rotation
+@returns(200) {createdAt: str(date-time), updatedAt: str(date-time), isActive: bool, rotationPeriod: num, notificationPeriod: num, tenantId: str}
+@errors {404}
+
+@endpoint POST /resources/configurations/v1/password-rotation
+@optional {isActive: bool=False, rotationPeriod: num=129600, notificationPeriod: num=10080}
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/password-rotation/vendor
+@returns(200) {createdAt: str(date-time), updatedAt: str(date-time), isActive: bool, rotationPeriod: num, notificationPeriod: num, tenantId: str}
+@errors {404}
+
+@endpoint POST /resources/auth/v1/passwordless/smscode/prelogin
+@required {email: str, userId: str, username: str, phoneNumber: str}
+@optional {recaptchaToken: str, invitationToken: str}
+@returns(201) {phoneNumber: str, resetPhoneNumberToken: str}
+@errors {400}
+
+@endpoint POST /resources/auth/v1/passwordless/smscode/postlogin
+@required {token: str}
+@optional {recaptchaToken: str, invitationToken: str}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/passwordless/magiclink/prelogin
+@required {email: str, userId: str, username: str}
+@optional {recaptchaToken: str, invitationToken: str}
+@returns(200)
+@errors {400}
+
+@endpoint POST /resources/auth/v1/passwordless/magiclink/postlogin
+@required {token: str}
+@optional {recaptchaToken: str, invitationToken: str}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/auth/v1/passwordless/code/prelogin
+@required {email: str, userId: str, username: str}
+@optional {recaptchaToken: str, invitationToken: str}
+@returns(201)
+@errors {400}
+
+@endpoint POST /resources/auth/v1/passwordless/code/postlogin
+@required {token: str}
+@optional {recaptchaToken: str, invitationToken: str}
+@returns(201) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint GET /resources/permissions/v1
+@returns(200)
+
+@endpoint POST /resources/permissions/v1
+@returns(201)
+
+@endpoint DELETE /resources/permissions/v1/{permissionId}
+@required {permissionId: str}
+@returns(204)
+
+@endpoint PATCH /resources/permissions/v1/{permissionId}
+@required {permissionId: str}
+@optional {key: str, name: str, description: str, categoryId: str}
+@returns(200) {id: str, key: str, name: str, description: str, createdAt: str(date-time), updatedAt: str(date-time), roleIds: [str], categoryId: str, fePermission: bool}
+
+@endpoint PUT /resources/permissions/v1/{permissionId}/roles
+@required {permissionId: str, roleIds: [str]}
+@returns(200) {id: str, key: str, name: str, description: str, createdAt: str(date-time), updatedAt: str(date-time), roleIds: [str], categoryId: str, fePermission: bool}
+
+@endpoint PUT /resources/permissions/v1/classification
+@required {permissionIds: [str], type: str(NEVER/ALWAYS/ASSIGNABLE)}
+@returns(200) {id: str, key: str, name: str, description: str, createdAt: str(date-time), updatedAt: str(date-time), roleIds: [str], categoryId: str, fePermission: bool}
+
+@endpoint GET /resources/permissions/v1/categories
+@returns(200)
+
+@endpoint POST /resources/permissions/v1/categories
+@required {name: str}
+@optional {description: str, id: str}
+@returns(201) {id: str, name: str, description: str?, createdAt: str(date-time), feCategory: bool}
+
+@endpoint PATCH /resources/permissions/v1/categories/{categoryId}
+@required {categoryId: str}
+@optional {name: str, description: str}
+@returns(200)
+
+@endpoint DELETE /resources/permissions/v1/categories/{categoryId}
+@required {categoryId: str}
+@returns(200)
+
+@endpoint POST /resources/users/access-tokens/v1
+@required {frontegg-tenant-id: str, frontegg-user-id: str}
+@optional {description: str, expiresInMinutes: num}
+@returns(201) {id: str, description: str, createdAt: str(date-time), secret: str, expires: str(date-time)}
+
+@endpoint GET /resources/users/access-tokens/v1
+@required {frontegg-tenant-id: str, frontegg-user-id: str}
+@returns(200) {accessTokens: [map]}
+
+@endpoint DELETE /resources/users/access-tokens/v1/{id}
+@required {frontegg-tenant-id: str, frontegg-user-id: str, id: str}
+@returns(200)
+
+@endpoint POST /resources/users/api-tokens/v1
+@required {frontegg-tenant-id: str, frontegg-user-id: str}
+@optional {metadata: map, description: str, expiresInMinutes: num}
+@returns(201) {clientId: str, description: str, metadata: map, createdAt: str(date-time), secret: str, expires: str(date-time)}
+
+@endpoint GET /resources/users/api-tokens/v1
+@required {frontegg-tenant-id: str, frontegg-user-id: str}
+@returns(200)
+
+@endpoint DELETE /resources/users/api-tokens/v1/{id}
+@required {frontegg-tenant-id: str, frontegg-user-id: str, id: str}
+@returns(200)
+
+@endpoint GET /resources/roles/v1
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/roles/v1
+@optional {frontegg-tenant-id: str}
+@returns(201)
+
+@endpoint DELETE /resources/roles/v1/{roleId}
+@required {roleId: str}
+@optional {frontegg-tenant-id: str}
+@returns(204)
+
+@endpoint PATCH /resources/roles/v1/{roleId}
+@required {roleId: str}
+@optional {frontegg-tenant-id: str, isDefault: bool, firstUserRole: bool, migrateRole: bool, level: num, key: str, name: str, description: str}
+@returns(200) {id: str, vendorId: str, tenantId: str, key: str, name: str, description: str, isDefault: bool, firstUserRole: bool, level: num, createdAt: str(date-time), updatedAt: str(date-time), permissions: [str]}
+
+@endpoint PUT /resources/roles/v1/{roleId}/permissions
+@required {roleId: str, permissionIds: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, vendorId: str, tenantId: str, key: str, name: str, description: str, isDefault: bool, firstUserRole: bool, level: num, createdAt: str(date-time), updatedAt: str(date-time), permissions: [str]}
+
+@endpoint PUT /resources/roles/v1/{roleId}/tenant
+@required {roleId: str, tenantId: str}
+@returns(200) {id: str, vendorId: str, tenantId: str, key: str, name: str, description: str, isDefault: bool, firstUserRole: bool, level: num, createdAt: str(date-time), updatedAt: str(date-time), permissions: [str]}
+
+@endpoint GET /resources/users/phone-numbers/v1
+@optional {_limit: num, _offset: num, _sortBy: str(userId/phoneNumber), _order: str(ASC/DESC), _phoneNumber: str}
+@returns(200)
+
+@endpoint POST /resources/users/phone-numbers/v1
+@required {phoneNumber: str}
+@optional {verify: bool=True}
+@returns(201)
+
+@endpoint POST /resources/users/phone-numbers/v1/preverify
+@required {phoneNumber: str}
+@returns(200)
+
+@endpoint POST /resources/users/phone-numbers/v1/verify
+@required {otcToken: str, code: str}
+@returns(200)
+
+@endpoint DELETE /resources/users/phone-numbers/v1/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint POST /resources/users/phone-numbers/v1/{id}/delete/verify
+@required {id: str, otcToken: str, code: str}
+@returns(200)
+
+@endpoint GET /resources/users/phone-numbers/v1/me
+@required {frontegg-user-id: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/users/phone-numbers/v2
+@optional {_limit: num, _offset: num, _sortBy: str(userId/phoneNumber), _order: str(ASC/DESC), _phoneNumber: str, userIds: [str]}
+@returns(200)
+
+@endpoint POST /resources/configurations/v1/sms
+@optional {senderName: str, accountId: str, token: str, serviceId: str, provider: str, channel: str}
+@returns(200)
+@returns(201)
+
+@endpoint DELETE /resources/configurations/v1/sms
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/sms
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/sms/templates
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/sms/templates/{type}
+@required {type: str}
+@returns(200)
+
+@endpoint DELETE /resources/configurations/v1/sms/templates/{type}
+@required {type: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/v1/sms/templates/{type}
+@required {type: str}
+@returns(200)
+@returns(201)
+
+@endpoint GET /resources/configurations/v1/sms/templates/{type}/default
+@required {type: str}
+@returns(200)
+
+@endpoint GET /resources/configurations/v1/sms/templates/default/all
+@returns(200)
+
+@endpoint GET /resources/configurations/sessions/v1/vendor
+@returns(200)
+
+@endpoint GET /resources/configurations/sessions/v1
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/configurations/sessions/v1
+@optional {frontegg-tenant-id: str, sessionIdleTimeoutConfiguration: map{isActive!: bool, timeout!: num}, sessionTimeoutConfiguration: map{isActive!: bool, timeout!: num}, sessionConcurrentConfiguration: map{isActive!: bool, maxSessions!: num}}
+@returns(201)
+
+@endpoint GET /resources/configurations/v1/user-emails-policy
+@returns(200) {allowEmailChange: bool}
+
+@endpoint POST /resources/configurations/v1/user-emails-policy
+@optional {allowEmailChange: bool}
+@returns(200)
+
+@endpoint GET /resources/groups/v1
+@optional {_groupsRelations: str(roles/users/rolesAndUsers), frontegg-tenant-id: str}
+@returns(200) {groups: [map]}
+
+@endpoint POST /resources/groups/v1
+@required {name: str}
+@optional {frontegg-tenant-id: str, color: str, description: str, metadata: str}
+@returns(201) {id: str, name: str, color: str, description: str, metadata: str, roles: [map], users: [map], managedBy: str, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint POST /resources/groups/v1/bulkGet
+@required {groupsIds: [str]}
+@optional {_groupsRelations: str(roles/users/rolesAndUsers), frontegg-tenant-id: str}
+@returns(201) {groups: [map]}
+
+@endpoint PATCH /resources/groups/v1/{id}
+@required {id: str}
+@optional {frontegg-tenant-id: str, color: str, description: str, metadata: str, name: str}
+@returns(200) {id: str, name: str, color: str, description: str, metadata: str, roles: [map], users: [map], managedBy: str, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint DELETE /resources/groups/v1/{id}
+@required {id: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/groups/v1/{id}
+@required {id: str}
+@optional {_groupsRelations: str(roles/users/rolesAndUsers), frontegg-tenant-id: str}
+@returns(200) {id: str, name: str, color: str, description: str, metadata: str, roles: [map], users: [map], managedBy: str, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint GET /resources/groups/v1/config
+@returns(200) {enabled: bool, rolesEnabled: bool}
+
+@endpoint POST /resources/groups/v1/config
+@optional {enabled: bool=True, rolesEnabled: bool=True}
+@returns(201)
+
+@endpoint POST /resources/groups/v1/{groupId}/roles
+@required {groupId: str, roleIds: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(201)
+
+@endpoint DELETE /resources/groups/v1/{groupId}/roles
+@required {groupId: str, roleIds: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/groups/v1/{groupId}/users
+@required {groupId: str, userIds: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(201)
+
+@endpoint DELETE /resources/groups/v1/{groupId}/users
+@required {groupId: str, userIds: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/groups/v2
+@optional {_groupsRelations: str(roles/users/rolesAndUsers), _limit: num, _offset: num, _sortBy: str(id/name/createdAt/updatedAt), _order: str(ASC/DESC), frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/tenants/users/v1/{userId}/disable
+@required {userId: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+@returns(201)
+@errors {403}
+
+@endpoint POST /resources/tenants/users/v1/{userId}/enable
+@required {userId: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+@returns(201)
+@errors {403}
+
+@endpoint PUT /resources/users/temporary/v1/{userId}
+@required {userId: str, expirationInSeconds: num}
+@returns(201) {expirationInSeconds: num}
+
+@endpoint DELETE /resources/users/temporary/v1/{userId}
+@required {userId: str}
+@returns(200)
+
+@endpoint GET /resources/users/temporary/v1/configuration
+@returns(200) {enabled: bool}
+
+@endpoint PUT /resources/users/temporary/v1/configuration
+@required {enabled: bool}
+@returns(200) {enabled: bool}
+
+@endpoint GET /resources/users/emails/v1
+@optional {_limit: num, _offset: num, _sortBy: str(userId/email), _order: str(ASC/DESC), _email: str, userIds: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/emails/v1
+@required {email: str}
+@optional {frontegg-tenant-id: str}
+@returns(200) {id: str, userId: str, email: str, verified: bool, isPrimary: bool, createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(201) {id: str, userId: str, email: str, verified: bool, isPrimary: bool, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint POST /resources/users/emails/v1/verify
+@required {code: str, email: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint DELETE /resources/users/emails/v1/{emailId}
+@required {emailId: str, frontegg-user-id: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/emails/v1/vendor/{userId}
+@required {userId: str, email: str}
+@optional {isVerified: bool}
+@returns(200) {id: str, userId: str, email: str, verified: bool, isPrimary: bool, createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(201) {id: str, userId: str, email: str, verified: bool, isPrimary: bool, createdAt: str(date-time), updatedAt: str(date-time)}
+
+@endpoint DELETE /resources/users/emails/v1/vendor/{userId}/{emailId}
+@required {userId: str, emailId: str}
+@returns(200)
+
+@endpoint POST /resources/users/emails/v1/vendor/{userId}/primary
+@required {userId: str, email: str}
+@returns(200)
+
+@endpoint POST /resources/users/emails/v1/me/primary
+@required {email: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/users/emails/v1/me
+@required {frontegg-user-id: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint PUT /resources/sub-tenants/users/v1/{userId}/access
+@required {userId: str, allowAccess: bool}
+@returns(200)
+
+@endpoint POST /resources/users/v1/activate/reset
+@required {email: str(email), emailMetadata: map}
+@returns(201)
+
+@endpoint POST /resources/users/v1/invitation/reset
+@required {frontegg-tenant-id: str, email: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/invitation/reset/all
+@required {frontegg-tenant-id: str, email: str}
+@returns(200)
+
+@endpoint GET /resources/users/v3
+@optional {_limit: num, _identifier: str, _identifierType: str(email/phoneNumber/username), _includeSubTenants: bool=True, _namePrefix: str, _offset: num, _email: str, _tenantId: str, ids: str, _sortBy: str(createdAt/name/email/id/verified/isLocked/provider/tenantId), _order: str(ASC/DESC), _externalIds: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/users/v3/roles
+@required {ids: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/users/v3/groups
+@required {ids: [str]}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/v3/me/unlock
+@required {token: str}
+@returns(200)
+
+@endpoint POST /resources/users/v2
+@required {frontegg-tenant-id: str}
+@optional {email: str(email), username: str, name: str, profilePictureUrl: str, password: str, phoneNumber: str, provider: str(local/saml/google/github/facebook/microsoft/scim2/slack/apple)=local, metadata: str, skipInviteEmail: bool, roleIds: [str], emailMetadata: map, expirationInSeconds: num}
+@returns(201) {id: str, email: str, verified: bool, name: str, profilePictureUrl: str, roles: [str], permissions: [str], metadata: str, createdAt: str(date-time), lastLogin: str(date-time), activatedForTenant: bool, temporaryExpirationDate: str(date-time)}
+
+@endpoint PUT /resources/users/v2/me
+@optional {phoneNumber: str, profilePictureUrl: str, metadata: str, name: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint GET /resources/users/v2/me
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/users/v1
+@required {frontegg-tenant-id: str}
+@optional {email: str(email), username: str, name: str, profilePictureUrl: str, password: str, phoneNumber: str, provider: str(local/saml/google/github/facebook/microsoft/scim2/slack/apple)=local, metadata: str, skipInviteEmail: bool, roleIds: [str], emailMetadata: map, expirationInSeconds: num}
+@returns(201) {id: str, email: str, verified: bool, name: str, profilePictureUrl: str, roles: [str], permissions: [str], metadata: str, createdAt: str(date-time), lastLogin: str(date-time), activatedForTenant: bool, temporaryExpirationDate: str(date-time)}
+
+@endpoint PUT /resources/users/v1
+@required {frontegg-tenant-id: str, frontegg-user-id: str}
+@optional {phoneNumber: str, profilePictureUrl: str, metadata: str, name: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint DELETE /resources/users/v1/{userId}
+@required {userId: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint PUT /resources/users/v1/{userId}
+@required {userId: str}
+@optional {phoneNumber: str, profilePictureUrl: str, metadata: str, vendorMetadata: str, mfaBypass: bool, externalId: str, name: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/users/v1/{userId}/roles
+@required {userId: str, frontegg-tenant-id: str, roleIds: [str]}
+@returns(201) {tenantId: str, userId: str, roles: [map]}
+
+@endpoint DELETE /resources/users/v1/{userId}/roles
+@required {userId: str, frontegg-tenant-id: str, roleIds: [str]}
+@returns(200) {tenantId: str, userId: str, roles: [map]}
+
+@endpoint PUT /resources/users/v1/tenant
+@required {frontegg-tenant-id: str, frontegg-user-id: str, tenantId: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint GET /resources/users/v1/query/phrase
+@optional {_limit: num, _identifier: str, _identifierType: str(email/phoneNumber/username), _includeSubTenants: bool=True, _namePrefix: str, _phraseSearchContains: [str], _phraseSearchExcludes: [str], _phraseSearchOptional: [str], _phraseSearchApproximate: bool=False, _offset: num, _email: str, _tenantId: str, ids: str, _sortBy: str(createdAt/name/email/id/verified/isLocked/provider/tenantId), _order: str(ASC/DESC), _externalIds: str, frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint GET /resources/usernames/v1
+@optional {_limit: num, _offset: num, _sortBy: str(userId/username), _order: str(ASC/DESC), _usernamePrefix: str, userIds: [str], usernames: [str]}
+@returns(200) {username: str, userId: str}
+
+@endpoint POST /resources/usernames/v1
+@required {username: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+@returns(201)
+
+@endpoint DELETE /resources/usernames/v1/{username}
+@required {username: str}
+@returns(200)
+
+@endpoint GET /resources/usernames/v1/me
+@required {frontegg-user-id: str}
+@optional {frontegg-tenant-id: str}
+@returns(200) {username: str, userId: str}
+
+@endpoint POST /resources/users/v1/email/me
+@required {email: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/email/me/verify
+@required {code: str, email: str}
+@optional {frontegg-tenant-id: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/activate
+@required {frontegg-vendor-host: str, userId: str, token: str}
+@optional {password: str, recaptchaToken: str, lastTermsCheck: str}
+@returns(200) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint POST /resources/users/v1/activate/code
+@required {frontegg-vendor-host: str, userId: str, token: str, code: str}
+@optional {password: str, recaptchaToken: str, lastTermsCheck: str}
+@returns(200) {tokenType: str, otcToken: str, mfaRequired: bool, mfaToken: str, resetPasswordToken: str, passwordExpiresIn: num, notificationPeriod: num, mfaEnrolled: bool, mfaDevices: map{webauthn: [map], phones: [map], authenticators: [map], emails: [map]}, mfaStrategies: map, qrCode: str, recoveryCode: str, accessToken: str, refreshToken: str, expiresIn: num, expires: str, userId: str, userEmail: str, emailVerified: bool, isBreachedPassword: bool}
+
+@endpoint GET /resources/users/v1/activate/strategy
+@required {userId: str, token: str}
+@returns(200) {shouldSetPassword: bool}
+
+@endpoint POST /resources/users/v1/invitation/accept
+@required {userId: str, token: str}
+@returns(200)
+@returns(201)
+
+@endpoint POST /resources/users/v1/invitation/accept/code
+@required {userId: str, token: str, code: str}
+@returns(200)
+
+@endpoint GET /resources/users/v3/me
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint GET /resources/users/v2/me/tenants
+@required {frontegg-user-id: str}
+@returns(200)
+
+@endpoint GET /resources/users/v2/me/hierarchy
+@returns(200)
+
+@endpoint GET /resources/users/v1/me/authorization
+@returns(200) {roles: [map], permissions: [map]}
+
+@endpoint GET /resources/users/v1/me/tenants
+@returns(200)
+
+@endpoint GET /resources/user-sources/v1
+@returns(200)
+
+@endpoint GET /resources/user-sources/v1/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, type: str, description: str, appIds: [str], index: num, configuration: map}
+
+@endpoint DELETE /resources/user-sources/v1/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint POST /resources/user-sources/v1/external/auth0
+@required {name: str, configuration: any, index: num}
+@optional {appIds: [str], description: str}
+@returns(201) {id: str, name: str, type: str, appIds: [str], description: str, index: num}
+
+@endpoint POST /resources/user-sources/v1/external/cognito
+@required {name: str, configuration: any, index: num}
+@optional {appIds: [str], description: str}
+@returns(201) {id: str, name: str, type: str, appIds: [str], description: str, index: num}
+
+@endpoint POST /resources/user-sources/v1/external/firebase
+@required {name: str, configuration: any, index: num}
+@optional {appIds: [str], description: str}
+@returns(201) {id: str, name: str, type: str, appIds: [str], description: str, index: num}
+
+@endpoint POST /resources/user-sources/v1/external/custom-code
+@required {name: str, configuration: any, index: num}
+@optional {appIds: [str], description: str}
+@returns(201) {id: str, name: str, type: str, appIds: [str], description: str, index: num}
+
+@endpoint POST /resources/user-sources/v1/federation
+@required {name: str, configuration: any, index: num}
+@optional {appIds: [str], description: str}
+@returns(201) {id: str, name: str, type: str, appIds: [str], description: str, index: num}
+
+@endpoint PUT /resources/user-sources/v1/external/auth0/{id}
+@required {id: str}
+@optional {name: str, configuration: any, index: num, description: str}
+@returns(200)
+
+@endpoint PUT /resources/user-sources/v1/external/cognito/{id}
+@required {id: str}
+@optional {name: str, configuration: any, index: num, description: str}
+@returns(200)
+
+@endpoint PUT /resources/user-sources/v1/external/firebase/{id}
+@required {id: str}
+@optional {name: str, configuration: any, index: num, description: str}
+@returns(200)
+
+@endpoint PUT /resources/user-sources/v1/external/custom-code/{id}
+@required {id: str}
+@optional {name: str, configuration: any, index: num, description: str}
+@returns(200)
+
+@endpoint PUT /resources/user-sources/v1/federation/{id}
+@required {id: str}
+@optional {name: str, configuration: any, index: num, description: str}
+@returns(200)
+
+@endpoint POST /resources/user-sources/v1/assign
+@required {appIds: [str], userSourceId: str}
+@returns(201)
+
+@endpoint POST /resources/user-sources/v1/unassign
+@required {appIds: [str], userSourceId: str}
+@returns(201)
+
+@endpoint GET /resources/user-sources/v1/{id}/users
+@required {id: str}
+@returns(200)
+
+@endpoint GET /resources/users/sessions/v1/me
+@required {frontegg-user-id: str}
+@returns(200)
+
+@endpoint DELETE /resources/users/sessions/v1/me/all
+@required {frontegg-user-id: str}
+@returns(200)
+
+@endpoint DELETE /resources/users/sessions/v1/me/{id}
+@required {id: str, frontegg-user-id: str}
+@returns(200)
+
+@endpoint GET /resources/vendor-only/users/v1/{userId}
+@required {userId: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/vendor-only/users/v1/{userId}/mfa/unenroll
+@required {userId: str}
+@returns(200)
+
+@endpoint POST /resources/vendor-only/users/v1/passwords/verify
+@required {email: str, password: str}
+@returns(200)
+
+@endpoint POST /resources/vendor-only/users/v1
+@required {tenantId: str}
+@optional {email: str, username: str, name: str, password: str, phoneNumber: str, metadata: str, vendorMetadata: str, roleIds: [str], expirationInSeconds: num, mfaBypass: bool, externalId: str}
+@returns(201) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint GET /resources/tenants/users/v1/statuses
+@required {userIds: [str]}
+@optional {userTenantStatuses: [str]}
+@returns(200) {userId: str, tenantsStatuses: [map]}
+
+@endpoint POST /resources/users/phone-numbers/v1/vendor/{userId}
+@required {userId: str, phoneNumber: str}
+@returns(201)
+
+@endpoint DELETE /resources/users/phone-numbers/v1/vendor/{userId}/{phoneId}
+@required {phoneId: str, userId: str}
+@returns(200)
+
+@endpoint POST /resources/users/bulk/v1/invite
+@required {frontegg-tenant-id: str, users: [map{email: str(email), username: str, name: str, profilePictureUrl: str, password: str, phoneNumber: str, provider: str, metadata: str, skipInviteEmail: bool, roleIds: [str], emailMetadata: map, expirationInSeconds: num, verified: bool}]}
+@returns(202)
+
+@endpoint GET /resources/users/bulk/v1/status/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint GET /resources/users/v1/email
+@required {email: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint GET /resources/users/v1/{id}
+@required {id: str, frontegg-tenant-id: str}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/users/v1/{userId}/verify
+@required {userId: str}
+@returns(200)
+
+@endpoint PUT /resources/users/v1/{userId}/invisible
+@required {userId: str, invisible: bool}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint PUT /resources/users/v1/{userId}/superuser
+@required {userId: str, superUser: bool}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint PUT /resources/users/v1/{userId}/tenant
+@required {userId: str, tenantId: str}
+@optional {validateTenantExist: bool}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/users/v1/{userId}/tenant
+@required {userId: str, tenantId: str}
+@optional {validateTenantExist: bool, skipInviteEmail: bool}
+@returns(201) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint PUT /resources/users/v1/{userId}/email
+@required {userId: str, email: str(email)}
+@returns(200) {id: str, email: str, name: str, profilePictureUrl: str, sub: str, verified: bool, mfaEnrolled: bool, mfaBypass: bool, phoneNumber: str, roles: [map], permissions: [map], provider: str, tenantId: str, tenantIds: [str], activatedForTenant: bool, isLocked: bool, tenants: [map], invisible: bool, superUser: bool, metadata: str, vendorMetadata: str, externalId: str, createdAt: str(date-time), lastLogin: str(date-time), groups: [map], subAccountAccessAllowed: bool, managedBy: str}
+
+@endpoint POST /resources/users/v1/{userId}/links/generate-activation-token
+@required {userId: str}
+@returns(201) {link: str, token: str, userId: str}
+
+@endpoint POST /resources/users/v1/{userId}/links/generate-password-reset-token
+@required {userId: str}
+@returns(201) {link: str, token: str, userId: str}
+
+@endpoint POST /resources/users/v1/{userId}/unlock
+@required {userId: str}
+@returns(200)
+
+@endpoint POST /resources/users/v1/{userId}/lock
+@required {userId: str}
+@returns(200)
+
+@endpoint PUT /resources/users/v1/tenants/migrate
+@required {srcTenantId: str, targetTenantId: str}
+@returns(200)
+
+@endpoint GET /resources/applications/v1/{appId}/users
+@required {appId: str}
+@returns(200)
+
+@endpoint GET /resources/applications/v1/{userId}/apps
+@required {userId: str}
+@returns(200)
+
+@endpoint POST /resources/applications/v1
+@required {appId: str, tenantId: str, userIds: [str]}
+@returns(201)
+
+@endpoint DELETE /resources/applications/v1
+@required {appId: str, tenantId: str, userIds: [str]}
+@returns(200)
+
+@endpoint GET /resources/applications/user-tenants/active/v1
+@required {frontegg-user-id: str}
+@returns(200) {applicationActiveTenants: [map]}
+
+@endpoint PUT /resources/applications/user-tenants/active/v1
+@required {frontegg-user-id: str, activeApplicationTenants: [map{applicationId!: str, tenantId!: str}]}
+@returns(200)
+
+@end

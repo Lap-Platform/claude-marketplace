@@ -1,0 +1,118 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Platform API
+@base https://rest.ably.io
+@version 1.1.1
+@auth Bearer basic | Bearer bearer
+@endpoints 22
+@hint download_for_search
+@toc channels(6), push(13), keys(1), stats(1), time(1)
+
+@group channels
+@endpoint GET /channels/{channel_id}/messages
+@required {channel_id: str}
+@optional {start: str, limit: int=100, end: str=now, direction: str(forwards/backwards)=backwards}
+@returns(2XX)
+
+@endpoint POST /channels/{channel_id}/messages
+@required {channel_id: str}
+@optional {name: str, data: str, id: str, timestamp: int(int64), encoding: str, clientId: str, connectionId: str, extras: map{push: map{data: str, notification: map, apns: map, fcm: map, web: map}}}
+@returns(2XX) {channel: str, messageId: str}
+
+@endpoint GET /channels/{channel_id}/presence
+@required {channel_id: str}
+@optional {clientId: str, connectionId: str, limit: int=100}
+@returns(200)
+
+@endpoint GET /channels/{channel_id}/presence/history
+@required {channel_id: str}
+@optional {start: str, limit: int=100, end: str=now, direction: str(forwards/backwards)=backwards}
+@returns(2XX)
+
+@endpoint GET /channels/{channel_id}
+@required {channel_id: str}
+@returns(200) {channelId: str, region: str, isGlobalMaster: bool, status: map{isActive: bool, occupancy: map{publishers: int, subscribers: int, presenceSubscribers: int, presenceConnections: int, presenceMembers: int}}}
+
+@endpoint GET /channels
+@optional {limit: int=100, prefix: str, by: str(value/id)}
+@returns(2XX)
+
+@endgroup
+
+@group push
+@endpoint GET /push/deviceRegistrations
+@optional {deviceId: str, clientId: str, limit: int=100}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint POST /push/deviceRegistrations
+@optional {id: str, clientId: str, formFactor: str(phone/tablet/desktop/tv/watch/car/embedded), metadata: map, platform: str(ios/android/browser), deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str(Active/Failing/Failed)}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint DELETE /push/deviceRegistrations
+@optional {deviceId: str, clientId: str}
+@returns(2XX)
+
+@endpoint GET /push/deviceRegistrations/{device_id}
+@required {device_id: str}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint PUT /push/deviceRegistrations/{device_id}
+@required {device_id: str}
+@optional {id: str, clientId: str, formFactor: str(phone/tablet/desktop/tv/watch/car/embedded), metadata: map, platform: str(ios/android/browser), deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str(Active/Failing/Failed)}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint PATCH /push/deviceRegistrations/{device_id}
+@required {device_id: str}
+@optional {id: str, clientId: str, formFactor: str(phone/tablet/desktop/tv/watch/car/embedded), metadata: map, platform: str(ios/android/browser), deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str(Active/Failing/Failed)}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint DELETE /push/deviceRegistrations/{device_id}
+@required {device_id: str}
+@returns(2XX)
+
+@endpoint GET /push/deviceRegistrations/{device_id}/resetUpdateToken
+@required {device_id: str}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint GET /push/channelSubscriptions
+@optional {channel: str, deviceId: str, clientId: str, limit: int=100}
+@returns(2XX) {id: str, clientId: str, formFactor: str, metadata: map, platform: str, deviceSecret: str, push.recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}, push.state: str}
+
+@endpoint POST /push/channelSubscriptions
+@returns(2XX)
+
+@endpoint DELETE /push/channelSubscriptions
+@optional {channel: str, deviceId: str, clientId: str}
+@returns(2XX)
+
+@endpoint GET /push/channels
+@returns(2XX)
+
+@endpoint POST /push/publish
+@required {recipient: map{transportType: str, deviceToken: str, registrationToken: str, encryptionKey: map, clientId: str, deviceId: str}}
+@optional {push: map{data: str, notification: map{title: str, body: str, icon: str, sound: str, collapseKey: str}, apns: map{notification: map}, fcm: map{notification: map}, web: map{notification: map}}}
+@returns(2XX)
+
+@endgroup
+
+@group keys
+@endpoint POST /keys/{keyName}/requestToken
+@required {keyName: str}
+@returns(2XX) {token: str, keyName: str, issued: int, expires: int, capability: str}
+
+@endgroup
+
+@group stats
+@endpoint GET /stats
+@optional {start: str, limit: int=100, end: str=now, direction: str(forwards/backwards)=backwards, unit: str(minute/hour/day/month)=minute}
+@returns(2XX)
+
+@endgroup
+
+@group time
+@endpoint GET /time
+@returns(2XX)
+
+@endgroup
+
+@end

@@ -1,0 +1,230 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Replicate HTTP API
+@base https://api.replicate.com/v1
+@version 1.0.0-a1
+@auth Bearer bearer
+@endpoints 36
+@hint download_for_search
+@toc account(1), collections(2), deployments(6), files(5), hardware(1), models(12), predictions(4), search(1), trainings(3), webhooks(1)
+
+@group account
+@endpoint GET /account
+@desc Get the authenticated account
+@returns(200) {avatar_url: str(uri), github_url: str(uri), name: str, type: str, username: str} # Success
+
+@endgroup
+
+@group collections
+@endpoint GET /collections
+@desc List collections of models
+@returns(200) {next: str?, previous: str?, results: [map]} # Success
+
+@endpoint GET /collections/{collection_slug}
+@desc Get a collection of models
+@required {collection_slug: str # The slug of the collection, like `super-resolution` or `image-restoration`. See [replicate.com/collections](https://replicate.com/collections).}
+@returns(200) {description: str, full_description: str?, models: [map], name: str, slug: str} # Success
+
+@endgroup
+
+@group deployments
+@endpoint GET /deployments
+@desc List deployments
+@returns(200) {next: str?, previous: str?, results: [map]} # Success
+
+@endpoint POST /deployments
+@desc Create a deployment
+@required {hardware: str # The SKU for the hardware used to run the model. Possible values can be retrieved from the `hardware.list` endpoint., max_instances: int # The maximum number of instances for scaling., min_instances: int # The minimum number of instances for scaling., model: str # The full name of the model that you want to deploy e.g. stability-ai/sdxl., name: str # The name of the deployment., version: str # The 64-character string ID of the model version that you want to deploy.}
+@returns(200) {current_release: map{configuration: map{hardware: str, max_instances: int, min_instances: int}, created_at: str(date-time), created_by: map{avatar_url: str(uri), github_url: str(uri), name: str, type: str, username: str}, model: str, number: int, version: str}, name: str, owner: str} # Success
+
+@endpoint DELETE /deployments/{deployment_owner}/{deployment_name}
+@desc Delete a deployment
+@required {deployment_owner: str # The name of the user or organization that owns the deployment., deployment_name: str # The name of the deployment.}
+@returns(204) Success
+
+@endpoint GET /deployments/{deployment_owner}/{deployment_name}
+@desc Get a deployment
+@required {deployment_owner: str # The name of the user or organization that owns the deployment., deployment_name: str # The name of the deployment.}
+@returns(200) {current_release: map{configuration: map{hardware: str, max_instances: int, min_instances: int}, created_at: str(date-time), created_by: map{avatar_url: str(uri), github_url: str(uri), name: str, type: str, username: str}, model: str, number: int, version: str}, name: str, owner: str} # Success
+
+@endpoint PATCH /deployments/{deployment_owner}/{deployment_name}
+@desc Update a deployment
+@required {deployment_owner: str # The name of the user or organization that owns the deployment., deployment_name: str # The name of the deployment.}
+@optional {hardware: str # The SKU for the hardware used to run the model. Possible values can be retrieved from the `hardware.list` endpoint., max_instances: int # The maximum number of instances for scaling., min_instances: int # The minimum number of instances for scaling., version: str # The ID of the model version that you want to deploy}
+@returns(200) {current_release: map{configuration: map{hardware: str, max_instances: int, min_instances: int}, created_at: str(date-time), created_by: map{avatar_url: str(uri), github_url: str(uri), name: str, type: str, username: str}, model: str, number: int, version: str}, name: str, owner: str} # Success
+
+@endpoint POST /deployments/{deployment_owner}/{deployment_name}/predictions
+@desc Create a prediction using a deployment
+@required {deployment_owner: str # The name of the user or organization that owns the deployment., deployment_name: str # The name of the deployment., input: map # The model's input as a JSON object. The input schema depends on what model you are running. To see the available inputs, click the "API" tab on the model you are running or [get the model version](#models.versions.get) and look at its `openapi_schema` property. For example, [stability-ai/sdxl](https://replicate.com/stability-ai/sdxl) takes `prompt` as an input.  Files should be passed as HTTP URLs or data URLs.  Use an HTTP URL when:  - you have a large file > 256kb - you want to be able to use the file multiple times - you want your prediction metadata to be associable with your input files  Use a data URL when:  - you have a small file <= 256kb - you don't want to upload and host the file somewhere - you don't need to use the file again (Replicate will not store it)}
+@optional {Prefer: str # Leave the request open and wait for the model to finish generating output. Set to `wait=n` where n is a number of seconds between 1 and 60.  See https://replicate.com/docs/topics/predictions/create-a-prediction#sync-mode for more information., Cancel-After: str # The maximum time the prediction can run before it is automatically canceled. The lifetime is measured from when the prediction is created.  The duration can be specified as string with an optional unit suffix: - `s` for seconds (e.g., `30s`, `90s`) - `m` for minutes (e.g., `5m`, `15m`) - `h` for hours (e.g., `1h`, `2h30m`) - defaults to seconds if no unit suffix is provided (e.g. `30` is the same as `30s`)  You can combine units for more precision (e.g., `1h30m45s`).  The minimum allowed duration is 5 seconds., stream: bool # **This field is deprecated.**  Request a URL to receive streaming output using [server-sent events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events).  This field is no longer needed as the returned prediction will always have a `stream` entry in its `urls` property if the model supports streaming., webhook: str # An HTTPS URL for receiving a webhook when the prediction has new output. The webhook will be a POST request where the request body is the same as the response body of the [get prediction](#predictions.get) operation. If there are network problems, we will retry the webhook a few times, so make sure it can be safely called more than once. Replicate will not follow redirects when sending webhook requests to your service, so be sure to specify a URL that will resolve without redirecting., webhook_events_filter: [str] # By default, we will send requests to your webhook URL whenever there are new outputs or the prediction has finished. You can change which events trigger webhook requests by specifying `webhook_events_filter` in the prediction request:  - `start`: immediately on prediction start - `output`: each time a prediction generates an output (note that predictions can generate multiple outputs) - `logs`: each time log output is generated by a prediction - `completed`: when the prediction reaches a terminal state (succeeded/canceled/failed)  For example, if you only wanted requests to be sent at the start and end of the prediction, you would provide:  ```json {   "input": {     "text": "Alice"   },   "webhook": "https://example.com/my-webhook",   "webhook_events_filter": ["start", "completed"] } ```  Requests for event types `output` and `logs` will be sent at most once every 500ms. If you request `start` and `completed` webhooks, then they'll always be sent regardless of throttling.}
+@returns(201) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Prediction has been created. If the `Prefer: wait` header is provided it will contain the final output.
+@returns(202) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Prediction has been created but does not yet have all outputs
+
+@endgroup
+
+@group files
+@endpoint GET /files
+@desc List files
+@returns(200) {next: str(uri)?, previous: str(uri)?, results: [map]} # Success
+
+@endpoint POST /files
+@desc Create a file
+@returns(201) {checksums: map{sha256: str}, content_type: str, created_at: str(date-time), expires_at: str(date-time), id: str, metadata: map, size: int, urls: map{get: str(uri)}} # File has been created
+@errors {413: Content Too Large}
+
+@endpoint DELETE /files/{file_id}
+@desc Delete a file
+@required {file_id: str # The ID of the file to delete}
+@returns(204) File has been deleted
+@errors {404: File not found}
+
+@endpoint GET /files/{file_id}
+@desc Get a file
+@required {file_id: str # The ID of the file to get}
+@returns(200) {checksums: map{sha256: str}, content_type: str, created_at: str(date-time), expires_at: str(date-time), id: str, metadata: map, size: int, urls: map{get: str(uri)}} # Success
+@errors {404: File not found}
+
+@endpoint GET /files/{file_id}/download
+@desc Download a file
+@required {file_id: str # The ID of the file to download, owner: str # The username of the user or organization that uploaded the file, expiry: int(int64) # A Unix timestamp with expiration date of this download URL, signature: str # A base64-encoded HMAC-SHA256 checksum of the string '{owner} {id} {expiry}' generated with the Files API signing secret}
+@returns(200) Success
+@errors {404: File not found}
+
+@endgroup
+
+@group hardware
+@endpoint GET /hardware
+@desc List available hardware for models
+@returns(200) Success
+
+@endgroup
+
+@group models
+@endpoint GET /models
+@desc List public models
+@optional {sort_by: str(model_created_at/latest_version_created_at)=latest_version_created_at # Field to sort models by. Defaults to `latest_version_created_at`., sort_direction: str(asc/desc)=desc # Sort direction. Defaults to `desc` (descending, newest first).}
+@returns(200) {next: str?, previous: str?, results: [map]} # Success
+
+@endpoint POST /models
+@desc Create a model
+@required {hardware: str # The SKU for the hardware used to run the model. Possible values can be retrieved from the `hardware.list` endpoint., name: str # The name of the model. This must be unique among all models owned by the user or organization., owner: str # The name of the user or organization that will own the model. This must be the same as the user or organization that is making the API request. In other words, the API token used in the request must belong to this user or organization., visibility: str(public/private) # Whether the model should be public or private. A public model can be viewed and run by anyone, whereas a private model can be viewed and run only by the user or organization members that own the model.}
+@optional {cover_image_url: str # A URL for the model's cover image. This should be an image file., description: str # A description of the model., github_url: str # A URL for the model's source code on GitHub., license_url: str # A URL for the model's license., paper_url: str # A URL for the model's paper.}
+@returns(201) {cover_image_url: str(uri)?, default_example: map?, description: str?, github_url: str(uri)?, is_official: bool, latest_version: map?, license_url: str(uri)?, name: str, owner: str, paper_url: str(uri)?, run_count: int, url: str(uri), visibility: str} # Success
+
+@endpoint DELETE /models/{model_owner}/{model_name}
+@desc Delete a model
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model.}
+@returns(204) Success
+
+@endpoint GET /models/{model_owner}/{model_name}
+@desc Get a model
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model.}
+@returns(200) {cover_image_url: str(uri)?, default_example: map?, description: str?, github_url: str(uri)?, is_official: bool, latest_version: map?, license_url: str(uri)?, name: str, owner: str, paper_url: str(uri)?, run_count: int, url: str(uri), visibility: str} # Success
+
+@endpoint PATCH /models/{model_owner}/{model_name}
+@desc Update metadata for a model
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model.}
+@optional {description: str # A description of the model., github_url: str # A URL for the model's source code on GitHub., license_url: str # A URL for the model's license., paper_url: str # A URL for the model's paper., readme: str # The README content of the model., weights_url: str # A URL for the model's weights.}
+@returns(200) {cover_image_url: str(uri)?, default_example: map?, description: str?, github_url: str(uri)?, is_official: bool, latest_version: map?, license_url: str(uri)?, name: str, owner: str, paper_url: str(uri)?, run_count: int, url: str(uri), visibility: str} # Success
+
+@endpoint GET /models/{model_owner}/{model_name}/examples
+@desc List examples for a model
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model.}
+@returns(200) {next: str?, previous: str?, results: [map]} # Success
+
+@endpoint POST /models/{model_owner}/{model_name}/predictions
+@desc Create a prediction using an official model
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model., input: map # The model's input as a JSON object. The input schema depends on what model you are running. To see the available inputs, click the "API" tab on the model you are running or [get the model version](#models.versions.get) and look at its `openapi_schema` property. For example, [stability-ai/sdxl](https://replicate.com/stability-ai/sdxl) takes `prompt` as an input.  Files should be passed as HTTP URLs or data URLs.  Use an HTTP URL when:  - you have a large file > 256kb - you want to be able to use the file multiple times - you want your prediction metadata to be associable with your input files  Use a data URL when:  - you have a small file <= 256kb - you don't want to upload and host the file somewhere - you don't need to use the file again (Replicate will not store it)}
+@optional {Prefer: str # Leave the request open and wait for the model to finish generating output. Set to `wait=n` where n is a number of seconds between 1 and 60.  See https://replicate.com/docs/topics/predictions/create-a-prediction#sync-mode for more information., Cancel-After: str # The maximum time the prediction can run before it is automatically canceled. The lifetime is measured from when the prediction is created.  The duration can be specified as string with an optional unit suffix: - `s` for seconds (e.g., `30s`, `90s`) - `m` for minutes (e.g., `5m`, `15m`) - `h` for hours (e.g., `1h`, `2h30m`) - defaults to seconds if no unit suffix is provided (e.g. `30` is the same as `30s`)  You can combine units for more precision (e.g., `1h30m45s`).  The minimum allowed duration is 5 seconds., stream: bool # **This field is deprecated.**  Request a URL to receive streaming output using [server-sent events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events).  This field is no longer needed as the returned prediction will always have a `stream` entry in its `urls` property if the model supports streaming., webhook: str # An HTTPS URL for receiving a webhook when the prediction has new output. The webhook will be a POST request where the request body is the same as the response body of the [get prediction](#predictions.get) operation. If there are network problems, we will retry the webhook a few times, so make sure it can be safely called more than once. Replicate will not follow redirects when sending webhook requests to your service, so be sure to specify a URL that will resolve without redirecting., webhook_events_filter: [str] # By default, we will send requests to your webhook URL whenever there are new outputs or the prediction has finished. You can change which events trigger webhook requests by specifying `webhook_events_filter` in the prediction request:  - `start`: immediately on prediction start - `output`: each time a prediction generates an output (note that predictions can generate multiple outputs) - `logs`: each time log output is generated by a prediction - `completed`: when the prediction reaches a terminal state (succeeded/canceled/failed)  For example, if you only wanted requests to be sent at the start and end of the prediction, you would provide:  ```json {   "input": {     "text": "Alice"   },   "webhook": "https://example.com/my-webhook",   "webhook_events_filter": ["start", "completed"] } ```  Requests for event types `output` and `logs` will be sent at most once every 500ms. If you request `start` and `completed` webhooks, then they'll always be sent regardless of throttling.}
+@returns(201) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Prediction has been created. If the `Prefer: wait` header is provided it will contain the final output.
+@returns(202) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Prediction has been created but does not yet have all outputs
+
+@endpoint GET /models/{model_owner}/{model_name}/readme
+@desc Get a model's README
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model.}
+@returns(200) Success
+@errors {404: README not found}
+
+@endpoint GET /models/{model_owner}/{model_name}/versions
+@desc List model versions
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model.}
+@returns(200) {next: str?, previous: str?, results: [map]} # Success
+
+@endpoint DELETE /models/{model_owner}/{model_name}/versions/{version_id}
+@desc Delete a model version
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model., version_id: str # The ID of the version.}
+@returns(202) Deletion request has been accepted. It might take a few minutes to be processed.
+
+@endpoint GET /models/{model_owner}/{model_name}/versions/{version_id}
+@desc Get a model version
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model., version_id: str # The ID of the version.}
+@returns(200) {cog_version: str?, created_at: str(date-time), id: str, openapi_schema: map?} # Success
+
+@endpoint POST /models/{model_owner}/{model_name}/versions/{version_id}/trainings
+@desc Create a training
+@required {model_owner: str # The name of the user or organization that owns the model., model_name: str # The name of the model., version_id: str # The ID of the version., destination: str # A string representing the desired model to push to in the format `{destination_model_owner}/{destination_model_name}`. This should be an existing model owned by the user or organization making the API request. If the destination is invalid, the server will return an appropriate 4XX response., input: map # An object containing inputs to the Cog model's `train()` function.}
+@optional {webhook: str # An HTTPS URL for receiving a webhook when the training completes. The webhook will be a POST request where the request body is the same as the response body of the [get training](#trainings.get) operation. If there are network problems, we will retry the webhook a few times, so make sure it can be safely called more than once. Replicate will not follow redirects when sending webhook requests to your service, so be sure to specify a URL that will resolve without redirecting., webhook_events_filter: [str] # By default, we will send requests to your webhook URL whenever there are new outputs or the training has finished. You can change which events trigger webhook requests by specifying `webhook_events_filter` in the training request:  - `start`: immediately on training start - `output`: each time a training generates an output (note that trainings can generate multiple outputs) - `logs`: each time log output is generated by a training - `completed`: when the training reaches a terminal state (succeeded/canceled/failed)  For example, if you only wanted requests to be sent at the start and end of the training, you would provide:  ```json {   "destination": "my-organization/my-model",   "input": {     "text": "Alice"   },   "webhook": "https://example.com/my-webhook",   "webhook_events_filter": ["start", "completed"] } ```  Requests for event types `output` and `logs` will be sent at most once every 500ms. If you request `start` and `completed` webhooks, then they'll always be sent regardless of throttling.}
+@returns(201) {completed_at: str(date-time), created_at: str(date-time), error: str?, id: str, input: map, logs: str, metrics: map{predict_time: num, total_time: num}, model: str, output: map{version: str, weights: str}, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri)}, version: str} # Success
+
+@endgroup
+
+@group predictions
+@endpoint GET /predictions
+@desc List predictions
+@optional {created_after: str(date-time) # Include only predictions created at or after this date-time, in ISO 8601 format., created_before: str(date-time) # Include only predictions created before this date-time, in ISO 8601 format., source: str # Filter predictions by how they were created. Currently only `web` is supported.  If no value is set, the API returns predictions from both API and web sources.  When filtering by `source=web`, results are limited to predictions created in the last 14 days.}
+@returns(200) {next: str(uri)?, previous: str(uri)?, results: [map]} # Success
+
+@endpoint POST /predictions
+@desc Create a prediction
+@required {input: map # The model's input as a JSON object. The input schema depends on what model you are running. To see the available inputs, click the "API" tab on the model you are running or [get the model version](#models.versions.get) and look at its `openapi_schema` property. For example, [stability-ai/sdxl](https://replicate.com/stability-ai/sdxl) takes `prompt` as an input.  Files should be passed as HTTP URLs or data URLs.  Use an HTTP URL when:  - you have a large file > 256kb - you want to be able to use the file multiple times - you want your prediction metadata to be associable with your input files  Use a data URL when:  - you have a small file <= 256kb - you don't want to upload and host the file somewhere - you don't need to use the file again (Replicate will not store it), version: str # The identifier for the model or model version that you want to run. This can be specified in a few different formats:  - `{owner_name}/{model_name}` - Use this format for [official models](https://replicate.com/docs/topics/models/official-models). For example, `black-forest-labs/flux-schnell`. For all other models, the specific version is required. - `{owner_name}/{model_name}:{version_id}` - The owner and model name, plus the full 64-character version ID. For example, `replicate/hello-world:9dcd6d78e7c6560c340d916fe32e9f24aabfa331e5cce95fe31f77fb03121426`. - `{version_id}` - Just the 64-character version ID. For example, `9dcd6d78e7c6560c340d916fe32e9f24aabfa331e5cce95fe31f77fb03121426`}
+@optional {Prefer: str # Leave the request open and wait for the model to finish generating output. Set to `wait=n` where n is a number of seconds between 1 and 60.  See https://replicate.com/docs/topics/predictions/create-a-prediction#sync-mode for more information., Cancel-After: str # The maximum time the prediction can run before it is automatically canceled. The lifetime is measured from when the prediction is created.  The duration can be specified as string with an optional unit suffix: - `s` for seconds (e.g., `30s`, `90s`) - `m` for minutes (e.g., `5m`, `15m`) - `h` for hours (e.g., `1h`, `2h30m`) - defaults to seconds if no unit suffix is provided (e.g. `30` is the same as `30s`)  You can combine units for more precision (e.g., `1h30m45s`).  The minimum allowed duration is 5 seconds., stream: bool # **This field is deprecated.**  Request a URL to receive streaming output using [server-sent events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events).  This field is no longer needed as the returned prediction will always have a `stream` entry in its `urls` property if the model supports streaming., webhook: str # An HTTPS URL for receiving a webhook when the prediction has new output. The webhook will be a POST request where the request body is the same as the response body of the [get prediction](#predictions.get) operation. If there are network problems, we will retry the webhook a few times, so make sure it can be safely called more than once. Replicate will not follow redirects when sending webhook requests to your service, so be sure to specify a URL that will resolve without redirecting., webhook_events_filter: [str] # By default, we will send requests to your webhook URL whenever there are new outputs or the prediction has finished. You can change which events trigger webhook requests by specifying `webhook_events_filter` in the prediction request:  - `start`: immediately on prediction start - `output`: each time a prediction generates an output (note that predictions can generate multiple outputs) - `logs`: each time log output is generated by a prediction - `completed`: when the prediction reaches a terminal state (succeeded/canceled/failed)  For example, if you only wanted requests to be sent at the start and end of the prediction, you would provide:  ```json {   "version": "5c7d5dc6dd8bf75c1acaa8565735e7986bc5b66206b55cca93cb72c9bf15ccaa",   "input": {     "text": "Alice"   },   "webhook": "https://example.com/my-webhook",   "webhook_events_filter": ["start", "completed"] } ```  Requests for event types `output` and `logs` will be sent at most once every 500ms. If you request `start` and `completed` webhooks, then they'll always be sent regardless of throttling.}
+@returns(201) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Prediction has been created. If the `Prefer: wait` header is provided it will contain the final output.
+@returns(202) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Prediction has been created but does not yet have all outputs
+
+@endpoint GET /predictions/{prediction_id}
+@desc Get a prediction
+@required {prediction_id: str # The ID of the prediction to get.}
+@returns(200) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Success
+
+@endpoint POST /predictions/{prediction_id}/cancel
+@desc Cancel a prediction
+@required {prediction_id: str # The ID of the prediction to cancel.}
+@returns(200) {completed_at: str(date-time), created_at: str(date-time), data_removed: bool, deadline: str(date-time), deployment: str, error: str?, id: str, input: map, logs: str, metrics: map{total_time: num}, model: str, output: any, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri), stream: str(uri), web: str(uri)}, version: any} # Success
+
+@endgroup
+
+@group search
+@endpoint GET /search
+@desc Search models, collections, and docs (beta)
+@required {query: str # The search query string}
+@optional {limit: int=20 # Maximum number of model results to return (1-50, defaults to 20)}
+@returns(200) {collections: [map], models: [map], pages: [map], query: str} # Success
+@errors {400: Bad Request - Missing or invalid query parameter, 500: Internal Server Error - Search service error}
+
+@endgroup
+
+@group trainings
+@endpoint GET /trainings
+@desc List trainings
+@returns(200) {next: str?, previous: str?, results: [map]} # Success
+
+@endpoint GET /trainings/{training_id}
+@desc Get a training
+@required {training_id: str # The ID of the training to get.}
+@returns(200) {completed_at: str(date-time), created_at: str(date-time), error: str?, id: str, input: map, logs: str, metrics: map{predict_time: num, total_time: num}, model: str, output: map{version: str, weights: str}, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri)}, version: str} # Success
+
+@endpoint POST /trainings/{training_id}/cancel
+@desc Cancel a training
+@required {training_id: str # The ID of the training you want to cancel.}
+@returns(200) {completed_at: str(date-time), created_at: str(date-time), error: str?, id: str, input: map, logs: str, metrics: map{predict_time: num, total_time: num}, model: str, output: map{version: str, weights: str}, source: str, started_at: str(date-time), status: str, urls: map{cancel: str(uri), get: str(uri)}, version: str} # Success
+
+@endgroup
+
+@group webhooks
+@endpoint GET /webhooks/default/secret
+@desc Get the signing secret for the default webhook
+@returns(200) {key: str} # Success
+
+@endgroup
+
+@end

@@ -1,0 +1,68 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Transfers API
+@base https://balanceplatform-api-test.adyen.com/btl/v3
+@version 3
+@auth ApiKey X-API-Key in header | Bearer basic | ApiKey clientKey in query
+@endpoints 9
+@toc grants(3), transactions(2), transfers(4)
+
+@group grants
+@endpoint GET /grants
+@optional {counterpartyAccountHolderId: str}
+@returns(200) {grants: [map]}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /grants
+@required {grantAccountId: str, grantOfferId: str}
+@optional {Idempotency-Key: str, counterparty: map{balanceAccountId: str, transferInstrumentId: str}}
+@returns(200) {amount: map{currency: str, value: int(int64)}, balances: map{currency: str, fee: int(int64), principal: int(int64), total: int(int64)}, counterparty: map{accountHolderId: str, balanceAccountId: str, transferInstrumentId: str}, fee: map{amount: map{currency: str, value: int(int64)}}, grantAccountId: str, grantOfferId: str, id: str, repayment: map{basisPoints: int(int32), term: map{estimatedDays: int(int32), maximumDays: int(int32)}, threshold: map{amount: map}}, status: str}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint GET /grants/{id}
+@required {id: str}
+@returns(200) {amount: map{currency: str, value: int(int64)}, balances: map{currency: str, fee: int(int64), principal: int(int64), total: int(int64)}, counterparty: map{accountHolderId: str, balanceAccountId: str, transferInstrumentId: str}, fee: map{amount: map{currency: str, value: int(int64)}}, grantAccountId: str, grantOfferId: str, id: str, repayment: map{basisPoints: int(int32), term: map{estimatedDays: int(int32), maximumDays: int(int32)}, threshold: map{amount: map}}, status: str}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endgroup
+
+@group transactions
+@endpoint GET /transactions
+@required {createdSince: str(date-time), createdUntil: str(date-time)}
+@optional {balancePlatform: str, paymentInstrumentId: str, accountHolderId: str, balanceAccountId: str, cursor: str, sortOrder: str(asc/desc), limit: int(int32)}
+@returns(200) {_links: map{next: map{href: str}, prev: map{href: str}}, data: [map]}
+@errors {401, 403, 422, 500}
+
+@endpoint GET /transactions/{id}
+@required {id: str}
+@returns(200) {accountHolderId: str, amount: map{currency: str, value: int(int64)}, balanceAccountId: str, balancePlatform: str, bookingDate: str(date-time), category: str, counterparty: map{balanceAccountId: str, bankAccount: map{accountHolder: map, accountIdentification: any, storedPaymentMethodId: str}, card: map{cardHolder: map, cardIdentification: map}, merchant: map{acquirerId: str, mcc: str, merchantId: str, nameLocation: map, postalCode: str}, transferInstrumentId: str}, createdAt: str(date-time), creationDate: str(date-time), description: str, eventId: str, id: str, instructedAmount: map{currency: str, value: int(int64)}, paymentInstrumentId: str, reference: str, referenceForBeneficiary: str, status: str, transferId: str, type: str, valueDate: str(date-time)}
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group transfers
+@endpoint POST /transfers
+@required {amount: map{currency!: str, value!: int(int64)}, category: str(bank/card/internal/issuedCard/platformPayment/topUp), counterparty: map{balanceAccountId: str, bankAccount: map, card: map, transferInstrumentId: str}}
+@optional {Idempotency-Key: str, WWW-Authenticate: str, balanceAccountId: str, description: str, executionDate: map{date: str(date), timezone: str}, paymentInstrumentId: str, priority: str(crossBorder/fast/instant/internal/regular/wire), reference: str, referenceForBeneficiary: str, review: map{numberOfApprovalsRequired: int(int32), scaOnApproval: bool}, type: str(bankTransfer/internalTransfer/internalDirectDebit), ultimateParty: map{address: map, dateOfBirth: str(date), email: str, firstName: str, fullName: str, fundingInstrument: map, lastName: str, reference: str, type: str, url: str}}
+@returns(202) {accountHolder: map{description: str, id: str, reference: str}, amount: map{currency: str, value: int(int64)}, balanceAccount: map{description: str, id: str, reference: str}, balanceAccountId: str, category: str, counterparty: map{balanceAccountId: str, bankAccount: map{accountHolder: map, accountIdentification: any, storedPaymentMethodId: str}, card: map{cardHolder: map, cardIdentification: map}, merchant: map{acquirerId: str, mcc: str, merchantId: str, nameLocation: map, postalCode: str}, transferInstrumentId: str}, createdAt: str(date-time), creationDate: str(date-time), description: str, directDebitInformation: map{dateOfSignature: str(date-time), dueDate: str(date-time), mandateId: str, sequenceType: str}, direction: str, executionDate: map{date: str(date), timezone: str}, id: str, paymentInstrument: map{description: str, id: str, reference: str, tokenType: str}, paymentInstrumentId: str, priority: str, reason: str, reference: str, referenceForBeneficiary: str, review: map{numberOfApprovalsRequired: int(int32), scaOnApproval: str}, status: str, type: str}
+@errors {401, 403, 422, 500}
+
+@endpoint POST /transfers/approve
+@optional {Idempotency-Key: str, WWW-Authenticate: str, transferIds: [str]}
+@returns(200)
+@errors {401, 403, 422, 500}
+
+@endpoint POST /transfers/cancel
+@optional {Idempotency-Key: str, transferIds: [str]}
+@returns(200)
+@errors {401, 403, 422, 500}
+
+@endpoint POST /transfers/{transferId}/returns
+@required {transferId: str, amount: map{currency!: str, value!: int(int64)}}
+@optional {Idempotency-Key: str, reference: str}
+@returns(200) {id: str, reference: str, status: str, transferId: str}
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@end

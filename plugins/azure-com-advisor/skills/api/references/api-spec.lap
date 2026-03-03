@@ -1,0 +1,105 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AdvisorManagementClient
+@base https://management.azure.com
+@version 2017-04-19
+@auth OAuth2
+@common_fields {api-version: any # The version of the API to be used with the client request.}
+@endpoints 15
+@toc providers(3), subscriptions(8), {resourceUri}(4)
+
+@group providers
+@endpoint GET /providers/Microsoft.Advisor/metadata/{name}
+@desc Gets the metadata entity.
+@required {name: any # Name of metadata entity.}
+@returns(200) OK. Successfully retrieved metadata entities
+@errors {404: Client sent unknown metadata name}
+
+@endpoint GET /providers/Microsoft.Advisor/metadata
+@desc Gets the list of metadata entities.
+@returns(200) OK. Successfully retrieved metadata entities
+
+@endgroup
+
+@group subscriptions
+@endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Advisor/configurations
+@desc Retrieve Azure Advisor configurations.
+@required {subscriptionId: any # The Azure subscription ID.}
+@returns(200) OK. Successfully retrieved zero or more configurations.
+
+@endpoint PUT /subscriptions/{subscriptionId}/providers/Microsoft.Advisor/configurations
+@desc Create/Overwrite Azure Advisor configuration.
+@required {configContract: map # The Azure Advisor configuration data structure., subscriptionId: any # The Azure subscription ID.}
+@returns(204) No Content. Successfully created/overwrote configuration.
+@errors {400: Bad Request. Client sent invalid configuration scope, properties or values.}
+
+@endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Advisor/configurations
+@desc Retrieve Azure Advisor configurations.
+@required {subscriptionId: any # The Azure subscription ID., resourceGroup: any # The name of the Azure resource group.}
+@returns(200) OK. Successfully retrieved zero or more configurations.
+
+@endpoint PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroup}/providers/Microsoft.Advisor/configurations
+@desc Create/Overwrite Azure Advisor configuration.
+@required {configContract: map # The Azure Advisor configuration data structure., subscriptionId: any # The Azure subscription ID., resourceGroup: any # The name of the Azure resource group.}
+@returns(204) No Content. Successfully created/overwrote configuration.
+@errors {400: Bad Request. Client sent invalid configuration scope, properties or values.}
+
+@endpoint POST /subscriptions/{subscriptionId}/providers/Microsoft.Advisor/generateRecommendations
+@desc Initiates the recommendation generation or computation process for a subscription. This operation is asynchronous. The generated recommendations are stored in a cache in the Advisor service.
+@required {subscriptionId: any # The Azure subscription ID.}
+@returns(202) Accepted. Recommendation generation has been accepted.
+
+@endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Advisor/generateRecommendations/{operationId}
+@desc Retrieves the status of the recommendation computation or generation process. Invoke this API after calling the generation recommendation. The URI of this API is returned in the Location field of the response header.
+@required {subscriptionId: any # The Azure subscription ID., operationId: any # The operation ID, which can be found from the Location field in the generate recommendation response header.}
+@returns(202) Accepted. Recommendation generation is in progress.
+@returns(204) NoContent. Recommendation generation has been completed.
+
+@endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Advisor/recommendations
+@desc Obtains cached recommendations for a subscription. The recommendations are generated or computed by invoking generateRecommendations.
+@required {subscriptionId: any # The Azure subscription ID.}
+@optional {$filter: any # The filter to apply to the recommendations.<br>Filter can be applied to properties ['ResourceId', 'ResourceGroup', 'RecommendationTypeGuid', '[Category](#category)'] with operators ['eq', 'and', 'or'].<br>Example:<br>- $filter=Category eq 'Cost' and ResourceGroup eq 'MyResourceGroup', $top: any # The number of recommendations per page if a paged version of this API is being used., $skipToken: any # The page-continuation token to use with a paged version of this API.}
+@returns(200) OK. Successfully obtained cached recommendations.
+
+@endgroup
+
+@group providers
+@endpoint GET /providers/Microsoft.Advisor/operations
+@desc Lists all the available Advisor REST API operations.
+@returns(200) OK. Successfully retrieved operation list.
+
+@endgroup
+
+@group {resourceUri}
+@endpoint GET /{resourceUri}/providers/Microsoft.Advisor/recommendations/{recommendationId}
+@desc Obtains details of a cached recommendation.
+@required {resourceUri: any # The fully qualified Azure Resource Manager identifier of the resource to which the recommendation applies., recommendationId: any # The recommendation ID.}
+@returns(200) OK. Successfully got recommendation detail.
+
+@endpoint GET /{resourceUri}/providers/Microsoft.Advisor/recommendations/{recommendationId}/suppressions/{name}
+@desc Obtains the details of a suppression.
+@required {resourceUri: any # The fully qualified Azure Resource Manager identifier of the resource to which the recommendation applies., recommendationId: any # The recommendation ID., name: any # The name of the suppression.}
+@returns(200) OK. Successfully got suppression detail.
+
+@endpoint PUT /{resourceUri}/providers/Microsoft.Advisor/recommendations/{recommendationId}/suppressions/{name}
+@desc Enables the snoozed or dismissed attribute of a recommendation. The snoozed or dismissed attribute is referred to as a suppression. Use this API to create or update the snoozed or dismissed status of a recommendation.
+@required {resourceUri: any # The fully qualified Azure Resource Manager identifier of the resource to which the recommendation applies., recommendationId: any # The recommendation ID., name: any # The name of the suppression., suppressionContract: map # The snoozed or dismissed attribute; for example, the snooze duration.}
+@returns(200) OK. Successfully created suppression.
+
+@endpoint DELETE /{resourceUri}/providers/Microsoft.Advisor/recommendations/{recommendationId}/suppressions/{name}
+@desc Enables the activation of a snoozed or dismissed recommendation. The snoozed or dismissed attribute of a recommendation is referred to as a suppression.
+@required {resourceUri: any # The fully qualified Azure Resource Manager identifier of the resource to which the recommendation applies., recommendationId: any # The recommendation ID., name: any # The name of the suppression.}
+@returns(204) NoContent. The recommendation has been activated.
+
+@endgroup
+
+@group subscriptions
+@endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Advisor/suppressions
+@desc Retrieves the list of snoozed or dismissed suppressions for a subscription. The snoozed or dismissed attribute of a recommendation is referred to as a suppression.
+@required {subscriptionId: any # The Azure subscription ID.}
+@optional {$top: any # The number of suppressions per page if a paged version of this API is being used., $skipToken: any # The page-continuation token to use with a paged version of this API.}
+@returns(200) OK. Successfully got all suppressions in a subscription.
+
+@endgroup
+
+@end

@@ -1,0 +1,72 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Authentiq Connect API
+@base https://connect.authentiq.io/
+@version 1.0
+@auth OAuth2 | ApiKey Authorization in header | OAuth2 | OAuth2 | OAuth2
+@endpoints 9
+@toc authorize(1), token(1), userinfo(1), client(5), {client_id}(1)
+
+@group authorize
+@endpoint GET /authorize
+@desc Authenticate a user
+@required {client_id: any # A client ID obtained from the [Dashboard](https://dashboard.authentiq.com/)., response_type: any # The OIDC response type to use for this authentication flow. Valid choices are `code`, `id_token`, `token`, `token id_token`, `code id_token` `code token` and `code token id_token`, but a client can be configured with a more restricted set., scope: any # The space-separated identity claims to request from the end-user. Always include `openid` as a scope for compatibility with OIDC., redirect_uri: any # The location to redirect to after (un)successful authentication. See OIDC for the parameters passed in the query string (`response_mode=query`) or as fragments (`response_mode=fragment`). Unless the client is in test-mode this must be one of the registered redirect URLs., state: any # An opaque string that will be passed back to the redirect URL and therefore can be used to communicate client side state and prevent CSRF attacks.}
+@optional {response_mode: any # Whether to append parameters to the redirect URL in the query string (`query`) or as fragments (`fragment`). This option usually has a sensible default for each of the response types., nonce: any # An nonce provided by the client (and opaque to Authentiq Connect) that will be included in any ID Token generated for this session. Clients should use the nonce to mitigate replay attacks., display: any # The authentication display mode, which can be one of `page`, `popup` or `modal`. Defaults to `page`., prompt: any # Space-delimited, case sensitive list of ASCII string values that specifies whether the Authorization Server prompts the End-User for reauthentication and consent. The supported values are: `none`, `login`, `consent`. If `consent` the end-user is asked to (re)confirm what claims they share. Use `none` to check for an active session., max_age: any # Specifies the allowable elapsed time in seconds since the last time the end-user was actively authenticated., ui_locales: any # Specifies the preferred language to use on the authorization page, as a space-separated list of BCP47 language tags. Ignored at the moment.}
+@errors {302: A successful or erroneous authentication response., 303: *Sign in with Authentiq* page, popup or modal.}
+
+@endgroup
+
+@group token
+@endpoint POST /token
+@desc Obtain an ID Token
+@required {client_id: any # The registered client ID., client_secret: any # The registered client ID secret., grant_type: any # The authorization grant type, must be `authorization_code`., code: any # The authorization code previously obtained from the Authentication endpoint., redirect_uri: any # The redirect URL that was used previously with the Authentication endpoint.}
+@optional {Authorization: any # HTTP Basic authorization header.}
+@returns(200) Token response
+@errors {400: OAuth 2.0 error response, 401: OAuth 2.0 error response}
+
+@endgroup
+
+@group userinfo
+@endpoint GET /userinfo
+@desc Retrieve a user profile
+@returns(200) UserInfo response
+@errors {401: OAuth 2.0 error response}
+
+@endgroup
+
+@group client
+@endpoint GET /client
+@desc List clients
+@returns(200) A list of Client Objects.
+
+@endpoint POST /client
+@desc Register a client
+@required {body: any # Client Object}
+@returns(201) Client created
+
+@endpoint GET /client/{client_id}
+@desc View a client
+@required {client_id: any # Client identifier}
+@returns(200) Client found
+
+@endpoint PUT /client/{client_id}
+@desc Update a client
+@required {client_id: any # Client identifier, body: any # Client Object}
+@returns(200) Client updated
+
+@endpoint DELETE /client/{client_id}
+@desc Delete a client
+@required {client_id: any # Client identifier}
+@returns(204) Client deleted
+
+@endgroup
+
+@group {client_id}
+@endpoint GET /{client_id}/iframe
+@desc Include a session iframe
+@required {client_id: any # Client identifier}
+@returns(200) OK
+
+@endgroup
+
+@end

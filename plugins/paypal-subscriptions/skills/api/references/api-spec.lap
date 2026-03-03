@@ -1,0 +1,99 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Subscriptions
+@base https://api-m.sandbox.paypal.com
+@version 1.8
+@auth OAuth2
+@endpoints 16
+@toc billing(16)
+
+@endpoint POST /v1/billing/plans
+@required {product_id: str, name: str, billing_cycles: [map{pricing_scheme: map{version: int, fixed_price: map, pricing_model: str, tiers: [map], create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3)}, frequency!: map{interval_unit!: str, interval_count: int}, tenure_type!: str, sequence!: int, total_cycles: int}], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str}, setup_fee_failure_action: str, payment_failure_threshold: int}}
+@optional {Prefer: str=return=minimal, PayPal-Request-Id: str, status: str(CREATED/INACTIVE/ACTIVE)=ACTIVE, description: str, taxes: map{percentage!: str(ppaas_common_percentage_v2), inclusive: bool}, quantity_supported: bool=False}
+@returns(200) {id: str, product_id: str, name: str, status: str, description: str, billing_cycles: [map], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, setup_fee_failure_action: str, payment_failure_threshold: int}, taxes: map{percentage: str(ppaas_common_percentage_v2), inclusive: bool}, quantity_supported: bool, create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3), links: [map]}
+@returns(201) {id: str, product_id: str, name: str, status: str, description: str, billing_cycles: [map], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, setup_fee_failure_action: str, payment_failure_threshold: int}, taxes: map{percentage: str(ppaas_common_percentage_v2), inclusive: bool}, quantity_supported: bool, create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3), links: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /v1/billing/plans
+@optional {Prefer: str=return=minimal, product_id: str, page_size: int=10, page: int=1, total_required: bool=False}
+@returns(200) {plans: [map], total_items: int, total_pages: int, links: [map]}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /v1/billing/plans/{id}
+@required {id: str}
+@returns(200) {id: str, product_id: str, name: str, status: str, description: str, billing_cycles: [map], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, setup_fee_failure_action: str, payment_failure_threshold: int}, taxes: map{percentage: str(ppaas_common_percentage_v2), inclusive: bool}, quantity_supported: bool, create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3), links: [map]}
+@errors {401, 403, 404, 500}
+
+@endpoint PATCH /v1/billing/plans/{id}
+@required {id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/plans/{id}/activate
+@required {id: str}
+@returns(204)
+@errors {401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/plans/{id}/deactivate
+@required {id: str}
+@returns(204)
+@errors {401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/plans/{id}/update-pricing-schemes
+@required {id: str, pricing_schemes: [map{billing_cycle_sequence!: int, pricing_scheme!: map{version: int, fixed_price: map, pricing_model: str, tiers: [map], create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3)}}]}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/subscriptions
+@required {plan_id: str}
+@optional {Prefer: str=return=minimal, PayPal-Request-Id: str, start_time: str(ppaas_date_time_v3), quantity: str, shipping_amount: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str}, subscriber: any, auto_renewal: bool=False, application_context: map{brand_name: str, locale: str(ppaas_common_language_v3), shipping_preference: str, user_action: str, payment_method: map{payee_preferred: str}, return_url!: str(uri), cancel_url!: str(uri)}, custom_id: str, plan: map{billing_cycles: [map{pricing_scheme: map, sequence!: int, total_cycles: int}], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map, setup_fee_failure_action: str, payment_failure_threshold: int}, taxes: map{percentage: str(ppaas_common_percentage_v2), inclusive: bool}}, merchant_inventory: any}
+@returns(200)
+@returns(201)
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /v1/billing/subscriptions/{id}
+@required {id: str}
+@optional {fields: str}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint PATCH /v1/billing/subscriptions/{id}
+@required {id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/subscriptions/{id}/revise
+@required {id: str}
+@optional {plan_id: str, quantity: str, shipping_amount: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str}, shipping_address: map{name: map{full_name: str}, type: str, options: [map{id!: str, label!: str, type: str, amount: map, selected!: bool}], address: map{address_line_1: str, address_line_2: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code!: str(ppaas_common_country_code_v2)}}, application_context: map{brand_name: str, locale: str(ppaas_common_language_v3), shipping_preference: str, payment_method: map{payee_preferred: str}, return_url!: str(uri), cancel_url!: str(uri)}, plan: map{billing_cycles: [map{pricing_scheme: map, sequence!: int, total_cycles: int}], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map, setup_fee_failure_action: str, payment_failure_threshold: int}, taxes: map{percentage: str(ppaas_common_percentage_v2), inclusive: bool}}}
+@returns(200) {plan_id: str, quantity: str, shipping_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, shipping_address: map{name: map{full_name: str}, type: str, options: [map], address: map{address_line_1: str, address_line_2: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code: str(ppaas_common_country_code_v2)}}, plan: map{billing_cycles: [map], payment_preferences: map{auto_bill_outstanding: bool, setup_fee: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, setup_fee_failure_action: str, payment_failure_threshold: int}, taxes: map{percentage: str(ppaas_common_percentage_v2), inclusive: bool}}, plan_overridden: bool, links: [map]}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/subscriptions/{id}/suspend
+@required {id: str, reason: str}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/subscriptions/{id}/cancel
+@required {id: str, reason: str}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/subscriptions/{id}/activate
+@required {id: str}
+@optional {reason: str}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /v1/billing/subscriptions/{id}/capture
+@required {id: str, note: str, capture_type: str, amount: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str}}
+@optional {PayPal-Request-Id: str}
+@returns(200) {status: str, id: str, amount_with_breakdown: map{gross_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, total_item_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, fee_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, shipping_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, tax_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, net_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}}, payer_name: map{prefix: str, given_name: str, surname: str, middle_name: str, suffix: str, full_name: str}, payer_email: str(ppaas_common_email_address_v2), time: str(ppaas_date_time_v3)}
+@returns(202)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint GET /v1/billing/subscriptions/{id}/transactions
+@required {id: str, start_time: str, end_time: str}
+@returns(200) {transactions: [map], total_items: int, total_pages: int, links: [map]}
+@errors {400, 401, 403, 404, 500}
+
+@end

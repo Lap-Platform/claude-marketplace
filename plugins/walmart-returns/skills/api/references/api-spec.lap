@@ -1,0 +1,37 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Returns Management
+@base https://marketplace.walmartapis.com
+@auth ApiKey WM_SEC.ACCESS_TOKEN in header
+@endpoints 3
+@toc returns(2), feeds(1)
+
+@group returns
+@endpoint POST /v3/returns/{returnOrderId}/refund
+@desc Issue refund
+@required {returnOrderId: str # The return order ID, WM_SEC.ACCESS_TOKEN: str # The access token retrieved in the Token API call, WM_QOS.CORRELATION_ID: str # A unique ID which identifies each API call and used to track and debug issues; use a random generated GUID for this ID, WM_SVC.NAME: str # Walmart Service Name, customerOrderId: str # A unique ID associated with the sales order for specified customer, refundLines: [map{returnOrderLineNumber!: int(int64), quantity: map{unitOfMeasure!: str, measurementValue!: num(double)}}] # Array of refund lines.}
+@optional {WM_CONSUMER.CHANNEL.TYPE: str # A unique ID to track the consumer request by channel. Use the Consumer Channel Type received during onboarding}
+@returns(200) {returnOrderId: str, customerOrderId: str, refundLines: [map]} # Successful Operation
+@example_request {"customerOrderId":"1535274411287","refundLines":[{"returnOrderLineNumber":1,"quantity":{"unitOfMeasure":"EA","measurementValue":2}}]}
+
+@endgroup
+
+@group feeds
+@endpoint POST /v3/feeds
+@desc Return Item Overrides
+@required {feedType: str=RETURNS_OVERRIDES # Feed Type, WM_SEC.ACCESS_TOKEN: str # The access token retrieved in the Token API call, WM_QOS.CORRELATION_ID: str # A unique ID which identifies each API call and used to track and debug issues; use a random generated GUID for this ID, WM_SVC.NAME: str # Walmart Service Name}
+@optional {WM_CONSUMER.CHANNEL.TYPE: str # A unique ID to track the consumer request by channel. Use the Consumer Channel Type received during onboarding}
+@returns(200) {feedId: str} # Successful Operation
+
+@endgroup
+
+@group returns
+@endpoint GET /v3/returns
+@desc Returns
+@required {WM_SEC.ACCESS_TOKEN: str # The access token retrieved in the Token API call, WM_QOS.CORRELATION_ID: str # A unique ID which identifies each API call and used to track and debug issues; use a random generated GUID for this ID, WM_SVC.NAME: str # Walmart Service Name}
+@optional {returnOrderId: str # Return order identifier of the return order object as part of array. This is the same as RMA number., customerOrderId: str # A unique ID associated with the sales order for specified customer, status: str # Status may be specified to query the returns with specific status.Valid statuses are: INITIATED, DELIVERED, COMPLETED, replacementInfo: str # Provides additional attributes - replacementCustomerOrderID, returnType, rechargeReason, returnCancellationReason - related to Replacement return order, in response, if available. Allowed values are true or false., returnType: str # Specifies if the return order is a replacement return or a regular (refund) return. Possible values are REPLACEMENT or REFUND., returnCreationStartDate: str(date-time) # Start Date for querying all return orders that were created after that date. Use one of the following formats, based on UTC, ISO 8601. Date example: '2013-08-16' Timestamp example: '2013-08-16T10:30:15Z', returnCreationEndDate: str(date-time) # Limits the query to the return orders that were created before this returnCreationEndDate. Use one of the following formats, based on ISO 8601, are allowed: UTC date or timestamp. Examples: '2016-08-16T10:30:30.155Z' or '2016-08-16', returnLastModifiedStartDate: str(date-time) # Start Date for querying all return orders that were modified after that date. Use one of the following formats, based on UTC, ISO 8601. Date example: '2013-08-16' Timestamp example: '2013-08-16T10:30:15Z'.In case of dates with timezone, use format '2020-04-17T10:42:41.000+0000' and follow encode '+' with %20, returnLastModifiedEndDate: str(date-time) # Limits the query to the return orders that were modified before this date. Use one of the following formats, based on UTC, ISO 8601. Date example: '2013-08-16' Timestamp example: '2013-08-18T10:30:15Z'.In case of dates with timezone, use format '2020-04-18T10:42:41.000+0000' and follow encode '+' with %20, limit: str=10 # The number of orders to be returned. Cannot be larger than 200, WM_CONSUMER.CHANNEL.TYPE: str # A unique ID to track the consumer request by channel. Use the Consumer Channel Type received during onboarding}
+@returns(200) {meta: map{totalCount: int(int64), limit: int(int64), nextCursor: str}, returnOrders: [map]} # Successful Operation
+
+@endgroup
+
+@end

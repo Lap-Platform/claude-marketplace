@@ -1,0 +1,1398 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Trello REST API
+@base https://api.trello.com/1
+@version 0.0.1
+@auth ApiKey key in query | ApiKey token in query
+@endpoints 256
+@hint download_for_search
+@toc actions(16), applications(1), batch(1), boards(36), cards(42), checklists(12), customFields(8), emoji(1), enterprises(21), labels(5), lists(11), members(45), notifications(11), organizations(26), plugins(5), search(2), tokens(8), webhooks(5)
+
+@group actions
+@endpoint GET /actions/{id}
+@desc Get an Action
+@optional {display: bool=True, entities: bool=False, fields: str=all # `all` or a comma-separated list of action [fields](/cloud/trello/guides/rest-api/object-definitions/#action-object), member: bool=True, member_fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/), memberCreator: bool=True # Whether to include the member object for the creator of the action, memberCreator_fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint PUT /actions/{id}
+@desc Update an Action
+@required {text: str # The new text for the comment}
+@returns(200) Success
+
+@endpoint DELETE /actions/{id}
+@desc Delete an Action
+@returns(200) Success
+
+@endpoint GET /actions/{id}/{field}
+@desc Get a specific field on an Action
+@required {id: str # The ID of the Action, field: str # An action field}
+@returns(200) {id: str, idMemberCreator: str, data: map{text: str, card: map{id: str, name: str, idShort: int, shortLink: str}, board: map{id: str, name: str, shortLink: str}, list: map{id: str, name: str}}, type: str, date: str(date-time), limits: map{reactions: map{perAction: map{status: str, disableAt: num, warnAt: num}, uniquePerAction: map{status: str, disableAt: num, warnAt: num}}}, display: map{translationKey: str, entities: map{contextOn: map{type: str, translationKey: str, hideIfContext: bool, idContext: str}, card: map{type: str, hideIfContext: bool, id: str, shortLink: str, text: str}, comment: map{type: str, text: str}, memberCreator: map{type: str, id: str, username: str, text: str}}}, memberCreator: map{id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), fullName: str, idMemberReferrer: str, initials: str, username: str}} # Success
+
+@endpoint GET /actions/{id}/board
+@desc Get the Board for an Action
+@required {id: str # The ID of the action}
+@optional {fields: str # `all` or a comma-separated list of board fields}
+@returns(200) {id: str, name: str, desc: str, descData: str, closed: bool, idMemberCreator: str, idOrganization: str, pinned: bool, url: str(url), shortUrl: str(url), prefs: map{permissionLevel: str, hideVotes: bool, voting: str, comments: str, invitations: any, selfJoin: bool, cardCovers: bool, isTemplate: bool, cardAging: str, calendarFeedEnabled: bool, background: str, backgroundImage: str(uri), backgroundImageScaled: [map], backgroundTile: bool, backgroundBrightness: str, backgroundBottomColor: str, backgroundTopColor: str, canBePublic: bool, canBeEnterprise: bool, canBeOrg: bool, canBePrivate: bool, canInvite: bool}, labelNames: map{green: str, yellow: str, orange: str, red: str, purple: str, blue: str, sky: str, lime: str, pink: str, black: str}, limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, starred: bool, memberships: str, shortLink: str, subscribed: bool, powerUps: str, dateLastActivity: str(date), dateLastView: str(date), idTags: str, datePluginDisable: str(date)?, creationMethod: str?, ixUpdate: int, templateGallery: str?, enterpriseOwned: bool} # Success
+
+@endpoint GET /actions/{id}/card
+@desc Get the Card for an Action
+@required {id: str # The ID of the action}
+@optional {fields: str=all # `all` or a comma-separated list of card fields}
+@returns(200) {id: str, address: str?, badges: map{attachmentsByType: map{trello: map{board: num, card: num}}, location: bool, votes: int, viewingMemberVoted: bool, subscribed: bool, fogbugz: str, checkItems: int, checkItemsChecked: int, comments: int, attachments: int, description: bool, due: str(date)?, start: str(date)?, dueComplete: bool}, cardRole: str?, checkItemStates: [any], closed: bool, coordinates: str?, creationMethod: str?, dateLastActivity: str(date-time), desc: str, descData: map{emoji: map}, due: str(date)?, dueReminder: str?, idBoard: str, idChecklists: [any], idLabels: [any], idList: str, idMembers: [any], idMembersVoted: [any], idShort: int, idAttachmentCover: str, labels: [any], limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, locationName: str?, manualCoverAttachment: bool, mirrorSourceId: str, name: str, pos: num(float), shortLink: str, shortUrl: str(url), subscribed: bool, url: str(url), cover: map{idAttachment: str, color: str?, idUploadedBackground: bool?, size: str, brightness: str, isTemplate: bool}} # Success
+
+@endpoint GET /actions/{id}/list
+@desc Get the List for an Action
+@required {id: str # The ID of the action}
+@optional {fields: str=all # `all` or a comma-separated list of list fields}
+@returns(200) {id: str, name: str, closed: bool, pos: num, softLimit: str, idBoard: str, subscribed: bool, limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}} # Success
+
+@endpoint GET /actions/{id}/member
+@desc Get the Member of an Action
+@required {id: str # The ID of the Action}
+@optional {fields: str=all # `all` or a comma-separated list of member fields}
+@returns(200) {id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), bio: str, bioData: map{emoji: map}, confirmed: bool, fullName: str, idEnterprise: str, idEnterprisesDeactivated: [str], idMemberReferrer: str, idPremOrgsAdmin: [str], initials: str, memberType: str, nonPublic: map{fullName: str, initials: str, avatarUrl: str(url), avatarHash: str}, nonPublicAvailable: bool, products: [int], url: str(url), username: str, status: str, aaEmail: str(email)?, aaEnrolledDate: str?, aaId: str?, avatarSource: str, email: str, gravatarHash: str, idBoards: [str], idOrganizations: [str], idEnterprisesAdmin: [str], limits: map{status: str, disableAt: num, warnAt: num}, loginTypes: [str], marketingOptIn: map{optedIn: bool, date: str(date)}, messagesDismissed: map{name: str, count: str, lastDismissed: str(date), _id: str}, oneTimeMessagesDismissed: [str], prefs: map{timezoneInfo: map{offsetCurrent: int, timezoneCurrent: str, offsetNext: int, dateNext: str(date), timezoneNext: str}, privacy: map{fullName: str, avatar: str}, sendSummaries: bool, minutesBetweenSummaries: int, minutesBeforeDeadlineToNotify: int, colorBlind: bool, locale: str, timezone: str, twoFactor: map{enabled: bool, needsNewBackups: bool}}, trophies: [str], uploadedAvatarHash: str, uploadedAvatarUrl: str(url), premiumFeatures: [str], isAaMastered: bool, ixUpdate: num, idBoardsPinned: [str]?} # Success
+
+@endpoint GET /actions/{id}/memberCreator
+@desc Get the Member Creator of an Action
+@required {id: str # The ID of the Action}
+@optional {fields: str=all # `all` or a comma-separated list of member fields}
+@returns(200) {id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), bio: str, bioData: map{emoji: map}, confirmed: bool, fullName: str, idEnterprise: str, idEnterprisesDeactivated: [str], idMemberReferrer: str, idPremOrgsAdmin: [str], initials: str, memberType: str, nonPublic: map{fullName: str, initials: str, avatarUrl: str(url), avatarHash: str}, nonPublicAvailable: bool, products: [int], url: str(url), username: str, status: str, aaEmail: str(email)?, aaEnrolledDate: str?, aaId: str?, avatarSource: str, email: str, gravatarHash: str, idBoards: [str], idOrganizations: [str], idEnterprisesAdmin: [str], limits: map{status: str, disableAt: num, warnAt: num}, loginTypes: [str], marketingOptIn: map{optedIn: bool, date: str(date)}, messagesDismissed: map{name: str, count: str, lastDismissed: str(date), _id: str}, oneTimeMessagesDismissed: [str], prefs: map{timezoneInfo: map{offsetCurrent: int, timezoneCurrent: str, offsetNext: int, dateNext: str(date), timezoneNext: str}, privacy: map{fullName: str, avatar: str}, sendSummaries: bool, minutesBetweenSummaries: int, minutesBeforeDeadlineToNotify: int, colorBlind: bool, locale: str, timezone: str, twoFactor: map{enabled: bool, needsNewBackups: bool}}, trophies: [str], uploadedAvatarHash: str, uploadedAvatarUrl: str(url), premiumFeatures: [str], isAaMastered: bool, ixUpdate: num, idBoardsPinned: [str]?} # Success
+
+@endpoint GET /actions/{id}/organization
+@desc Get the Organization of an Action
+@required {id: str # The ID of the action}
+@optional {fields: str=all # `all` or a comma-separated list of organization fields}
+@returns(200) {id: str, name: str, displayName: str, dateLastActivity: str(date), prefs: map{boardVisibilityRestrict: map, boardDeleteRestrict: map, attachmentRestrictions: [str], permissionLevel: str}, idEnterprise: str, offering: str, url: str(url), idBoards: [str], memberships: [str], premiumFeatures: [str]} # Success
+
+@endpoint PUT /actions/{id}/text
+@desc Update a Comment Action
+@required {id: str # The ID of the action to update, value: str # The new text for the comment}
+@returns(200) Success
+
+@endpoint GET /actions/{idAction}/reactions
+@desc Get Action's Reactions
+@optional {member: bool=True # Whether to load the member as a nested resource. See [Members Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#members-nested-resource), emoji: bool=True # Whether to load the emoji as a nested resource.}
+@returns(200) Success
+
+@endpoint POST /actions/{idAction}/reactions
+@desc Create Reaction for Action
+@optional {shortName: str # The primary `shortName` of the emoji to add. See [/emoji](#emoji), skinVariation: str # The `skinVariation` of the emoji to add. See [/emoji](#emoji), native: str # The emoji to add as a native unicode emoji. See [/emoji](#emoji), unified: str # The `unified` value of the emoji to add. See [/emoji](#emoji)}
+@returns(200) Success
+
+@endpoint GET /actions/{idAction}/reactions/{id}
+@desc Get Action's Reaction
+@optional {member: bool=True # Whether to load the member as a nested resource. See [Members Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#members-nested-resource), emoji: bool=True # Whether to load the emoji as a nested resource.}
+@returns(200) Success
+
+@endpoint DELETE /actions/{idAction}/reactions/{id}
+@desc Delete Action's Reaction
+@returns(200) Success
+
+@endpoint GET /actions/{idAction}/reactionsSummary
+@desc List Action's summary of Reactions
+@required {idAction: str # The ID of the action}
+@returns(200) Success
+
+@endgroup
+
+@group applications
+@endpoint GET /applications/{key}/compliance
+@desc Get Application's compliance data
+@returns(200) Success
+
+@endgroup
+
+@group batch
+@endpoint GET /batch
+@desc Batch Requests
+@required {urls: str # A list of API routes. Maximum of 10 routes allowed. The routes should begin with a forward slash and should not include the API version number - e.g. "urls=/members/trello,/cards/[cardId]"}
+@returns(200) Success
+
+@endgroup
+
+@group boards
+@endpoint GET /boards/{id}/memberships
+@desc Get Memberships of a Board
+@required {id: str # The ID of the board}
+@optional {filter: str(admins/all/none/normal)=all # One of `admins`, `all`, `none`, `normal`, activity: bool=False # Works for premium organizations only., orgMemberType: bool=False # Shows the type of member to the org the user is. For instance, an org admin will have a `orgMemberType` of `admin`., member: bool=False # Determines whether to include a [nested member object](/cloud/trello/guides/rest-api/nested-resources/)., member_fields: str=fullname,username # Fields to show if `member=true`. Valid values: [nested member resource fields](/cloud/trello/guides/rest-api/nested-resources/).}
+@returns(200) {id: str} # Success
+
+@endpoint GET /boards/{id}
+@desc Get a Board
+@optional {actions: str=all # This is a nested resource. Read more about actions as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., boardStars: str=none # Valid values are one of: `mine` or `none`., cards: str=none # This is a nested resource. Read more about cards as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., card_pluginData: bool=False # Use with the `cards` param to include card pluginData with the response, checklists: str=none # This is a nested resource. Read more about checklists as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., customFields: bool=False # This is a nested resource. Read more about custom fields as nested resources [here](#custom-fields-nested-resource)., fields: str=name,desc,descData,closed,idOrganization,pinned,url,shortUrl,prefs,labelNames # The fields of the board to be included in the response. Valid values: all or a comma-separated list of: closed, dateLastActivity, dateLastView, desc, descData, idMemberCreator, idOrganization, invitations, invited, labelNames, memberships, name, pinned, powerUps, prefs, shortLink, shortUrl, starred, subscribed, url, labels: str # This is a nested resource. Read more about labels as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., lists: str=open # This is a nested resource. Read more about lists as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., members: str=none # This is a nested resource. Read more about members as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., memberships: str=none # This is a nested resource. Read more about memberships as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., pluginData: bool=False # Determines whether the pluginData for this board should be returned. Valid values: true or false., organization: bool=False # This is a nested resource. Read more about organizations as nested resources [here](/cloud/trello/guides/rest-api/nested-resources/)., organization_pluginData: bool=False # Use with the `organization` param to include organization pluginData with the response, myPrefs: bool=False, tags: bool=False # Also known as collections, tags, refer to the collection(s) that a Board belongs to.}
+@returns(200) {id: str, name: str, desc: str, descData: str, closed: bool, idMemberCreator: str, idOrganization: str, pinned: bool, url: str(url), shortUrl: str(url), prefs: map{permissionLevel: str, hideVotes: bool, voting: str, comments: str, invitations: any, selfJoin: bool, cardCovers: bool, isTemplate: bool, cardAging: str, calendarFeedEnabled: bool, background: str, backgroundImage: str(uri), backgroundImageScaled: [map], backgroundTile: bool, backgroundBrightness: str, backgroundBottomColor: str, backgroundTopColor: str, canBePublic: bool, canBeEnterprise: bool, canBeOrg: bool, canBePrivate: bool, canInvite: bool}, labelNames: map{green: str, yellow: str, orange: str, red: str, purple: str, blue: str, sky: str, lime: str, pink: str, black: str}, limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, starred: bool, memberships: str, shortLink: str, subscribed: bool, powerUps: str, dateLastActivity: str(date), dateLastView: str(date), idTags: str, datePluginDisable: str(date)?, creationMethod: str?, ixUpdate: int, templateGallery: str?, enterpriseOwned: bool} # Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint PUT /boards/{id}
+@desc Update a Board
+@optional {name: str # The new name for the board. 1 to 16384 characters long., desc: str # A new description for the board, 0 to 16384 characters long, closed: bool # Whether the board is closed, subscribed: str # Whether the acting user is subscribed to the board, idOrganization: str # The id of the Workspace the board should be moved to, prefs/permissionLevel: str # One of: org, private, public, prefs/selfJoin: bool # Whether Workspace members can join the board themselves, prefs/cardCovers: bool # Whether card covers should be displayed on this board, prefs/hideVotes: bool # Determines whether the Voting Power-Up should hide who voted on cards or not., prefs/invitations: str # Who can invite people to this board. One of: admins, members, prefs/voting: str # Who can vote on this board. One of disabled, members, observers, org, public, prefs/comments: str # Who can comment on cards on this board. One of: disabled, members, observers, org, public, prefs/background: str # The id of a custom background or one of: blue, orange, green, red, purple, pink, lime, sky, grey, prefs/cardAging: str # One of: pirate, regular, prefs/calendarFeedEnabled: bool # Determines whether the calendar feed is enabled or not.}
+@returns(200) Success
+
+@endpoint DELETE /boards/{id}
+@desc Delete a Board
+@required {id: str # The id of the board to delete}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/{field}
+@desc Get a field on a Board
+@required {id: str # The ID of the board., field: str # The field you'd like to receive. Valid values: closed, dateLastActivity, dateLastView, desc, descData, idMemberCreator, idOrganization, invitations, invited, labelNames, memberships, name, pinned, powerUps, prefs, shortLink, shortUrl, starred, subscribed, url.}
+@returns(200) Success
+
+@endpoint GET /boards/{boardId}/actions
+@desc Get Actions of a Board
+@required {boardId: str}
+@optional {fields: map # The fields to be returned for the Actions. [See Action fields here](/cloud/trello/guides/rest-api/object-definitions/#action-object)., filter: str # A comma-separated list of [action types](/cloud/trello/guides/rest-api/action-types/)., format: str=list # The format of the returned Actions. Either list or count., idModels: str # A comma-separated list of idModels. Only actions related to these models will be returned., limit: num=50 # The limit of the number of responses, between 0 and 1000., member: bool=True # Whether to return the member object for each action., member_fields: str=activityBlocked,avatarHash,avatarUrl,fullName,idMemberReferrer,initials,nonPublic,nonPublicAvailable,username # The fields of the [member](/cloud/trello/guides/rest-api/object-definitions/#member-object) to return., memberCreator: bool=True # Whether to return the memberCreator object for each action., memberCreator_fields: str=activityBlocked,avatarHash,avatarUrl,fullName,idMemberReferrer,initials,nonPublic,nonPublicAvailable,username # The fields of the [member](/cloud/trello/guides/rest-api/object-definitions/#member-object) creator to return, page: num=0 # The page of results for actions., reactions: bool # Whether to show reactions on comments or not., before: str # A date string in the form of YYYY-MM-DDThh:mm:ssZ or a mongo object ID. Only objects created before this date will be returned., since: str # A date string in the form of YYYY-MM-DDThh:mm:ssZ or a mongo object ID. Only objects created since this date will be returned.}
+@returns(200) Success
+
+@endpoint GET /boards/{boardId}/boardStars
+@desc Get boardStars on a Board
+@required {boardId: str}
+@optional {filter: str=mine # Valid values: mine, none}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/checklists
+@desc Get Checklists on a Board
+@required {id: str # The ID of the board}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/cards
+@desc Get Cards on a Board
+@required {id: str}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/cards/{filter}
+@desc Get filtered Cards on a Board
+@required {id: str # ID of the Board, filter: str(all/closed/complete/incomplete/none/open/visible) # One of: `all`, `closed`, `complete`, `incomplete`, `none`, `open`, `visible`}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/customFields
+@desc Get Custom Fields for Board
+@required {id: str # The ID of the board}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/labels
+@desc Get Labels on a Board
+@required {id: str # The ID of the Board.}
+@optional {fields: map # The fields to be returned for the Labels., limit: int(int32)=50 # The number of Labels to be returned.}
+@returns(200) Success
+
+@endpoint POST /boards/{id}/labels
+@desc Create a Label on a Board
+@required {id: str # The id of the board to update, name: str # The name of the label to be created. 1 to 16384 characters long., color: str # Sets the color of the new label. Valid values are a label color or `null`.}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/lists
+@desc Get Lists on a Board
+@optional {cards: str # Filter to apply to Cards., card_fields: str=all # `all` or a comma-separated list of card [fields](/cloud/trello/guides/rest-api/object-definitions/#card-object), filter: str # Filter to apply to Lists, fields: str=all # `all` or a comma-separated list of list [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint POST /boards/{id}/lists
+@desc Create a List on a Board
+@required {name: str # The name of the list to be created. 1 to 16384 characters long.}
+@optional {pos: str=top # Determines the position of the list. Valid values: `top`, `bottom`, or a positive number.}
+@returns(200) {id: str, name: str, closed: bool, pos: num, softLimit: str, idBoard: str, subscribed: bool, limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}} # Success
+
+@endpoint GET /boards/{id}/lists/{filter}
+@desc Get filtered Lists on a Board
+@required {id: str # The ID of the board, filter: str # One of `all`, `closed`, `none`, `open`}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/members
+@desc Get the Members of a Board
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/members
+@desc Invite Member to Board via email
+@required {email: str(email) # The email address of a user to add as a member of the board.}
+@optional {type: str(admin/normal/observer)=normal # Valid values: admin, normal, observer. Determines what type of member the user being added should be of the board., fullName: str # The full name of the user to as a member of the board. Must have a length of at least 1 and cannot begin nor end with a space.}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/members/{idMember}
+@desc Add a Member to a Board
+@required {type: str(admin/normal/observer) # One of: admin, normal, observer. Determines the type of member this user will be on the board.}
+@optional {allowBillableGuest: bool=False # Optional param that allows organization admins to add multi-board guests onto a board.}
+@returns(200) Success
+
+@endpoint DELETE /boards/{id}/members/{idMember}
+@desc Remove Member from Board
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/memberships/{idMembership}
+@desc Update Membership of Member on a Board
+@required {id: str # The id of the board to update, idMembership: str # The id of a membership that should be added to this board., type: str(admin/normal/observer) # One of: admin, normal, observer. Determines the type of member that this membership will be to this board.}
+@optional {member_fields: str(all/avatarHash/bio/bioData/confirmed/fullName/idPremOrgsAdmin/initials/memberType/products/status/url/username)=fullName, username # Valid values: all, avatarHash, bio, bioData, confirmed, fullName, idPremOrgsAdmin, initials, memberType, products, status, url, username}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/myPrefs/emailPosition
+@desc Update emailPosition Pref on a Board
+@required {id: str # The id of the board to update, value: str(bottom/top) # Valid values: bottom, top. Determines the position of the email address.}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/myPrefs/idEmailList
+@desc Update idEmailList Pref on a Board
+@required {id: str # The id of the board to update, value: str # The id of an email list.}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/myPrefs/showSidebar
+@desc Update showSidebar Pref on a Board
+@required {id: str # The id of the board to update, value: bool # Determines whether to show the side bar.}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/myPrefs/showSidebarActivity
+@desc Update showSidebarActivity Pref on a Board
+@required {id: str # The id of the board to update, value: bool # Determines whether to show sidebar activity.}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/myPrefs/showSidebarBoardActions
+@desc Update showSidebarBoardActions Pref on a Board
+@required {id: str # The id of the board to update, value: bool # Determines whether to show the sidebar board actions.}
+@returns(200) Success
+
+@endpoint PUT /boards/{id}/myPrefs/showSidebarMembers
+@desc Update showSidebarMembers Pref on a Board
+@required {id: str # The id of the board to update, value: bool # Determines whether to show members of the board in the sidebar.}
+@returns(200) Success
+
+@endpoint POST /boards/
+@desc Create a Board
+@required {name: str # The new name for the board. 1 to 16384 characters long.}
+@optional {defaultLabels: bool=True # Determines whether to use the default set of labels., defaultLists: bool=True # Determines whether to add the default set of lists to a board (To Do, Doing, Done). It is ignored if `idBoardSource` is provided., desc: str # A new description for the board, 0 to 16384 characters long, idOrganization: str # The id or name of the Workspace the board should belong to., idBoardSource: str # The id of a board to copy into the new board., keepFromSource: str(cards/none)=none # To keep cards from the original board pass in the value `cards`, powerUps: str(all/calendar/cardAging/recap/voting) # The Power-Ups that should be enabled on the new board. One of: `all`, `calendar`, `cardAging`, `recap`, `voting`., prefs_permissionLevel: str(org/private/public)=private # The permissions level of the board. One of: `org`, `private`, `public`., prefs_voting: str(disabled/members/observers/org/public)=disabled # Who can vote on this board. One of `disabled`, `members`, `observers`, `org`, `public`., prefs_comments: str(disabled/members/observers/org/public)=members # Who can comment on cards on this board. One of: `disabled`, `members`, `observers`, `org`, `public`., prefs_invitations: str(members/admins)=members # Determines what types of members can invite users to join. One of: `admins`, `members`., prefs_selfJoin: bool=True # Determines whether users can join the boards themselves or whether they have to be invited., prefs_cardCovers: bool=True # Determines whether card covers are enabled., prefs_background: str(blue/orange/green/red/purple/pink/lime/sky/grey)=blue # The id of a custom background or one of: `blue`, `orange`, `green`, `red`, `purple`, `pink`, `lime`, `sky`, `grey`., prefs_cardAging: str(pirate/regular)=regular # Determines the type of card aging that should take place on the board if card aging is enabled. One of: `pirate`, `regular`.}
+@returns(200) Success
+
+@endpoint POST /boards/{id}/calendarKey/generate
+@desc Create a calendarKey for a Board
+@required {id: str # The id of the board to update}
+@returns(200) Success
+
+@endpoint POST /boards/{id}/emailKey/generate
+@desc Create a emailKey for a Board
+@required {id: str # The id of the board to update}
+@returns(200) Success
+
+@endpoint POST /boards/{id}/idTags
+@desc Create a Tag for a Board
+@required {id: str # The id of the board to update, value: str # The id of a tag from the organization to which this board belongs.}
+@returns(200) Success
+
+@endpoint POST /boards/{id}/markedAsViewed
+@desc Mark Board as viewed
+@required {id: str # The id of the board to update}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/boardPlugins
+@desc Get Enabled Power-Ups on Board
+@returns(200) Success
+
+@endpoint POST /boards/{id}/boardPlugins
+@desc Enable a Power-Up on a Board
+@optional {idPlugin: str # The ID of the Power-Up to enable}
+@returns(200) Success
+
+@endpoint DELETE /boards/{id}/boardPlugins/{idPlugin}
+@desc Disable a Power-Up on a Board
+@required {id: str # The ID of the board, idPlugin: str # The ID of the Power-Up to disable}
+@returns(200) Success
+
+@endpoint GET /boards/{id}/plugins
+@desc Get Power-Ups on a Board
+@required {id: str # The ID of the board}
+@optional {filter: str(enabled/available)=enabled # One of: `enabled` or `available`}
+@returns(200) {id: str} # Success
+
+@endgroup
+
+@group cards
+@endpoint POST /cards
+@desc Create a new Card
+@required {idList: str # The ID of the list the card should be created in}
+@optional {name: str # The name for the card, desc: str # The description for the card, pos: any # The position of the new card. `top`, `bottom`, or a positive float, due: str(date) # A due date for the card, start: str(date) # The start date of a card, or `null`, dueComplete: bool # Whether the status of the card is complete, idMembers: [any] # Comma-separated list of member IDs to add to the card, idLabels: [any] # Comma-separated list of label IDs to add to the card, urlSource: str(url) # A URL starting with `http://` or `https://`. The URL will be attached to the card upon creation., fileSource: str(binary), mimeType: str # The mimeType of the attachment. Max length 256, idCardSource: str # The ID of a card to copy into the new card, keepFromSource: str(all/attachments/checklists/comments/customFields/due/start/labels/members/start/stickers)=all # If using `idCardSource` you can specify which properties to copy over. `all` or comma-separated list of: `attachments,checklists,customFields,comments,due,start,labels,members,start,stickers`, address: str # For use with/by the Map View, locationName: str # For use with/by the Map View, coordinates: str # For use with/by the Map View. Should take the form latitude,longitude, cardRole: str(separator/board/mirror/link) # For displaying cards in different ways based on the card name. Board cards must have a name that is a link to a Trello board. Mirror cards must have a name that is a link to a Trello card.}
+@returns(200) {id: str, address: str?, badges: map{attachmentsByType: map{trello: map{board: num, card: num}}, location: bool, votes: int, viewingMemberVoted: bool, subscribed: bool, fogbugz: str, checkItems: int, checkItemsChecked: int, comments: int, attachments: int, description: bool, due: str(date)?, start: str(date)?, dueComplete: bool}, cardRole: str?, checkItemStates: [any], closed: bool, coordinates: str?, creationMethod: str?, dateLastActivity: str(date-time), desc: str, descData: map{emoji: map}, due: str(date)?, dueReminder: str?, idBoard: str, idChecklists: [any], idLabels: [any], idList: str, idMembers: [any], idMembersVoted: [any], idShort: int, idAttachmentCover: str, labels: [any], limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, locationName: str?, manualCoverAttachment: bool, mirrorSourceId: str, name: str, pos: num(float), shortLink: str, shortUrl: str(url), subscribed: bool, url: str(url), cover: map{idAttachment: str, color: str?, idUploadedBackground: bool?, size: str, brightness: str, isTemplate: bool}} # Success
+
+@endpoint GET /cards/{id}
+@desc Get a Card
+@optional {fields: str # `all` or a comma-separated list of [fields](/cloud/trello/guides/rest-api/object-definitions/). **Defaults**: `badges, checkItemStates, closed, dateLastActivity, desc, descData, due, start, idBoard, idChecklists, idLabels, idList, idMembers, idShort, idAttachmentCover, manualCoverAttachment, labels, name, pos, shortUrl, url`, actions: str # See the [Actions Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#actions-nested-resource), attachments: str=False # `true`, `false`, or `cover`, attachment_fields: str=all # `all` or a comma-separated list of attachment [fields](/cloud/trello/guides/rest-api/object-definitions/), members: bool=False # Whether to return member objects for members on the card, member_fields: str # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/). **Defaults**: `avatarHash, fullName, initials, username`, membersVoted: bool=False # Whether to return member objects for members who voted on the card, memberVoted_fields: str # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/). **Defaults**: `avatarHash, fullName, initials, username`, checkItemStates: bool=False, checklists: str=none # Whether to return the checklists on the card. `all` or `none`, checklist_fields: str=all # `all` or a comma-separated list of `idBoard,idCard,name,pos`, board: bool=False # Whether to return the board object the card is on, board_fields: str # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/#board-object). **Defaults**: `name, desc, descData, closed, idOrganization, pinned, url, prefs`, list: bool=False # See the [Lists Nested Resource](/cloud/trello/guides/rest-api/nested-resources/), pluginData: bool=False # Whether to include pluginData on the card with the response, stickers: bool=False # Whether to include sticker models with the response, sticker_fields: str=all # `all` or a comma-separated list of sticker [fields](/cloud/trello/guides/rest-api/object-definitions/), customFieldItems: bool=False # Whether to include the customFieldItems}
+@returns(200) {id: str, address: str?, badges: map{attachmentsByType: map{trello: map{board: num, card: num}}, location: bool, votes: int, viewingMemberVoted: bool, subscribed: bool, fogbugz: str, checkItems: int, checkItemsChecked: int, comments: int, attachments: int, description: bool, due: str(date)?, start: str(date)?, dueComplete: bool}, cardRole: str?, checkItemStates: [any], closed: bool, coordinates: str?, creationMethod: str?, dateLastActivity: str(date-time), desc: str, descData: map{emoji: map}, due: str(date)?, dueReminder: str?, idBoard: str, idChecklists: [any], idLabels: [any], idList: str, idMembers: [any], idMembersVoted: [any], idShort: int, idAttachmentCover: str, labels: [any], limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, locationName: str?, manualCoverAttachment: bool, mirrorSourceId: str, name: str, pos: num(float), shortLink: str, shortUrl: str(url), subscribed: bool, url: str(url), cover: map{idAttachment: str, color: str?, idUploadedBackground: bool?, size: str, brightness: str, isTemplate: bool}} # Success
+
+@endpoint PUT /cards/{id}
+@desc Update a Card
+@optional {name: str # The new name for the card, desc: str # The new description for the card, closed: bool # Whether the card should be archived (closed: true), idMembers: str # Comma-separated list of member IDs, idAttachmentCover: str # The ID of the image attachment the card should use as its cover, or null for none, idList: str # The ID of the list the card should be in, idLabels: str # Comma-separated list of label IDs, idBoard: str # The ID of the board the card should be on, pos: any # The position of the card in its list. `top`, `bottom`, or a positive float, due: str(date) # When the card is due, or `null`, start: str(date) # The start date of a card, or `null`, dueComplete: bool # Whether the status of the card is complete, subscribed: bool # Whether the member is should be subscribed to the card, address: str # For use with/by the Map View, locationName: str # For use with/by the Map View, coordinates: str # For use with/by the Map View. Should be latitude,longitude, cover: map # Updates the card's cover  | Option | Values | About |  |--------|--------|-------|  | color | `pink`, `yellow`, `lime`, `blue`, `black`, `orange`, `red`, `purple`, `sky`, `green` | Makes the cover a solid color . |  | brightness | `dark`, `light` | Determines whether the text on the cover should be dark or light.  | url | An unsplash URL: https://images.unsplash.com | Used if making an image the cover. Only Unsplash URLs work.  | idAttachment | ID of an attachment on the card | Used if setting an attached image as the cover. |  | size | `normal`, `full` | Determines whether to show the card name on the cover, or below it. |    `brightness` can be sent alongside any of the other parameters, but all of the other parameters are mutually exclusive; you can not have the cover be a `color` and an `idAttachment` at the same time.     On the brightness options, setting it to light will make the text on the card cover dark:  ![](/cloud/trello/images/rest/cards/cover-brightness-dark.png)    And vice versa, setting it to dark will make the text on the card cover light:   ![](/cloud/trello/images/rest/cards/cover-brightness-light.png)}
+@returns(200) {id: str, address: str?, badges: map{attachmentsByType: map{trello: map{board: num, card: num}}, location: bool, votes: int, viewingMemberVoted: bool, subscribed: bool, fogbugz: str, checkItems: int, checkItemsChecked: int, comments: int, attachments: int, description: bool, due: str(date)?, start: str(date)?, dueComplete: bool}, cardRole: str?, checkItemStates: [any], closed: bool, coordinates: str?, creationMethod: str?, dateLastActivity: str(date-time), desc: str, descData: map{emoji: map}, due: str(date)?, dueReminder: str?, idBoard: str, idChecklists: [any], idLabels: [any], idList: str, idMembers: [any], idMembersVoted: [any], idShort: int, idAttachmentCover: str, labels: [any], limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, locationName: str?, manualCoverAttachment: bool, mirrorSourceId: str, name: str, pos: num(float), shortLink: str, shortUrl: str(url), subscribed: bool, url: str(url), cover: map{idAttachment: str, color: str?, idUploadedBackground: bool?, size: str, brightness: str, isTemplate: bool}} # Success
+
+@endpoint DELETE /cards/{id}
+@desc Delete a Card
+@returns(200) Success
+
+@endpoint GET /cards/{id}/{field}
+@desc Get a field on a Card
+@required {id: str # The ID of the Card, field: str # The desired field.}
+@returns(200) {id: str, address: str?, badges: map{attachmentsByType: map{trello: map{board: num, card: num}}, location: bool, votes: int, viewingMemberVoted: bool, subscribed: bool, fogbugz: str, checkItems: int, checkItemsChecked: int, comments: int, attachments: int, description: bool, due: str(date)?, start: str(date)?, dueComplete: bool}, cardRole: str?, checkItemStates: [any], closed: bool, coordinates: str?, creationMethod: str?, dateLastActivity: str(date-time), desc: str, descData: map{emoji: map}, due: str(date)?, dueReminder: str?, idBoard: str, idChecklists: [any], idLabels: [any], idList: str, idMembers: [any], idMembersVoted: [any], idShort: int, idAttachmentCover: str, labels: [any], limits: map{attachments: map{perBoard: map{status: str, disableAt: num, warnAt: num}}}, locationName: str?, manualCoverAttachment: bool, mirrorSourceId: str, name: str, pos: num(float), shortLink: str, shortUrl: str(url), subscribed: bool, url: str(url), cover: map{idAttachment: str, color: str?, idUploadedBackground: bool?, size: str, brightness: str, isTemplate: bool}} # Success
+
+@endpoint GET /cards/{id}/actions
+@desc Get Actions on a Card
+@required {id: str # The ID of the Card}
+@optional {filter: str=commentCard, updateCard:idList # A comma-separated list of [action types](https://developer.atlassian.com/cloud/trello/guides/rest-api/action-types/)., page: num=0 # The page of results for actions. Each page of results has 50 actions.}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/attachments
+@desc Get Attachments on a Card
+@optional {fields: str=all # `all` or a comma-separated list of attachment [fields](/cloud/trello/guides/rest-api/object-definitions/), filter: str=false # Use `cover` to restrict to just the cover attachment}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/attachments
+@desc Create Attachment On Card
+@optional {name: str # The name of the attachment. Max length 256., file: str(binary) # The file to attach, as multipart/form-data, mimeType: str # The mimeType of the attachment. Max length 256, url: str # A URL to attach. Must start with `http://` or `https://`, setCover: bool=False # Determines whether to use the new attachment as a cover for the Card.}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/attachments/{idAttachment}
+@desc Get an Attachment on a Card
+@optional {fields: [any]=['all'] # The Attachment fields to be included in the response.}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/attachments/{idAttachment}
+@desc Delete an Attachment on a Card
+@required {id: str # The ID of the Card, idAttachment: str # The ID of the attachment to delete}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/board
+@desc Get the Board the Card is on
+@required {id: str # The ID of the Card}
+@optional {fields: str=all # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/#board-object)}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/checkItemStates
+@desc Get checkItems on a Card
+@required {id: str # The ID of the Card}
+@optional {fields: str=all # `all` or a comma-separated list of: `idCheckItem`, `state`}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/checklists
+@desc Get Checklists on a Card
+@required {id: str # The ID of the Card}
+@optional {checkItems: str(all/none)=all # `all` or `none`, checkItem_fields: str(name/nameData/pos/state/type/due/dueReminder/idMember)=name,nameData,pos,state,due,dueReminder,idMember # `all` or a comma-separated list of: `name,nameData,pos,state,type,due,dueReminder,idMember`, filter: str(all/none)=all # `all` or `none`, fields: str(all/name/nameData/pos/state/type)=all # `all` or a comma-separated list of: `idBoard,idCard,name,pos`}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/checklists
+@desc Create Checklist on a Card
+@required {id: str # The ID of the Card}
+@optional {name: str # The name of the checklist, idChecklistSource: str # The ID of a source checklist to copy into the new one, pos: str # The position of the checklist on the card. One of: `top`, `bottom`, or a positive number.}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/checkItem/{idCheckItem}
+@desc Get checkItem on a Card
+@optional {fields: str=name,nameData,pos,state,due,dueReminder,idMember # `all` or a comma-separated list of `name,nameData,pos,state,type,due,dueReminder,idMember`}
+@returns(200) Success
+
+@endpoint PUT /cards/{id}/checkItem/{idCheckItem}
+@desc Update a checkItem on a Card
+@optional {name: str # The new name for the checklist item, state: str(complete/incomplete) # One of: `complete`, `incomplete`, idChecklist: str # The ID of the checklist this item is in, pos: any # `top`, `bottom`, or a positive float, due: str(date) # A due date for the checkitem, dueReminder: num # A dueReminder for the due date on the checkitem, idMember: str # The ID of the member to remove from the card}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/checkItem/{idCheckItem}
+@desc Delete checkItem on a Card
+@returns(200) Success
+
+@endpoint GET /cards/{id}/list
+@desc Get the List of a Card
+@required {id: str # The ID of the Card}
+@optional {fields: str=all # `all` or a comma-separated list of list [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/members
+@desc Get the Members of a Card
+@required {id: str # The ID of the Card}
+@optional {fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/membersVoted
+@desc Get Members who have voted on a Card
+@optional {fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/membersVoted
+@desc Add Member vote to Card
+@required {value: str # The ID of the member to vote 'yes' on the card}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/pluginData
+@desc Get pluginData on a Card
+@required {id: str # The ID of the Card}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/stickers
+@desc Get Stickers on a Card
+@required {id: str # The ID of the Card}
+@optional {fields: str=all # `all` or a comma-separated list of sticker [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/stickers
+@desc Add a Sticker to a Card
+@required {image: str # For custom stickers, the id of the sticker. For default stickers, the string identifier (like 'taco-cool', see below), top: num(float) # The top position of the sticker, from -60 to 100, left: num(float) # The left position of the sticker, from -60 to 100, zIndex: int # The z-index of the sticker}
+@optional {rotate: num(float)=0 # The rotation of the sticker}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/stickers/{idSticker}
+@desc Get a Sticker on a Card
+@optional {fields: str=all # `all` or a comma-separated list of sticker [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/stickers/{idSticker}
+@desc Delete a Sticker on a Card
+@returns(200) Success
+
+@endpoint PUT /cards/{id}/stickers/{idSticker}
+@desc Update a Sticker on a Card
+@required {top: num(float) # The top position of the sticker, from -60 to 100, left: num(float) # The left position of the sticker, from -60 to 100, zIndex: int # The z-index of the sticker}
+@optional {rotate: num(float)=0 # The rotation of the sticker}
+@returns(200) Success
+
+@endpoint PUT /cards/{id}/actions/{idAction}/comments
+@desc Update Comment Action on a Card
+@required {text: str # The new text for the comment}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/actions/{idAction}/comments
+@desc Delete a comment on a Card
+@returns(200) Success
+
+@endpoint PUT /cards/{idCard}/customField/{idCustomField}/item
+@desc Update Custom Field item on Card
+@required {idCard: str # ID of the card that the Custom Field value should be set/updated for, idCustomField: str # ID of the Custom Field on the card.}
+@returns(200) Success
+
+@endpoint PUT /cards/{idCard}/customFields
+@desc Update Multiple Custom Field items on Card
+@optional {customFieldItems: [map{idCustomField: any, value: map{text: str, checked: bool, date: str(date-time), number: num}, idValue: any}] # An array of objects containing the custom field ID, key and value, and ID of list type option.}
+@returns(200) Success
+
+@endpoint GET /cards/{id}/customFieldItems
+@desc Get Custom Field Items for a Card
+@required {id: str # The ID of the Card}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/actions/comments
+@desc Add a new comment to a Card
+@required {id: str # The ID of the Card, text: str # The comment}
+@returns(200) {id: str, idMemberCreator: str, data: map{text: str, card: map{id: str, name: str, idShort: int, shortLink: str}, board: map{id: str, name: str, shortLink: str}, list: map{id: str, name: str}}, type: str, date: str(date-time), limits: map{reactions: map{perAction: map{status: str, disableAt: num, warnAt: num}, uniquePerAction: map{status: str, disableAt: num, warnAt: num}}}, display: map{translationKey: str, entities: map{contextOn: map{type: str, translationKey: str, hideIfContext: bool, idContext: str}, card: map{type: str, hideIfContext: bool, id: str, shortLink: str, text: str}, comment: map{type: str, text: str}, memberCreator: map{type: str, id: str, username: str, text: str}}}, memberCreator: map{id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), fullName: str, idMemberReferrer: str, initials: str, username: str}} # Success
+
+@endpoint POST /cards/{id}/idLabels
+@desc Add a Label to a Card
+@required {id: str # The ID of the Card}
+@optional {value: str # The ID of the label to add}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/idMembers
+@desc Add a Member to a Card
+@required {id: str # The ID of the Card}
+@optional {value: str # The ID of the Member to add to the card}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/labels
+@desc Create a new Label on a Card
+@required {id: str # The ID of the Card, color: str # A valid label color or `null`. See [labels](/cloud/trello/guides/rest-api/object-definitions/)}
+@optional {name: str # A name for the label}
+@returns(200) Success
+
+@endpoint POST /cards/{id}/markAssociatedNotificationsRead
+@desc Mark a Card's Notifications as read
+@required {id: str # The ID of the Card}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/idLabels/{idLabel}
+@desc Remove a Label from a Card
+@required {id: str # The ID of the Card, idLabel: str # The ID of the label to remove}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/idMembers/{idMember}
+@desc Remove a Member from a Card
+@required {id: str # The ID of the Card, idMember: str # The ID of the member to remove from the card}
+@returns(200) Success
+
+@endpoint DELETE /cards/{id}/membersVoted/{idMember}
+@desc Remove a Member's Vote on a Card
+@required {id: str # The ID of the Card, idMember: str # The ID of the member whose vote to remove}
+@returns(200) Success
+
+@endpoint PUT /cards/{idCard}/checklist/{idChecklist}/checkItem/{idCheckItem}
+@desc Update Checkitem on Checklist on Card
+@required {idCard: str # The ID of the Card, idCheckItem: str # The ID of the checklist item to update, idChecklist: str # The ID of the item to update.}
+@optional {pos: any # `top`, `bottom`, or a positive float}
+@returns(200) {idChecklist: str, state: str, id: str, name: str, nameData: str?, pos: str} # Success
+
+@endpoint DELETE /cards/{id}/checklists/{idChecklist}
+@desc Delete a Checklist on a Card
+@required {id: str # The ID of the Card, idChecklist: str # The ID of the checklist to delete}
+@returns(200) Success
+
+@endgroup
+
+@group checklists
+@endpoint POST /checklists
+@desc Create a Checklist
+@required {idCard: str # The ID of the Card that the checklist should be added to.}
+@optional {name: str # The name of the checklist. Should be a string of length 1 to 16384., pos: any # The position of the checklist on the card. One of: `top`, `bottom`, or a positive number., idChecklistSource: str # The ID of a checklist to copy into the new checklist.}
+@returns(200) Success
+
+@endpoint GET /checklists/{id}
+@desc Get a Checklist
+@optional {cards: str(all/closed/none/open/visible)=none # Valid values: `all`, `closed`, `none`, `open`, `visible`. Cards is a nested resource. The additional query params available are documented at [Cards Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#cards-nested-resource)., checkItems: str(all/none)=all # The check items on the list to return. One of: `all`, `none`., checkItem_fields: str(all/name/nameData/pos/state/type/due/dueReminder/idMember)=name, nameData, pos, state, due, dueReminder, idMember # The fields on the checkItem to return if checkItems are being returned. `all` or a comma-separated list of: `name`, `nameData`, `pos`, `state`, `type`, `due`, `dueReminder`, `idMember`, fields: str=all # `all` or a comma-separated list of checklist [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint PUT /checklists/{id}
+@desc Update a Checklist
+@optional {name: str # Name of the new checklist being created. Should be length of 1 to 16384., pos: any # Determines the position of the checklist on the card. One of: `top`, `bottom`, or a positive number.}
+@returns(200) Success
+
+@endpoint DELETE /checklists/{id}
+@desc Delete a Checklist
+@returns(200) Success
+
+@endpoint GET /checklists/{id}/{field}
+@desc Get field on a Checklist
+@returns(200) Success
+
+@endpoint PUT /checklists/{id}/{field}
+@desc Update field on a Checklist
+@required {value: any # The value to change the checklist name to. Should be a string of length 1 to 16384.}
+@returns(200) Success
+
+@endpoint GET /checklists/{id}/board
+@desc Get the Board the Checklist is on
+@required {id: str # ID of a checklist.}
+@optional {fields: str(all/name)=all # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /checklists/{id}/cards
+@desc Get the Card a Checklist is on
+@required {id: str # ID of a checklist.}
+@returns(200) Success
+
+@endpoint GET /checklists/{id}/checkItems
+@desc Get Checkitems on a Checklist
+@optional {filter: str(all/none)=all # One of: `all`, `none`., fields: str(all/name/nameData/pos/state/type/due/dueReminder/idMember)=name, nameData, pos, state, due, dueReminder, idMember # One of: `all`, `name`, `nameData`, `pos`, `state`,`type`, `due`, `dueReminder`, `idMember`.}
+@returns(200) Success
+
+@endpoint POST /checklists/{id}/checkItems
+@desc Create Checkitem on Checklist
+@required {name: str # The name of the new check item on the checklist. Should be a string of length 1 to 16384.}
+@optional {pos: any=bottom # The position of the check item in the checklist. One of: `top`, `bottom`, or a positive number., checked: bool=False # Determines whether the check item is already checked when created., due: str(date) # A due date for the checkitem, dueReminder: num # A dueReminder for the due date on the checkitem, idMember: str # An ID of a member resource.}
+@returns(200) Success
+
+@endpoint GET /checklists/{id}/checkItems/{idCheckItem}
+@desc Get a Checkitem on a Checklist
+@optional {fields: str(all/name/nameData/pos/state/type/due/dueReminder/idMember)=name, nameData, pos, state, due, dueReminder, idMember # One of: `all`, `name`, `nameData`, `pos`, `state`, `type`, `due`, `dueReminder`, `idMember`,.}
+@returns(200) Success
+
+@endpoint DELETE /checklists/{id}/checkItems/{idCheckItem}
+@desc Delete Checkitem from Checklist
+@returns(200) Success
+
+@endgroup
+
+@group customFields
+@endpoint POST /customFields
+@desc Create a new Custom Field on a Board
+@required {idModel: str, modelType: str # The type of model that the Custom Field is being defined on. This should always be `board`., name: str # The name of the Custom Field, type: str(checkbox/list/number/text/date) # The type of Custom Field to create., pos: any}
+@optional {options: str # If the type is `checkbox`, display_cardFront: bool=True # Whether this Custom Field should be shown on the front of Cards}
+@returns(200) {id: str, idModel: str, modelType: str, fieldGroup: str, display: map{cardFront: bool, name: str, pos: str, options: [map]}, type: str} # Success
+
+@endpoint GET /customFields/{id}
+@desc Get a Custom Field
+@returns(200) {id: str, idModel: str, modelType: str, fieldGroup: str, display: map{cardFront: bool, name: str, pos: str, options: [map]}, type: str} # Success
+
+@endpoint PUT /customFields/{id}
+@desc Update a Custom Field definition
+@optional {name: str # The name of the Custom Field, pos: any, display/cardFront: bool # Whether to display this custom field on the front of cards}
+@returns(200) {id: str, idModel: str, modelType: str, fieldGroup: str, display: map{cardFront: bool, name: str, pos: str, options: [map]}, type: str} # Success
+
+@endpoint DELETE /customFields/{id}
+@desc Delete a Custom Field definition
+@returns(200) Success
+
+@endpoint POST /customFields/{id}/options
+@desc Add Option to Custom Field dropdown
+@returns(200) Success
+
+@endpoint GET /customFields/{id}/options
+@desc Get Options of Custom Field drop down
+@returns(200) Success
+
+@endpoint GET /customFields/{id}/options/{idCustomFieldOption}
+@desc Get Option of Custom Field dropdown
+@returns(200) Success
+
+@endpoint DELETE /customFields/{id}/options/{idCustomFieldOption}
+@desc Delete Option of Custom Field dropdown
+@returns(200) Success
+
+@endgroup
+
+@group emoji
+@endpoint GET /emoji
+@desc List available Emoji
+@optional {locale: str # The locale to return emoji descriptions and names in. Defaults to the logged in member's locale., spritesheets: bool=False # `true` to return spritesheet URLs in the response}
+@returns(200) {trello: [map]} # Success
+
+@endgroup
+
+@group enterprises
+@endpoint GET /enterprises/{id}
+@desc Get an Enterprise
+@required {id: str # ID of the enterprise to retrieve.}
+@optional {fields: str=all # Comma-separated list of: `id`, `name`, `displayName`, `prefs`, `ssoActivationFailed`, `idAdmins`, `idMembers` (Note that the members array returned will be paginated if `members` is 'normal' or 'admins'. Pagination can be controlled with member_startIndex, etc, but the API response will not contain the total available result count or pagination status data.), `idOrganizations`, `products`, `userTypes`, `idMembers`, `idOrganizations`, members: str=none # One of: `none`, `normal`, `admins`, `owners`, `all`, member_fields: str=avatarHash, fullName, initials, username # One of: `avatarHash`, `fullName`, `initials`, `username`, member_filter: str=none # Pass a SCIM-style query to filter members. This takes precedence over the all/normal/admins value of members. If any of the member_* args are set, the member array will be paginated., member_sort: str # This parameter expects a SCIM-style sorting value prefixed by a `-` to sort descending. If no `-` is prefixed, it will be sorted ascending. Note that the members array returned will be paginated if `members` is 'normal' or 'admins'. Pagination can be controlled with member_startIndex, etc, but the API response will not contain the total available result count or pagination status data., member_sortBy: str=none # Deprecated: Please use member_sort. This parameter expects a SCIM-style sorting value. Note that the members array returned will be paginated if `members` is `normal` or `admins`. Pagination can be controlled with `member_startIndex`, etc, and the API response's header will contain the total count and pagination state., member_sortOrder: str=id # Deprecated: Please use member_sort. One of: `ascending`, `descending`, `asc`, `desc`, member_startIndex: int(int32)=1 # Any integer between 0 and 100., member_count: int(int32)=10 # 0 to 100, organizations: str=none # One of: `none`, `members`, `public`, `all`, organization_fields: str=none # Any valid value that the [nested organization field resource]() accepts., organization_paid_accounts: bool=False # Whether or not to include paid account information in the returned workspace objects, organization_memberships: str=none # Comma-seperated list of: `me`, `normal`, `admin`, `active`, `deactivated`}
+@returns(200) {id: str, name: str, displayName: str, logoHash: str?, logoUrl: str?, prefs: map{ssoOnly: bool, signup: map{banner: str, bannerHtml: str}, mandatoryTransferDate: str(date)?, brandingColor: str, autoJoinOrganizations: bool, notifications: map, maxMembers: num?}, organizationPrefs: map{boardVisibilityRestrict: map, boardDeleteRestrict: map, attachmentRestrictions: [str], permissionLevel: str}, ssoActivationFailed: bool, idAdmins: [str], enterpriseDomains: [str(url)], isRealEnterprise: bool, pluginWhitelistingEnabled: [str], idOrganizations: [str], products: [num(integer)], licenses: map{maxMembers: num(integer)?, totalMembers: num(integer), relatedEnterprises: [map]}, domains: [str(url)], dateOrganizationPrefsLastUpdated: str(date), idp: map{requestSigned: bool, certificate: str?, loginUrl: str(url)?}} # Success
+
+@endpoint GET /enterprises/{id}/auditlog
+@desc Get auditlog data for an Enterprise
+@required {id: str # ID of the enterprise to retrieve.}
+@returns(200) Success
+
+@endpoint GET /enterprises/{id}/admins
+@desc Get Enterprise admin Members
+@required {id: str # ID of the enterprise to retrieve.}
+@optional {fields: str=fullName, userName # Any valid value that the [nested member field resource]() accepts.}
+@returns(200) {id: str, fullName: str, username: str} # Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint GET /enterprises/{id}/signupUrl
+@desc Get signupUrl for Enterprise
+@required {id: str # ID of the enterprise to retrieve.}
+@optional {authenticate: bool=False, confirmationAccepted: bool=False, returnUrl: str(url)=None # Any valid URL., tosAccepted: bool=False # Designates whether the user has seen/consented to the Trello ToS prior to being redirected to the enterprise signup page/their IdP.}
+@returns(200) {signupUrl: str} # Success
+
+@endpoint GET /enterprises/{id}/members/query
+@desc Get Users of an Enterprise
+@required {id: str # ID of the enterprise to retrieve.}
+@optional {licensed: bool=False # When true, returns members who possess a license for the corresponding Trello Enterprise; when false, returns members who do not. If unspecified, both licensed and unlicensed members will be returned., deactivated: bool=False # When true, returns members who have been deactivated for the corresponding Trello Enterprise; when false, returns members who have not. If unspecified, both active and deactivated members will be returned., collaborator: bool=False # When true, returns members who are guests on one or more boards in the corresponding Trello Enterprise (but do not possess a license); when false, returns members who are not. If unspecified, both guests and non-guests will be returned., managed: bool=none # When true, returns members who are managed by the corresponding Trello Enterprise; when false, returns members who are not. If unspecified, both managed and unmanaged members will be returned., admin: bool=False # When true, returns members who are administrators of the corresponding Trello Enterprise; when false, returns members who are not. If unspecified, both admin and non-admin members will be returned., activeSince: str=none # Returns only Trello users active since this date (inclusive)., inactiveSince: str=none # Returns only Trello users active since this date (inclusive)., search: str=none # Returns members with email address or full name that start with the search value., cursor: str=none # Cursor to return next set of results, use cursor returned in the response to query the next batch.}
+@returns(200) Success
+
+@endpoint GET /enterprises/{id}/members
+@desc Get Members of Enterprise
+@required {id: str # ID of the Enterprise to retrieve.}
+@optional {fields: str=avatarHash, fullName, initials, username # A comma-seperated list of valid [member fields](/cloud/trello/guides/rest-api/object-definitions/#member-object)., filter: str # Pass a SCIM-style query to filter members. This takes precedence over the all/normal/admins value of members. If any of the below member_* args are set, the member array will be paginated., sort: str # This parameter expects a SCIM-style sorting value prefixed by a `-` to sort descending. If no `-` is prefixed, it will be sorted ascending. Note that the members array returned will be paginated if `members` is 'normal' or 'admins'. Pagination can be controlled with member_startIndex, etc, but the API response will not contain the total available result count or pagination status data., sortBy: str # Deprecated: Please use `sort` instead. This parameter expects a SCIM-style sorting value. Note that the members array returned will be paginated if `members` is 'normal' or 'admins'. Pagination can be controlled with member_startIndex, etc, but the API response will not contain the total available result count or pagination status data., sortOrder: str(ascending/descending/asc/desc)=None # Deprecated: Please use `sort` instead. One of: `ascending`, `descending`, `asc`, `desc`., startIndex: int(int32) # Any integer between 0 and 9999., count: str=none # SCIM-style filter., organization_fields: str=displayName # Any valid value that the [nested organization field resource](/cloud/trello/guides/rest-api/nested-resources/) accepts., board_fields: str=name # Any valid value that the [nested board resource](/cloud/trello/guides/rest-api/nested-resources/) accepts.}
+@returns(200) Success
+
+@endpoint GET /enterprises/{id}/members/{idMember}
+@desc Get a Member of Enterprise
+@required {id: str # ID of the enterprise to retrieve., idMember: str # An ID of a member resource.}
+@optional {fields: str=avatarHash, fullName, initials, username # A comma separated list of any valid values that the [nested member field resource]() accepts., organization_fields: str=displayName # Any valid value that the [nested organization field resource](/cloud/trello/guides/rest-api/nested-resources/) accepts., board_fields: str=name # Any valid value that the [nested board resource](/cloud/trello/guides/rest-api/nested-resources/) accepts.}
+@returns(200) {id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), bio: str, bioData: map{emoji: map}, confirmed: bool, fullName: str, idEnterprise: str, idEnterprisesDeactivated: [str], idMemberReferrer: str, idPremOrgsAdmin: [str], initials: str, memberType: str, nonPublic: map{fullName: str, initials: str, avatarUrl: str(url), avatarHash: str}, nonPublicAvailable: bool, products: [int], url: str(url), username: str, status: str, aaEmail: str(email)?, aaEnrolledDate: str?, aaId: str?, avatarSource: str, email: str, gravatarHash: str, idBoards: [str], idOrganizations: [str], idEnterprisesAdmin: [str], limits: map{status: str, disableAt: num, warnAt: num}, loginTypes: [str], marketingOptIn: map{optedIn: bool, date: str(date)}, messagesDismissed: map{name: str, count: str, lastDismissed: str(date), _id: str}, oneTimeMessagesDismissed: [str], prefs: map{timezoneInfo: map{offsetCurrent: int, timezoneCurrent: str, offsetNext: int, dateNext: str(date), timezoneNext: str}, privacy: map{fullName: str, avatar: str}, sendSummaries: bool, minutesBetweenSummaries: int, minutesBeforeDeadlineToNotify: int, colorBlind: bool, locale: str, timezone: str, twoFactor: map{enabled: bool, needsNewBackups: bool}}, trophies: [str], uploadedAvatarHash: str, uploadedAvatarUrl: str(url), premiumFeatures: [str], isAaMastered: bool, ixUpdate: num, idBoardsPinned: [str]?} # Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint GET /enterprises/{id}/transferrable/organization/{idOrganization}
+@desc Get whether an organization can be transferred to an enterprise.
+@required {id: str # ID of the Enterprise to retrieve., idOrganization: str # An ID of an Organization resource.}
+@returns(200) {transferrable: bool, newBillableMembers: [map], restrictedMembers: [map]} # Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint GET /enterprises/{id}/transferrable/bulk/{idOrganizations}
+@desc Get a bulk list of organizations that can be transferred to an enterprise.
+@required {id: str # ID of the Enterprise to retrieve., idOrganizations: [any] # An array of IDs of an Organization resource.}
+@returns(200) Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint PUT /enterprises/${id}/enterpriseJoinRequest/bulk
+@desc Decline enterpriseJoinRequests from one organization or a bulk list of organizations.
+@required {id: str # ID of the Enterprise to retrieve., idOrganizations: [any] # An array of IDs of an Organization resource.}
+@returns(200) Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint GET /enterprises/{id}/claimableOrganizations
+@desc Get ClaimableOrganizations of an Enterprise
+@required {id: str # ID of the enterprise to retrieve}
+@optional {limit: int # Limits the number of workspaces to be sorted, cursor: str # Specifies the sort order to return matching documents, name: str # Name of the enterprise to retrieve workspaces for, activeSince: str # Date in YYYY-MM-DD format indicating the date to search up to for activeness of workspace, inactiveSince: str # Date in YYYY-MM-DD format indicating the date to search up to for inactiveness of workspace}
+@returns(200) {organizations: [map], claimableCount: num} # Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint GET /enterprises/{id}/pendingOrganizations
+@desc Get PendingOrganizations of an Enterprise
+@required {id: str # ID of the enterprise to retrieve}
+@optional {activeSince: str # Date in YYYY-MM-DD format indicating the date to search up to for activeness of workspace, inactiveSince: str # Date in YYYY-MM-DD format indicating the date to search up to for inactiveness of workspace}
+@returns(200) Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint POST /enterprises/{id}/tokens
+@desc Create an auth Token for an Enterprise.
+@required {id: str # ID of the enterprise to retrieve.}
+@optional {expiration: str=none # One of: `1hour`, `1day`, `30days`, `never`}
+@returns(200) Success
+
+@endpoint GET /enterprises/{id}/organizations
+@desc Get Organizations of an Enterprise
+@required {id: str # ID of the Enterprise to retrieve.}
+@optional {fields: str=all # comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/), filter: str=all, startIndex: int(int32) # Any integer greater than and equal to 1., count: int(int32) # Any integer between 0 and 100.}
+@returns(200) Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint PUT /enterprises/{id}/organizations
+@desc Transfer an Organization to an Enterprise.
+@required {id: str # ID of the Enterprise to retrieve., idOrganization: str # ID of Organization to be transferred to Enterprise.}
+@returns(200) Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint PUT /enterprises/{id}/members/{idMember}/licensed
+@desc Update a Member's licensed status
+@required {id: str # ID of the Enterprise., idMember: str # The ID of the Member, value: bool # Boolean value to determine whether the user should be given an Enterprise license (true) or not (false).}
+@returns(200) {id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), bio: str, bioData: map{emoji: map}, confirmed: bool, fullName: str, idEnterprise: str, idEnterprisesDeactivated: [str], idMemberReferrer: str, idPremOrgsAdmin: [str], initials: str, memberType: str, nonPublic: map{fullName: str, initials: str, avatarUrl: str(url), avatarHash: str}, nonPublicAvailable: bool, products: [int], url: str(url), username: str, status: str, aaEmail: str(email)?, aaEnrolledDate: str?, aaId: str?, avatarSource: str, email: str, gravatarHash: str, idBoards: [str], idOrganizations: [str], idEnterprisesAdmin: [str], limits: map{status: str, disableAt: num, warnAt: num}, loginTypes: [str], marketingOptIn: map{optedIn: bool, date: str(date)}, messagesDismissed: map{name: str, count: str, lastDismissed: str(date), _id: str}, oneTimeMessagesDismissed: [str], prefs: map{timezoneInfo: map{offsetCurrent: int, timezoneCurrent: str, offsetNext: int, dateNext: str(date), timezoneNext: str}, privacy: map{fullName: str, avatar: str}, sendSummaries: bool, minutesBetweenSummaries: int, minutesBeforeDeadlineToNotify: int, colorBlind: bool, locale: str, timezone: str, twoFactor: map{enabled: bool, needsNewBackups: bool}}, trophies: [str], uploadedAvatarHash: str, uploadedAvatarUrl: str(url), premiumFeatures: [str], isAaMastered: bool, ixUpdate: num, idBoardsPinned: [str]?} # Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endpoint PUT /enterprises/{id}/members/{idMember}/deactivated
+@desc Deactivate a Member of an Enterprise.
+@required {id: str # ID of the enterprise to retrieve., idMember: str # ID of the Member to deactive., value: bool # Determines whether the user is deactivated or not.}
+@optional {fields: str=avatarHash, fullName, initials, username # A comma separated list of any valid values that the [nested member field resource]() accepts., organization_fields: str=displayName # Any valid value that the [nested organization resource](/cloud/trello/guides/rest-api/nested-resources/) accepts., board_fields: str=name # Any valid value that the [nested board resource](/cloud/trello/guides/rest-api/nested-resources/) accepts.}
+@returns(200) Success
+
+@endpoint PUT /enterprises/{id}/admins/{idMember}
+@desc Update Member to be admin of Enterprise
+@required {id: str # ID of the enterprise to retrieve., idMember: str # ID of member to be made an admin of enterprise.}
+@returns(200) Success
+
+@endpoint DELETE /enterprises/{id}/admins/{idMember}
+@desc Remove a Member as admin from Enterprise.
+@required {id: str # ID of the Enterprise to retrieve., idMember: str # ID of the member to be removed as an admin from enterprise.}
+@returns(200) Success
+
+@endpoint DELETE /enterprises/{id}/organizations/{idOrg}
+@desc Delete an Organization from an Enterprise.
+@required {id: str # ID of the enterprise to retrieve., idOrg: str # ID of the organization to be removed from the enterprise.}
+@returns(200) Success
+
+@endpoint GET /enterprises/{id}/organizations/bulk/{idOrganizations}
+@desc Bulk accept a set of organizations to an Enterprise.
+@required {id: str # ID of the enterprise to retrieve., idOrganizations: [any] # An array of IDs of the organizations to be removed from the enterprise.}
+@returns(200) Success
+@errors {401: Unauthorized, 404: The specified resource was not found}
+
+@endgroup
+
+@group labels
+@endpoint GET /labels/{id}
+@desc Get a Label
+@optional {fields: str=all # all or a comma-separated list of [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint PUT /labels/{id}
+@desc Update a Label
+@optional {name: str # The new name for the label, color: str # The new color for the label. See: [fields](/cloud/trello/guides/rest-api/object-definitions/) for color options}
+@returns(200) Success
+
+@endpoint DELETE /labels/{id}
+@desc Delete a Label
+@returns(200) Success
+
+@endpoint PUT /labels/{id}/{field}
+@desc Update a field on a label
+@required {id: str # The id of the label, field: str(color/name) # The field on the Label to update., value: str # The new value for the field.}
+@returns(200) Success
+
+@endpoint POST /labels
+@desc Create a Label
+@required {name: str # Name for the label, color: str # The color for the label., idBoard: str # The ID of the Board to create the Label on.}
+@returns(200) Success
+
+@endgroup
+
+@group lists
+@endpoint GET /lists/{id}
+@desc Get a List
+@optional {fields: str=name,closed,idBoard,pos # `all` or a comma separated list of List field names.}
+@returns(200) Success
+
+@endpoint PUT /lists/{id}
+@desc Update a List
+@optional {name: str # New name for the list, closed: bool # Whether the list should be closed (archived), idBoard: str # ID of a board the list should be moved to, pos: any # New position for the list: `top`, `bottom`, or a positive floating point number, subscribed: bool # Whether the active member is subscribed to this list}
+@returns(200) Success
+
+@endpoint POST /lists
+@desc Create a new List
+@required {name: str # Name for the list, idBoard: str # The long ID of the board the list should be created on}
+@optional {idListSource: str # ID of the List to copy into the new List, pos: any # Position of the list. `top`, `bottom`, or a positive floating point number}
+@returns(200) Success
+
+@endpoint POST /lists/{id}/archiveAllCards
+@desc Archive all Cards in List
+@required {id: str # The ID of the list}
+@returns(200) Success
+
+@endpoint POST /lists/{id}/moveAllCards
+@desc Move all Cards in List
+@required {id: str # The ID of the list, idBoard: str # The ID of the board the cards should be moved to, idList: str # The ID of the list that the cards should be moved to}
+@returns(200) Success
+
+@endpoint PUT /lists/{id}/closed
+@desc Archive or unarchive a list
+@required {id: str # The ID of the list}
+@optional {value: str # Set to true to close (archive) the list}
+@returns(200) Success
+
+@endpoint PUT /lists/{id}/idBoard
+@desc Move List to Board
+@required {id: str # The ID of the list, value: str # The ID of the board to move the list to}
+@returns(200) Success
+
+@endpoint PUT /lists/{id}/{field}
+@desc Update a field on a List
+@required {id: str # The ID of the list, field: str(name/pos/subscribed) # The field on the List to be updated}
+@optional {value: any # The new value for the field}
+@returns(200) Success
+
+@endpoint GET /lists/{id}/actions
+@desc Get Actions for a List
+@required {id: str # The ID of the list}
+@optional {filter: str # A comma-separated list of [action types](https://developer.atlassian.com/cloud/trello/guides/rest-api/action-types/).}
+@returns(200) Success
+
+@endpoint GET /lists/{id}/board
+@desc Get the Board a List is on
+@required {id: str # The ID of the list}
+@optional {fields: str=all # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/#board-object)}
+@returns(200) Success
+
+@endpoint GET /lists/{id}/cards
+@desc Get Cards in a List
+@required {id: str # The ID of the list}
+@returns(200) Success
+
+@endgroup
+
+@group members
+@endpoint GET /members/{id}
+@desc Get a Member
+@required {id: any # The ID or username of the member}
+@optional {actions: str # See the [Actions Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#actions-nested-resource), boards: str # See the [Boards Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#boards-nested-resource), boardBackgrounds: str(all/custom/default/none/premium)=none # One of: `all`, `custom`, `default`, `none`, `premium`, boardsInvited: str(closed/members/open/organization/pinned/public/starred/unpinned) # `all` or a comma-separated list of: closed, members, open, organization, pinned, public, starred, unpinned, boardsInvited_fields: str=name,closed,idOrganization,pinned # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/), boardStars: bool=False # Whether to return the boardStars or not, cards: str=none # See the [Cards Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#cards-nested-resource) for additional options, customBoardBackgrounds: str(all/none)=none # `all` or `none`, customEmoji: str(all/none)=none # `all` or `none`, customStickers: str(all/none)=none # `all` or `none`, fields: str=all # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/), notifications: str # See the [Notifications Nested Resource](/cloud/trello/guides/rest-api/nested-resources/#notifications-nested-resource), organizations: str(all/members/none/public)=none # One of: `all`, `members`, `none`, `public`, organization_fields: str=all # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/), organization_paid_account: bool=False # Whether or not to include paid account information in the returned workspace object, organizationsInvited: str(all/members/none/public)=none # One of: `all`, `members`, `none`, `public`, organizationsInvited_fields: str=all # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/), paid_account: bool=False # Whether or not to include paid account information in the returned member object, savedSearches: bool=False, tokens: str(all/none)=none # `all` or `none`}
+@returns(200) Success
+
+@endpoint PUT /members/{id}
+@desc Update a Member
+@required {id: str # The ID or username of the member}
+@optional {fullName: str # New name for the member. Cannot begin or end with a space., initials: str # New initials for the member. 1-4 characters long., username: str # New username for the member. At least 3 characters long, only lowercase letters, underscores, and numbers. Must be unique., bio: str, avatarSource: str(gravatar/none/upload) # One of: `gravatar`, `none`, `upload`, prefs/colorBlind: bool, prefs/locale: str, prefs/minutesBetweenSummaries: int(int32) # `-1` for disabled, `1`, or `60`}
+@returns(200) Success
+
+@endpoint GET /members/{id}/{field}
+@desc Get a field on a Member
+@required {id: str # The ID or username of the member, field: str # One of the member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /members/{id}/actions
+@desc Get a Member's Actions
+@required {id: str # The ID or username of the member}
+@optional {filter: str # A comma-separated list of [action types](https://developer.atlassian.com/cloud/trello/guides/rest-api/action-types/).}
+@returns(200) Success
+
+@endpoint GET /members/{id}/boardBackgrounds
+@desc Get Member's custom Board backgrounds
+@required {id: str # The ID or username of the member}
+@optional {filter: str(all/custom/default/none/premium)=all # One of: `all`, `custom`, `default`, `none`, `premium`}
+@returns(200) Success
+
+@endpoint POST /members/{id}/boardBackgrounds
+@desc Upload new boardBackground for Member
+@required {id: str # The ID or username of the member, file: str(binary)}
+@returns(200) Success
+
+@endpoint GET /members/{id}/boardBackgrounds/{idBackground}
+@desc Get a boardBackground of a Member
+@optional {fields: str(all/brightness/fullSizeUrl/scaled/tile)=all # `all` or a comma-separated list of: `brightness`, `fullSizeUrl`, `scaled`, `tile`}
+@returns(200) {id: str} # Success
+
+@endpoint PUT /members/{id}/boardBackgrounds/{idBackground}
+@desc Update a Member's custom Board background
+@optional {brightness: str(dark/light/unknown) # One of: `dark`, `light`, `unknown`, tile: bool # Whether the background should be tiled}
+@returns(200) {id: str} # Success
+
+@endpoint DELETE /members/{id}/boardBackgrounds/{idBackground}
+@desc Delete a Member's custom Board background
+@returns(200) Success
+
+@endpoint GET /members/{id}/boardStars
+@desc Get a Member's boardStars
+@required {id: str # The ID or username of the member}
+@returns(200) Success
+
+@endpoint POST /members/{id}/boardStars
+@desc Create Star for Board
+@required {id: any # The ID or username of the member, idBoard: str # The ID of the board to star, pos: any # The position of the newly starred board. `top`, `bottom`, or a positive float.}
+@returns(200) Success
+
+@endpoint GET /members/{id}/boardStars/{idStar}
+@desc Get a boardStar of Member
+@returns(200) {id: str, idBoard: str, pos: int} # Success
+
+@endpoint PUT /members/{id}/boardStars/{idStar}
+@desc Update the position of a boardStar of Member
+@optional {pos: any # New position for the starred board. `top`, `bottom`, or a positive float.}
+@returns(200) Success
+
+@endpoint DELETE /members/{id}/boardStars/{idStar}
+@desc Delete Star for Board
+@returns(200) Success
+
+@endpoint GET /members/{id}/boards
+@desc Get Boards that Member belongs to
+@required {id: str # The ID or username of the member}
+@optional {filter: str(all/closed/members/open/organization/public/starred)=all # `all` or a comma-separated list of: `closed`, `members`, `open`, `organization`, `public`, `starred`, fields: str=all # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/), lists: str(all/closed/none/open)=none # Which lists to include with the boards. One of: `all`, `closed`, `none`, `open`, organization: bool=False # Whether to include the Organization object with the Boards, organization_fields: str=name,displayName # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /members/{id}/boardsInvited
+@desc Get Boards the Member has been invited to
+@required {id: str # The ID or username of the member}
+@optional {fields: str=all # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /members/{id}/cards
+@desc Get Cards the Member is on
+@required {id: str # The ID or username of the member}
+@optional {filter: str(all/closed/complete/incomplete/none/open/visible)=visible # One of: `all`, `closed`, `complete`, `incomplete`, `none`, `open`, `visible`}
+@returns(200) Success
+
+@endpoint GET /members/{id}/customBoardBackgrounds
+@desc Get a Member's custom Board Backgrounds
+@returns(200) Success
+
+@endpoint POST /members/{id}/customBoardBackgrounds
+@desc Create a new custom Board Background
+@required {file: str(binary)}
+@returns(200) {id: str} # Success
+
+@endpoint GET /members/{id}/customBoardBackgrounds/{idBackground}
+@desc Get custom Board Background of Member
+@returns(200) {id: str} # Success
+
+@endpoint PUT /members/{id}/customBoardBackgrounds/{idBackground}
+@desc Update custom Board Background of Member
+@optional {brightness: str(dark/light/unknown) # One of: `dark`, `light`, `unknown`, tile: bool # Whether to tile the background}
+@returns(200) {id: str} # Success
+
+@endpoint DELETE /members/{id}/customBoardBackgrounds/{idBackground}
+@desc Delete custom Board Background of Member
+@returns(200) Success
+
+@endpoint GET /members/{id}/customEmoji
+@desc Get a Member's customEmojis
+@returns(200) Success
+
+@endpoint POST /members/{id}/customEmoji
+@desc Create custom Emoji for Member
+@required {file: str(binary), name: str # Name for the emoji. 2 - 64 characters}
+@returns(200) {id: str, url: str(url), name: str} # Success
+
+@endpoint GET /members/{id}/customEmoji/{idEmoji}
+@desc Get a Member's custom Emoji
+@required {id: str # The ID or username of the member, idEmoji: str # The ID of the custom emoji}
+@optional {fields: str(name/url/all)=all # `all` or a comma-separated list of `name`, `url`}
+@returns(200) {id: str, url: str(url), name: str} # Success
+
+@endpoint GET /members/{id}/customStickers
+@desc Get Member's custom Stickers
+@returns(200) Success
+
+@endpoint POST /members/{id}/customStickers
+@desc Create custom Sticker for Member
+@required {file: str(binary)}
+@returns(200) {id: str, url: str(url), scaled: [map]} # Success
+
+@endpoint GET /members/{id}/customStickers/{idSticker}
+@desc Get a Member's custom Sticker
+@optional {fields: str(scaled/url/all)=all # `all` or a comma-separated list of `scaled`, `url`}
+@returns(200) {id: str, url: str(url), scaled: [map]} # Success
+
+@endpoint DELETE /members/{id}/customStickers/{idSticker}
+@desc Delete a Member's custom Sticker
+@returns(200) Success
+
+@endpoint GET /members/{id}/notifications
+@desc Get Member's Notifications
+@required {id: str # The ID or username of the member}
+@optional {entities: bool=False, display: bool=False, filter: str=all, read_filter: str=all # One of: `all`, `read`, `unread`, fields: str=all # `all` or a comma-separated list of notification [fields](/cloud/trello/guides/rest-api/object-definitions/), limit: int(int32)=50 # Max 1000, page: int(int32)=0 # Max 100, before: str # A notification ID, since: str # A notification ID, memberCreator: bool=True, memberCreator_fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /members/{id}/organizations
+@desc Get Member's Organizations
+@required {id: str # The ID or username of the member}
+@optional {filter: str(all/members/none/public)=all # One of: `all`, `members`, `none`, `public` (Note: `members` filters to only private Workspaces), fields: str=all # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/), paid_account: bool=False # Whether or not to include paid account information in the returned workspace object}
+@returns(200) Success
+
+@endpoint GET /members/{id}/organizationsInvited
+@desc Get Organizations a Member has been invited to
+@required {id: str # The ID or username of the member}
+@optional {fields: str=all # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /members/{id}/savedSearches
+@desc Get Member's saved searched
+@returns(200) Success
+
+@endpoint POST /members/{id}/savedSearches
+@desc Create saved Search for Member
+@required {name: str # The name for the saved search, query: str # The search query, pos: any # The position of the saved search. `top`, `bottom`, or a positive float.}
+@returns(200) {id: str, name: str, query: str, pos: any} # Success
+
+@endpoint GET /members/{id}/savedSearches/{idSearch}
+@desc Get a saved search
+@returns(200) {id: str, name: str, query: str, pos: any} # Success
+
+@endpoint PUT /members/{id}/savedSearches/{idSearch}
+@desc Update a saved search
+@optional {name: str # The new name for the saved search, query: str # The new search query, pos: str # New position for saves search. `top`, `bottom`, or a positive float.}
+@returns(200) {id: str, name: str, query: str, pos: any} # Success
+
+@endpoint DELETE /members/{id}/savedSearches/{idSearch}
+@desc Delete a saved search
+@returns(200) Success
+
+@endpoint GET /members/{id}/tokens
+@desc Get Member's Tokens
+@required {id: str # The ID or username of the member}
+@optional {webhooks: bool=False # Whether to include webhooks}
+@returns(200) Success
+
+@endpoint POST /members/{id}/avatar
+@desc Create Avatar for Member
+@required {id: str # The ID or username of the member, file: str(binary)}
+@returns(200) Success
+
+@endpoint POST /members/{id}/oneTimeMessagesDismissed
+@desc Dismiss a message for Member
+@required {id: str # The ID or username of the member, value: str # The message to dismiss}
+@returns(200) Success
+
+@endpoint GET /members/{id}/notificationsChannelSettings
+@desc Get a Member's notification channel settings
+@returns(200) Success
+
+@endpoint PUT /members/{id}/notificationsChannelSettings
+@desc Update blocked notification keys of Member on a channel
+@required {channel: str, blockedKeys: any # Blocked key or array of blocked keys.}
+@returns(200) {id: str, idMember: str, blockedKeys: [str], channel: str} # Success
+
+@endpoint GET /members/{id}/notificationsChannelSettings/{channel}
+@desc Get blocked notification keys of Member on this channel
+@returns(200) {id: str, idMember: str, blockedKeys: [str], channel: str} # Success
+
+@endpoint PUT /members/{id}/notificationsChannelSettings/{channel}
+@desc Update blocked notification keys of Member on a channel
+@required {blockedKeys: any # Singular key or array of notification keys}
+@returns(200) {id: str, idMember: str, blockedKeys: [str], channel: str} # Success
+
+@endpoint PUT /members/{id}/notificationsChannelSettings/{channel}/{blockedKeys}
+@desc Update blocked notification keys of Member on a channel
+@returns(200) {id: str, idMember: str, blockedKeys: [str], channel: str} # Success
+
+@endgroup
+
+@group notifications
+@endpoint GET /notifications/{id}
+@desc Get a Notification
+@required {id: str # The ID of the notification}
+@optional {board: bool=False # Whether to include the board object, board_fields: str=name # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/), card: bool=False # Whether to include the card object, card_fields: str=name # `all` or a comma-separated list of card [fields](/cloud/trello/guides/rest-api/object-definitions/), display: bool=False # Whether to include the display object with the results, entities: bool=False # Whether to include the entities object with the results, fields: str=all # `all` or a comma-separated list of notification [fields](/cloud/trello/guides/rest-api/object-definitions/), list: bool=False # Whether to include the list object, member: bool=True # Whether to include the member object, member_fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/), memberCreator: bool=True # Whether to include the member object of the creator, memberCreator_fields: str=avatarHash,fullName,initials,username # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/), organization: bool=False # Whether to include the organization object, organization_fields: str=displayName # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint PUT /notifications/{id}
+@desc Update a Notification's read status
+@required {id: str # The ID of the notification}
+@optional {unread: bool # Whether the notification should be marked as read or not}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/{field}
+@desc Get a field of a Notification
+@required {id: str # The ID of the notification, field: str # A notification [field](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint POST /notifications/all/read
+@desc Mark all Notifications as read
+@optional {read: bool=True # Boolean to specify whether to mark as read or unread (defaults to `true`, marking as read), ids: [str] # A comma-seperated list of IDs. Allows specifying an array of notification IDs to change the read state for. This will become useful as we add grouping of notifications to the UI, with a single button to mark all notifications in the group as read/unread.}
+@returns(200) Success
+
+@endpoint PUT /notifications/{id}/unread
+@desc Update Notification's read status
+@required {id: str # The ID of the notification}
+@optional {value: str}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/board
+@desc Get the Board a Notification is on
+@required {id: str # The ID of the notification}
+@optional {fields: str=all # `all` or a comma-separated list of board[fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/card
+@desc Get the Card a Notification is on
+@required {id: str # The ID of the notification}
+@optional {fields: str=all # `all` or a comma-separated list of card [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/list
+@desc Get the List a Notification is on
+@required {id: str # The ID of the notification}
+@optional {fields: str=all # `all` or a comma-separated list of list [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/member
+@desc Get the Member a Notification is about (not the creator)
+@required {id: str # The ID of the notification}
+@optional {fields: str=all # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/memberCreator
+@desc Get the Member who created the Notification
+@required {id: str # The ID of the notification}
+@optional {fields: str=all # `all` or a comma-separated list of member [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint GET /notifications/{id}/organization
+@desc Get a Notification's associated Organization
+@required {id: str # The ID of the notification}
+@optional {fields: str=all # `all` or a comma-separated list of organization [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endgroup
+
+@group organizations
+@endpoint POST /organizations
+@desc Create a new Organization
+@required {displayName: str # The name to display for the Organization}
+@optional {desc: str # The description for the organizations, name: str # A string with a length of at least 3. Only lowercase letters, underscores, and numbers are allowed. If the name contains invalid characters, they will be removed. If the name conflicts with an existing name, a new name will be substituted., website: str(url) # A URL starting with `http://` or `https://`}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}
+@desc Get an Organization
+@returns(200) {id: str, name: str, displayName: str, dateLastActivity: str(date), prefs: map{boardVisibilityRestrict: map, boardDeleteRestrict: map, attachmentRestrictions: [str], permissionLevel: str}, idEnterprise: str, offering: str, url: str(url), idBoards: [str], memberships: [str], premiumFeatures: [str]} # Success
+
+@endpoint PUT /organizations/{id}
+@desc Update an Organization
+@optional {name: str # A new name for the organization. At least 3 lowercase letters, underscores, and numbers. Must be unique, displayName: str # A new displayName for the organization. Must be at least 1 character long and not begin or end with a space., desc: str # A new description for the organization, website: str # A URL starting with `http://`, `https://`, or `null`, prefs/associatedDomain: str # The Google Apps domain to link this org to., prefs/externalMembersDisabled: bool # Whether non-workspace members can be added to boards inside the Workspace, prefs/googleAppsVersion: int(int32) # `1` or `2`, prefs/boardVisibilityRestrict/org: str # Who on the Workspace can make Workspace visible boards. One of `admin`, `none`, `org`, prefs/boardVisibilityRestrict/private: str # Who can make private boards. One of: `admin`, `none`, `org`, prefs/boardVisibilityRestrict/public: str # Who on the Workspace can make public boards. One of: `admin`, `none`, `org`, prefs/orgInviteRestrict: str # An email address with optional wildcard characters. (E.g. `subdomain.*.trello.com`), prefs/permissionLevel: str # Whether the Workspace page is publicly visible. One of: `private`, `public`}
+@returns(200) {id: str, name: str, displayName: str, dateLastActivity: str(date), prefs: map{boardVisibilityRestrict: map, boardDeleteRestrict: map, attachmentRestrictions: [str], permissionLevel: str}, idEnterprise: str, offering: str, url: str(url), idBoards: [str], memberships: [str], premiumFeatures: [str]} # Success
+
+@endpoint DELETE /organizations/{id}
+@desc Delete an Organization
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/{field}
+@desc Get field on Organization
+@required {id: str # The ID or name of the organization, field: str # An organization [field](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) {id: str, name: str, displayName: str, dateLastActivity: str(date), prefs: map{boardVisibilityRestrict: map, boardDeleteRestrict: map, attachmentRestrictions: [str], permissionLevel: str}, idEnterprise: str, offering: str, url: str(url), idBoards: [str], memberships: [str], premiumFeatures: [str]} # Success
+
+@endpoint GET /organizations/{id}/actions
+@desc Get Actions for Organization
+@required {id: str # The ID or name of the organization}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/boards
+@desc Get Boards in an Organization
+@required {id: str # The ID or name of the organization}
+@optional {filter: str(all/open/closed/members/organization/public)=all # `all` or a comma-separated list of: `open`, `closed`, `members`, `organization`, `public`, fields: str=all # `all` or a comma-separated list of board [fields](/cloud/trello/guides/rest-api/object-definitions/)}
+@returns(200) Success
+
+@endpoint POST /organizations/{id}/exports
+@desc Create Export for Organizations
+@optional {attachments: bool=True # Whether the CSV should include attachments or not.}
+@returns(200) {id: str, status: map{attempts: num, finished: bool, stage: str}, startedAt: str(date-time), size: str?, exportUrl: str?} # Success
+
+@endpoint GET /organizations/{id}/exports
+@desc Retrieve Organization's Exports
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/members
+@desc Get the Members of an Organization
+@required {id: str # The ID or name of the Organization}
+@returns(200) Success
+
+@endpoint PUT /organizations/{id}/members
+@desc Update an Organization's Members
+@required {id: str # The ID or name of the organization, email: str(email) # An email address, fullName: str # Name for the member, at least 1 character not beginning or ending with a space}
+@optional {type: str(admin/normal)=normal # One of: `admin`, `normal`}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/memberships
+@desc Get Memberships of an Organization
+@required {id: str # The ID or name of the organization}
+@optional {filter: str(all/active/admin/deactivated/me/normal)=all # `all` or a comma-separated list of: `active`, `admin`, `deactivated`, `me`, `normal`, member: bool=False # Whether to include the Member objects with the Memberships}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/memberships/{idMembership}
+@desc Get a Membership of an Organization
+@required {id: str # The ID or name of the organization, idMembership: str # The ID of the membership to load}
+@optional {member: bool=False # Whether to include the Member object in the response}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/pluginData
+@desc Get the pluginData Scoped to Organization
+@required {id: str # The ID or name of the organization}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/tags
+@desc Get Tags of an Organization
+@returns(200) Success
+
+@endpoint POST /organizations/{id}/tags
+@desc Create a Tag in Organization
+@returns(200) Success
+
+@endpoint PUT /organizations/{id}/members/{idMember}
+@desc Update a Member of an Organization
+@required {id: str # The ID or name of the organization, idMember: any # The ID or username of the member to update, type: str(admin/normal) # One of: `admin`, `normal`}
+@returns(200) Success
+
+@endpoint DELETE /organizations/{id}/members/{idMember}
+@desc Remove a Member from an Organization
+@required {id: any # The ID or name of the organization, idMember: str # The ID of the Member to remove from the Workspace}
+@returns(200) Success
+
+@endpoint PUT /organizations/{id}/members/{idMember}/deactivated
+@desc Deactivate or reactivate a member of an Organization
+@required {id: str # The ID or name of the organization, idMember: any # The ID or username of the member to update, value: bool}
+@returns(200) Success
+
+@endpoint POST /organizations/{id}/logo
+@desc Update logo for an Organization
+@required {id: str # The ID or name of the Workspace}
+@optional {file: str(binary) # Image file for the logo}
+@returns(200) Success
+
+@endpoint DELETE /organizations/{id}/logo
+@desc Delete Logo for Organization
+@required {id: str # The ID or name of the organization}
+@returns(200) Success
+
+@endpoint DELETE /organizations/{id}/members/{idMember}/all
+@desc Remove a Member from an Organization and all Organization Boards
+@required {id: str # The ID or name of the organization, idMember: str # The ID of the member to remove from the Workspace}
+@returns(200) Success
+
+@endpoint DELETE /organizations/{id}/prefs/associatedDomain
+@desc Remove the associated Google Apps domain from a Workspace
+@required {id: str # The ID or name of the organization}
+@returns(200) Success
+
+@endpoint DELETE /organizations/{id}/prefs/orgInviteRestrict
+@desc Delete the email domain restriction on who can be invited to the Workspace
+@required {id: str # The ID or name of the organization}
+@returns(200) Success
+
+@endpoint DELETE /organizations/{id}/tags/{idTag}
+@desc Delete an Organization's Tag
+@required {id: str # The ID or name of the organization, idTag: str # The ID of the tag to delete}
+@returns(200) Success
+
+@endpoint GET /organizations/{id}/newBillableGuests/{idBoard}
+@desc Get Organizations new billable guests
+@required {id: str # The ID or name of the organization, idBoard: str # The ID of the board to check for new billable guests.}
+@returns(200) Success
+
+@endgroup
+
+@group plugins
+@endpoint GET /plugins/{id}/
+@desc Get a Plugin
+@required {id: str # The ID or name of the organization}
+@returns(200) {id: str} # Success
+
+@endpoint PUT /plugins/{id}/
+@desc Update a Plugin
+@required {id: str # The ID or name of the organization}
+@returns(200) {id: str} # Success
+
+@endpoint POST /plugins/{idPlugin}/listing
+@desc Create a Listing for Plugin
+@required {idPlugin: str # The ID of the Power-Up for which you are creating a new listing.}
+@optional {description: str # The description to show for the given locale, locale: str # The locale that this listing should be displayed for., overview: str # The overview to show for the given locale., name: str # The name to use for the given locale.}
+@returns(200) {id: str, name: str, locale: str, description: str, overview: str} # Success
+
+@endpoint GET /plugins/{id}/compliance/memberPrivacy
+@desc Get Plugin's Member privacy compliance
+@required {id: str # The ID of the Power-Up}
+@returns(200) Success
+
+@endpoint PUT /plugins/{idPlugin}/listings/{idListing}
+@desc Updating Plugin's Listing
+@required {idPlugin: str # The ID of the Power-Up whose listing is being updated., idListing: str # The ID of the existing listing for the Power-Up that is being updated.}
+@optional {description: str # The description to show for the given locale, locale: str # The locale that this listing should be displayed for., overview: str # The overview to show for the given locale., name: str # The name to use for the given locale.}
+@returns(200) {id: str, name: str, locale: str, description: str, overview: str} # Success
+
+@endgroup
+
+@group search
+@endpoint GET /search
+@desc Search Trello
+@required {query: str # The search query with a length of 1 to 16384 characters}
+@optional {idBoards: any # `mine` or a comma-separated list of Board IDs, idOrganizations: str # A comma-separated list of Organization IDs, idCards: str # A comma-separated list of Card IDs, modelTypes: str=all # What type or types of Trello objects you want to search. all or a comma-separated list of: `actions`, `boards`, `cards`, `members`, `organizations`, board_fields: str=name,idOrganization # all or a comma-separated list of: `closed`, `dateLastActivity`, `dateLastView`, `desc`, `descData`, `idOrganization`, `invitations`, `invited`, `labelNames`, `memberships`, `name`, `pinned`, `powerUps`, `prefs`, `shortLink`, `shortUrl`, `starred`, `subscribed`, `url`, boards_limit: int=10 # The maximum number of boards returned. Maximum: 1000, board_organization: bool=False # Whether to include the parent organization with board results, card_fields: str=all # all or a comma-separated list of: `badges`, `checkItemStates`, `closed`, `dateLastActivity`, `desc`, `descData`, `due`, `idAttachmentCover`, `idBoard`, `idChecklists`, `idLabels`, `idList`, `idMembers`, `idMembersVoted`, `idShort`, `labels`, `manualCoverAttachment`, `name`, `pos`, `shortLink`, `shortUrl`, `subscribed`, `url`, cards_limit: int=10 # The maximum number of cards to return. Maximum: 1000, cards_page: num=0 # The page of results for cards. Maximum: 100, card_board: bool=False # Whether to include the parent board with card results, card_list: bool=False # Whether to include the parent list with card results, card_members: bool=False # Whether to include member objects with card results, card_stickers: bool=False # Whether to include sticker objects with card results, card_attachments: str=false # Whether to include attachment objects with card results. A boolean value (true or false) or cover for only card cover attachments., organization_fields: str=name,displayName # all or a comma-separated list of billableMemberCount, desc, descData, displayName, idBoards, invitations, invited, logoHash, memberships, name, powerUps, prefs, premiumFeatures, products, url, website, organizations_limit: int(int32)=10 # The maximum number of Workspaces to return. Maximum 1000, member_fields: str=avatarHash,fullName,initials,username,confirmed # all or a comma-separated list of: avatarHash, bio, bioData, confirmed, fullName, idPremOrgsAdmin, initials, memberType, products, status, url, username, members_limit: int(int32)=10 # The maximum number of members to return. Maximum 1000, partial: bool=False # By default, Trello searches for each word in your query against exactly matching words within Member content. Specifying partial to be true means that we will look for content that starts with any of the words in your query.  If you are looking for a Card titled "My Development Status Report", by default you would need to search for "Development". If you have partial enabled, you will be able to search for "dev" but not "velopment".}
+@returns(200) Success
+
+@endpoint GET /search/members/
+@desc Search for Members
+@required {query: str # Search query 1 to 16384 characters long}
+@optional {limit: int(int32)=8 # The maximum number of results to return. Maximum of 20., idBoard: str, idOrganization: str, onlyOrgMembers: bool=False}
+@returns(200) Success
+
+@endgroup
+
+@group tokens
+@endpoint GET /tokens/{token}
+@desc Get a Token
+@required {token: str}
+@optional {fields: str=all # `all` or a comma-separated list of `dateCreated`, `dateExpires`, `idMember`, `identifier`, `permissions`, webhooks: bool=False # Determines whether to include webhooks.}
+@returns(200) {id: str, identifier: str, idMember: str, dateCreated: str(date-time), dateExpires: str(date-time)?, permissions: [map]} # Success
+
+@endpoint GET /tokens/{token}/member
+@desc Get Token's Member
+@required {token: str}
+@optional {fields: str=all # `all` or a comma-separated list of valid fields for [Member Object](/cloud/trello/guides/rest-api/object-definitions/).}
+@returns(200) {id: str, activityBlocked: bool, avatarHash: str, avatarUrl: str(url), bio: str, bioData: map{emoji: map}, confirmed: bool, fullName: str, idEnterprise: str, idEnterprisesDeactivated: [str], idMemberReferrer: str, idPremOrgsAdmin: [str], initials: str, memberType: str, nonPublic: map{fullName: str, initials: str, avatarUrl: str(url), avatarHash: str}, nonPublicAvailable: bool, products: [int], url: str(url), username: str, status: str, aaEmail: str(email)?, aaEnrolledDate: str?, aaId: str?, avatarSource: str, email: str, gravatarHash: str, idBoards: [str], idOrganizations: [str], idEnterprisesAdmin: [str], limits: map{status: str, disableAt: num, warnAt: num}, loginTypes: [str], marketingOptIn: map{optedIn: bool, date: str(date)}, messagesDismissed: map{name: str, count: str, lastDismissed: str(date), _id: str}, oneTimeMessagesDismissed: [str], prefs: map{timezoneInfo: map{offsetCurrent: int, timezoneCurrent: str, offsetNext: int, dateNext: str(date), timezoneNext: str}, privacy: map{fullName: str, avatar: str}, sendSummaries: bool, minutesBetweenSummaries: int, minutesBeforeDeadlineToNotify: int, colorBlind: bool, locale: str, timezone: str, twoFactor: map{enabled: bool, needsNewBackups: bool}}, trophies: [str], uploadedAvatarHash: str, uploadedAvatarUrl: str(url), premiumFeatures: [str], isAaMastered: bool, ixUpdate: num, idBoardsPinned: [str]?} # Success
+
+@endpoint GET /tokens/{token}/webhooks
+@desc Get Webhooks for Token
+@returns(200) Success
+
+@endpoint POST /tokens/{token}/webhooks
+@desc Create Webhooks for Token
+@required {callbackURL: str(url) # The URL that the webhook should POST information to., idModel: str # ID of the object to create a webhook on.}
+@optional {description: str # A description to be displayed when retrieving information about the webhook.}
+@returns(200) {id: str, description: str, idModel: str, callbackURL: str(url), active: bool, consecutiveFailures: num, firstConsecutiveFailDate: str(date)?} # Success
+
+@endpoint GET /tokens/{token}/webhooks/{idWebhook}
+@desc Get a Webhook belonging to a Token
+@returns(200) {id: str, description: str, idModel: str, callbackURL: str(url), active: bool, consecutiveFailures: num, firstConsecutiveFailDate: str(date)?} # Success
+
+@endpoint DELETE /tokens/{token}/webhooks/{idWebhook}
+@desc Delete a Webhook created by Token
+@returns(200) Success
+
+@endpoint PUT /tokens/{token}/webhooks/{idWebhook}
+@desc Update a Webhook created by Token
+@optional {description: str # A description to be displayed when retrieving information about the webhook., callbackURL: str(url) # The URL that the webhook should `POST` information to., idModel: str # ID of the object that the webhook is on.}
+@returns(200) Success
+
+@endpoint DELETE /tokens/{token}/
+@desc Delete a Token
+@required {token: str}
+@returns(200) Success
+
+@endgroup
+
+@group webhooks
+@endpoint POST /webhooks/
+@desc Create a Webhook
+@required {callbackURL: str(url) # A valid URL that is reachable with a `HEAD` and `POST` request., idModel: str # ID of the model to be monitored}
+@optional {description: str # A string with a length from `0` to `16384`., active: bool # Determines whether the webhook is active and sending `POST` requests.}
+@returns(200) {id: str, description: str, idModel: str, callbackURL: str(url), active: bool, consecutiveFailures: num, firstConsecutiveFailDate: str(date)?} # Success
+
+@endpoint GET /webhooks/{id}
+@desc Get a Webhook
+@returns(200) {id: str, description: str, idModel: str, callbackURL: str(url), active: bool, consecutiveFailures: num, firstConsecutiveFailDate: str(date)?} # Success
+
+@endpoint PUT /webhooks/{id}
+@desc Update a Webhook
+@optional {description: str # A string with a length from `0` to `16384`., callbackURL: str(url) # A valid URL that is reachable with a `HEAD` and `POST` request., idModel: str # ID of the model to be monitored, active: bool # Determines whether the webhook is active and sending `POST` requests.}
+@returns(200) {id: str, description: str, idModel: str, callbackURL: str(url), active: bool, consecutiveFailures: num, firstConsecutiveFailDate: str(date)?} # Success
+
+@endpoint DELETE /webhooks/{id}
+@desc Delete a Webhook
+@returns(200) Success
+
+@endpoint GET /webhooks/{id}/{field}
+@desc Get a field on a Webhook
+@required {id: str # ID of the webhook., field: str(active/callbackURL/description/idModel/consecutiveFailures/firstConsecutiveFailDate) # Field to retrieve. One of: `active`, `callbackURL`, `description`, `idModel`}
+@returns(200) Success
+
+@endgroup
+
+@end

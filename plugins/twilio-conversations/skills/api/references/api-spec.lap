@@ -1,0 +1,580 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Twilio - Conversations
+@base https://conversations.twilio.com
+@version 1.0.0
+@auth Bearer basic
+@endpoints 103
+@hint download_for_search
+@toc Configuration(9), Conversations(22), ConversationWithParticipants(1), Credentials(5), ParticipantConversations(1), Roles(5), Services(51), Users(9)
+
+@group Configuration
+@endpoint GET /v1/Configuration
+@desc Fetch the global configuration of conversations on your account
+@returns(200) {account_sid: str?, default_chat_service_sid: str?, default_messaging_service_sid: str?, default_inactive_timer: str?, default_closed_timer: str?, url: str(uri)?, links: map?} # OK
+
+@endpoint POST /v1/Configuration
+@desc Update the global configuration of conversations on your account
+@returns(200) {account_sid: str?, default_chat_service_sid: str?, default_messaging_service_sid: str?, default_inactive_timer: str?, default_closed_timer: str?, url: str(uri)?, links: map?} # OK
+
+@endpoint GET /v1/Configuration/Addresses
+@desc Retrieve a list of address configurations for an account
+@optional {Type: str # Filter the address configurations by its type. This value can be one of: `whatsapp`, `sms`., PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {address_configurations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Configuration/Addresses
+@desc Create a new address configuration
+@returns(201) {sid: str?, account_sid: str?, type: str?, address: str?, friendly_name: str?, auto_creation: any?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, address_country: str?} # Created
+
+@endpoint GET /v1/Configuration/Addresses/{Sid}
+@desc Fetch an address configuration
+@required {Sid: str # The SID of the Address Configuration resource. This value can be either the `sid` or the `address` of the configuration}
+@returns(200) {sid: str?, account_sid: str?, type: str?, address: str?, friendly_name: str?, auto_creation: any?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, address_country: str?} # OK
+
+@endpoint POST /v1/Configuration/Addresses/{Sid}
+@desc Update an existing address configuration
+@required {Sid: str # The SID of the Address Configuration resource. This value can be either the `sid` or the `address` of the configuration}
+@returns(200) {sid: str?, account_sid: str?, type: str?, address: str?, friendly_name: str?, auto_creation: any?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, address_country: str?} # OK
+
+@endpoint DELETE /v1/Configuration/Addresses/{Sid}
+@desc Remove an existing address configuration
+@required {Sid: str # The SID of the Address Configuration resource. This value can be either the `sid` or the `address` of the configuration}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Configuration/Webhooks
+@returns(200) {account_sid: str?, method: str, filters: [str]?, pre_webhook_url: str?, post_webhook_url: str?, target: str, url: str(uri)?} # OK
+
+@endpoint POST /v1/Configuration/Webhooks
+@returns(200) {account_sid: str?, method: str, filters: [str]?, pre_webhook_url: str?, post_webhook_url: str?, target: str, url: str(uri)?} # OK
+
+@endgroup
+
+@group Conversations
+@endpoint POST /v1/Conversations
+@desc Create a new conversation in your account's default service
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, url: str(uri)?, links: map?, bindings: any?} # Created
+
+@endpoint GET /v1/Conversations
+@desc Retrieve a list of conversations in your account's default service
+@optional {StartDate: str # Specifies the beginning of the date range for filtering Conversations based on their creation date. Conversations that were created on or after this date will be included in the results. The date must be in ISO8601 format, specifically starting at the beginning of the specified date (YYYY-MM-DDT00:00:00Z), for precise filtering. This parameter can be combined with other filters. If this filter is used, the returned list is sorted by latest conversation creation date in descending order., EndDate: str # Defines the end of the date range for filtering conversations by their creation date. Only conversations that were created on or before this date will appear in the results.  The date must be in ISO8601 format, specifically capturing up to the end of the specified date (YYYY-MM-DDT23:59:59Z), to ensure that conversations from the entire end day are included. This parameter can be combined with other filters. If this filter is used, the returned list is sorted by latest conversation creation date in descending order., State: str # State for sorting and filtering list of Conversations. Can be `active`, `inactive` or `closed`, PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {conversations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Conversations/{Sid}
+@desc Update an existing conversation in your account's default service
+@required {Sid: str # A 34 character string that uniquely identifies this resource. Can also be the `unique_name` of the Conversation.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, url: str(uri)?, links: map?, bindings: any?} # OK
+
+@endpoint DELETE /v1/Conversations/{Sid}
+@desc Remove a conversation from your account's default service
+@required {Sid: str # A 34 character string that uniquely identifies this resource. Can also be the `unique_name` of the Conversation.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Conversations/{Sid}
+@desc Fetch a conversation from your account's default service
+@required {Sid: str # A 34 character string that uniquely identifies this resource. Can also be the `unique_name` of the Conversation.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, url: str(uri)?, links: map?, bindings: any?} # OK
+
+@endpoint POST /v1/Conversations/{ConversationSid}/Messages
+@desc Add a new message to the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, conversation_sid: str?, sid: str?, index: int, author: str?, body: str?, media: [any]?, attributes: str?, participant_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, delivery: any?, links: map?, content_sid: str?} # Created
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Messages
+@desc Retrieve a list of all messages in the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for messages.}
+@optional {Order: str # The sort order of the returned messages. Can be: `asc` (ascending) or `desc` (descending), with `asc` as the default., PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {messages: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Conversations/{ConversationSid}/Messages/{Sid}
+@desc Update an existing message in the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {account_sid: str?, conversation_sid: str?, sid: str?, index: int, author: str?, body: str?, media: [any]?, attributes: str?, participant_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, delivery: any?, links: map?, content_sid: str?} # OK
+
+@endpoint DELETE /v1/Conversations/{ConversationSid}/Messages/{Sid}
+@desc Remove a message from the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Messages/{Sid}
+@desc Fetch a message from the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {account_sid: str?, conversation_sid: str?, sid: str?, index: int, author: str?, body: str?, media: [any]?, attributes: str?, participant_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, delivery: any?, links: map?, content_sid: str?} # OK
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Messages/{MessageSid}/Receipts/{Sid}
+@desc Fetch the delivery and read receipts of the conversation message
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., MessageSid: str # The SID of the message within a [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) the delivery receipt belongs to., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {account_sid: str?, conversation_sid: str?, sid: str?, message_sid: str?, channel_message_sid: str?, participant_sid: str?, status: str, error_code: int, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Messages/{MessageSid}/Receipts
+@desc Retrieve a list of all delivery and read receipts of the conversation message
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., MessageSid: str # The SID of the message within a [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) the delivery receipt belongs to.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {delivery_receipts: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Conversations/{ConversationSid}/Participants
+@desc Add a new participant to the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, conversation_sid: str?, sid: str?, identity: str?, attributes: str?, messaging_binding: any?, role_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, last_read_message_index: int?, last_read_timestamp: str?} # Created
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Participants
+@desc Retrieve a list of all participants of the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for participants.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {participants: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Conversations/{ConversationSid}/Participants/{Sid}
+@desc Update an existing participant in the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {account_sid: str?, conversation_sid: str?, sid: str?, identity: str?, attributes: str?, messaging_binding: any?, role_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, last_read_message_index: int?, last_read_timestamp: str?} # OK
+
+@endpoint DELETE /v1/Conversations/{ConversationSid}/Participants/{Sid}
+@desc Remove a participant from the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Participants/{Sid}
+@desc Fetch a participant of the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant., Sid: str # A 34 character string that uniquely identifies this resource. Alternatively, you can pass a Participant's `identity` rather than the SID.}
+@returns(200) {account_sid: str?, conversation_sid: str?, sid: str?, identity: str?, attributes: str?, messaging_binding: any?, role_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, last_read_message_index: int?, last_read_timestamp: str?} # OK
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Webhooks
+@desc Retrieve a list of all webhooks scoped to the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 5, and the maximum is 5., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {webhooks: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Conversations/{ConversationSid}/Webhooks
+@desc Create a new webhook scoped to the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook.}
+@returns(201) {sid: str?, account_sid: str?, conversation_sid: str?, target: str?, url: str(uri)?, configuration: any?, date_created: str(date-time)?, date_updated: str(date-time)?} # Created
+
+@endpoint GET /v1/Conversations/{ConversationSid}/Webhooks/{Sid}
+@desc Fetch the configuration of a conversation-scoped webhook
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, conversation_sid: str?, target: str?, url: str(uri)?, configuration: any?, date_created: str(date-time)?, date_updated: str(date-time)?} # OK
+
+@endpoint POST /v1/Conversations/{ConversationSid}/Webhooks/{Sid}
+@desc Update an existing conversation-scoped webhook
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, conversation_sid: str?, target: str?, url: str(uri)?, configuration: any?, date_created: str(date-time)?, date_updated: str(date-time)?} # OK
+
+@endpoint DELETE /v1/Conversations/{ConversationSid}/Webhooks/{Sid}
+@desc Remove an existing webhook scoped to the conversation
+@required {ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(204) The resource was deleted successfully.
+
+@endgroup
+
+@group ConversationWithParticipants
+@endpoint POST /v1/ConversationWithParticipants
+@desc Create a new conversation with the list of participants in your account's default service
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, links: map?, bindings: any?, url: str(uri)?} # Created
+@returns(202) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, links: map?, bindings: any?, url: str(uri)?} # Accepted
+
+@endgroup
+
+@group Credentials
+@endpoint POST /v1/Credentials
+@desc Add a new push notification credential to your account
+@returns(201) {sid: str?, account_sid: str?, friendly_name: str?, type: str, sandbox: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # Created
+
+@endpoint GET /v1/Credentials
+@desc Retrieve a list of all push notification credentials on your account
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {credentials: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Credentials/{Sid}
+@desc Update an existing push notification credential on your account
+@required {Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, friendly_name: str?, type: str, sandbox: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endpoint DELETE /v1/Credentials/{Sid}
+@desc Remove a push notification credential from your account
+@required {Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Credentials/{Sid}
+@desc Fetch a push notification credential from your account
+@required {Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, friendly_name: str?, type: str, sandbox: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endgroup
+
+@group ParticipantConversations
+@endpoint GET /v1/ParticipantConversations
+@desc Retrieve a list of all Conversations that this Participant belongs to by identity or by address. Only one parameter should be specified.
+@optional {Identity: str # A unique string identifier for the conversation participant as [Conversation User](https://www.twilio.com/docs/conversations/api/user-resource). This parameter is non-null if (and only if) the participant is using the Conversations SDK to communicate. Limited to 256 characters., Address: str # A unique string identifier for the conversation participant who's not a Conversation User. This parameter could be found in messaging_binding.address field of Participant resource. It should be url-encoded., PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {conversations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endgroup
+
+@group Roles
+@endpoint POST /v1/Roles
+@desc Create a new user role in your account's default service
+@returns(201) {sid: str?, account_sid: str?, chat_service_sid: str?, friendly_name: str?, type: str, permissions: [str]?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # Created
+
+@endpoint GET /v1/Roles
+@desc Retrieve a list of all user roles in your account's default service
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {roles: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Roles/{Sid}
+@desc Update an existing user role in your account's default service
+@required {Sid: str # The SID of the Role resource to update.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, friendly_name: str?, type: str, permissions: [str]?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endpoint DELETE /v1/Roles/{Sid}
+@desc Remove a user role from your account's default service
+@required {Sid: str # The SID of the Role resource to delete.}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Roles/{Sid}
+@desc Fetch a user role from your account's default service
+@required {Sid: str # The SID of the Role resource to fetch.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, friendly_name: str?, type: str, permissions: [str]?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endgroup
+
+@group Services
+@endpoint POST /v1/Services
+@desc Create a new conversation service on your account
+@returns(201) {account_sid: str?, sid: str?, friendly_name: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # Created
+
+@endpoint GET /v1/Services
+@desc Retrieve a list of all conversation services on your account
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {services: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint DELETE /v1/Services/{Sid}
+@desc Remove a conversation service with all its nested resources from your account
+@required {Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{Sid}
+@desc Fetch a conversation service from your account
+@required {Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {account_sid: str?, sid: str?, friendly_name: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Bindings/{Sid}
+@desc Remove a push notification binding from the conversation service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to delete the Binding resource from., Sid: str # The SID of the Binding resource to delete.}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Bindings/{Sid}
+@desc Fetch a push notification binding from the conversation service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Binding resource is associated with., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, credential_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, endpoint: str?, identity: str?, binding_type: str, message_types: [str]?, url: str(uri)?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Bindings
+@desc Retrieve a list of all push notification bindings in the conversation service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Binding resource is associated with.}
+@optional {BindingType: [str] # The push technology used by the Binding resources to read.  Can be: `apn`, `gcm`, `fcm`, or `twilsock`.  See [push notification configuration](https://www.twilio.com/docs/chat/push-notification-configuration) for more info., Identity: [str] # The identity of a [Conversation User](https://www.twilio.com/docs/conversations/api/user-resource) this binding belongs to. See [access tokens](https://www.twilio.com/docs/conversations/create-tokens) for more details., PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {bindings: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Configuration
+@desc Fetch the configuration of a conversation service
+@required {ChatServiceSid: str # The SID of the Service configuration resource to fetch.}
+@returns(200) {chat_service_sid: str?, default_conversation_creator_role_sid: str?, default_conversation_role_sid: str?, default_chat_service_role_sid: str?, url: str(uri)?, links: map?, reachability_enabled: bool?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Configuration
+@desc Update configuration settings of a conversation service
+@required {ChatServiceSid: str # The SID of the Service configuration resource to update.}
+@returns(200) {chat_service_sid: str?, default_conversation_creator_role_sid: str?, default_conversation_role_sid: str?, default_chat_service_role_sid: str?, url: str(uri)?, links: map?, reachability_enabled: bool?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations
+@desc Create a new conversation in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, url: str(uri)?, links: map?, bindings: any?} # Created
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations
+@desc Retrieve a list of conversations in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with.}
+@optional {StartDate: str # Specifies the beginning of the date range for filtering Conversations based on their creation date. Conversations that were created on or after this date will be included in the results. The date must be in ISO8601 format, specifically starting at the beginning of the specified date (YYYY-MM-DDT00:00:00Z), for precise filtering. This parameter can be combined with other filters. If this filter is used, the returned list is sorted by latest conversation creation date in descending order., EndDate: str # Defines the end of the date range for filtering conversations by their creation date. Only conversations that were created on or before this date will appear in the results.  The date must be in ISO8601 format, specifically capturing up to the end of the specified date (YYYY-MM-DDT23:59:59Z), to ensure that conversations from the entire end day are included. This parameter can be combined with other filters. If this filter is used, the returned list is sorted by latest conversation creation date in descending order., State: str # State for sorting and filtering list of Conversations. Can be `active`, `inactive` or `closed`, PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {conversations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{Sid}
+@desc Update an existing conversation in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., Sid: str # A 34 character string that uniquely identifies this resource. Can also be the `unique_name` of the Conversation.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, url: str(uri)?, links: map?, bindings: any?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Conversations/{Sid}
+@desc Remove a conversation from your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., Sid: str # A 34 character string that uniquely identifies this resource. Can also be the `unique_name` of the Conversation.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{Sid}
+@desc Fetch a conversation from your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., Sid: str # A 34 character string that uniquely identifies this resource. Can also be the `unique_name` of the Conversation.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, url: str(uri)?, links: map?, bindings: any?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages
+@desc Add a new message to the conversation in a specific service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, sid: str?, index: int, author: str?, body: str?, media: [any]?, attributes: str?, participant_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, delivery: any?, url: str(uri)?, links: map?, content_sid: str?} # Created
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages
+@desc Retrieve a list of all messages in the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for messages.}
+@optional {Order: str # The sort order of the returned messages. Can be: `asc` (ascending) or `desc` (descending), with `asc` as the default., PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {messages: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages/{Sid}
+@desc Update an existing message in the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, sid: str?, index: int, author: str?, body: str?, media: [any]?, attributes: str?, participant_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, delivery: any?, url: str(uri)?, links: map?, content_sid: str?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages/{Sid}
+@desc Remove a message from the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages/{Sid}
+@desc Fetch a message from the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, sid: str?, index: int, author: str?, body: str?, media: [any]?, attributes: str?, participant_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, delivery: any?, url: str(uri)?, links: map?, content_sid: str?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages/{MessageSid}/Receipts/{Sid}
+@desc Fetch the delivery and read receipts of the conversation message
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Message resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., MessageSid: str # The SID of the message within a [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) the delivery receipt belongs to., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, message_sid: str?, sid: str?, channel_message_sid: str?, participant_sid: str?, status: str, error_code: int, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Messages/{MessageSid}/Receipts
+@desc Retrieve a list of all delivery and read receipts of the conversation message
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Message resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this message., MessageSid: str # The SID of the message within a [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) the delivery receipt belongs to.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {delivery_receipts: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Participants
+@desc Add a new participant to the conversation in a specific service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, sid: str?, identity: str?, attributes: str?, messaging_binding: any?, role_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, last_read_message_index: int?, last_read_timestamp: str?} # Created
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Participants
+@desc Retrieve a list of all participants of the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for participants.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 100., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {participants: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Participants/{Sid}
+@desc Update an existing participant in the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, sid: str?, identity: str?, attributes: str?, messaging_binding: any?, role_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, last_read_message_index: int?, last_read_timestamp: str?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Participants/{Sid}
+@desc Remove a participant from the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant., Sid: str # A 34 character string that uniquely identifies this resource.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Participants/{Sid}
+@desc Fetch a participant of the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this participant., Sid: str # A 34 character string that uniquely identifies this resource. Alternatively, you can pass a Participant's `identity` rather than the SID.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, sid: str?, identity: str?, attributes: str?, messaging_binding: any?, role_sid: str?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, last_read_message_index: int?, last_read_timestamp: str?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Webhooks
+@desc Create a new webhook scoped to the conversation in a specific service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook.}
+@returns(201) {sid: str?, account_sid: str?, chat_service_sid: str?, conversation_sid: str?, target: str?, url: str(uri)?, configuration: any?, date_created: str(date-time)?, date_updated: str(date-time)?} # Created
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Webhooks
+@desc Retrieve a list of all webhooks scoped to the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 5, and the maximum is 5., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {webhooks: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Webhooks/{Sid}
+@desc Update an existing conversation-scoped webhook
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, conversation_sid: str?, target: str?, url: str(uri)?, configuration: any?, date_created: str(date-time)?, date_updated: str(date-time)?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Webhooks/{Sid}
+@desc Remove an existing webhook scoped to the conversation
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Conversations/{ConversationSid}/Webhooks/{Sid}
+@desc Fetch the configuration of a conversation-scoped webhook
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant resource is associated with., ConversationSid: str # The unique ID of the [Conversation](https://www.twilio.com/docs/conversations/api/conversation-resource) for this webhook., Sid: str # A 34 character string that uniquely identifies this resource.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, conversation_sid: str?, target: str?, url: str(uri)?, configuration: any?, date_created: str(date-time)?, date_updated: str(date-time)?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/ConversationWithParticipants
+@desc Create a new conversation with the list of participants in your account's default service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, links: map?, bindings: any?, url: str(uri)?} # Created
+@returns(202) {account_sid: str?, chat_service_sid: str?, messaging_service_sid: str?, sid: str?, friendly_name: str?, unique_name: str?, attributes: str?, state: str, date_created: str(date-time)?, date_updated: str(date-time)?, timers: any?, links: map?, bindings: any?, url: str(uri)?} # Accepted
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Configuration/Notifications
+@desc Update push notification service settings
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Configuration applies to.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, new_message: any?, added_to_conversation: any?, removed_from_conversation: any?, log_enabled: bool?, url: str(uri)?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Configuration/Notifications
+@desc Fetch push notification service settings
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Configuration applies to.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, new_message: any?, added_to_conversation: any?, removed_from_conversation: any?, log_enabled: bool?, url: str(uri)?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/ParticipantConversations
+@desc Retrieve a list of all Conversations that this Participant belongs to by identity or by address. Only one parameter should be specified.
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Participant Conversations resource is associated with.}
+@optional {Identity: str # A unique string identifier for the conversation participant as [Conversation User](https://www.twilio.com/docs/conversations/api/user-resource). This parameter is non-null if (and only if) the participant is using the Conversations SDK to communicate. Limited to 256 characters., Address: str # A unique string identifier for the conversation participant who's not a Conversation User. This parameter could be found in messaging_binding.address field of Participant resource. It should be url-encoded., PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {conversations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Roles
+@desc Create a new user role in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to create the Role resource under.}
+@returns(201) {sid: str?, account_sid: str?, chat_service_sid: str?, friendly_name: str?, type: str, permissions: [str]?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # Created
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Roles
+@desc Retrieve a list of all user roles in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to read the Role resources from.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {roles: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Roles/{Sid}
+@desc Update an existing user role in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to update the Role resource in., Sid: str # The SID of the Role resource to update.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, friendly_name: str?, type: str, permissions: [str]?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Roles/{Sid}
+@desc Remove a user role from your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to delete the Role resource from., Sid: str # The SID of the Role resource to delete.}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Roles/{Sid}
+@desc Fetch a user role from your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to fetch the Role resource from., Sid: str # The SID of the Role resource to fetch.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, friendly_name: str?, type: str, permissions: [str]?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Users
+@desc Add a new conversation user to your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the User resource is associated with.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {sid: str?, account_sid: str?, chat_service_sid: str?, role_sid: str?, identity: str?, friendly_name: str?, attributes: str?, is_online: bool?, is_notifiable: bool?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # Created
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Users
+@desc Retrieve a list of all conversation users in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to read the User resources from.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {users: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Users/{Sid}
+@desc Update an existing conversation user in your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the User resource is associated with., Sid: str # The SID of the User resource to update. This value can be either the `sid` or the `identity` of the User resource to update.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, role_sid: str?, identity: str?, friendly_name: str?, attributes: str?, is_online: bool?, is_notifiable: bool?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Users/{Sid}
+@desc Remove a conversation user from your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to delete the User resource from., Sid: str # The SID of the User resource to delete. This value can be either the `sid` or the `identity` of the User resource to delete.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Users/{Sid}
+@desc Fetch a conversation user from your service
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) to fetch the User resource from., Sid: str # The SID of the User resource to fetch. This value can be either the `sid` or the `identity` of the User resource to fetch.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, role_sid: str?, identity: str?, friendly_name: str?, attributes: str?, is_online: bool?, is_notifiable: bool?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Users/{UserSid}/Conversations/{ConversationSid}
+@desc Update a specific User Conversation.
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource., ConversationSid: str # The unique SID identifier of the Conversation. This value can be either the `sid` or the `unique_name` of the [Conversation resource](https://www.twilio.com/docs/conversations/api/conversation-resource).}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, unread_messages_count: int?, last_read_message_index: int?, participant_sid: str?, user_sid: str?, friendly_name: str?, conversation_state: str, timers: any?, attributes: str?, date_created: str(date-time)?, date_updated: str(date-time)?, created_by: str?, notification_level: str, unique_name: str?, url: str(uri)?, links: map?} # OK
+
+@endpoint DELETE /v1/Services/{ChatServiceSid}/Users/{UserSid}/Conversations/{ConversationSid}
+@desc Delete a specific User Conversation.
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource., ConversationSid: str # The unique SID identifier of the Conversation. This value can be either the `sid` or the `unique_name` of the [Conversation resource](https://www.twilio.com/docs/conversations/api/conversation-resource).}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Users/{UserSid}/Conversations/{ConversationSid}
+@desc Fetch a specific User Conversation.
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource., ConversationSid: str # The unique SID identifier of the Conversation. This value can be either the `sid` or the `unique_name` of the [Conversation resource](https://www.twilio.com/docs/conversations/api/conversation-resource).}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, unread_messages_count: int?, last_read_message_index: int?, participant_sid: str?, user_sid: str?, friendly_name: str?, conversation_state: str, timers: any?, attributes: str?, date_created: str(date-time)?, date_updated: str(date-time)?, created_by: str?, notification_level: str, unique_name: str?, url: str(uri)?, links: map?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Users/{UserSid}/Conversations
+@desc Retrieve a list of all User Conversations for the User.
+@required {ChatServiceSid: str # The SID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) the Conversation resource is associated with., UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {conversations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Services/{ChatServiceSid}/Configuration/Webhooks
+@desc Update a specific Webhook.
+@required {ChatServiceSid: str # The unique ID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) this conversation belongs to.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, pre_webhook_url: str(uri)?, post_webhook_url: str(uri)?, filters: [str]?, method: str, url: str(uri)?} # OK
+
+@endpoint GET /v1/Services/{ChatServiceSid}/Configuration/Webhooks
+@desc Fetch a specific service webhook configuration.
+@required {ChatServiceSid: str # The unique ID of the [Conversation Service](https://www.twilio.com/docs/conversations/api/service-resource) this conversation belongs to.}
+@returns(200) {account_sid: str?, chat_service_sid: str?, pre_webhook_url: str(uri)?, post_webhook_url: str(uri)?, filters: [str]?, method: str, url: str(uri)?} # OK
+
+@endgroup
+
+@group Users
+@endpoint POST /v1/Users
+@desc Add a new conversation user to your account's default service
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(201) {sid: str?, account_sid: str?, chat_service_sid: str?, role_sid: str?, identity: str?, friendly_name: str?, attributes: str?, is_online: bool?, is_notifiable: bool?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # Created
+
+@endpoint GET /v1/Users
+@desc Retrieve a list of all conversation users in your account's default service
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {users: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endpoint POST /v1/Users/{Sid}
+@desc Update an existing conversation user in your account's default service
+@required {Sid: str # The SID of the User resource to update. This value can be either the `sid` or the `identity` of the User resource to update.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, role_sid: str?, identity: str?, friendly_name: str?, attributes: str?, is_online: bool?, is_notifiable: bool?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # OK
+
+@endpoint DELETE /v1/Users/{Sid}
+@desc Remove a conversation user from your account's default service
+@required {Sid: str # The SID of the User resource to delete. This value can be either the `sid` or the `identity` of the User resource to delete.}
+@optional {X-Twilio-Webhook-Enabled: str # The X-Twilio-Webhook-Enabled HTTP request header}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Users/{Sid}
+@desc Fetch a conversation user from your account's default service
+@required {Sid: str # The SID of the User resource to fetch. This value can be either the `sid` or the `identity` of the User resource to fetch.}
+@returns(200) {sid: str?, account_sid: str?, chat_service_sid: str?, role_sid: str?, identity: str?, friendly_name: str?, attributes: str?, is_online: bool?, is_notifiable: bool?, date_created: str(date-time)?, date_updated: str(date-time)?, url: str(uri)?, links: map?} # OK
+
+@endpoint POST /v1/Users/{UserSid}/Conversations/{ConversationSid}
+@desc Update a specific User Conversation.
+@required {UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource., ConversationSid: str # The unique SID identifier of the Conversation. This value can be either the `sid` or the `unique_name` of the [Conversation resource](https://www.twilio.com/docs/conversations/api/conversation-resource).}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, unread_messages_count: int?, last_read_message_index: int?, participant_sid: str?, user_sid: str?, friendly_name: str?, conversation_state: str, timers: any?, attributes: str?, date_created: str(date-time)?, date_updated: str(date-time)?, created_by: str?, notification_level: str, unique_name: str?, url: str(uri)?, links: map?} # OK
+
+@endpoint DELETE /v1/Users/{UserSid}/Conversations/{ConversationSid}
+@desc Delete a specific User Conversation.
+@required {UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource., ConversationSid: str # The unique SID identifier of the Conversation. This value can be either the `sid` or the `unique_name` of the [Conversation resource](https://www.twilio.com/docs/conversations/api/conversation-resource).}
+@returns(204) The resource was deleted successfully.
+
+@endpoint GET /v1/Users/{UserSid}/Conversations/{ConversationSid}
+@desc Fetch a specific User Conversation.
+@required {UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource., ConversationSid: str # The unique SID identifier of the Conversation. This value can be either the `sid` or the `unique_name` of the [Conversation resource](https://www.twilio.com/docs/conversations/api/conversation-resource).}
+@returns(200) {account_sid: str?, chat_service_sid: str?, conversation_sid: str?, unread_messages_count: int?, last_read_message_index: int?, participant_sid: str?, user_sid: str?, friendly_name: str?, conversation_state: str, timers: any?, attributes: str?, date_created: str(date-time)?, date_updated: str(date-time)?, created_by: str?, notification_level: str, unique_name: str?, url: str(uri)?, links: map?} # OK
+
+@endpoint GET /v1/Users/{UserSid}/Conversations
+@desc Retrieve a list of all User Conversations for the User.
+@required {UserSid: str # The unique SID identifier of the [User resource](https://www.twilio.com/docs/conversations/api/user-resource). This value can be either the `sid` or the `identity` of the User resource.}
+@optional {PageSize: int(int64) # How many resources to return in each list page. The default is 50, and the maximum is 50., Page: int # The page index. This value is simply for client state., PageToken: str # The page token. This is provided by the API.}
+@returns(200) {conversations: [map], meta: map{first_page_url: str(uri), key: str, next_page_url: str(uri)?, page: int, page_size: int, previous_page_url: str(uri)?, url: str(uri)}} # OK
+
+@endgroup
+
+@end

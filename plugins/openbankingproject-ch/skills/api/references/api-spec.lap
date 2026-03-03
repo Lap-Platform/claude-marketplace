@@ -1,0 +1,214 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Swiss NextGen Banking API-Framework
+@base https://api.dev.openbankingproject.ch
+@version 1.3.8_2020-12-14 - Swiss edition 1.3.8.1-CH
+@auth Bearer bearer
+@common_fields {X-Request-ID: str, PSU-IP-Address: str(ipv4), Digest: str, Signature: str, TPP-Signature-Certificate: str(byte), PSU-IP-Port: str, PSU-Accept: str, PSU-Accept-Charset: str, PSU-Accept-Encoding: str, PSU-Accept-Language: str, PSU-User-Agent: str, PSU-Http-Method: str(GET/POST/PUT/PATCH/DELETE), PSU-Device-ID: str, PSU-Geo-Location: str}
+@endpoints 34
+@hint download_for_search
+@toc {payment-service}(12), accounts(5), consents(8), funds-confirmations(1), signing-baskets(8)
+
+@group {payment-service}
+@endpoint POST /v1/{payment-service}/{payment-product}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers)}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, Consent-ID: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Explicit-Authorisation-Preferred: bool, TPP-Rejection-NoFunds-Preferred: bool, TPP-Brand-Logging-Information: str, TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str}
+@returns(201) {transactionStatus: str, paymentId: str, transactionFees: map{currency: str, amount: str}, currencyConversionFee: map{currency: str, amount: str}, estimatedTotalAmount: map{currency: str, amount: str}, estimatedInterbankSettlementAmount: map{currency: str, amount: str}, transactionFeeIndicator: bool, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, confirmation: map{href: str}, startAuthorisation: map{href: str}, startAuthorisationWithPsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, startAuthorisationWithAuthenticationMethodSelection: map{href: str}, startAuthorisationWithTransactionAuthorisation: map{href: str}, self: map{href: str}, status: map{href: str}, scaStatus: map{href: str}}, psuMessage: str, tppMessages: [map]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/{payment-service}/{payment-product}/{paymentId}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint DELETE /v1/{payment-service}/{payment-product}/{paymentId}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@optional {TPP-Redirect-Preferred: bool, TPP-Nok-Redirect-URI: str(uri), TPP-Redirect-URI: str(uri), TPP-Explicit-Authorisation-Preferred: bool}
+@returns(204)
+@returns(202) {transactionStatus: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{startAuthorisation: map{href: str}, startAuthorisationWithPsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, startAuthorisationWithAuthenticationMethodSelection: map{href: str}}}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/{payment-service}/{payment-product}/{paymentId}/status
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@returns(200) {transactionStatus: str, fundsAvailable: bool, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint POST /v1/{payment-service}/{payment-product}/{paymentId}/authorisations
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str}
+@returns(201) {scaStatus: str, authorisationId: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, confirmation: map{href: str}, updatePsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, selectAuthenticationMethod: map{href: str}, authoriseTransaction: map{href: str}, scaStatus: map{href: str}}, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/{payment-service}/{payment-product}/{paymentId}/authorisations
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@returns(200) {authorisationIds: [str]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/{payment-service}/{payment-product}/{paymentId}/authorisations/{authorisationId}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str, authorisationId: str}
+@returns(200) {scaStatus: str, psuMessage: str, trustedBeneficiaryFlag: bool}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint PUT /v1/{payment-service}/{payment-product}/{paymentId}/authorisations/{authorisationId}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str, authorisationId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint POST /v1/{payment-service}/{payment-product}/{paymentId}/cancellation-authorisations
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str}
+@returns(201) {scaStatus: str, authorisationId: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, confirmation: map{href: str}, updatePsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, selectAuthenticationMethod: map{href: str}, authoriseTransaction: map{href: str}, scaStatus: map{href: str}}, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/{payment-service}/{payment-product}/{paymentId}/cancellation-authorisations
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str}
+@returns(200) {authorisationIds: [str]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/{payment-service}/{payment-product}/{paymentId}/cancellation-authorisations/{authorisationId}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str, authorisationId: str}
+@returns(200) {scaStatus: str, psuMessage: str, trustedBeneficiaryFlag: bool}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint PUT /v1/{payment-service}/{payment-product}/{paymentId}/cancellation-authorisations/{authorisationId}
+@required {payment-service: str(payments/bulk-payments/periodic-payments), payment-product: str(domestic-swiss-credit-transfers-isr/domestic-swiss-credit-transfers/domestic-swiss-credit-transfers-qr/domestic-swiss-foreign-credit-transfers/swiss-sepa-credit-transfers/swiss-cross-border-credit-transfers/pain.001-sepa-credit-transfers/pain.001-cross-border-credit-transfers/pain.001-swiss-six-credit-transfers), paymentId: str, authorisationId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endgroup
+
+@group accounts
+@endpoint GET /v1/accounts
+@required {Consent-ID: str}
+@optional {withBalance: bool}
+@returns(200) {accounts: [map]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/accounts/{account-id}
+@required {account-id: str, Consent-ID: str}
+@optional {withBalance: bool}
+@returns(200) {account: map{resourceId: str, iban: str, bban: str, msisdn: str, currency: str, name: str, displayName: str, product: str, cashAccountType: str, status: str, bic: str, linkedAccounts: str, usage: str, details: str, balances: [map], _links: map{balances: map{href: str}, transactions: map{href: str}}, ownerName: str}}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/accounts/{account-id}/balances
+@required {account-id: str, Consent-ID: str}
+@returns(200) {account: map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}, balances: [map]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/accounts/{account-id}/transactions
+@required {account-id: str, bookingStatus: str(information/booked/pending/both), Consent-ID: str}
+@optional {dateFrom: str(date), dateTo: str(date), entryReferenceFrom: str, deltaList: bool, withBalance: bool}
+@returns(200) {account: map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}, transactions: map{booked: [map], pending: [map], information: [map], _links: map{account: map{href: str}, first: map{href: str}, next: map{href: str}, previous: map{href: str}, last: map{href: str}}}, balances: [map], _links: map{download: map{href: str}}}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/accounts/{account-id}/transactions/{transactionId}
+@required {account-id: str, transactionId: str, Consent-ID: str}
+@returns(200) {transactionsDetails: map{transactionDetails: map{transactionId: str, entryReference: str, endToEndId: str, batchIndicator: bool, batchNumberOfTransactions: int, mandateId: str, checkId: str, creditorId: str, bookingDate: str(date), valueDate: str(date), transactionAmount: map{currency: str, amount: str}, currencyExchange: [map], creditorName: str, creditorAccount: map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}, creditorAgent: str, ultimateCreditor: str, debtorName: str, debtorAccount: map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}, debtorAgent: str, ultimateDebtor: str, remittanceInformationUnstructured: str, remittanceInformationUnstructuredArray: [str], remittanceInformationStructured: str, remittanceInformationStructuredArray: [map], entryDetails: [map], additionalInformation: str, additionalInformationStructured: map{standingOrderDetails: map}, purposeCode: str, bankTransactionCode: str, proprietaryBankTransactionCode: str, balanceAfterTransaction: map{balanceAmount: map, balanceType: str, creditLimitIncluded: bool, lastChangeDateTime: str(date-time), referenceDate: str(date), lastCommittedTransaction: str}, _links: map{transactionDetails: map}}}}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endgroup
+
+@group consents
+@endpoint POST /v1/consents
+@required {access: map{accounts: [map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}], balances: [map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}], transactions: [map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}], additionalInformation: map{ownerName: [map], trustedBeneficiaries: [map]}, availableAccounts: str, availableAccountsWithBalance: str, allPsd2: str, restrictedTo: [str]}, recurringIndicator: bool, validUntil: str(date), frequencyPerDay: int, combinedServiceIndicator: bool}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Explicit-Authorisation-Preferred: bool, TPP-Brand-Logging-Information: str, TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str}
+@returns(201) {consentStatus: str, consentId: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, confirmation: map{href: str}, startAuthorisation: map{href: str}, startAuthorisationWithPsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, startAuthorisationWithAuthenticationMethodSelection: map{href: str}, startAuthorisationWithTransactionAuthorisation: map{href: str}, self: map{href: str}, status: map{href: str}, scaStatus: map{href: str}}, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/consents/{consentId}
+@required {consentId: str}
+@returns(200) {access: map{accounts: [map], balances: [map], transactions: [map], additionalInformation: map{ownerName: [map], trustedBeneficiaries: [map]}, availableAccounts: str, availableAccountsWithBalance: str, allPsd2: str, restrictedTo: [str]}, recurringIndicator: bool, validUntil: str(date), frequencyPerDay: int, lastActionDate: str(date), consentStatus: str, _links: map{account: map{href: str}, card-account: map{href: str}}}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint DELETE /v1/consents/{consentId}
+@required {consentId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/consents/{consentId}/status
+@required {consentId: str}
+@returns(200) {consentStatus: str, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint POST /v1/consents/{consentId}/authorisations
+@required {consentId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str}
+@returns(201) {scaStatus: str, authorisationId: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, confirmation: map{href: str}, updatePsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, selectAuthenticationMethod: map{href: str}, authoriseTransaction: map{href: str}, scaStatus: map{href: str}}, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/consents/{consentId}/authorisations
+@required {consentId: str}
+@returns(200) {authorisationIds: [str]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/consents/{consentId}/authorisations/{authorisationId}
+@required {consentId: str, authorisationId: str}
+@returns(200) {scaStatus: str, psuMessage: str, trustedBeneficiaryFlag: bool}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint PUT /v1/consents/{consentId}/authorisations/{authorisationId}
+@required {consentId: str, authorisationId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endgroup
+
+@group funds-confirmations
+@endpoint POST /v1/funds-confirmations
+@required {account: map{iban: str, otherAccountIdentification: str, currency: str, cashAccountType: str}, instructedAmount: map{currency!: str, amount!: str}}
+@optional {Authorization: str, cardNumber: str, payee: str}
+@returns(200) {fundsAvailable: bool}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endgroup
+
+@group signing-baskets
+@endpoint POST /v1/signing-baskets
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, Consent-ID: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Explicit-Authorisation-Preferred: bool, TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str, paymentIds: [str], consentIds: [str]}
+@returns(201) {transactionStatus: str, basketId: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, startAuthorisation: map{href: str}, startAuthorisationWithPsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, startAuthorisationWithAuthenticationMethodSelection: map{href: str}, startAuthorisationWithTransactionAuthorisation: map{href: str}, self: map{href: str}, status: map{href: str}, scaStatus: map{href: str}}, psuMessage: str, tppMessages: [map]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/signing-baskets/{basketId}
+@required {basketId: str}
+@returns(200) {payments: [str], consents: [str], transactionStatus: str, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, startAuthorisation: map{href: str}, startAuthorisationWithPsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, startAuthorisationWithAuthenticationMethodSelection: map{href: str}, startAuthorisationWithTransactionAuthorisation: map{href: str}, self: map{href: str}, status: map{href: str}, scaStatus: map{href: str}}}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint DELETE /v1/signing-baskets/{basketId}
+@required {basketId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/signing-baskets/{basketId}/status
+@required {basketId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str}
+@returns(200) {transactionStatus: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint POST /v1/signing-baskets/{basketId}/authorisations
+@required {basketId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str, TPP-Redirect-Preferred: bool, TPP-Redirect-URI: str(uri), TPP-Nok-Redirect-URI: str(uri), TPP-Notification-URI: str, TPP-Notification-Content-Preferred: str}
+@returns(201) {scaStatus: str, authorisationId: str, scaMethods: [map], chosenScaMethod: map{authenticationType: str, authenticationVersion: str, authenticationMethodId: str, name: str, explanation: str}, challengeData: map{image: str(byte), data: [str], imageLink: str, otpMaxLength: int, otpFormat: str, additionalInformation: str}, _links: map{scaRedirect: map{href: str}, scaOAuth: map{href: str}, confirmation: map{href: str}, updatePsuIdentification: map{href: str}, startAuthorisationWithPsuAuthentication: map{href: str}, startAuthorisationWithEncryptedPsuAuthentication: map{href: str}, selectAuthenticationMethod: map{href: str}, authoriseTransaction: map{href: str}, scaStatus: map{href: str}}, psuMessage: str}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/signing-baskets/{basketId}/authorisations
+@required {basketId: str}
+@returns(200) {authorisationIds: [str]}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint PUT /v1/signing-baskets/{basketId}/authorisations/{authorisationId}
+@required {basketId: str, authorisationId: str}
+@optional {PSU-ID: str, PSU-ID-Type: str, PSU-Corporate-ID: str, PSU-Corporate-ID-Type: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endpoint GET /v1/signing-baskets/{basketId}/authorisations/{authorisationId}
+@required {basketId: str, authorisationId: str}
+@returns(200) {scaStatus: str, psuMessage: str, trustedBeneficiaryFlag: bool}
+@errors {400, 401, 403, 404, 405, 406, 408, 409, 415, 429, 500, 503}
+
+@endgroup
+
+@end

@@ -1,0 +1,357 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api n8n Public API
+@base /api/v1
+@version 1.1.1
+@auth ApiKey X-N8N-API-KEY in header
+@endpoints 59
+@hint download_for_search
+@toc audit(1), credentials(6), executions(8), tags(5), workflows(11), users(5), source-control(1), variables(4), data-tables(10), projects(8)
+
+@group audit
+@endpoint POST /audit
+@optional {additionalOptions: map{daysAbandonedWorkflow: int, categories: [str]}}
+@returns(200) {Credentials Risk Report: map, Database Risk Report: map, Filesystem Risk Report: map, Nodes Risk Report: map, Instance Risk Report: map}
+@errors {401, 500}
+
+@endgroup
+
+@group credentials
+@endpoint GET /credentials
+@optional {limit: num=100, cursor: str}
+@returns(200) {data: [any], nextCursor: str?}
+@errors {401}
+
+@endpoint POST /credentials
+@required {name: str, type: str, data: map}
+@optional {id: str, isResolvable: bool, createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(200) {id: str, name: str, type: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 415}
+
+@endpoint PATCH /credentials/{id}
+@required {id: str}
+@optional {name: str, type: str, data: map, isGlobal: bool, isResolvable: bool, isPartialData: bool=False}
+@returns(200) {id: str, name: str, type: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 404}
+
+@endpoint DELETE /credentials/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, type: str, data: map, isResolvable: bool, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 404}
+
+@endpoint GET /credentials/schema/{credentialTypeName}
+@required {credentialTypeName: str}
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /credentials/{id}/transfer
+@required {id: str, destinationProjectId: str}
+@returns(200)
+@errors {400, 401, 404}
+
+@endgroup
+
+@group executions
+@endpoint GET /executions
+@optional {includeData: bool, status: str(canceled/error/running/success/waiting), workflowId: str, projectId: str, limit: num=100, cursor: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401, 404}
+
+@endpoint GET /executions/{id}
+@required {id: num}
+@optional {includeData: bool}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
+@errors {401, 404}
+
+@endpoint DELETE /executions/{id}
+@required {id: num}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
+@errors {401, 404}
+
+@endpoint POST /executions/{id}/retry
+@required {id: num}
+@optional {loadWorkflow: bool}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
+@errors {401, 404, 409}
+
+@endpoint POST /executions/{id}/stop
+@required {id: num}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
+@errors {401, 404}
+
+@endpoint POST /executions/stop
+@required {status: [str]}
+@optional {workflowId: str, startedAfter: str(date-time), startedBefore: str(date-time)}
+@returns(200) {stopped: num}
+@errors {400, 401}
+
+@endpoint GET /executions/{id}/tags
+@required {id: num}
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /executions/{id}/tags
+@required {id: num}
+@returns(200)
+@errors {400, 401, 404}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags
+@required {name: str}
+@optional {id: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(201) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 409}
+
+@endpoint GET /tags
+@optional {limit: num=100, cursor: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401}
+
+@endpoint GET /tags/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 404}
+
+@endpoint DELETE /tags/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 403, 404}
+
+@endpoint PUT /tags/{id}
+@required {id: str, name: str}
+@optional {id: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 404, 409}
+
+@endgroup
+
+@group workflows
+@endpoint POST /workflows
+@required {name: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}}
+@optional {id: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), staticData: any, tags: [map{id: str, name!: str, createdAt: str(date-time), updatedAt: str(date-time)}], shared: [map{role: str, workflowId: str, projectId: str, project: map{id: str, name: str, type: str}, createdAt: str(date-time), updatedAt: str(date-time)}], activeVersion: map{versionId: str, workflowId: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@errors {400, 401}
+
+@endpoint GET /workflows
+@optional {active: bool, tags: str, name: str, projectId: str, excludePinnedData: bool, limit: num=100, cursor: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401}
+
+@endpoint GET /workflows/{id}
+@required {id: str}
+@optional {excludePinnedData: bool}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@errors {401, 404}
+
+@endpoint DELETE /workflows/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@errors {401, 404}
+
+@endpoint PUT /workflows/{id}
+@required {id: str, name: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}}
+@optional {id: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), staticData: any, tags: [map{id: str, name!: str, createdAt: str(date-time), updatedAt: str(date-time)}], shared: [map{role: str, workflowId: str, projectId: str, project: map{id: str, name: str, type: str}, createdAt: str(date-time), updatedAt: str(date-time)}], activeVersion: map{versionId: str, workflowId: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@errors {400, 401, 404}
+
+@endpoint GET /workflows/{id}/{versionId}
+@required {id: str, versionId: str}
+@returns(200) {versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, name: str?, description: str?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 404}
+
+@endpoint POST /workflows/{id}/activate
+@required {id: str}
+@optional {versionId: str, name: str, description: str}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@errors {400, 401, 404}
+
+@endpoint POST /workflows/{id}/deactivate
+@required {id: str}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
+@errors {401, 404}
+
+@endpoint PUT /workflows/{id}/transfer
+@required {id: str, destinationProjectId: str}
+@returns(200)
+@errors {400, 401, 404}
+
+@endpoint GET /workflows/{id}/tags
+@required {id: str}
+@returns(200)
+@errors {400, 401, 404}
+
+@endpoint PUT /workflows/{id}/tags
+@required {id: str}
+@returns(200)
+@errors {400, 401, 404}
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@optional {limit: num=100, cursor: str, includeRole: bool=False, projectId: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401}
+
+@endpoint POST /users
+@returns(200) {user: map{id: str, email: str, inviteAcceptUrl: str, emailSent: bool}, error: str}
+@errors {401, 403}
+
+@endpoint GET /users/{id}
+@required {id: str(identifier)}
+@optional {includeRole: bool=False}
+@returns(200) {id: str, email: str(email), firstName: str, lastName: str, isPending: bool, createdAt: str(date-time), updatedAt: str(date-time), role: str}
+@errors {401}
+
+@endpoint DELETE /users/{id}
+@required {id: str(identifier)}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint PATCH /users/{id}/role
+@required {id: str(identifier), newRoleName: str}
+@returns(200)
+@errors {401, 403, 404}
+
+@endgroup
+
+@group source-control
+@endpoint POST /source-control/pull
+@optional {force: bool, autoPublish: str(none/all/published)=none, variables: map}
+@returns(200) {variables: map{added: [str], changed: [str]}, credentials: [map], workflows: [map], tags: map{tags: [map], mappings: [map]}}
+@errors {400, 409}
+
+@endgroup
+
+@group variables
+@endpoint POST /variables
+@required {key: str, value: str}
+@optional {id: str, type: str, projectId: str}
+@returns(201)
+@errors {400, 401}
+
+@endpoint GET /variables
+@optional {limit: num=100, cursor: str, projectId: str, state: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401}
+
+@endpoint DELETE /variables/{id}
+@required {id: str}
+@returns(204)
+@errors {401, 404}
+
+@endpoint PUT /variables/{id}
+@required {id: str, key: str, value: str}
+@optional {id: str, type: str, projectId: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group data-tables
+@endpoint GET /data-tables
+@optional {limit: num=100, cursor: str, filter: str(jsonString), sortBy: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {400, 401}
+
+@endpoint POST /data-tables
+@required {name: str, columns: [map{name!: str, type!: str}]}
+@returns(201) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 409}
+
+@endpoint GET /data-tables/{dataTableId}
+@required {dataTableId: str(nanoid)}
+@returns(200) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 404}
+
+@endpoint PATCH /data-tables/{dataTableId}
+@required {dataTableId: str(nanoid), name: str}
+@returns(200) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 404, 409}
+
+@endpoint DELETE /data-tables/{dataTableId}
+@required {dataTableId: str(nanoid)}
+@returns(204)
+@errors {401, 404}
+
+@endpoint GET /data-tables/{dataTableId}/rows
+@required {dataTableId: str(nanoid)}
+@optional {limit: num=100, cursor: str, filter: str(jsonString), sortBy: str, search: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {400, 401, 404}
+
+@endpoint POST /data-tables/{dataTableId}/rows
+@required {dataTableId: str(nanoid), data: [map]}
+@optional {returnType: str(count/id/all)=count}
+@returns(200)
+@errors {400, 401, 404}
+
+@endpoint PATCH /data-tables/{dataTableId}/rows/update
+@required {dataTableId: str(nanoid), filter: map{type: str, filters!: [map{columnName!: str, condition!: str, value!: any}]}, data: map}
+@optional {returnData: bool=False, dryRun: bool=False}
+@returns(200)
+@errors {400, 401, 404}
+
+@endpoint POST /data-tables/{dataTableId}/rows/upsert
+@required {dataTableId: str(nanoid), filter: map{type: str, filters!: [map{columnName!: str, condition!: str, value!: any}]}, data: map}
+@optional {returnData: bool=False, dryRun: bool=False}
+@returns(200)
+@errors {400, 401, 404}
+
+@endpoint DELETE /data-tables/{dataTableId}/rows/delete
+@required {dataTableId: str(nanoid), filter: str(jsonString)}
+@optional {returnData: bool=False, dryRun: bool=False}
+@returns(200)
+@errors {400, 401, 404}
+
+@endgroup
+
+@group projects
+@endpoint POST /projects
+@required {name: str}
+@optional {id: str, type: str}
+@returns(201)
+@errors {400, 401}
+
+@endpoint GET /projects
+@optional {limit: num=100, cursor: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401}
+
+@endpoint DELETE /projects/{projectId}
+@required {projectId: str}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint PUT /projects/{projectId}
+@required {projectId: str, name: str}
+@optional {id: str, type: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /projects/{projectId}/users
+@required {projectId: str}
+@optional {limit: num=100, cursor: str}
+@returns(200) {data: [map], nextCursor: str?}
+@errors {401, 403, 404}
+
+@endpoint POST /projects/{projectId}/users
+@required {projectId: str, relations: [map{userId!: str, role!: str}]}
+@returns(201)
+@errors {401, 403, 404}
+
+@endpoint DELETE /projects/{projectId}/users/{userId}
+@required {projectId: str, userId: str}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint PATCH /projects/{projectId}/users/{userId}
+@required {projectId: str, userId: str, role: str}
+@returns(204)
+@errors {401, 403, 404}
+
+@endgroup
+
+@end

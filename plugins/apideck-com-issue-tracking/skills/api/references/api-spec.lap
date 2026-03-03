@@ -1,0 +1,113 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Issue Tracking API
+@base https://unify.apideck.com
+@version 10.24.0
+@auth ApiKey Authorization in header
+@common_fields {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, raw: bool=False # Include raw response. Mostly used for debugging purposes, x-apideck-service-id: str # Provide the service id you want to call (e.g., pipedrive). Only needed when a consumer has activated multiple integrations for a Unified API.}
+@endpoints 15
+@toc issue-tracking(15)
+
+@endpoint GET /issue-tracking/collections
+@desc List Collections
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, sort: map # Apply sorting, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # List Collections
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}
+@desc Get Collection
+@required {collection_id: str # The collection ID}
+@optional {fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, parent_id: str?, type: str?, name: str?, description: str?, custom_mappings: map?, updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # Get a Collection
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/tickets
+@desc List Tickets
+@required {collection_id: str # The collection ID}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, sort: map # Apply sorting, filter: map # Apply filters, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # List Tickets
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /issue-tracking/collections/{collection_id}/tickets
+@desc Create Ticket
+@required {collection_id: str # The collection ID, id: str # A unique identifier for an object.}
+@optional {parent_id: str # The ticket's parent ID, collection_id: str # The ticket's collection ID, type: str # The ticket's type, subject: str # Subject of the ticket, description: str # The ticket's description. HTML version of description is mapped if supported by the third-party platform, status: str # The current status of the ticket. Possible values include: open, in_progress, closed, or - in cases where there is no clear mapping - the original value passed through., priority: str(low/normal/high/urgent) # Priority of the ticket, assignees: [map{id!: str, username: str}], updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., created_by: str # The user who created the object., due_date: str(date-time) # Due date of the ticket, completed_at: str(date-time) # When the ticket was completed, tags: [map{id!: str, name: str, custom_mappings: map}], custom_mappings: map # When custom mappings are configured on the resource, the result is included here., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Create a Ticket
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/tickets/{ticket_id}
+@desc Get Ticket
+@required {ticket_id: str # ID of the ticket you are acting upon., collection_id: str # The collection ID}
+@optional {fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, parent_id: str?, collection_id: str?, type: str?, subject: str?, description: str?, status: str?, priority: str?, assignees: [map], updated_at: str(date-time)?, created_at: str(date-time)?, created_by: str?, due_date: str(date-time)?, completed_at: str(date-time)?, tags: [map], custom_mappings: map?, pass_through: [map]}, _raw: map?} # Get a Ticket
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /issue-tracking/collections/{collection_id}/tickets/{ticket_id}
+@desc Update Ticket
+@required {ticket_id: str # ID of the ticket you are acting upon., collection_id: str # The collection ID, id: str # A unique identifier for an object.}
+@optional {parent_id: str # The ticket's parent ID, collection_id: str # The ticket's collection ID, type: str # The ticket's type, subject: str # Subject of the ticket, description: str # The ticket's description. HTML version of description is mapped if supported by the third-party platform, status: str # The current status of the ticket. Possible values include: open, in_progress, closed, or - in cases where there is no clear mapping - the original value passed through., priority: str(low/normal/high/urgent) # Priority of the ticket, assignees: [map{id!: str, username: str}], updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., created_by: str # The user who created the object., due_date: str(date-time) # Due date of the ticket, completed_at: str(date-time) # When the ticket was completed, tags: [map{id!: str, name: str, custom_mappings: map}], custom_mappings: map # When custom mappings are configured on the resource, the result is included here., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Update a Ticket
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /issue-tracking/collections/{collection_id}/tickets/{ticket_id}
+@desc Delete Ticket
+@required {ticket_id: str # ID of the ticket you are acting upon., collection_id: str # The collection ID}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Delete a Ticket
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/tickets/{ticket_id}/comments
+@desc List Comments
+@required {collection_id: str # The collection ID, ticket_id: str # ID of the ticket you are acting upon.}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, sort: map # Apply sorting, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # List Comments
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /issue-tracking/collections/{collection_id}/tickets/{ticket_id}/comments
+@desc Create Comment
+@required {collection_id: str # The collection ID, ticket_id: str # ID of the ticket you are acting upon.}
+@optional {id: str # A unique identifier for an object., body: str # Body of the comment, custom_mappings: map # When custom mappings are configured on the resource, the result is included here., created_by: str # The user who created the object., updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(201) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Create a Comment
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/tickets/{ticket_id}/comments/{id}
+@desc Get Comment
+@required {id: str # ID of the record you are acting upon., collection_id: str # The collection ID, ticket_id: str # ID of the ticket you are acting upon.}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str, body: str?, custom_mappings: map?, created_by: str?, updated_at: str(date-time)?, created_at: str(date-time)?, pass_through: [map]}, _raw: map?} # Get a Comment
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /issue-tracking/collections/{collection_id}/tickets/{ticket_id}/comments/{id}
+@desc Update Comment
+@required {id: str # ID of the record you are acting upon., collection_id: str # The collection ID, ticket_id: str # ID of the ticket you are acting upon.}
+@optional {id: str # A unique identifier for an object., body: str # Body of the comment, custom_mappings: map # When custom mappings are configured on the resource, the result is included here., created_by: str # The user who created the object., updated_at: str(date-time) # The date and time when the object was last updated., created_at: str(date-time) # The date and time when the object was created., pass_through: [map{service_id!: str, operation_id: str, extend_object: map, extend_paths: [map{path!: str, value!: any}]}] # The pass_through property allows passing service-specific, custom data or structured modifications in request body when creating or updating resources.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Update a Comment
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /issue-tracking/collections/{collection_id}/tickets/{ticket_id}/comments/{id}
+@desc Delete Comment
+@required {id: str # ID of the record you are acting upon., collection_id: str # The collection ID, ticket_id: str # ID of the ticket you are acting upon.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str}, _raw: map?} # Delete a Comment
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/users
+@desc List Users
+@required {collection_id: str # The collection ID}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # Users
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/users/{id}
+@desc Get user
+@required {collection_id: str # The collection ID, id: str # ID of the record you are acting upon.}
+@optional {fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: map{id: str?, name: str?, first_name: str?, last_name: str?, email: str?, photo_url: str?, custom_mappings: map?, updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # User
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /issue-tracking/collections/{collection_id}/tags
+@desc List Tags
+@required {collection_id: str # The collection ID}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, pass_through: map # Optional unmapped key/values that will be passed through to downstream as query parameters. Ie: ?pass_through[search]=leads becomes ?search=leads, fields: str # The 'fields' parameter allows API users to specify the fields they want to include in the API response. If this parameter is not present, the API will return all available fields. If this parameter is present, only the fields specified in the comma-separated string will be included in the response. Nested properties can also be requested by using a dot notation. <br /><br />Example: `fields=name,email,addresses.city`<br /><br />In the example above, the response will only include the fields "name", "email" and "addresses.city". If any other fields are available, they will be excluded.}
+@returns(200) {status_code: int, status: str, service: str, resource: str, operation: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # List Tags
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@end

@@ -1,0 +1,162 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Prometheus Service
+@version 2020-08-01
+@auth AWS SigV4
+@endpoints 26
+@hint download_for_search
+@toc workspaces(18), scrapers(4), scraperconfiguration(1), tags(3)
+
+@group workspaces
+@endpoint POST /workspaces/{workspaceId}/alertmanager/definition
+@required {workspaceId: str, data: bytes}
+@optional {clientToken: str}
+@returns(200) {status: AlertManagerDefinitionStatus{statusCode: str, statusReason: str?}}
+
+@endpoint POST /workspaces/{workspaceId}/logging
+@required {workspaceId: str, logGroupArn: str}
+@optional {clientToken: str}
+@returns(200) {status: LoggingConfigurationStatus{statusCode: str, statusReason: str?}}
+
+@endpoint POST /workspaces/{workspaceId}/rulegroupsnamespaces
+@required {workspaceId: str, data: bytes, name: str}
+@optional {clientToken: str, tags: map<str,str>}
+@returns(200) {arn: str, name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str,str>?}
+
+@endgroup
+
+@group scrapers
+@endpoint POST /scrapers
+@required {destination: Destination, scrapeConfiguration: ScrapeConfiguration, source: Source}
+@optional {alias: str, clientToken: str, tags: map<str,str>}
+@returns(200) {arn: str, scraperId: str, status: ScraperStatus{statusCode: str}, tags: map<str,str>?}
+
+@endgroup
+
+@group workspaces
+@endpoint POST /workspaces
+@optional {alias: str, clientToken: str, kmsKeyArn: str, tags: map<str,str>}
+@returns(200) {arn: str, kmsKeyArn: str?, status: WorkspaceStatus{statusCode: str}, tags: map<str,str>?, workspaceId: str}
+
+@endpoint DELETE /workspaces/{workspaceId}/alertmanager/definition
+@required {workspaceId: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /workspaces/{workspaceId}/logging
+@required {workspaceId: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /workspaces/{workspaceId}/rulegroupsnamespaces/{name}
+@required {name: str, workspaceId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group scrapers
+@endpoint DELETE /scrapers/{scraperId}
+@required {scraperId: str}
+@optional {clientToken: str}
+@returns(200) {scraperId: str, status: ScraperStatus{statusCode: str}}
+
+@endgroup
+
+@group workspaces
+@endpoint DELETE /workspaces/{workspaceId}
+@required {workspaceId: str}
+@optional {clientToken: str}
+
+@endpoint GET /workspaces/{workspaceId}/alertmanager/definition
+@required {workspaceId: str}
+@returns(200) {alertManagerDefinition: AlertManagerDefinitionDescription{createdAt: str(timestamp), data: bytes, modifiedAt: str(timestamp), status: AlertManagerDefinitionStatus{statusCode: str, statusReason: str?}}}
+
+@endpoint GET /workspaces/{workspaceId}/logging
+@required {workspaceId: str}
+@returns(200) {loggingConfiguration: LoggingConfigurationMetadata{createdAt: str(timestamp), logGroupArn: str, modifiedAt: str(timestamp), status: LoggingConfigurationStatus{statusCode: str, statusReason: str?}, workspace: str}}
+
+@endpoint GET /workspaces/{workspaceId}/rulegroupsnamespaces/{name}
+@required {name: str, workspaceId: str}
+@returns(200) {ruleGroupsNamespace: RuleGroupsNamespaceDescription{arn: str, createdAt: str(timestamp), data: bytes, modifiedAt: str(timestamp), name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str,str>?}}
+
+@endgroup
+
+@group scrapers
+@endpoint GET /scrapers/{scraperId}
+@required {scraperId: str}
+@returns(200) {scraper: ScraperDescription{alias: str?, arn: str, createdAt: str(timestamp), destination: Destination{ampConfiguration: AmpConfiguration?{workspaceArn: str}}, lastModifiedAt: str(timestamp), roleArn: str, scrapeConfiguration: ScrapeConfiguration{configurationBlob: bytes?}, scraperId: str, source: Source{eksConfiguration: EksConfiguration?{clusterArn: str, securityGroupIds: [str]?, subnetIds: [str]}}, status: ScraperStatus{statusCode: str}, statusReason: str?, tags: map<str,str>?}}
+
+@endgroup
+
+@group workspaces
+@endpoint GET /workspaces/{workspaceId}
+@required {workspaceId: str}
+@returns(200) {workspace: WorkspaceDescription{alias: str?, arn: str, createdAt: str(timestamp), kmsKeyArn: str?, prometheusEndpoint: str?, status: WorkspaceStatus{statusCode: str}, tags: map<str,str>?, workspaceId: str}}
+
+@endgroup
+
+@group scraperconfiguration
+@endpoint GET /scraperconfiguration
+@returns(200) {configuration: bytes}
+
+@endgroup
+
+@group workspaces
+@endpoint GET /workspaces/{workspaceId}/rulegroupsnamespaces
+@required {workspaceId: str}
+@optional {maxResults: int, name: str, nextToken: str}
+@returns(200) {nextToken: str?, ruleGroupsNamespaces: [RuleGroupsNamespaceSummary]}
+
+@endgroup
+
+@group scrapers
+@endpoint GET /scrapers
+@optional {filters: map<str,[str]>, maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, scrapers: [ScraperSummary]}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group workspaces
+@endpoint GET /workspaces
+@optional {alias: str, maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, workspaces: [WorkspaceSummary]}
+
+@endpoint PUT /workspaces/{workspaceId}/alertmanager/definition
+@required {workspaceId: str, data: bytes}
+@optional {clientToken: str}
+@returns(200) {status: AlertManagerDefinitionStatus{statusCode: str, statusReason: str?}}
+
+@endpoint PUT /workspaces/{workspaceId}/rulegroupsnamespaces/{name}
+@required {name: str, workspaceId: str, data: bytes}
+@optional {clientToken: str}
+@returns(200) {arn: str, name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str,str>?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group workspaces
+@endpoint PUT /workspaces/{workspaceId}/logging
+@required {workspaceId: str, logGroupArn: str}
+@optional {clientToken: str}
+@returns(200) {status: LoggingConfigurationStatus{statusCode: str, statusReason: str?}}
+
+@endpoint POST /workspaces/{workspaceId}/alias
+@required {workspaceId: str}
+@optional {alias: str, clientToken: str}
+
+@endgroup
+
+@end

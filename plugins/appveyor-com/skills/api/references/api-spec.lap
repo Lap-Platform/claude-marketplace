@@ -1,0 +1,276 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AppVeyor REST API
+@base https://ci.appveyor.com/api
+@version 1.0.0
+@auth ApiKey Authorization in header
+@endpoints 53
+@hint download_for_search
+@toc users(7), user(1), collaborators(4), roles(5), account(1), projects(20), builds(3), buildjobs(3), environments(6), deployments(3)
+
+@group users
+@endpoint GET /users
+@desc Get users
+@returns(200) Success
+
+@endpoint PUT /users
+@desc Update user
+@required {body: any}
+@returns(204) Success
+
+@endpoint GET /users/{userId}
+@desc Get user
+@returns(200) Success
+
+@endpoint DELETE /users/{userId}
+@desc Delete user
+@returns(204) Success
+
+@endpoint GET /users/invitations
+@desc Get user invitations
+@returns(200) Success
+
+@endpoint POST /users/invitations
+@desc Invite user
+@required {body: map}
+@returns(204) Success
+
+@endpoint DELETE /users/invitations/{userInvitationId}
+@desc Cancel user invitation
+@returns(204) Success
+
+@endgroup
+
+@group user
+@endpoint PUT /user/join-account
+@desc Join Account
+@required {body: map}
+@returns(200) Success
+
+@endgroup
+
+@group collaborators
+@endpoint GET /collaborators
+@desc Get collaborators
+@returns(200) Success
+
+@endpoint PUT /collaborators
+@desc Update collaborator
+@required {body: map}
+@returns(204) Success
+
+@endpoint GET /collaborators/{userId}
+@desc Get collaborator
+@returns(200) Success
+
+@endpoint DELETE /collaborators/{userId}
+@desc Delete collaborator
+@returns(204) Success
+
+@endgroup
+
+@group roles
+@endpoint GET /roles
+@desc Get roles
+@returns(200) Success
+
+@endpoint POST /roles
+@desc Add role
+@required {body: map}
+@returns(200) Success
+
+@endpoint PUT /roles
+@desc Update role
+@required {body: any}
+@returns(200) Success
+
+@endpoint GET /roles/{roleId}
+@desc Get role
+@returns(200) Success
+
+@endpoint DELETE /roles/{roleId}
+@desc Delete role
+@returns(204) Success
+
+@endgroup
+
+@group account
+@endpoint POST /account/encrypt
+@desc Encrypt a value for use in StoredValue.
+@required {body: map}
+@returns(200) Success
+
+@endgroup
+
+@group projects
+@endpoint GET /projects
+@desc Get projects
+@returns(200) Success
+
+@endpoint POST /projects
+@desc Add project
+@required {body: map}
+@returns(200) Success
+
+@endpoint PUT /projects
+@desc Update project
+@required {body: map}
+@returns(204) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}
+@desc Get project last build
+@returns(200) Success
+
+@endpoint DELETE /projects/{accountName}/{projectSlug}
+@desc Delete project
+@returns(204) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/branch/{buildBranch}
+@desc Get project last branch build
+@returns(200) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/build/{buildVersion}
+@desc Get project build by version
+@returns(200) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/history
+@desc Get project history
+@required {recordsNumber: any # Number of results to include in the response. getProjectDeployments is documented to have a maximum of 20. It currently returns 500 Internal Server Error for recordsNumber <= 5. In the past it has returned 500 Internal Server Error for many different values which did not match the value used by the ci.appveyor.com web interface at the time.  As of 2018-09-08, the value used by the web interface is 10.}
+@optional {startBuildId: any # Maximum `buildId` to include in the results (exclusive)., branch: any # Repository Branch}
+@returns(200) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/artifacts/{artifactFileName}
+@desc Get last successful build artifact
+@returns(200) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/deployments
+@desc Get project deployments
+@returns(200) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/settings
+@desc Get project settings
+@returns(200) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/settings/yaml
+@desc Get project settings in YAML
+@returns(200) Success  The schema type of this response could be specified as `file` to denote opaque binary data.  The generated Java code for `file` saves the response as a temporary file, making it a little more difficult to use and less efficient for common cases.  If `string` causes problems for other generators, can switch to `file` type.
+
+@endpoint PUT /projects/{accountName}/{projectSlug}/settings/yaml
+@desc Update project settings in YAML
+@required {body: str(binary) # The body of requests should contain YAML data.  It is unclear how to specify this since the OpenAPI spec requires `schema` without `type` for `in: body` parameters and does not allow `type: file` in `schema`.  See https://github.com/OAI/OpenAPI-Specification/issues/326 swagger-codegen (for Java, probably others) allows a binary string body parameter with non-application/json `consumes` to be passed through in the request body without conversion to JSON.}
+@returns(204) Success
+
+@endpoint PUT /projects/{accountName}/{projectSlug}/settings/build-number
+@desc Update project build number
+@required {body: map}
+@returns(204) Success
+
+@endpoint GET /projects/{accountName}/{projectSlug}/settings/environment-variables
+@desc Get project environment variables
+@returns(200) Success
+
+@endpoint PUT /projects/{accountName}/{projectSlug}/settings/environment-variables
+@desc Update project environment variables
+@required {body: [map]}
+@returns(204) Success
+
+@endpoint DELETE /projects/{accountName}/{projectSlug}/buildcache
+@desc Delete project build cache
+@returns(204) Success
+
+@endpoint GET /projects/status/{statusBadgeId}
+@desc Get project status badge image
+@optional {svg: any # Return an SVG image instead of PNG?  Exclusive with `retina`., retina: any # Return a larger image suitable for retina displays?  Exclusive with `svg`., passingText: any # Text to show in badge when build is passing., failingText: any # Text to show in badge when build is failing., pendingText: any # Text to show in badge when build is pending.}
+@returns(200) Success
+
+@endpoint GET /projects/status/{statusBadgeId}/branch/{buildBranch}
+@desc Get project branch status badge image
+@optional {svg: any # Return an SVG image instead of PNG?  Exclusive with `retina`., retina: any # Return a larger image suitable for retina displays?  Exclusive with `svg`., passingText: any # Text to show in badge when build is passing., failingText: any # Text to show in badge when build is failing., pendingText: any # Text to show in badge when build is pending.}
+@returns(200) Success
+
+@endpoint GET /projects/status/{badgeRepoProvider}/{repoAccountName}/{repoSlug}
+@desc Get status badge image for a project with a public repository
+@optional {branch: any # Repository Branch, svg: any # Return an SVG image instead of PNG?  Exclusive with `retina`., retina: any # Return a larger image suitable for retina displays?  Exclusive with `svg`., passingText: any # Text to show in badge when build is passing., failingText: any # Text to show in badge when build is failing., pendingText: any # Text to show in badge when build is pending.}
+@returns(200) Success
+
+@endgroup
+
+@group builds
+@endpoint POST /builds
+@desc Start build of branch most recent commit
+@required {body: map}
+@returns(200) Success
+
+@endpoint PUT /builds
+@desc Re-run build
+@required {body: map}
+@returns(200) Success
+
+@endpoint DELETE /builds/{accountName}/{projectSlug}/{buildVersion}
+@desc Cancel build
+@returns(204) Success
+
+@endgroup
+
+@group buildjobs
+@endpoint GET /buildjobs/{jobId}/artifacts
+@desc Get build artifacts
+@returns(200) Success
+
+@endpoint GET /buildjobs/{jobId}/artifacts/{artifactFileName}
+@desc Download build artifact
+@returns(200) Success
+
+@endpoint GET /buildjobs/{jobId}/log
+@desc Download build log
+@returns(200) Success. Note:  Response content is plain text sent with Content-Type application/octet-stream.
+
+@endgroup
+
+@group environments
+@endpoint GET /environments
+@desc Get environments
+@returns(200) Success
+
+@endpoint POST /environments
+@desc Add environment
+@required {body: map}
+@returns(200) Success
+
+@endpoint PUT /environments
+@desc Update environment
+@required {body: any}
+@returns(200) Success
+
+@endpoint GET /environments/{deploymentEnvironmentId}/settings
+@desc Get environment settings
+@returns(200) Success
+
+@endpoint GET /environments/{deploymentEnvironmentId}/deployments
+@desc Get environment deployments
+@returns(200) Success
+
+@endpoint DELETE /environments/{deploymentEnvironmentId}
+@desc Delete environment
+@returns(204) Success
+
+@endgroup
+
+@group deployments
+@endpoint GET /deployments/{deploymentId}
+@desc Get deployment
+@returns(200) Success
+
+@endpoint POST /deployments
+@desc Start deployment
+@required {body: map}
+@returns(200) Success
+
+@endpoint PUT /deployments/stop
+@desc Cancel deployment
+@required {body: map}
+@returns(204) Success
+
+@endgroup
+
+@end

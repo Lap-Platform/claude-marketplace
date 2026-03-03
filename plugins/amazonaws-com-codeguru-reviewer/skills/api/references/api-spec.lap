@@ -1,0 +1,101 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon CodeGuru Reviewer
+@version 2019-09-19
+@auth AWS SigV4
+@endpoints 14
+@toc associations(4), codereviews(4), feedback(3), tags(3)
+
+@group associations
+@endpoint POST /associations
+@required {Repository: Repository}
+@optional {ClientRequestToken: str, Tags: map<str,str>, KMSKeyDetails: KMSKeyDetails}
+@returns(200) {RepositoryAssociation: RepositoryAssociation?{AssociationId: str?, AssociationArn: str?, ConnectionArn: str?, Name: str?, Owner: str?, ProviderType: str?, State: str?, StateReason: str?, LastUpdatedTimeStamp: str(timestamp)?, CreatedTimeStamp: str(timestamp)?, KMSKeyDetails: KMSKeyDetails?{KMSKeyId: str?, EncryptionOption: str?}, S3RepositoryDetails: S3RepositoryDetails?{BucketName: str?, CodeArtifacts: CodeArtifacts?{SourceCodeArtifactsObjectKey: str, BuildArtifactsObjectKey: str?}}}, Tags: map<str,str>?}
+
+@endgroup
+
+@group codereviews
+@endpoint POST /codereviews
+@required {Name: str, RepositoryAssociationArn: str, Type: CodeReviewType}
+@optional {ClientRequestToken: str}
+@returns(200) {CodeReview: CodeReview?{Name: str?, CodeReviewArn: str?, RepositoryName: str?, Owner: str?, ProviderType: str?, State: str?, StateReason: str?, CreatedTimeStamp: str(timestamp)?, LastUpdatedTimeStamp: str(timestamp)?, Type: str?, PullRequestId: str?, SourceCodeType: SourceCodeType?{CommitDiff: CommitDiffSourceCodeType?{SourceCommit: str?, DestinationCommit: str?, MergeBaseCommit: str?}, RepositoryHead: RepositoryHeadSourceCodeType?{BranchName: str}, BranchDiff: BranchDiffSourceCodeType?{SourceBranchName: str, DestinationBranchName: str}, S3BucketRepository: S3BucketRepository?{Name: str, Details: S3RepositoryDetails?}, RequestMetadata: RequestMetadata?{RequestId: str?, Requester: str?, EventInfo: EventInfo?, VendorName: str?}}, AssociationArn: str?, Metrics: Metrics?{MeteredLinesOfCodeCount: int(i64)?, SuppressedLinesOfCodeCount: int(i64)?, FindingsCount: int(i64)?}, AnalysisTypes: [str]?, ConfigFileState: str?}}
+
+@endpoint GET /codereviews/{CodeReviewArn}
+@required {CodeReviewArn: str}
+@returns(200) {CodeReview: CodeReview?{Name: str?, CodeReviewArn: str?, RepositoryName: str?, Owner: str?, ProviderType: str?, State: str?, StateReason: str?, CreatedTimeStamp: str(timestamp)?, LastUpdatedTimeStamp: str(timestamp)?, Type: str?, PullRequestId: str?, SourceCodeType: SourceCodeType?{CommitDiff: CommitDiffSourceCodeType?{SourceCommit: str?, DestinationCommit: str?, MergeBaseCommit: str?}, RepositoryHead: RepositoryHeadSourceCodeType?{BranchName: str}, BranchDiff: BranchDiffSourceCodeType?{SourceBranchName: str, DestinationBranchName: str}, S3BucketRepository: S3BucketRepository?{Name: str, Details: S3RepositoryDetails?}, RequestMetadata: RequestMetadata?{RequestId: str?, Requester: str?, EventInfo: EventInfo?, VendorName: str?}}, AssociationArn: str?, Metrics: Metrics?{MeteredLinesOfCodeCount: int(i64)?, SuppressedLinesOfCodeCount: int(i64)?, FindingsCount: int(i64)?}, AnalysisTypes: [str]?, ConfigFileState: str?}}
+
+@endgroup
+
+@group feedback
+@endpoint GET /feedback/{CodeReviewArn}
+@required {CodeReviewArn: str, RecommendationId: str}
+@optional {UserId: str}
+@returns(200) {RecommendationFeedback: RecommendationFeedback?{CodeReviewArn: str?, RecommendationId: str?, Reactions: [str]?, UserId: str?, CreatedTimeStamp: str(timestamp)?, LastUpdatedTimeStamp: str(timestamp)?}}
+
+@endgroup
+
+@group associations
+@endpoint GET /associations/{AssociationArn}
+@required {AssociationArn: str}
+@returns(200) {RepositoryAssociation: RepositoryAssociation?{AssociationId: str?, AssociationArn: str?, ConnectionArn: str?, Name: str?, Owner: str?, ProviderType: str?, State: str?, StateReason: str?, LastUpdatedTimeStamp: str(timestamp)?, CreatedTimeStamp: str(timestamp)?, KMSKeyDetails: KMSKeyDetails?{KMSKeyId: str?, EncryptionOption: str?}, S3RepositoryDetails: S3RepositoryDetails?{BucketName: str?, CodeArtifacts: CodeArtifacts?{SourceCodeArtifactsObjectKey: str, BuildArtifactsObjectKey: str?}}}, Tags: map<str,str>?}
+
+@endpoint DELETE /associations/{AssociationArn}
+@required {AssociationArn: str}
+@returns(200) {RepositoryAssociation: RepositoryAssociation?{AssociationId: str?, AssociationArn: str?, ConnectionArn: str?, Name: str?, Owner: str?, ProviderType: str?, State: str?, StateReason: str?, LastUpdatedTimeStamp: str(timestamp)?, CreatedTimeStamp: str(timestamp)?, KMSKeyDetails: KMSKeyDetails?{KMSKeyId: str?, EncryptionOption: str?}, S3RepositoryDetails: S3RepositoryDetails?{BucketName: str?, CodeArtifacts: CodeArtifacts?{SourceCodeArtifactsObjectKey: str, BuildArtifactsObjectKey: str?}}}, Tags: map<str,str>?}
+
+@endgroup
+
+@group codereviews
+@endpoint GET /codereviews
+@required {Type: str}
+@optional {ProviderTypes: [str], States: [str], RepositoryNames: [str], MaxResults: int, NextToken: str}
+@returns(200) {CodeReviewSummaries: [CodeReviewSummary]?, NextToken: str?}
+
+@endgroup
+
+@group feedback
+@endpoint GET /feedback/{CodeReviewArn}/RecommendationFeedback
+@required {CodeReviewArn: str}
+@optional {NextToken: str, MaxResults: int, UserIds: [str], RecommendationIds: [str]}
+@returns(200) {RecommendationFeedbackSummaries: [RecommendationFeedbackSummary]?, NextToken: str?}
+
+@endgroup
+
+@group codereviews
+@endpoint GET /codereviews/{CodeReviewArn}/Recommendations
+@required {CodeReviewArn: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {RecommendationSummaries: [RecommendationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group associations
+@endpoint GET /associations
+@optional {ProviderType: [str], State: [str], Name: [str], Owner: [str], MaxResults: int, NextToken: str}
+@returns(200) {RepositoryAssociationSummaries: [RepositoryAssociationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group feedback
+@endpoint PUT /feedback
+@required {CodeReviewArn: str, RecommendationId: str, Reactions: [str]}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@end

@@ -1,0 +1,395 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Audit Manager
+@version 2017-07-25
+@auth AWS SigV4
+@endpoints 62
+@hint download_for_search
+@toc assessments(24), assessmentFrameworks(6), controls(5), assessmentFrameworkShareRequests(3), account(6), delegations(1), evidenceFileUploadUrl(1), insights(6), services(1), settings(2), assessmentReports(2), dataSourceKeywords(1), notifications(1), tags(3)
+
+@group assessments
+@endpoint PUT /assessments/{assessmentId}/associateToAssessmentReport
+@required {assessmentId: str, evidenceFolderId: str}
+
+@endpoint PUT /assessments/{assessmentId}/batchAssociateToAssessmentReport
+@required {assessmentId: str, evidenceFolderId: str, evidenceIds: [str]}
+@returns(200) {evidenceIds: [str]?, errors: [AssessmentReportEvidenceError]?}
+
+@endpoint POST /assessments/{assessmentId}/delegations
+@required {assessmentId: str, createDelegationRequests: [CreateDelegationRequest]}
+@returns(200) {delegations: [Delegation]?, errors: [BatchCreateDelegationByAssessmentError]?}
+
+@endpoint PUT /assessments/{assessmentId}/delegations
+@required {assessmentId: str, delegationIds: [str]}
+@returns(200) {errors: [BatchDeleteDelegationByAssessmentError]?}
+
+@endpoint PUT /assessments/{assessmentId}/batchDisassociateFromAssessmentReport
+@required {assessmentId: str, evidenceFolderId: str, evidenceIds: [str]}
+@returns(200) {evidenceIds: [str]?, errors: [AssessmentReportEvidenceError]?}
+
+@endpoint POST /assessments/{assessmentId}/controlSets/{controlSetId}/controls/{controlId}/evidence
+@required {assessmentId: str, controlSetId: str, controlId: str, manualEvidence: [ManualEvidence]}
+@returns(200) {errors: [BatchImportEvidenceToAssessmentControlError]?}
+
+@endpoint POST /assessments
+@required {name: str, assessmentReportsDestination: AssessmentReportsDestination, scope: Scope, roles: [Role], frameworkId: str}
+@optional {description: str, tags: map<str,str>}
+@returns(200) {assessment: Assessment?{arn: str?, awsAccount: AWSAccount?{id: str?, emailAddress: str?, name: str?}, metadata: AssessmentMetadata?{name: str?, id: str?, description: str?, complianceType: str?, status: str?, assessmentReportsDestination: AssessmentReportsDestination?{destinationType: str?, destination: str?}, scope: Scope?{awsAccounts: [AWSAccount]?, awsServices: [AWSService]?}, roles: [Role]?, delegations: [Delegation]?, creationTime: str(timestamp)?, lastUpdated: str(timestamp)?}, framework: AssessmentFramework?{id: str?, arn: str?, metadata: FrameworkMetadata?{name: str?, description: str?, logo: str?, complianceType: str?}, controlSets: [AssessmentControlSet]?}, tags: map<str,str>?}}
+
+@endgroup
+
+@group assessmentFrameworks
+@endpoint POST /assessmentFrameworks
+@required {name: str, controlSets: [CreateAssessmentFrameworkControlSet]}
+@optional {description: str, complianceType: str, tags: map<str,str>}
+@returns(200) {framework: Framework?{arn: str?, id: str?, name: str?, type: str?, complianceType: str?, description: str?, logo: str?, controlSources: str?, controlSets: [ControlSet]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?}}
+
+@endgroup
+
+@group assessments
+@endpoint POST /assessments/{assessmentId}/reports
+@required {assessmentId: str, name: str}
+@optional {description: str, queryStatement: str}
+@returns(200) {assessmentReport: AssessmentReport?{id: str?, name: str?, description: str?, awsAccountId: str?, assessmentId: str?, assessmentName: str?, author: str?, status: str?, creationTime: str(timestamp)?}}
+
+@endgroup
+
+@group controls
+@endpoint POST /controls
+@required {name: str, controlMappingSources: [CreateControlMappingSource]}
+@optional {description: str, testingInformation: str, actionPlanTitle: str, actionPlanInstructions: str, tags: map<str,str>}
+@returns(200) {control: Control?{arn: str?, id: str?, type: str?, name: str?, description: str?, testingInformation: str?, actionPlanTitle: str?, actionPlanInstructions: str?, controlSources: str?, controlMappingSources: [ControlMappingSource]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?, state: str?}}
+
+@endgroup
+
+@group assessments
+@endpoint DELETE /assessments/{assessmentId}
+@required {assessmentId: str}
+
+@endgroup
+
+@group assessmentFrameworks
+@endpoint DELETE /assessmentFrameworks/{frameworkId}
+@required {frameworkId: str}
+
+@endgroup
+
+@group assessmentFrameworkShareRequests
+@endpoint DELETE /assessmentFrameworkShareRequests/{requestId}
+@required {requestId: str, requestType: str}
+
+@endgroup
+
+@group assessments
+@endpoint DELETE /assessments/{assessmentId}/reports/{assessmentReportId}
+@required {assessmentId: str, assessmentReportId: str}
+
+@endgroup
+
+@group controls
+@endpoint DELETE /controls/{controlId}
+@required {controlId: str}
+
+@endgroup
+
+@group account
+@endpoint POST /account/deregisterAccount
+@returns(200) {status: str?}
+
+@endpoint POST /account/deregisterOrganizationAdminAccount
+@optional {adminAccountId: str}
+
+@endgroup
+
+@group assessments
+@endpoint PUT /assessments/{assessmentId}/disassociateFromAssessmentReport
+@required {assessmentId: str, evidenceFolderId: str}
+
+@endgroup
+
+@group account
+@endpoint GET /account/status
+@returns(200) {status: str?}
+
+@endgroup
+
+@group assessments
+@endpoint GET /assessments/{assessmentId}
+@required {assessmentId: str}
+@returns(200) {assessment: Assessment?{arn: str?, awsAccount: AWSAccount?{id: str?, emailAddress: str?, name: str?}, metadata: AssessmentMetadata?{name: str?, id: str?, description: str?, complianceType: str?, status: str?, assessmentReportsDestination: AssessmentReportsDestination?{destinationType: str?, destination: str?}, scope: Scope?{awsAccounts: [AWSAccount]?, awsServices: [AWSService]?}, roles: [Role]?, delegations: [Delegation]?, creationTime: str(timestamp)?, lastUpdated: str(timestamp)?}, framework: AssessmentFramework?{id: str?, arn: str?, metadata: FrameworkMetadata?{name: str?, description: str?, logo: str?, complianceType: str?}, controlSets: [AssessmentControlSet]?}, tags: map<str,str>?}, userRole: Role?{roleType: str, roleArn: str}}
+
+@endgroup
+
+@group assessmentFrameworks
+@endpoint GET /assessmentFrameworks/{frameworkId}
+@required {frameworkId: str}
+@returns(200) {framework: Framework?{arn: str?, id: str?, name: str?, type: str?, complianceType: str?, description: str?, logo: str?, controlSources: str?, controlSets: [ControlSet]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?}}
+
+@endgroup
+
+@group assessments
+@endpoint GET /assessments/{assessmentId}/reports/{assessmentReportId}/url
+@required {assessmentReportId: str, assessmentId: str}
+@returns(200) {preSignedUrl: URL?{hyperlinkName: str?, link: str?}}
+
+@endpoint GET /assessments/{assessmentId}/changelogs
+@required {assessmentId: str}
+@optional {controlSetId: str, controlId: str, nextToken: str, maxResults: int}
+@returns(200) {changeLogs: [ChangeLog]?, nextToken: str?}
+
+@endgroup
+
+@group controls
+@endpoint GET /controls/{controlId}
+@required {controlId: str}
+@returns(200) {control: Control?{arn: str?, id: str?, type: str?, name: str?, description: str?, testingInformation: str?, actionPlanTitle: str?, actionPlanInstructions: str?, controlSources: str?, controlMappingSources: [ControlMappingSource]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?, state: str?}}
+
+@endgroup
+
+@group delegations
+@endpoint GET /delegations
+@optional {nextToken: str, maxResults: int}
+@returns(200) {delegations: [DelegationMetadata]?, nextToken: str?}
+
+@endgroup
+
+@group assessments
+@endpoint GET /assessments/{assessmentId}/controlSets/{controlSetId}/evidenceFolders/{evidenceFolderId}/evidence/{evidenceId}
+@required {assessmentId: str, controlSetId: str, evidenceFolderId: str, evidenceId: str}
+@returns(200) {evidence: Evidence?{dataSource: str?, evidenceAwsAccountId: str?, time: str(timestamp)?, eventSource: str?, eventName: str?, evidenceByType: str?, resourcesIncluded: [Resource]?, attributes: map<str,str>?, iamId: str?, complianceCheck: str?, awsOrganization: str?, awsAccountId: str?, evidenceFolderId: str?, id: str?, assessmentReportSelection: str?}}
+
+@endpoint GET /assessments/{assessmentId}/controlSets/{controlSetId}/evidenceFolders/{evidenceFolderId}/evidence
+@required {assessmentId: str, controlSetId: str, evidenceFolderId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {evidence: [Evidence]?, nextToken: str?}
+
+@endgroup
+
+@group evidenceFileUploadUrl
+@endpoint GET /evidenceFileUploadUrl
+@required {fileName: str}
+@returns(200) {evidenceFileName: str?, uploadUrl: str?}
+
+@endgroup
+
+@group assessments
+@endpoint GET /assessments/{assessmentId}/controlSets/{controlSetId}/evidenceFolders/{evidenceFolderId}
+@required {assessmentId: str, controlSetId: str, evidenceFolderId: str}
+@returns(200) {evidenceFolder: AssessmentEvidenceFolder?{name: str?, date: str(timestamp)?, assessmentId: str?, controlSetId: str?, controlId: str?, id: str?, dataSource: str?, author: str?, totalEvidence: int?, assessmentReportSelectionCount: int?, controlName: str?, evidenceResourcesIncludedCount: int?, evidenceByTypeConfigurationDataCount: int?, evidenceByTypeManualCount: int?, evidenceByTypeComplianceCheckCount: int?, evidenceByTypeComplianceCheckIssuesCount: int?, evidenceByTypeUserActivityCount: int?, evidenceAwsServiceSourceCount: int?}}
+
+@endpoint GET /assessments/{assessmentId}/evidenceFolders
+@required {assessmentId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {evidenceFolders: [AssessmentEvidenceFolder]?, nextToken: str?}
+
+@endpoint GET /assessments/{assessmentId}/evidenceFolders-by-assessment-control/{controlSetId}/{controlId}
+@required {assessmentId: str, controlSetId: str, controlId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {evidenceFolders: [AssessmentEvidenceFolder]?, nextToken: str?}
+
+@endgroup
+
+@group insights
+@endpoint GET /insights
+@returns(200) {insights: Insights?{activeAssessmentsCount: int?, noncompliantEvidenceCount: int?, compliantEvidenceCount: int?, inconclusiveEvidenceCount: int?, assessmentControlsCountByNoncompliantEvidence: int?, totalAssessmentControlsCount: int?, lastUpdated: str(timestamp)?}}
+
+@endpoint GET /insights/assessments/{assessmentId}
+@required {assessmentId: str}
+@returns(200) {insights: InsightsByAssessment?{noncompliantEvidenceCount: int?, compliantEvidenceCount: int?, inconclusiveEvidenceCount: int?, assessmentControlsCountByNoncompliantEvidence: int?, totalAssessmentControlsCount: int?, lastUpdated: str(timestamp)?}}
+
+@endgroup
+
+@group account
+@endpoint GET /account/organizationAdminAccount
+@returns(200) {adminAccountId: str?, organizationId: str?}
+
+@endgroup
+
+@group services
+@endpoint GET /services
+@returns(200) {serviceMetadata: [ServiceMetadata]?}
+
+@endgroup
+
+@group settings
+@endpoint GET /settings/{attribute}
+@required {attribute: str}
+@returns(200) {settings: Settings?{isAwsOrgEnabled: bool?, snsTopic: str?, defaultAssessmentReportsDestination: AssessmentReportsDestination?{destinationType: str?, destination: str?}, defaultProcessOwners: [Role]?, kmsKey: str?, evidenceFinderEnablement: EvidenceFinderEnablement?{eventDataStoreArn: str?, enablementStatus: str?, backfillStatus: str?, error: str?}, deregistrationPolicy: DeregistrationPolicy?{deleteResources: str?}, defaultExportDestination: DefaultExportDestination?{destinationType: str?, destination: str?}}}
+
+@endgroup
+
+@group insights
+@endpoint GET /insights/controls-by-assessment
+@required {controlDomainId: str, assessmentId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {controlInsightsByAssessment: [ControlInsightsMetadataByAssessmentItem]?, nextToken: str?}
+
+@endgroup
+
+@group assessmentFrameworkShareRequests
+@endpoint GET /assessmentFrameworkShareRequests
+@required {requestType: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {assessmentFrameworkShareRequests: [AssessmentFrameworkShareRequest]?, nextToken: str?}
+
+@endgroup
+
+@group assessmentFrameworks
+@endpoint GET /assessmentFrameworks
+@required {frameworkType: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {frameworkMetadataList: [AssessmentFrameworkMetadata]?, nextToken: str?}
+
+@endgroup
+
+@group assessmentReports
+@endpoint GET /assessmentReports
+@optional {nextToken: str, maxResults: int}
+@returns(200) {assessmentReports: [AssessmentReportMetadata]?, nextToken: str?}
+
+@endgroup
+
+@group assessments
+@endpoint GET /assessments
+@optional {status: str, nextToken: str, maxResults: int}
+@returns(200) {assessmentMetadata: [AssessmentMetadataItem]?, nextToken: str?}
+
+@endgroup
+
+@group insights
+@endpoint GET /insights/control-domains
+@optional {nextToken: str, maxResults: int}
+@returns(200) {controlDomainInsights: [ControlDomainInsights]?, nextToken: str?}
+
+@endpoint GET /insights/control-domains-by-assessment
+@required {assessmentId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {controlDomainInsights: [ControlDomainInsights]?, nextToken: str?}
+
+@endpoint GET /insights/controls
+@required {controlDomainId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {controlInsightsMetadata: [ControlInsightsMetadataItem]?, nextToken: str?}
+
+@endgroup
+
+@group controls
+@endpoint GET /controls
+@required {controlType: str}
+@optional {nextToken: str, maxResults: int, controlCatalogId: str}
+@returns(200) {controlMetadataList: [ControlMetadata]?, nextToken: str?}
+
+@endgroup
+
+@group dataSourceKeywords
+@endpoint GET /dataSourceKeywords
+@required {source: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {keywords: [str]?, nextToken: str?}
+
+@endgroup
+
+@group notifications
+@endpoint GET /notifications
+@optional {nextToken: str, maxResults: int}
+@returns(200) {notifications: [Notification]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group account
+@endpoint POST /account/registerAccount
+@optional {kmsKey: str, delegatedAdminAccount: str}
+@returns(200) {status: str?}
+
+@endpoint POST /account/registerOrganizationAdminAccount
+@required {adminAccountId: str}
+@returns(200) {adminAccountId: str?, organizationId: str?}
+
+@endgroup
+
+@group assessmentFrameworks
+@endpoint POST /assessmentFrameworks/{frameworkId}/shareRequests
+@required {frameworkId: str, destinationAccount: str, destinationRegion: str}
+@optional {comment: str}
+@returns(200) {assessmentFrameworkShareRequest: AssessmentFrameworkShareRequest?{id: str?, frameworkId: str?, frameworkName: str?, frameworkDescription: str?, status: str?, sourceAccount: str?, destinationAccount: str?, destinationRegion: str?, expirationTime: str(timestamp)?, creationTime: str(timestamp)?, lastUpdated: str(timestamp)?, comment: str?, standardControlsCount: int?, customControlsCount: int?, complianceType: str?}}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group assessments
+@endpoint PUT /assessments/{assessmentId}
+@required {assessmentId: str, scope: Scope}
+@optional {assessmentName: str, assessmentDescription: str, assessmentReportsDestination: AssessmentReportsDestination, roles: [Role]}
+@returns(200) {assessment: Assessment?{arn: str?, awsAccount: AWSAccount?{id: str?, emailAddress: str?, name: str?}, metadata: AssessmentMetadata?{name: str?, id: str?, description: str?, complianceType: str?, status: str?, assessmentReportsDestination: AssessmentReportsDestination?{destinationType: str?, destination: str?}, scope: Scope?{awsAccounts: [AWSAccount]?, awsServices: [AWSService]?}, roles: [Role]?, delegations: [Delegation]?, creationTime: str(timestamp)?, lastUpdated: str(timestamp)?}, framework: AssessmentFramework?{id: str?, arn: str?, metadata: FrameworkMetadata?{name: str?, description: str?, logo: str?, complianceType: str?}, controlSets: [AssessmentControlSet]?}, tags: map<str,str>?}}
+
+@endpoint PUT /assessments/{assessmentId}/controlSets/{controlSetId}/controls/{controlId}
+@required {assessmentId: str, controlSetId: str, controlId: str}
+@optional {controlStatus: str, commentBody: str}
+@returns(200) {control: AssessmentControl?{id: str?, name: str?, description: str?, status: str?, response: str?, comments: [ControlComment]?, evidenceSources: [str]?, evidenceCount: int?, assessmentReportEvidenceCount: int?}}
+
+@endpoint PUT /assessments/{assessmentId}/controlSets/{controlSetId}/status
+@required {assessmentId: str, controlSetId: str, status: str, comment: str}
+@returns(200) {controlSet: AssessmentControlSet?{id: str?, description: str?, status: str?, roles: [Role]?, controls: [AssessmentControl]?, delegations: [Delegation]?, systemEvidenceCount: int?, manualEvidenceCount: int?}}
+
+@endgroup
+
+@group assessmentFrameworks
+@endpoint PUT /assessmentFrameworks/{frameworkId}
+@required {frameworkId: str, name: str, controlSets: [UpdateAssessmentFrameworkControlSet]}
+@optional {description: str, complianceType: str}
+@returns(200) {framework: Framework?{arn: str?, id: str?, name: str?, type: str?, complianceType: str?, description: str?, logo: str?, controlSources: str?, controlSets: [ControlSet]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?}}
+
+@endgroup
+
+@group assessmentFrameworkShareRequests
+@endpoint PUT /assessmentFrameworkShareRequests/{requestId}
+@required {requestId: str, requestType: str, action: str}
+@returns(200) {assessmentFrameworkShareRequest: AssessmentFrameworkShareRequest?{id: str?, frameworkId: str?, frameworkName: str?, frameworkDescription: str?, status: str?, sourceAccount: str?, destinationAccount: str?, destinationRegion: str?, expirationTime: str(timestamp)?, creationTime: str(timestamp)?, lastUpdated: str(timestamp)?, comment: str?, standardControlsCount: int?, customControlsCount: int?, complianceType: str?}}
+
+@endgroup
+
+@group assessments
+@endpoint PUT /assessments/{assessmentId}/status
+@required {assessmentId: str, status: str}
+@returns(200) {assessment: Assessment?{arn: str?, awsAccount: AWSAccount?{id: str?, emailAddress: str?, name: str?}, metadata: AssessmentMetadata?{name: str?, id: str?, description: str?, complianceType: str?, status: str?, assessmentReportsDestination: AssessmentReportsDestination?{destinationType: str?, destination: str?}, scope: Scope?{awsAccounts: [AWSAccount]?, awsServices: [AWSService]?}, roles: [Role]?, delegations: [Delegation]?, creationTime: str(timestamp)?, lastUpdated: str(timestamp)?}, framework: AssessmentFramework?{id: str?, arn: str?, metadata: FrameworkMetadata?{name: str?, description: str?, logo: str?, complianceType: str?}, controlSets: [AssessmentControlSet]?}, tags: map<str,str>?}}
+
+@endgroup
+
+@group controls
+@endpoint PUT /controls/{controlId}
+@required {controlId: str, name: str, controlMappingSources: [ControlMappingSource]}
+@optional {description: str, testingInformation: str, actionPlanTitle: str, actionPlanInstructions: str}
+@returns(200) {control: Control?{arn: str?, id: str?, type: str?, name: str?, description: str?, testingInformation: str?, actionPlanTitle: str?, actionPlanInstructions: str?, controlSources: str?, controlMappingSources: [ControlMappingSource]?, createdAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, createdBy: str?, lastUpdatedBy: str?, tags: map<str,str>?, state: str?}}
+
+@endgroup
+
+@group settings
+@endpoint PUT /settings
+@optional {snsTopic: str, defaultAssessmentReportsDestination: AssessmentReportsDestination, defaultProcessOwners: [Role], kmsKey: str, evidenceFinderEnabled: bool, deregistrationPolicy: DeregistrationPolicy, defaultExportDestination: DefaultExportDestination}
+@returns(200) {settings: Settings?{isAwsOrgEnabled: bool?, snsTopic: str?, defaultAssessmentReportsDestination: AssessmentReportsDestination?{destinationType: str?, destination: str?}, defaultProcessOwners: [Role]?, kmsKey: str?, evidenceFinderEnablement: EvidenceFinderEnablement?{eventDataStoreArn: str?, enablementStatus: str?, backfillStatus: str?, error: str?}, deregistrationPolicy: DeregistrationPolicy?{deleteResources: str?}, defaultExportDestination: DefaultExportDestination?{destinationType: str?, destination: str?}}}
+
+@endgroup
+
+@group assessmentReports
+@endpoint POST /assessmentReports/integrity
+@required {s3RelativePath: str}
+@returns(200) {signatureValid: bool?, signatureAlgorithm: str?, signatureDateTime: str?, signatureKeyId: str?, validationErrors: [str]?}
+
+@endgroup
+
+@end

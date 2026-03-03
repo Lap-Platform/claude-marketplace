@@ -1,0 +1,504 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Configuration API
+@base https://balanceplatform-api-test.adyen.com/bcl/v2
+@version 2
+@auth ApiKey X-API-Key in header | Bearer basic | ApiKey clientKey in query
+@endpoints 79
+@hint download_for_search
+@toc accountHolders(7), balanceAccounts(16), balancePlatforms(12), cardorders(2), grantAccounts(1), grantOffers(2), networkTokens(2), paymentInstrumentGroups(3), paymentInstruments(13), pins(2), publicKey(1), registeredDevices(6), transactionRules(4), transferRoutes(1), validateBankAccountIdentification(1), scaAssociations(3), scaDevices(3)
+
+@group accountHolders
+@endpoint POST /accountHolders
+@required {legalEntityId: str}
+@optional {balancePlatform: str, capabilities: map, contactDetails: map{address!: map, email!: str, phone!: map, webAddress: str}, description: str, metadata: map, migratedAccountHolderCode: str, reference: str, timeZone: str}
+@returns(200) {balancePlatform: str, capabilities: map, contactDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, email: str, phone: map{number: str, type: str}, webAddress: str}, description: str, id: str, legalEntityId: str, metadata: map, migratedAccountHolderCode: str, primaryBalanceAccount: str, reference: str, status: str, timeZone: str, verificationDeadlines: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /accountHolders/{id}
+@required {id: str}
+@returns(200) {balancePlatform: str, capabilities: map, contactDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, email: str, phone: map{number: str, type: str}, webAddress: str}, description: str, id: str, legalEntityId: str, metadata: map, migratedAccountHolderCode: str, primaryBalanceAccount: str, reference: str, status: str, timeZone: str, verificationDeadlines: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /accountHolders/{id}
+@required {id: str}
+@optional {balancePlatform: str, capabilities: map, contactDetails: map{address!: map, email!: str, phone!: map, webAddress: str}, description: str, metadata: map, migratedAccountHolderCode: str, primaryBalanceAccount: str, reference: str, status: str(active/closed/suspended), timeZone: str, verificationDeadlines: [map{capabilities!: [str], entityIds: [str], expiresAt!: str(date-time)}]}
+@returns(200) {balancePlatform: str, capabilities: map, contactDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, email: str, phone: map{number: str, type: str}, webAddress: str}, description: str, id: str, legalEntityId: str, metadata: map, migratedAccountHolderCode: str, primaryBalanceAccount: str, reference: str, status: str, timeZone: str, verificationDeadlines: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /accountHolders/{id}/balanceAccounts
+@required {id: str}
+@optional {offset: int(int32), limit: int(int32)}
+@returns(200) {balanceAccounts: [map], hasNext: bool, hasPrevious: bool}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /accountHolders/{id}/taxForms
+@required {id: str, formType: str(US1099k/US1099nec), year: int(int32)}
+@optional {legalEntityId: str}
+@returns(200) {content: str(byte), contentType: str}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint GET /accountHolders/{id}/transactionRules
+@required {id: str}
+@returns(200) {transactionRules: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group balanceAccounts
+@endpoint POST /balanceAccounts
+@required {accountHolderId: str}
+@optional {defaultCurrencyCode: str, description: str, metadata: map, migratedAccountCode: str, platformPaymentConfiguration: map{salesDayClosingTime: str(time), settlementDelayDays: int(int32)}, reference: str, timeZone: str}
+@returns(200) {accountHolderId: str, balances: [map], defaultCurrencyCode: str, description: str, id: str, metadata: map, migratedAccountCode: str, platformPaymentConfiguration: map{salesDayClosingTime: str(time), settlementDelayDays: int(int32)}, reference: str, status: str, timeZone: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balanceAccounts/{balanceAccountId}/sweeps
+@required {balanceAccountId: str}
+@optional {offset: int(int32), limit: int(int32)}
+@returns(200) {hasNext: bool, hasPrevious: bool, sweeps: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint POST /balanceAccounts/{balanceAccountId}/sweeps
+@required {balanceAccountId: str, counterparty: map{balanceAccountId: str, merchantAccount: str, transferInstrumentId: str}, currency: str, schedule: map{cronExpression: str, type!: str}}
+@optional {category: str(bank/internal/platformPayment), description: str, priorities: [str], reason: str(accountHierarchyNotActive/amountLimitExceeded/approved/counterpartyAccountBlocked/counterpartyAccountClosed/counterpartyAccountNotFound/counterpartyAddressRequired/counterpartyBankTimedOut/counterpartyBankUnavailable/directDebitNotSupported/error/notEnoughBalance/refusedByCounterpartyBank/routeNotFound/transferInstrumentDoesNotExist/unknown), reasonDetail: str, reference: str, referenceForBeneficiary: str, status: str(active/inactive), sweepAmount: map{currency!: str, value!: int(int64)}, targetAmount: map{currency!: str, value!: int(int64)}, triggerAmount: map{currency!: str, value!: int(int64)}, type: str(pull/push)=push}
+@returns(200) {category: str, counterparty: map{balanceAccountId: str, merchantAccount: str, transferInstrumentId: str}, currency: str, description: str, id: str, priorities: [str], reason: str, reasonDetail: str, reference: str, referenceForBeneficiary: str, schedule: map{cronExpression: str, type: str}, status: str, sweepAmount: map{currency: str, value: int(int64)}, targetAmount: map{currency: str, value: int(int64)}, triggerAmount: map{currency: str, value: int(int64)}, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balanceAccounts/{balanceAccountId}/sweeps/{sweepId}
+@required {balanceAccountId: str, sweepId: str}
+@returns(200) {category: str, counterparty: map{balanceAccountId: str, merchantAccount: str, transferInstrumentId: str}, currency: str, description: str, id: str, priorities: [str], reason: str, reasonDetail: str, reference: str, referenceForBeneficiary: str, schedule: map{cronExpression: str, type: str}, status: str, sweepAmount: map{currency: str, value: int(int64)}, targetAmount: map{currency: str, value: int(int64)}, triggerAmount: map{currency: str, value: int(int64)}, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint DELETE /balanceAccounts/{balanceAccountId}/sweeps/{sweepId}
+@required {balanceAccountId: str, sweepId: str}
+@returns(204)
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /balanceAccounts/{balanceAccountId}/sweeps/{sweepId}
+@required {balanceAccountId: str, sweepId: str}
+@optional {category: str(bank/internal/platformPayment), counterparty: map{balanceAccountId: str, merchantAccount: str, transferInstrumentId: str}, currency: str, description: str, id: str, priorities: [str], reason: str(accountHierarchyNotActive/amountLimitExceeded/approved/counterpartyAccountBlocked/counterpartyAccountClosed/counterpartyAccountNotFound/counterpartyAddressRequired/counterpartyBankTimedOut/counterpartyBankUnavailable/directDebitNotSupported/error/notEnoughBalance/refusedByCounterpartyBank/routeNotFound/transferInstrumentDoesNotExist/unknown), reasonDetail: str, reference: str, referenceForBeneficiary: str, schedule: map{cronExpression: str, type!: str}, status: str(active/inactive), sweepAmount: map{currency!: str, value!: int(int64)}, targetAmount: map{currency!: str, value!: int(int64)}, triggerAmount: map{currency!: str, value!: int(int64)}, type: str(pull/push)=push}
+@returns(200) {category: str, counterparty: map{balanceAccountId: str, merchantAccount: str, transferInstrumentId: str}, currency: str, description: str, id: str, priorities: [str], reason: str, reasonDetail: str, reference: str, referenceForBeneficiary: str, schedule: map{cronExpression: str, type: str}, status: str, sweepAmount: map{currency: str, value: int(int64)}, targetAmount: map{currency: str, value: int(int64)}, triggerAmount: map{currency: str, value: int(int64)}, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balanceAccounts/{id}
+@required {id: str}
+@returns(200) {accountHolderId: str, balances: [map], defaultCurrencyCode: str, description: str, id: str, metadata: map, migratedAccountCode: str, platformPaymentConfiguration: map{salesDayClosingTime: str(time), settlementDelayDays: int(int32)}, reference: str, status: str, timeZone: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /balanceAccounts/{id}
+@required {id: str}
+@optional {accountHolderId: str, description: str, metadata: map, platformPaymentConfiguration: map{salesDayClosingTime: str(time), settlementDelayDays: int(int32)}, reference: str, status: str(active/closed/inactive/suspended), timeZone: str}
+@returns(200) {accountHolderId: str, balances: [map], defaultCurrencyCode: str, description: str, id: str, metadata: map, migratedAccountCode: str, platformPaymentConfiguration: map{salesDayClosingTime: str(time), settlementDelayDays: int(int32)}, reference: str, status: str, timeZone: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balanceAccounts/{id}/paymentInstruments
+@required {id: str}
+@optional {offset: int(int32), limit: int(int32), status: str}
+@returns(200) {hasNext: bool, hasPrevious: bool, paymentInstruments: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balanceAccounts/{id}/transactionRules
+@required {id: str}
+@returns(200) {transactionRules: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group balancePlatforms
+@endpoint GET /balancePlatforms/{id}
+@required {id: str}
+@returns(200) {description: str, id: str, status: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balancePlatforms/{id}/accountHolders
+@required {id: str}
+@optional {offset: int(int32), limit: int(int32)}
+@returns(200) {accountHolders: [map], hasNext: bool, hasPrevious: bool}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /balancePlatforms/{id}/transactionRules
+@required {id: str}
+@returns(200) {transactionRules: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group cardorders
+@endpoint GET /cardorders
+@optional {id: str, cardManufacturingProfileId: str, status: str, txVariantCode: str, createdSince: str(date-time), createdUntil: str(date-time), lockedSince: str(date-time), lockedUntil: str(date-time), serviceCenter: str, offset: int(int32), limit: int(int32)}
+@returns(200) {cardOrders: [map], hasNext: bool, hasPrevious: bool}
+@errors {401, 403, 422, 500}
+
+@endpoint GET /cardorders/{id}/items
+@required {id: str}
+@optional {offset: int(int32), limit: int(int32)}
+@returns(200) {data: [map], hasNext: bool, hasPrevious: bool}
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group grantAccounts
+@endpoint GET /grantAccounts/{id}
+@required {id: str}
+@returns(200) {balances: [map], fundingBalanceAccountId: str, id: str, limits: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group grantOffers
+@endpoint GET /grantOffers
+@required {accountHolderId: str}
+@returns(200) {grantOffers: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /grantOffers/{grantOfferId}
+@required {grantOfferId: str}
+@returns(200) {accountHolderId: str, amount: map{currency: str, value: int(int64)}, contractType: str, expiresAt: str(date-time), fee: map{amount: map{currency: str, value: int(int64)}}, id: str, repayment: map{basisPoints: int(int32), term: map{estimatedDays: int(int32), maximumDays: int(int32)}, threshold: map{amount: map}}, startsAt: str(date-time)}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group networkTokens
+@endpoint GET /networkTokens/{networkTokenId}
+@required {networkTokenId: str}
+@returns(200) {token: map{brandVariant: str, creationDate: str(date-time), device: map{formFactor: str, osName: str, phone: map}, id: str, paymentInstrumentId: str, status: str, tokenLastFour: str, tokenRequestor: map{id: str, name: str}, type: str}}
+@errors {401, 403, 422, 500}
+
+@endpoint PATCH /networkTokens/{networkTokenId}
+@required {networkTokenId: str}
+@optional {status: str(active/suspended/closed)}
+@returns(202)
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group paymentInstrumentGroups
+@endpoint POST /paymentInstrumentGroups
+@required {balancePlatform: str, txVariant: str}
+@optional {description: str, properties: map, reference: str}
+@returns(200) {balancePlatform: str, description: str, id: str, properties: map, reference: str, txVariant: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstrumentGroups/{id}
+@required {id: str}
+@returns(200) {balancePlatform: str, description: str, id: str, properties: map, reference: str, txVariant: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstrumentGroups/{id}/transactionRules
+@required {id: str}
+@returns(200) {transactionRules: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group paymentInstruments
+@endpoint POST /paymentInstruments
+@required {balanceAccountId: str, issuingCountryCode: str, type: str(bankAccount/card)}
+@optional {bankAccount: map{formFactor: str}, card: map{authentication: map, brand!: str, brandVariant!: str, cardholderName!: str, configuration: map, deliveryContact: map, formFactor!: str, threeDSecure: str, usage: str}, description: str, paymentInstrumentGroupId: str, reference: str, status: str(active/closed/inactive/suspended), statusComment: str, statusReason: str(accountClosure/damaged/endOfLife/expired/lost/other/stolen/suspectedFraud/transactionRule)}
+@returns(200) {additionalBankAccountIdentifications: [any], balanceAccountId: str, bankAccount: map{accountNumber: str, accountType: str, branchNumber: str, formFactor: str, iban: str, routingNumber: str, sortCode: str, type: str}, card: map{authentication: map{email: str, password: str, phone: map}, bin: str, brand: str, brandVariant: str, cardholderName: str, configuration: map{activation: str, activationUrl: str, bulkAddress: map, cardImageId: str, carrier: str, carrierImageId: str, configurationProfileId: str, currency: str, envelope: str, insert: str, language: str, logoImageId: str, pinMailer: str, shipmentMethod: str}, cvc: str, deliveryContact: map{address: map, company: str, email: str, fullPhoneNumber: str, name: map, phoneNumber: map, webAddress: str}, expiration: map{month: str, year: str}, formFactor: str, lastFour: str, number: str, threeDSecure: str, usage: str}, description: str, id: str, issuingCountryCode: str, paymentInstrumentGroupId: str, reference: str, replacedById: str, replacementOfId: str, status: str, statusComment: str, statusReason: str, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint POST /paymentInstruments/reveal
+@required {encryptedKey: str, paymentInstrumentId: str}
+@returns(200) {encryptedData: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstruments/{id}
+@required {id: str}
+@returns(200) {additionalBankAccountIdentifications: [any], balanceAccountId: str, bankAccount: map{accountNumber: str, accountType: str, branchNumber: str, formFactor: str, iban: str, routingNumber: str, sortCode: str, type: str}, card: map{authentication: map{email: str, password: str, phone: map}, bin: str, brand: str, brandVariant: str, cardholderName: str, configuration: map{activation: str, activationUrl: str, bulkAddress: map, cardImageId: str, carrier: str, carrierImageId: str, configurationProfileId: str, currency: str, envelope: str, insert: str, language: str, logoImageId: str, pinMailer: str, shipmentMethod: str}, cvc: str, deliveryContact: map{address: map, company: str, email: str, fullPhoneNumber: str, name: map, phoneNumber: map, webAddress: str}, expiration: map{month: str, year: str}, formFactor: str, lastFour: str, number: str, threeDSecure: str, usage: str}, description: str, id: str, issuingCountryCode: str, paymentInstrumentGroupId: str, reference: str, replacedById: str, replacementOfId: str, status: str, statusComment: str, statusReason: str, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /paymentInstruments/{id}
+@required {id: str}
+@optional {balanceAccountId: str, card: map{authentication: map, brand!: str, brandVariant!: str, cardholderName!: str, configuration: map, deliveryContact: map, formFactor!: str, threeDSecure: str, usage: str}, status: str(active/closed/inactive/suspended), statusComment: str, statusReason: str(accountClosure/damaged/endOfLife/expired/lost/other/stolen/suspectedFraud/transactionRule)}
+@returns(200) {additionalBankAccountIdentifications: [any], balanceAccountId: str, bankAccount: map{accountNumber: str, accountType: str, branchNumber: str, formFactor: str, iban: str, routingNumber: str, sortCode: str, type: str}, card: map{authentication: map{email: str, password: str, phone: map}, bin: str, brand: str, brandVariant: str, cardholderName: str, configuration: map{activation: str, activationUrl: str, bulkAddress: map, cardImageId: str, carrier: str, carrierImageId: str, configurationProfileId: str, currency: str, envelope: str, insert: str, language: str, logoImageId: str, pinMailer: str, shipmentMethod: str}, cvc: str, deliveryContact: map{address: map, company: str, email: str, fullPhoneNumber: str, name: map, phoneNumber: map, webAddress: str}, expiration: map{month: str, year: str}, formFactor: str, lastFour: str, number: str, threeDSecure: str, usage: str}, description: str, id: str, issuingCountryCode: str, paymentInstrumentGroupId: str, reference: str, replacedById: str, replacementOfId: str, status: str, statusComment: str, statusReason: str, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstruments/{id}/networkTokenActivationData
+@required {id: str}
+@returns(200) {sdkInput: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint POST /paymentInstruments/{id}/networkTokenActivationData
+@required {id: str}
+@optional {sdkOutput: str}
+@returns(200) {sdkInput: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstruments/{id}/networkTokens
+@required {id: str}
+@returns(200) {networkTokens: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstruments/{id}/reveal
+@required {id: str}
+@returns(200) {cvc: str, expiration: map{month: str, year: str}, pan: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /paymentInstruments/{id}/transactionRules
+@required {id: str}
+@returns(200) {transactionRules: [map]}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group pins
+@endpoint POST /pins/change
+@required {encryptedKey: str, encryptedPinBlock: str, paymentInstrumentId: str, token: str}
+@returns(200) {status: str}
+@errors {401, 403, 422, 500}
+
+@endpoint POST /pins/reveal
+@required {encryptedKey: str, paymentInstrumentId: str}
+@returns(200) {encryptedPinBlock: str, token: str}
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group publicKey
+@endpoint GET /publicKey
+@optional {purpose: str, format: str}
+@returns(200) {publicKey: str, publicKeyExpiryDate: str}
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group registeredDevices
+@endpoint GET /registeredDevices
+@required {paymentInstrumentId: str}
+@optional {pageNumber: int(int32), pageSize: int(int32)}
+@returns(200) {data: [map], itemsTotal: int(int32), link: map{first: map{href: str}, last: map{href: str}, next: map{href: str}, previous: map{href: str}, self: map{href: str}}, pagesTotal: int(int32)}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint POST /registeredDevices
+@required {paymentInstrumentId: str, strongCustomerAuthentication: map{sdkOutput!: str}}
+@optional {name: str}
+@returns(200) {id: str, paymentInstrumentId: str, sdkInput: str, success: bool}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint POST /registeredDevices/{deviceId}/associations
+@required {deviceId: str, ids: [str], type: str}
+@returns(200) {sdkInput: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /registeredDevices/{deviceId}/associations
+@required {deviceId: str, ids: [str], strongCustomerAuthentication: map{sdkOutput!: str}, type: str}
+@returns(200) {deviceId: str, ids: [str], type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint DELETE /registeredDevices/{id}
+@required {id: str, paymentInstrumentId: str}
+@returns(204)
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /registeredDevices/{id}
+@required {id: str, paymentInstrumentId: str, strongCustomerAuthentication: map{sdkOutput!: str}}
+@optional {name: str}
+@returns(200) {success: bool}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group transactionRules
+@endpoint POST /transactionRules
+@required {description: str, entityKey: map{entityReference: str, entityType: str}, interval: map{dayOfMonth: int(int32), dayOfWeek: str, duration: map, timeOfDay: str, timeZone: str, type!: str}, reference: str, ruleRestrictions: map{activeNetworkTokens: map, brandVariants: map, counterpartyBank: map, counterpartyTypes: map, countries: map, dayOfWeek: map, differentCurrencies: map, entryModes: map, internationalTransaction: map, matchingTransactions: map, matchingValues: map, mccs: map, merchantNames: map, merchants: map, processingTypes: map, riskScores: map, sameAmountRestriction: map, sameCounterpartyRestriction: map, sourceAccountTypes: map, timeOfDay: map, tokenRequestors: map, totalAmount: map, walletProviderAccountScore: map, walletProviderDeviceScore: map, walletProviderDeviceType: map}, type: str(allowList/blockList/maxUsage/velocity)}
+@optional {aggregationLevel: str, endDate: str, outcomeType: str(enforceSCA/hardBlock/scoreBased/timedBlock), requestType: str(authentication/authorization/bankTransfer/tokenization), score: int(int32), startDate: str, status: str(active/inactive)}
+@returns(200) {aggregationLevel: str, description: str, endDate: str, entityKey: map{entityReference: str, entityType: str}, id: str, interval: map{dayOfMonth: int(int32), dayOfWeek: str, duration: map{unit: str, value: int(int32)}, timeOfDay: str, timeZone: str, type: str}, outcomeType: str, reference: str, requestType: str, ruleRestrictions: map{activeNetworkTokens: map{operation: str, value: int(int32)}, brandVariants: map{operation: str, value: [str]}, counterpartyBank: map{operation: str, value: [map]}, counterpartyTypes: map{operation: str, value: [str]}, countries: map{operation: str, value: [str]}, dayOfWeek: map{operation: str, value: [str]}, differentCurrencies: map{operation: str, value: bool}, entryModes: map{operation: str, value: [str]}, internationalTransaction: map{operation: str, value: bool}, matchingTransactions: map{operation: str, value: int(int32)}, matchingValues: map{operation: str, value: [str]}, mccs: map{operation: str, value: [str]}, merchantNames: map{operation: str, value: [map]}, merchants: map{operation: str, value: [map]}, processingTypes: map{operation: str, value: [str]}, riskScores: map{operation: str, value: map}, sameAmountRestriction: map{operation: str, value: bool}, sameCounterpartyRestriction: map{operation: str, value: bool}, sourceAccountTypes: map{operation: str, value: [str]}, timeOfDay: map{operation: str, value: map}, tokenRequestors: map{operation: str, value: [str]}, totalAmount: map{operation: str, value: map}, walletProviderAccountScore: map{operation: str, value: int(int32)}, walletProviderDeviceScore: map{operation: str, value: int(int32)}, walletProviderDeviceType: map{operation: str, value: [str]}}, score: int(int32), startDate: str, status: str, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /transactionRules/{transactionRuleId}
+@required {transactionRuleId: str}
+@returns(200) {transactionRule: map{aggregationLevel: str, description: str, endDate: str, entityKey: map{entityReference: str, entityType: str}, id: str, interval: map{dayOfMonth: int(int32), dayOfWeek: str, duration: map, timeOfDay: str, timeZone: str, type: str}, outcomeType: str, reference: str, requestType: str, ruleRestrictions: map{activeNetworkTokens: map, brandVariants: map, counterpartyBank: map, counterpartyTypes: map, countries: map, dayOfWeek: map, differentCurrencies: map, entryModes: map, internationalTransaction: map, matchingTransactions: map, matchingValues: map, mccs: map, merchantNames: map, merchants: map, processingTypes: map, riskScores: map, sameAmountRestriction: map, sameCounterpartyRestriction: map, sourceAccountTypes: map, timeOfDay: map, tokenRequestors: map, totalAmount: map, walletProviderAccountScore: map, walletProviderDeviceScore: map, walletProviderDeviceType: map}, score: int(int32), startDate: str, status: str, type: str}}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint DELETE /transactionRules/{transactionRuleId}
+@required {transactionRuleId: str}
+@returns(200) {aggregationLevel: str, description: str, endDate: str, entityKey: map{entityReference: str, entityType: str}, id: str, interval: map{dayOfMonth: int(int32), dayOfWeek: str, duration: map{unit: str, value: int(int32)}, timeOfDay: str, timeZone: str, type: str}, outcomeType: str, reference: str, requestType: str, ruleRestrictions: map{activeNetworkTokens: map{operation: str, value: int(int32)}, brandVariants: map{operation: str, value: [str]}, counterpartyBank: map{operation: str, value: [map]}, counterpartyTypes: map{operation: str, value: [str]}, countries: map{operation: str, value: [str]}, dayOfWeek: map{operation: str, value: [str]}, differentCurrencies: map{operation: str, value: bool}, entryModes: map{operation: str, value: [str]}, internationalTransaction: map{operation: str, value: bool}, matchingTransactions: map{operation: str, value: int(int32)}, matchingValues: map{operation: str, value: [str]}, mccs: map{operation: str, value: [str]}, merchantNames: map{operation: str, value: [map]}, merchants: map{operation: str, value: [map]}, processingTypes: map{operation: str, value: [str]}, riskScores: map{operation: str, value: map}, sameAmountRestriction: map{operation: str, value: bool}, sameCounterpartyRestriction: map{operation: str, value: bool}, sourceAccountTypes: map{operation: str, value: [str]}, timeOfDay: map{operation: str, value: map}, tokenRequestors: map{operation: str, value: [str]}, totalAmount: map{operation: str, value: map}, walletProviderAccountScore: map{operation: str, value: int(int32)}, walletProviderDeviceScore: map{operation: str, value: int(int32)}, walletProviderDeviceType: map{operation: str, value: [str]}}, score: int(int32), startDate: str, status: str, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /transactionRules/{transactionRuleId}
+@required {transactionRuleId: str, description: str, entityKey: map{entityReference: str, entityType: str}, interval: map{dayOfMonth: int(int32), dayOfWeek: str, duration: map, timeOfDay: str, timeZone: str, type!: str}, reference: str, ruleRestrictions: map{activeNetworkTokens: map, brandVariants: map, counterpartyBank: map, counterpartyTypes: map, countries: map, dayOfWeek: map, differentCurrencies: map, entryModes: map, internationalTransaction: map, matchingTransactions: map, matchingValues: map, mccs: map, merchantNames: map, merchants: map, processingTypes: map, riskScores: map, sameAmountRestriction: map, sameCounterpartyRestriction: map, sourceAccountTypes: map, timeOfDay: map, tokenRequestors: map, totalAmount: map, walletProviderAccountScore: map, walletProviderDeviceScore: map, walletProviderDeviceType: map}, type: str(allowList/blockList/maxUsage/velocity)}
+@optional {aggregationLevel: str, endDate: str, outcomeType: str(enforceSCA/hardBlock/scoreBased/timedBlock), requestType: str(authentication/authorization/bankTransfer/tokenization), score: int(int32), startDate: str, status: str(active/inactive)}
+@returns(200) {aggregationLevel: str, description: str, endDate: str, entityKey: map{entityReference: str, entityType: str}, id: str, interval: map{dayOfMonth: int(int32), dayOfWeek: str, duration: map{unit: str, value: int(int32)}, timeOfDay: str, timeZone: str, type: str}, outcomeType: str, reference: str, requestType: str, ruleRestrictions: map{activeNetworkTokens: map{operation: str, value: int(int32)}, brandVariants: map{operation: str, value: [str]}, counterpartyBank: map{operation: str, value: [map]}, counterpartyTypes: map{operation: str, value: [str]}, countries: map{operation: str, value: [str]}, dayOfWeek: map{operation: str, value: [str]}, differentCurrencies: map{operation: str, value: bool}, entryModes: map{operation: str, value: [str]}, internationalTransaction: map{operation: str, value: bool}, matchingTransactions: map{operation: str, value: int(int32)}, matchingValues: map{operation: str, value: [str]}, mccs: map{operation: str, value: [str]}, merchantNames: map{operation: str, value: [map]}, merchants: map{operation: str, value: [map]}, processingTypes: map{operation: str, value: [str]}, riskScores: map{operation: str, value: map}, sameAmountRestriction: map{operation: str, value: bool}, sameCounterpartyRestriction: map{operation: str, value: bool}, sourceAccountTypes: map{operation: str, value: [str]}, timeOfDay: map{operation: str, value: map}, tokenRequestors: map{operation: str, value: [str]}, totalAmount: map{operation: str, value: map}, walletProviderAccountScore: map{operation: str, value: int(int32)}, walletProviderDeviceScore: map{operation: str, value: int(int32)}, walletProviderDeviceType: map{operation: str, value: [str]}}, score: int(int32), startDate: str, status: str, type: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group transferRoutes
+@endpoint POST /transferRoutes/calculate
+@required {balancePlatform: str, category: str, currency: str}
+@optional {balanceAccountId: str, counterparty: map{bankAccount: map, transferInstrumentId: str}, country: str, priorities: [str]}
+@returns(200) {transferRoutes: [map]}
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group validateBankAccountIdentification
+@endpoint POST /validateBankAccountIdentification
+@required {accountIdentification: any}
+@returns(200)
+@errors {401, 403, 422, 500}
+
+@endgroup
+
+@group paymentInstruments
+@endpoint GET /paymentInstruments/{paymentInstrumentId}/authorisedCardUsers
+@required {paymentInstrumentId: str}
+@returns(200) {legalEntityIds: [str]}
+@errors {401, 403, 404, 422}
+
+@endpoint POST /paymentInstruments/{paymentInstrumentId}/authorisedCardUsers
+@required {paymentInstrumentId: str}
+@optional {legalEntityIds: [str]}
+@returns(204)
+@errors {400, 401, 403, 422}
+
+@endpoint DELETE /paymentInstruments/{paymentInstrumentId}/authorisedCardUsers
+@required {paymentInstrumentId: str}
+@returns(204)
+@errors {401, 403}
+
+@endpoint PATCH /paymentInstruments/{paymentInstrumentId}/authorisedCardUsers
+@required {paymentInstrumentId: str}
+@optional {legalEntityIds: [str]}
+@returns(204)
+@errors {400, 401, 403, 422}
+
+@endgroup
+
+@group balancePlatforms
+@endpoint GET /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings
+@required {balancePlatformId: str, webhookId: str}
+@returns(200) {webhookSettings: [map]}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings
+@required {balancePlatformId: str, webhookId: str, currency: str, status: str(active/inactive), target: map{id!: str, type!: str}, type: str}
+@optional {conditions: [map{balanceType!: str, conditionType!: str, value!: int(int64)}]}
+@returns(200) {currency: str, id: str, status: str, target: map{id: str, type: str}, type: str}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint GET /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings/{settingId}
+@required {balancePlatformId: str, webhookId: str, settingId: str}
+@returns(200) {currency: str, id: str, status: str, target: map{id: str, type: str}, type: str}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint DELETE /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings/{settingId}
+@required {balancePlatformId: str, webhookId: str, settingId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint PATCH /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings/{settingId}
+@required {balancePlatformId: str, webhookId: str, settingId: str}
+@optional {conditions: [map{balanceType!: str, conditionType!: str, value!: int(int64)}], currency: str, status: str(active/inactive), target: map{id: str, type: str}, type: str}
+@returns(200) {currency: str, id: str, status: str, target: map{id: str, type: str}, type: str}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endgroup
+
+@group scaAssociations
+@endpoint GET /scaAssociations
+@required {entityType: str, entityId: str, pageSize: int(int32), pageNumber: int(int32)}
+@returns(200) {_links: map{first: map{href: str}, last: map{href: str}, next: map{href: str}, previous: map{href: str}, self: map{href: str}}, data: [map], itemsTotal: int(int32), pagesTotal: int(int32)}
+@errors {400, 401, 403, 500}
+
+@endpoint DELETE /scaAssociations
+@required {WWW-Authenticate: str, entityId: str, entityType: str(accountHolder/paymentInstrument), scaDeviceIds: [str]}
+@returns(204)
+@errors {401, 403, 500}
+
+@endpoint PATCH /scaAssociations
+@required {WWW-Authenticate: str, entityId: str, entityType: str(accountHolder/paymentInstrument), scaDeviceIds: [str], status: str(pendingApproval/active)}
+@returns(200) {scaAssociations: [map]}
+@errors {401, 403, 500}
+
+@endgroup
+
+@group scaDevices
+@endpoint POST /scaDevices
+@required {name: str, sdkOutput: str}
+@returns(201) {scaDevice: map{id: str, name: str, type: str}, sdkInput: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint PATCH /scaDevices/{deviceId}
+@required {deviceId: str, sdkOutput: str}
+@returns(200) {scaDevice: map{id: str, name: str, type: str}}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /scaDevices/{deviceId}/scaAssociations
+@required {deviceId: str, entities: [map{id!: str, type!: str}]}
+@returns(201) {scaAssociations: [map]}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endgroup
+
+@group accountHolders
+@endpoint GET /accountHolders/{id}/taxFormSummary
+@required {id: str, formType: str}
+@returns(200) {data: [map]}
+
+@endgroup
+
+@group balanceAccounts
+@endpoint POST /balanceAccounts/{id}/transferLimits/approve
+@required {id: str, transferLimitIds: [str]}
+@optional {WWW-Authenticate: str}
+@returns(204)
+@errors {401, 404, 422}
+
+@endpoint GET /balanceAccounts/{id}/transferLimits
+@required {id: str}
+@optional {scope: str, transferType: str, status: str}
+@returns(200) {transferLimits: [map]}
+@errors {404, 422}
+
+@endpoint POST /balanceAccounts/{id}/transferLimits
+@required {id: str, amount: map{currency!: str, value!: int(int64)}, scope: str(perDay/perTransaction), transferType: str(instant/all)}
+@optional {WWW-Authenticate: str, endsAt: str(date-time), reference: str, scaInformation: map{exemption: str, scaOnApproval: bool}, startsAt: str(date-time)}
+@returns(200) {amount: map{currency: str, value: int(int64)}, endsAt: str(date-time), id: str, limitStatus: str, reference: str, scaInformation: map{exemption: str, status: str}, scope: str, startsAt: str(date-time), transferType: str}
+@errors {400, 401, 422}
+
+@endpoint GET /balanceAccounts/{id}/transferLimits/current
+@required {id: str}
+@optional {scope: str, transferType: str}
+@returns(200) {transferLimits: [map]}
+@errors {404, 422}
+
+@endpoint GET /balanceAccounts/{id}/transferLimits/{transferLimitId}
+@required {id: str, transferLimitId: str}
+@returns(200) {amount: map{currency: str, value: int(int64)}, endsAt: str(date-time), id: str, limitStatus: str, reference: str, scaInformation: map{exemption: str, status: str}, scope: str, startsAt: str(date-time), transferType: str}
+@errors {404, 422}
+
+@endpoint DELETE /balanceAccounts/{id}/transferLimits/{transferLimitId}
+@required {id: str, transferLimitId: str}
+@returns(204)
+@errors {404, 422}
+
+@endgroup
+
+@group balancePlatforms
+@endpoint GET /balancePlatforms/{id}/transferLimits
+@required {id: str}
+@optional {scope: str, transferType: str, status: str}
+@returns(200) {transferLimits: [map]}
+@errors {404, 422}
+
+@endpoint POST /balancePlatforms/{id}/transferLimits
+@required {id: str, amount: map{currency!: str, value!: int(int64)}, scope: str(perDay/perTransaction), transferType: str(instant/all)}
+@optional {endsAt: str(date-time), reference: str, scaInformation: map{exemption: str, scaOnApproval: bool}, startsAt: str(date-time)}
+@returns(200) {amount: map{currency: str, value: int(int64)}, endsAt: str(date-time), id: str, limitStatus: str, reference: str, scaInformation: map{exemption: str, status: str}, scope: str, startsAt: str(date-time), transferType: str}
+@errors {404, 422}
+
+@endpoint GET /balancePlatforms/{id}/transferLimits/{transferLimitId}
+@required {id: str, transferLimitId: str}
+@returns(200) {amount: map{currency: str, value: int(int64)}, endsAt: str(date-time), id: str, limitStatus: str, reference: str, scaInformation: map{exemption: str, status: str}, scope: str, startsAt: str(date-time), transferType: str}
+@errors {404, 422}
+
+@endpoint DELETE /balancePlatforms/{id}/transferLimits/{transferLimitId}
+@required {id: str, transferLimitId: str}
+@returns(204)
+@errors {404, 422}
+
+@endgroup
+
+@end

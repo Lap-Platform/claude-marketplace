@@ -1,0 +1,208 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Listen API: Podcast Search, Directory, and Insights API
+@base https://listen-api.listennotes.com/api/v2
+@version 2.0
+@auth ApiKey X-ListenAPI-Key in header
+@common_fields {X-ListenAPI-Key: str}
+@endpoints 26
+@hint download_for_search
+@toc search(1), typeahead(1), search_episode_titles(1), trending_searches(1), related_searches(1), spellcheck(1), best_podcasts(1), podcasts(8), episodes(3), curated_podcasts(2), genres(1), regions(1), languages(1), just_listen(1), playlists(2)
+
+@group search
+@endpoint GET /search
+@required {q: str}
+@optional {sort_by_date: int(0/1)=0, type: str(episode/podcast/curated)=episode, offset: int=0, len_min: int=0, len_max: int, episode_count_min: int, episode_count_max: int, update_freq_min: int, update_freq_max: int, genre_ids: str, published_before: int, published_after: int=0, only_in: str=title,description,author,audio, language: str, region: str, ocid: str, ncid: str, safe_mode: int(0/1)=0, unique_podcasts: int(0/1)=0, interviews_only: int(0/1)=0, sponsored_only: int(0/1)=0, page_size: int=10}
+@returns(200) {next_offset: int, took: num, total: int, count: int, results: [any]}
+@errors {400, 401, 429, 5XX}
+
+@endgroup
+
+@group typeahead
+@endpoint GET /typeahead
+@required {q: str}
+@optional {show_podcasts: int(0/1)=0, show_genres: int(0/1)=0, safe_mode: int(0/1)=0}
+@returns(200) {terms: [str], genres: [map], podcasts: [map]}
+@errors {400, 401, 429, 5XX}
+
+@endgroup
+
+@group search_episode_titles
+@endpoint GET /search_episode_titles
+@required {q: str}
+@optional {podcast_id: str, podcast_id_type: str(listennotes_id/itunes_id/spotify_id/rss)=listennotes_id}
+@returns(200) {next_offset: int, took: num, total: int, count: int, results: [map]}
+@errors {400, 401, 429, 5XX}
+
+@endgroup
+
+@group trending_searches
+@endpoint GET /trending_searches
+@returns(200) {terms: [str]}
+@errors {400, 401, 429, 5XX}
+
+@endgroup
+
+@group related_searches
+@endpoint GET /related_searches
+@required {q: str}
+@returns(200) {terms: [str]}
+@errors {400, 401, 429, 5XX}
+
+@endgroup
+
+@group spellcheck
+@endpoint GET /spellcheck
+@required {q: str}
+@returns(200) {tokens: [map], corrected_text_html: str}
+@errors {400, 401, 429, 5XX}
+
+@endgroup
+
+@group best_podcasts
+@endpoint GET /best_podcasts
+@optional {genre_id: str, page: int, region: str=us, publisher_region: str, language: str, sort: str(recent_added_first/oldest_added_first/recent_published_first/oldest_published_first/listen_score)=recent_added_first, safe_mode: int(0/1)=0}
+@returns(200) {has_previous: bool, name: str, listennotes_url: str, previous_page_number: int, page_number: int, has_next: bool, next_page_number: int, parent_id: int, id: int, total: int, podcasts: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@group podcasts
+@endpoint GET /podcasts/{id}
+@required {id: str}
+@optional {next_episode_pub_date: int, sort: str(recent_first/oldest_first)=recent_first}
+@returns(200) {episodes: [map], is_claimed: bool, type: str, explicit_content: bool, website: str, total_episodes: int, audio_length_sec: int, update_frequency_hours: int, earliest_pub_date_ms: int, rss: str, latest_episode_id: str, latest_pub_date_ms: int, title: str, language: str, description: str, email: str, image: str, thumbnail: str, listennotes_url: str, id: str, country: str, publisher: str, itunes_id: int, looking_for: map{cohosts: bool, cross_promotion: bool, sponsors: bool, guests: bool}, extra: map{youtube_url: str, facebook_handle: str, instagram_handle: str, twitter_handle: str, wechat_handle: str, patreon_handle: str, amazon_music_url: str, linkedin_url: str, spotify_url: str, url1: str, url2: str, url3: str}, genre_ids: [int], next_episode_pub_date: int, listen_score: int, listen_score_global_rank: str, has_guest_interviews: bool, has_sponsors: bool}
+@errors {401, 404, 429, 5XX}
+
+@endpoint DELETE /podcasts/{id}
+@required {id: str}
+@optional {reason: str}
+@returns(200) {status: str}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@group episodes
+@endpoint GET /episodes/{id}
+@required {id: str}
+@optional {show_transcript: int=0}
+@returns(200) {maybe_audio_invalid: bool, pub_date_ms: int, audio: str, listennotes_edit_url: str, image: str, thumbnail: str, description: str, title: str, explicit_content: bool, listennotes_url: str, audio_length_sec: int, id: str, podcast: map{is_claimed: bool, type: str, explicit_content: bool, website: str, total_episodes: int, audio_length_sec: int, update_frequency_hours: int, earliest_pub_date_ms: int, rss: str, latest_episode_id: str, latest_pub_date_ms: int, title: str, language: str, description: str, email: str, image: str, thumbnail: str, listennotes_url: str, id: str, country: str, publisher: str, itunes_id: int, looking_for: map{cohosts: bool, cross_promotion: bool, sponsors: bool, guests: bool}, extra: map{youtube_url: str, facebook_handle: str, instagram_handle: str, twitter_handle: str, wechat_handle: str, patreon_handle: str, amazon_music_url: str, linkedin_url: str, spotify_url: str, url1: str, url2: str, url3: str}, genre_ids: [int], listen_score: int, listen_score_global_rank: str, has_guest_interviews: bool, has_sponsors: bool}, link: str, transcript: str}
+@errors {401, 404, 429, 5XX}
+
+@endpoint POST /episodes
+@returns(200) {episodes: [map]}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group podcasts
+@endpoint POST /podcasts
+@returns(200) {podcasts: [map], latest_episodes: [map]}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group curated_podcasts
+@endpoint GET /curated_podcasts/{id}
+@required {id: str}
+@returns(200) {id: str, description: str, source_url: str, source_domain: str, pub_date_ms: int, listennotes_url: str, title: str, total: int, podcasts: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@group genres
+@endpoint GET /genres
+@optional {top_level_only: int(0/1)=0}
+@returns(200) {genres: [map]}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group regions
+@endpoint GET /regions
+@returns(200) {regions: map}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group languages
+@endpoint GET /languages
+@returns(200) {languages: [str]}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group just_listen
+@endpoint GET /just_listen
+@returns(200) {maybe_audio_invalid: bool, pub_date_ms: int, audio: str, listennotes_edit_url: str, image: str, thumbnail: str, description: str, title: str, explicit_content: bool, listennotes_url: str, audio_length_sec: int, id: str, link: str, podcast: map{image: str, thumbnail: str, title: str, listennotes_url: str, id: str, publisher: str, listen_score: int, listen_score_global_rank: str}}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group curated_podcasts
+@endpoint GET /curated_podcasts
+@optional {page: int=1}
+@returns(200) {has_previous: bool, previous_page_number: int, page_number: int, next_page_number: int, has_next: bool, total: int, curated_lists: [map]}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group podcasts
+@endpoint GET /podcasts/{id}/recommendations
+@required {id: str}
+@optional {safe_mode: int(0/1)=0}
+@returns(200) {recommendations: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@group episodes
+@endpoint GET /episodes/{id}/recommendations
+@required {id: str}
+@optional {safe_mode: int(0/1)=0}
+@returns(200) {recommendations: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@group podcasts
+@endpoint POST /podcasts/submit
+@returns(200) {status: str, podcast: map{image: str, thumbnail: str, title: str, listennotes_url: str, id: str, publisher: str, listen_score: int, listen_score_global_rank: str}}
+@errors {400, 401, 429, 5XX}
+
+@endpoint POST /podcasts/{id}/rss
+@required {id: str}
+@returns(200) {status: str, last_refreshed_at_ms: int}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@group playlists
+@endpoint GET /playlists/{id}
+@required {id: str}
+@optional {type: str(episode_list/podcast_list)=episode_list, last_timestamp_ms: int=0, sort: str(recent_added_first/oldest_added_first/recent_published_first/oldest_published_first)=recent_added_first}
+@returns(200) {id: str, name: str, description: str, image: str, thumbnail: str, listennotes_url: str, visibility: str, last_timestamp_ms: int, total: int, total_audio_length_sec: int, type: str, items: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endpoint GET /playlists
+@optional {sort: str(recent_added_first/oldest_added_first/name_a_to_z/name_z_to_a)=recent_added_first, page: int=1}
+@returns(200) {previous_page_number: int, page_number: int, has_next: bool, has_previous: bool, next_page_number: int, total: int, playlists: [map]}
+@errors {401, 429, 5XX}
+
+@endgroup
+
+@group podcasts
+@endpoint GET /podcasts/{id}/audience
+@required {id: str}
+@returns(200) {by_regions: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endpoint GET /podcasts/domains/{domain_name}
+@required {domain_name: str}
+@optional {page: int=1}
+@returns(200) {page_number: int, has_next: bool, next_page_number: int, has_previous: bool, previous_page_number: int, podcasts: [map]}
+@errors {401, 404, 429, 5XX}
+
+@endgroup
+
+@end

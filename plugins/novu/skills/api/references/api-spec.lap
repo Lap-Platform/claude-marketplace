@@ -1,0 +1,558 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Novu API
+@base https://api.novu.co
+@version 3.14.0
+@auth ApiKey Authorization in header
+@endpoints 95
+@hint download_for_search
+@toc environments(7), events(4), notifications(2), integrations(8), contexts(5), subscribers(19), layouts(8), messages(3), topics(11), workflows(8), channel-connections(5), channel-endpoints(5), translations(9), inbound-webhooks(1)
+
+@group environments
+@endpoint POST /v1/environments
+@required {name: str, color: str}
+@optional {parentId: str}
+@returns(201) {data: map{_id: str, name: str, _organizationId: str, identifier: str, type: str?, apiKeys: [map], _parentId: str, slug: str}}
+@errors {400, 401, 402, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/environments
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PUT /v1/environments/{environmentId}
+@required {environmentId: str}
+@optional {name: str, identifier: str, parentId: str, color: str, dns: map{inboundParseDomain: str}, bridge: map{url: str}}
+@returns(200) {data: map{_id: str, name: str, _organizationId: str, identifier: str, type: str?, apiKeys: [map], _parentId: str, slug: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/environments/{environmentId}
+@required {environmentId: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group events
+@endpoint POST /v1/events/trigger
+@required {name: str, to: any}
+@optional {payload: map, overrides: any, transactionId: str, actor: any, tenant: any, context: map}
+@returns(201) {data: map{acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/events/trigger/bulk
+@required {events: [map{name!: str, payload: map, overrides: any, to!: any, transactionId: str, actor: any, tenant: any, context: map}]}
+@returns(201) {data: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/events/trigger/broadcast
+@required {name: str, payload: map}
+@optional {overrides: any, transactionId: str, actor: any, tenant: any, context: map}
+@returns(200) {data: map{acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}}
+@returns(201) {acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/events/trigger/{transactionId}
+@required {transactionId: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group notifications
+@endpoint GET /v1/notifications
+@optional {channels: [str], templates: [str], emails: [str], search: str, subscriberIds: [str], severity: [str], page: num=0, limit: num=10, transactionId: str, topicKey: str, subscriptionId: str, contextKeys: [str], after: str, before: str}
+@returns(200) {hasMore: bool, data: [map], pageSize: num, page: num}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/notifications/{notificationId}
+@required {notificationId: str}
+@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, _subscriberId: str, transactionId: str, _templateId: str, _digestedNotificationId: str, createdAt: str, updatedAt: str, channels: [str], subscriber: any, template: any, jobs: [map], payload: map, tags: [str], controls: map, to: map, topics: [map], severity: str, critical: bool, contextKeys: [str]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group integrations
+@endpoint GET /v1/integrations
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/integrations
+@required {providerId: str, channel: str(in_app/email/sms/chat/push)}
+@optional {name: str, identifier: str, _environmentId: str(uuid), credentials: any, active: bool, check: bool, conditions: [map{isNegated!: bool, type!: str, value!: str, children!: [map{field!: str, value!: str, operator!: str, on!: str}]}], configurations: map}
+@returns(201) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/integrations/active
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PUT /v1/integrations/{integrationId}
+@required {integrationId: str}
+@optional {name: str, identifier: str, _environmentId: str, active: bool, credentials: map{apiKey: str, user: str, secretKey: str, domain: str, password: str, host: str, port: str, secure: bool, region: str, accountSid: str, messageProfileId: str, token: str, from: str, senderName: str, projectName: str, applicationId: str, clientId: str, requireTls: bool, ignoreTls: bool, tlsOptions: map, baseUrl: str, webhookUrl: str, redirectUrl: str, hmac: bool, serviceAccount: str, ipPoolName: str, apiKeyRequestHeader: str, secretKeyRequestHeader: str, idPath: str, datePath: str, apiToken: str, authenticateByToken: bool, authenticationTokenKey: str, instanceId: str, alertUid: str, title: str, imageUrl: str, state: str, externalLink: str, channelId: str, phoneNumberIdentification: str, accessKey: str, appSid: str, senderId: str, tenantId: str, AppIOBaseUrl: str}, check: bool, conditions: [map{isNegated!: bool, type!: str, value!: str, children!: [map{field!: str, value!: str, operator!: str, on!: str}]}], configurations: map}
+@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/integrations/{integrationId}
+@required {integrationId: str}
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/integrations/{integrationId}/auto-configure
+@required {integrationId: str}
+@returns(200) {data: map{success: bool, message: str, integration: map}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/integrations/{integrationId}/set-primary
+@required {integrationId: str}
+@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/integrations/chat/oauth
+@required {integrationIdentifier: str}
+@optional {subscriberId: str, connectionIdentifier: str, context: map, scope: [str]}
+@returns(201) {data: map{url: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group contexts
+@endpoint POST /v2/contexts
+@required {type: str, id: str}
+@optional {data: map}
+@returns(201) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/contexts
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, id: str, search: str}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/contexts/{type}/{id}
+@required {id: str, type: str, data: map}
+@returns(200) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/contexts/{type}/{id}
+@required {id: str, type: str}
+@returns(200) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v2/contexts/{type}/{id}
+@required {id: str, type: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group subscribers
+@endpoint POST /v1/subscribers/bulk
+@required {subscribers: [map{firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map, subscriberId!: str}]}
+@returns(201) {data: map{updated: [map], created: [map], failed: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PUT /v1/subscribers/{subscriberId}/credentials
+@required {subscriberId: str, providerId: str(slack/discord/msteams/mattermost/ryver/zulip/grafana-on-call/getstream/rocket-chat/whatsapp-business/chat-webhook/novu-slack/fcm/apns/expo/one-signal/pushpad/push-webhook/pusher-beams/appio), credentials: any}
+@optional {integrationIdentifier: str}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v1/subscribers/{subscriberId}/credentials
+@required {subscriberId: str, providerId: str(slack/discord/msteams/mattermost/ryver/zulip/grafana-on-call/getstream/rocket-chat/whatsapp-business/chat-webhook/novu-slack/fcm/apns/expo/one-signal/pushpad/push-webhook/pusher-beams/appio), credentials: any}
+@optional {integrationIdentifier: str}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/subscribers/{subscriberId}/credentials/{providerId}
+@required {subscriberId: str, providerId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v1/subscribers/{subscriberId}/online-status
+@required {subscriberId: str, isOnline: bool}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/subscribers/{subscriberId}/notifications/feed
+@required {subscriberId: str}
+@optional {page: num, limit: num=10, read: bool, seen: bool, payload: str}
+@returns(200) {data: map{totalCount: num, hasMore: bool, data: [map], pageSize: num, page: num}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/subscribers/{subscriberId}/notifications/unseen
+@required {subscriberId: str}
+@optional {seen: bool=False, limit: num=100}
+@returns(200) {data: map{count: num}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/subscribers/{subscriberId}/messages/mark-as
+@required {subscriberId: str, messageId: any, markAs: str(read/seen/unread/unseen)}
+@returns(201) {data: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/subscribers/{subscriberId}/messages/mark-all
+@required {subscriberId: str, markAs: str(read/seen/unread/unseen)}
+@optional {feedIdentifier: any}
+@returns(201)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/subscribers/{subscriberId}/messages/{messageId}/actions/{type}
+@required {messageId: str, type: any, subscriberId: str, status: str(pending/done)}
+@optional {payload: map}
+@returns(201) {data: map{_id: str, _templateId: str?, _environmentId: str, _messageTemplateId: str?, _organizationId: str, _notificationId: str, _subscriberId: str, subscriber: any, template: any, templateIdentifier: str, createdAt: str, deliveredAt: [str], lastSeenDate: str, lastReadDate: str, content: any?, transactionId: str, subject: str, channel: str, read: bool, seen: bool, snoozedUntil: str, email: str, phone: str, directWebhookUrl: str, providerId: str, deviceTokens: [str], title: str, cta: any, _feedId: str?, status: str, errorId: str, errorText: str, payload: map, overrides: map, contextKeys: [str]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/subscribers
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, email: str, name: str, phone: str, subscriberId: str}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/subscribers
+@required {subscriberId: str}
+@optional {failIfExists: bool, firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map}
+@returns(201) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/subscribers/{subscriberId}
+@required {subscriberId: str}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/subscribers/{subscriberId}
+@required {subscriberId: str}
+@optional {firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v2/subscribers/{subscriberId}
+@required {subscriberId: str}
+@returns(200) {data: map{acknowledged: bool, status: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/subscribers/{subscriberId}/preferences
+@required {subscriberId: str}
+@optional {criticality: str(critical/nonCritical/all)=nonCritical, contextKeys: [str]}
+@returns(200) {data: map{global: any, workflows: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/subscribers/{subscriberId}/preferences
+@required {subscriberId: str}
+@optional {channels: any, workflowId: str, schedule: any, context: map}
+@returns(200) {data: map{global: any, workflows: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/subscribers/{subscriberId}/preferences/bulk
+@required {subscriberId: str, preferences: [map{channels!: any, workflowId!: str}]}
+@optional {context: map}
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/subscribers/{subscriberId}/subscriptions
+@required {subscriberId: str}
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, key: str, contextKeys: [str]}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group layouts
+@endpoint POST /v2/layouts
+@required {layoutId: str, name: str}
+@optional {isTranslationEnabled: bool=False, __source: str=dashboard}
+@returns(201) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/layouts
+@optional {limit: num, offset: num, orderDirection: str, orderBy: str, query: str}
+@returns(200) {data: map{layouts: [map], totalCount: num}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PUT /v2/layouts/{layoutId}
+@required {layoutId: str, name: str}
+@optional {isTranslationEnabled: bool=False, controlValues: any}
+@returns(200) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/layouts/{layoutId}
+@required {layoutId: str}
+@returns(200) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v2/layouts/{layoutId}
+@required {layoutId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/layouts/{layoutId}/duplicate
+@required {layoutId: str, name: str}
+@optional {isTranslationEnabled: bool=False}
+@returns(201) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/layouts/{layoutId}/preview
+@required {layoutId: str}
+@optional {controlValues: map, previewPayload: any}
+@returns(201) {data: map{previewPayloadExample: any, schema: map?, result: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/layouts/{layoutId}/usage
+@required {layoutId: str}
+@returns(200) {data: map{workflows: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group messages
+@endpoint GET /v1/messages
+@optional {channel: str, subscriberId: str, transactionId: [str], contextKeys: [str], page: num=0, limit: num=10}
+@returns(200) {totalCount: num, hasMore: bool, data: [map], pageSize: num, page: num}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/messages/{messageId}
+@required {messageId: str}
+@returns(200) {data: map{acknowledged: bool, status: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/messages/transaction/{transactionId}
+@required {transactionId: str}
+@optional {channel: str(in_app/email/sms/chat/push)}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group topics
+@endpoint GET /v1/topics/{topicKey}/subscribers/{externalSubscriberId}
+@required {externalSubscriberId: str, topicKey: str}
+@returns(200) {_organizationId: str, _environmentId: str, _subscriberId: str, _topicId: str, topicKey: str, externalSubscriberId: str}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/topics
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, key: str, name: str}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/topics
+@required {key: str}
+@optional {failIfExists: bool, name: str}
+@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
+@returns(201) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/topics/{topicKey}
+@required {topicKey: str}
+@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/topics/{topicKey}
+@required {topicKey: str, name: str}
+@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v2/topics/{topicKey}
+@required {topicKey: str}
+@returns(200) {data: map{acknowledged: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/topics/{topicKey}/subscriptions
+@required {topicKey: str}
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, subscriberId: str, contextKeys: [str]}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/topics/{topicKey}/subscriptions
+@required {topicKey: str}
+@optional {subscriberIds: [str], subscriptions: [any], name: str, context: map, preferences: [any]}
+@returns(201) {data: map{data: [map], meta: any, errors: [map]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v2/topics/{topicKey}/subscriptions
+@required {topicKey: str}
+@optional {subscriberIds: [str], subscriptions: [any]}
+@returns(200) {data: [map], meta: any, errors: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/topics/{topicKey}/subscriptions/{identifier}
+@required {topicKey: str, identifier: str}
+@returns(200) {data: map{id: str, identifier: str, name: str, preferences: [map], contextKeys: [str]}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/topics/{topicKey}/subscriptions/{identifier}
+@required {topicKey: str, identifier: str}
+@optional {name: str, preferences: [any]}
+@returns(200) {data: map{_id: str, identifier: str, name: str, topic: any, subscriber: any?, preferences: [map], contextKeys: [str], createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group workflows
+@endpoint POST /v2/workflows
+@required {name: str, workflowId: str, steps: [any]}
+@optional {description: str, tags: [str], active: bool=False, validatePayload: bool, payloadSchema: map, isTranslationEnabled: bool=False, __source: str(template_store/editor/notification_directory/onboarding_digest_demo/onboarding_in_app/empty_state/dropdown/onboarding_get_started/bridge/dashboard/ai)=editor, preferences: any, severity: str(high/medium/low/none)}
+@returns(201) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/workflows
+@optional {limit: num, offset: num, orderDirection: str, orderBy: str, query: str, tags: [str], status: [str]}
+@returns(200) {data: map{workflows: [map], totalCount: num}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PUT /v2/workflows/{workflowId}/sync
+@required {workflowId: str, targetEnvironmentId: str}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PUT /v2/workflows/{workflowId}
+@required {workflowId: str, name: str, steps: [any], preferences: any, origin: str(novu-cloud/novu-cloud-v1/external)}
+@optional {description: str, tags: [str], active: bool=False, validatePayload: bool, payloadSchema: map, isTranslationEnabled: bool=False, workflowId: str, severity: str(high/medium/low/none)}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/workflows/{workflowId}
+@required {workflowId: str}
+@optional {environmentId: str}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v2/workflows/{workflowId}
+@required {workflowId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v2/workflows/{workflowId}
+@required {workflowId: str}
+@optional {active: bool, name: str, description: str, tags: [str], payloadSchema: map, validatePayload: bool, isTranslationEnabled: bool}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v2/workflows/{workflowId}/steps/{stepId}
+@required {workflowId: str, stepId: str}
+@returns(200) {data: map{controls: any, controlValues: map, variables: map, stepId: str, _id: str, name: str, slug: str, type: str, origin: str, workflowId: str, workflowDatabaseId: str, issues: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group environments
+@endpoint GET /v2/environments/{environmentId}/tags
+@required {environmentId: str}
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/environments/{targetEnvironmentId}/publish
+@required {targetEnvironmentId: str}
+@optional {sourceEnvironmentId: str, dryRun: bool=False, resources: [map{resourceType!: str, resourceId!: str}]}
+@returns(200) {data: map{results: [map], summary: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v2/environments/{targetEnvironmentId}/diff
+@required {targetEnvironmentId: str}
+@optional {sourceEnvironmentId: str}
+@returns(200) {data: map{sourceEnvironmentId: str, targetEnvironmentId: str, resources: [map], summary: any}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group channel-connections
+@endpoint GET /v1/channel-connections
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, subscriberId: str, channel: str(in_app/email/sms/chat/push), providerId: str, integrationIdentifier: str, contextKeys: [str]}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/channel-connections
+@required {integrationIdentifier: str, workspace: map{id!: str, name: str}, auth: map{accessToken!: str}}
+@optional {identifier: str, subscriberId: str, context: map}
+@returns(201) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/channel-connections/{identifier}
+@required {identifier: str}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v1/channel-connections/{identifier}
+@required {identifier: str, workspace: map{id!: str, name: str}, auth: map{accessToken!: str}}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/channel-connections/{identifier}
+@required {identifier: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group channel-endpoints
+@endpoint GET /v1/channel-endpoints
+@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, subscriberId: str, contextKeys: [str], channel: str(in_app/email/sms/chat/push), providerId: str, integrationIdentifier: str, connectionIdentifier: str}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint POST /v1/channel-endpoints
+@returns(201) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint GET /v1/channel-endpoints/{identifier}
+@required {identifier: str}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint PATCH /v1/channel-endpoints/{identifier}
+@required {identifier: str, endpoint: any}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}}
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endpoint DELETE /v1/channel-endpoints/{identifier}
+@required {identifier: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+
+@endgroup
+
+@group translations
+@endpoint POST /v2/translations/upload
+@returns(200) {totalFiles: num, successfulUploads: num, failedUploads: num, errors: [str]}
+
+@endpoint POST /v2/translations
+@required {resourceId: str, resourceType: str(workflow/layout), locale: str, content: map}
+@returns(200) {resourceId: str, resourceType: str, locale: str, content: map, createdAt: str, updatedAt: str}
+
+@endpoint GET /v2/translations/master-json
+@optional {locale: str}
+@returns(200) {workflows: map, layouts: map}
+
+@endpoint POST /v2/translations/master-json
+@required {locale: str, masterJson: map}
+@returns(200) {success: bool, message: str, successful: [str], failed: [str]}
+
+@endpoint POST /v2/translations/master-json/upload
+@returns(200) {success: bool, message: str, successful: [str], failed: [str]}
+
+@endpoint GET /v2/translations/group/{resourceType}/{resourceId}
+@required {resourceType: str(workflow/layout), resourceId: str}
+@returns(200) {resourceId: str, resourceType: str, resourceName: str, locales: [str], outdatedLocales: [str], createdAt: str, updatedAt: str}
+@errors {404}
+
+@endpoint GET /v2/translations/{resourceType}/{resourceId}/{locale}
+@required {resourceType: str(workflow/layout), resourceId: str, locale: str}
+@returns(200) {resourceId: str, resourceType: str, locale: str, content: map, createdAt: str, updatedAt: str}
+@errors {404}
+
+@endpoint DELETE /v2/translations/{resourceType}/{resourceId}/{locale}
+@required {resourceType: str(workflow/layout), resourceId: str, locale: str}
+@returns(204)
+@errors {404}
+
+@endpoint DELETE /v2/translations/{resourceType}/{resourceId}
+@required {resourceType: str(workflow/layout), resourceId: str}
+@returns(204)
+@errors {404}
+
+@endgroup
+
+@group inbound-webhooks
+@endpoint POST /v2/inbound-webhooks/delivery-providers/{environmentId}/{integrationId}
+@required {environmentId: str, integrationId: str}
+@returns(200)
+
+@endgroup
+
+@end

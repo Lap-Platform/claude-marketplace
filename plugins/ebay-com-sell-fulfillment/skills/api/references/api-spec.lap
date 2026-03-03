@@ -1,0 +1,104 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Fulfillment API
+@base https://api.ebay.com{basePath}
+@version v1.20.7
+@auth OAuth2
+@endpoints 15
+@toc order(6), payment_dispute(8), payment_dispute_summary(1)
+
+@group order
+@endpoint GET /order/{orderId}
+@required {orderId: str}
+@optional {fieldGroups: str}
+@returns(200) {buyer: map{buyerRegistrationAddress: map{companyName: str, contactAddress: map, email: str, fullName: str, primaryPhone: map}, taxAddress: map{city: str, countryCode: str, postalCode: str, stateOrProvince: str}, taxIdentifier: map{taxpayerId: str, taxIdentifierType: str, issuingCountry: str}, username: str}, buyerCheckoutNotes: str, cancelStatus: map{cancelledDate: str, cancelRequests: [map], cancelState: str}, creationDate: str, ebayCollectAndRemitTax: bool, fulfillmentHrefs: [str], fulfillmentStartInstructions: [map], lastModifiedDate: str, lineItems: [map], orderFulfillmentStatus: str, orderId: str, orderPaymentStatus: str, paymentSummary: map{payments: [map], refunds: [map], totalDueSeller: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}}, pricingSummary: map{adjustment: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, deliveryCost: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, deliveryDiscount: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, fee: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, priceDiscount: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, priceSubtotal: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, tax: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, total: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}}, program: map{authenticityVerification: map{outcomeReason: str, status: str}, ebayShipping: map{shippingLabelProvidedBy: str}, ebayVault: map{fulfillmentType: str}, ebayInternationalShipping: map{returnsManagedBy: str}, fulfillmentProgram: map{fulfilledBy: str}}, salesRecordReference: str, sellerId: str, totalFeeBasisAmount: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}, totalMarketplaceFee: map{convertedFromCurrency: str, convertedFromValue: str, currency: str, value: str}}
+@errors {400, 404, 500}
+
+@endpoint GET /order
+@optional {fieldGroups: str, filter: str, limit: str, offset: str, orderIds: str}
+@returns(200) {href: str, limit: int(int32), next: str, offset: int(int32), orders: [map], prev: str, total: int(int32), warnings: [map]}
+@errors {400, 500}
+
+@endpoint POST /order/{order_id}/issue_refund
+@required {order_id: str, Content-Type: str}
+@optional {reasonForRefund: str, comment: str, refundItems: [map{refundAmount: map, lineItemId: str, legacyReference: map}], orderLevelRefundAmount: map{currency: str, value: str}}
+@returns(200) {refundId: str, refundStatus: str}
+@errors {400, 403, 404, 409, 500}
+
+@endpoint GET /order/{orderId}/shipping_fulfillment
+@required {orderId: str}
+@returns(200) {fulfillments: [map], total: int(int32), warnings: [map]}
+@errors {400, 500}
+
+@endpoint POST /order/{orderId}/shipping_fulfillment
+@required {orderId: str, Content-Type: str}
+@optional {lineItems: [map{lineItemId: str, quantity: int(int32)}], shippedDate: str, shippingCarrierCode: str, trackingNumber: str}
+@returns(201)
+@errors {400, 409, 500}
+
+@endpoint GET /order/{orderId}/shipping_fulfillment/{fulfillmentId}
+@required {fulfillmentId: str, orderId: str}
+@returns(200) {fulfillmentId: str, lineItems: [map], shipmentTrackingNumber: str, shippedDate: str, shippingCarrierCode: str}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group payment_dispute
+@endpoint GET /payment_dispute/{payment_dispute_id}
+@required {payment_dispute_id: str}
+@returns(200) {amount: map{currency: str, value: str}, availableChoices: [str], buyerProvided: map{contentOnHold: bool, note: str, returnShipmentTracking: [map]}, buyerUsername: str, closedDate: str, evidence: [map], evidenceRequests: [map], lineItems: [map], monetaryTransactions: [map], note: str, openDate: str, orderId: str, paymentDisputeId: str, paymentDisputeStatus: str, reason: str, resolution: map{fees: map{currency: str, value: str}, protectedAmount: map{currency: str, value: str}, protectionStatus: str, reasonForClosure: str, recoupAmount: map{currency: str, value: str}, totalFeeCredit: map{currency: str, value: str}}, respondByDate: str, returnAddress: map{addressLine1: str, addressLine2: str, city: str, country: str, county: str, fullName: str, postalCode: str, primaryPhone: map{countryCode: str, number: str}, stateOrProvince: str}, revision: int(int32), sellerResponse: str}
+@errors {400, 404, 500}
+
+@endpoint GET /payment_dispute/{payment_dispute_id}/fetch_evidence_content
+@required {payment_dispute_id: str, evidence_id: str, file_id: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /payment_dispute/{payment_dispute_id}/activity
+@required {payment_dispute_id: str}
+@returns(200) {activity: [map]}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group payment_dispute_summary
+@endpoint GET /payment_dispute_summary
+@optional {order_id: str, buyer_username: str, open_date_from: str, open_date_to: str, payment_dispute_status: str, limit: str, offset: str}
+@returns(200) {href: str, limit: int(int32), next: str, offset: int(int32), paymentDisputeSummaries: [map], prev: str, total: int(int32)}
+@errors {400, 500}
+
+@endgroup
+
+@group payment_dispute
+@endpoint POST /payment_dispute/{payment_dispute_id}/contest
+@required {payment_dispute_id: str, Content-Type: str}
+@optional {note: str, returnAddress: map{addressLine1: str, addressLine2: str, city: str, country: str, county: str, fullName: str, postalCode: str, primaryPhone: map, stateOrProvince: str}, revision: int(int32)}
+@returns(204)
+@errors {400, 404, 409, 500}
+
+@endpoint POST /payment_dispute/{payment_dispute_id}/accept
+@required {payment_dispute_id: str, Content-Type: str}
+@optional {returnAddress: map{addressLine1: str, addressLine2: str, city: str, country: str, county: str, fullName: str, postalCode: str, primaryPhone: map, stateOrProvince: str}, revision: int(int32)}
+@returns(204)
+@errors {400, 404, 409, 500}
+
+@endpoint POST /payment_dispute/{payment_dispute_id}/upload_evidence_file
+@required {payment_dispute_id: str, Content-Type: str}
+@returns(200) {fileId: str}
+@errors {400, 404, 409, 500}
+
+@endpoint POST /payment_dispute/{payment_dispute_id}/add_evidence
+@required {payment_dispute_id: str, Content-Type: str}
+@optional {evidenceType: str, files: [map{fileId: str}], lineItems: [map{itemId: str, lineItemId: str}]}
+@returns(200) {evidenceId: str}
+@errors {400, 404, 409, 500}
+
+@endpoint POST /payment_dispute/{payment_dispute_id}/update_evidence
+@required {payment_dispute_id: str, Content-Type: str}
+@optional {evidenceId: str, evidenceType: str, files: [map{fileId: str}], lineItems: [map{itemId: str, lineItemId: str}]}
+@returns(204)
+@errors {400, 404, 409, 500}
+
+@endgroup
+
+@end

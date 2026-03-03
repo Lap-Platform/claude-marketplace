@@ -1,0 +1,858 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Supabase API (v1)
+@version 1.0.0
+@auth Bearer bearer
+@endpoints 158
+@hint download_for_search
+@toc branches(8), projects(137), organizations(7), oauth(4), snippets(2)
+
+@group branches
+@endpoint GET /v1/branches/{branch_id_or_ref}
+@required {branch_id_or_ref: any}
+@returns(200) {ref: str, postgres_version: str, postgres_engine: str, release_channel: str, status: str, db_host: str, db_port: int, db_user: str, db_pass: str, jwt_secret: str}
+@errors {500}
+
+@endpoint PATCH /v1/branches/{branch_id_or_ref}
+@required {branch_id_or_ref: any}
+@optional {branch_name: str, git_branch: str, reset_on_push: bool, persistent: bool, status: str(CREATING_PROJECT/RUNNING_MIGRATIONS/MIGRATIONS_PASSED/MIGRATIONS_FAILED/FUNCTIONS_DEPLOYED/FUNCTIONS_FAILED), request_review: bool, notify_url: str(uri)}
+@returns(200) {id: str(uuid), name: str, project_ref: str, parent_project_ref: str, is_default: bool, git_branch: str, pr_number: int(int32), latest_check_run_id: num, persistent: bool, status: str, created_at: str(date-time), updated_at: str(date-time), review_requested_at: str(date-time), with_data: bool, notify_url: str(uri), deletion_scheduled_at: str(date-time), preview_project_status: str}
+@errors {500}
+
+@endpoint DELETE /v1/branches/{branch_id_or_ref}
+@required {branch_id_or_ref: any}
+@optional {force: bool=true}
+@returns(200) {message: str}
+@errors {500}
+
+@endpoint POST /v1/branches/{branch_id_or_ref}/push
+@required {branch_id_or_ref: any}
+@optional {migration_version: str}
+@returns(201) {workflow_run_id: str, message: str}
+@errors {500}
+
+@endpoint POST /v1/branches/{branch_id_or_ref}/merge
+@required {branch_id_or_ref: any}
+@optional {migration_version: str}
+@returns(201) {workflow_run_id: str, message: str}
+@errors {500}
+
+@endpoint POST /v1/branches/{branch_id_or_ref}/reset
+@required {branch_id_or_ref: any}
+@optional {migration_version: str}
+@returns(201) {workflow_run_id: str, message: str}
+@errors {500}
+
+@endpoint POST /v1/branches/{branch_id_or_ref}/restore
+@required {branch_id_or_ref: any}
+@returns(200) {message: str}
+@errors {500}
+
+@endpoint GET /v1/branches/{branch_id_or_ref}/diff
+@required {branch_id_or_ref: any}
+@optional {included_schemas: str, pgdelta: bool}
+@returns(200)
+@errors {500}
+
+@endgroup
+
+@group projects
+@endpoint GET /v1/projects
+@returns(200)
+
+@endpoint POST /v1/projects
+@required {db_pass: str, name: str, organization_slug: str}
+@optional {organization_id: str, plan: str(free/pro), region: str(us-east-1/us-east-2/us-west-1/us-west-2/ap-east-1/ap-southeast-1/ap-northeast-1/ap-northeast-2/ap-southeast-2/eu-west-1/eu-west-2/eu-west-3/eu-north-1/eu-central-1/eu-central-2/ca-central-1/ap-south-1/sa-east-1), region_selection: any, kps_enabled: bool, desired_instance_size: str(pico/nano/micro/small/medium/large/xlarge/2xlarge/4xlarge/8xlarge/12xlarge/16xlarge/24xlarge/24xlarge_optimized_memory/24xlarge_optimized_cpu/24xlarge_high_memory/48xlarge/48xlarge_optimized_memory/48xlarge_optimized_cpu/48xlarge_high_memory), template_url: str(uri), release_channel: str(internal/alpha/beta/ga/withdrawn/preview), postgres_engine: str(15/17/17-oriole)}
+@returns(201) {id: str, ref: str, organization_id: str, organization_slug: str, name: str, region: str, created_at: str, status: str}
+
+@endpoint GET /v1/projects/available-regions
+@required {organization_slug: str}
+@optional {continent: str(NA/SA/EU/AF/AS/OC/AN), desired_instance_size: str(pico/nano/micro/small/medium/large/xlarge/2xlarge/4xlarge/8xlarge/12xlarge/16xlarge/24xlarge/24xlarge_optimized_memory/24xlarge_optimized_cpu/24xlarge_high_memory/48xlarge/48xlarge_optimized_memory/48xlarge_optimized_cpu/48xlarge_high_memory)}
+@returns(200) {recommendations: map{smartGroup: map{name: str, code: str, type: str}, specific: [map]}, all: map{smartGroup: [map], specific: [map]}}
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations
+@returns(200)
+@errors {500}
+
+@endpoint POST /v1/organizations
+@required {name: str}
+@returns(201) {id: str, slug: str, name: str}
+@errors {500}
+
+@endgroup
+
+@group oauth
+@endpoint GET /v1/oauth/authorize
+@required {client_id: str(uuid), response_type: str(code/token/id_token token), redirect_uri: str}
+@optional {scope: str, state: str, response_mode: str, code_challenge: str, code_challenge_method: str(plain/sha256/S256), organization_slug: str, resource: str(uri)}
+@returns(204)
+
+@endpoint POST /v1/oauth/token
+@returns(201) {access_token: str, refresh_token: str, expires_in: int, token_type: str}
+
+@endpoint POST /v1/oauth/revoke
+@required {client_id: str(uuid), client_secret: str, refresh_token: str}
+@returns(204)
+
+@endpoint GET /v1/oauth/authorize/project-claim
+@required {project_ref: str, client_id: str(uuid), response_type: str(code/token/id_token token), redirect_uri: str}
+@optional {state: str, response_mode: str, code_challenge: str, code_challenge_method: str(plain/sha256/S256)}
+@returns(204)
+
+@endgroup
+
+@group snippets
+@endpoint GET /v1/snippets
+@optional {project_ref: str, cursor: str, limit: str, sort_by: str(name/inserted_at), sort_order: str(asc/desc)}
+@returns(200) {data: [map], cursor: str}
+@errors {500}
+
+@endpoint GET /v1/snippets/{id}
+@required {id: str(uuid)}
+@returns(200) {id: str, inserted_at: str, updated_at: str, type: str, visibility: str, name: str, description: str?, project: map{id: num, name: str}, owner: map{id: num, username: str}, updated_by: map{id: num, username: str}, favorite: bool, content: map{favorite: bool, schema_version: str, sql: str}}
+@errors {500}
+
+@endgroup
+
+@group projects
+@endpoint GET /v1/projects/{ref}/actions
+@required {ref: str}
+@optional {offset: num, limit: num}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint HEAD /v1/projects/{ref}/actions
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/actions/{run_id}
+@required {ref: str, run_id: str}
+@returns(200) {id: str, branch_id: str, run_steps: [map], git_config: any?, workdir: str?, check_run_id: num?, created_at: str, updated_at: str}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/actions/{run_id}/status
+@required {ref: str, run_id: str}
+@optional {clone: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING), pull: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING), health: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING), configure: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING), migrate: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING), seed: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING), deploy: str(CREATED/DEAD/EXITED/PAUSED/REMOVING/RESTARTING/RUNNING)}
+@returns(200) {message: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/actions/{run_id}/logs
+@required {ref: str, run_id: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/api-keys
+@required {ref: str}
+@optional {reveal: bool}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/api-keys
+@required {ref: str, type: str(publishable/secret), name: str}
+@optional {reveal: bool, description: str, secret_jwt_template: map}
+@returns(201) {api_key: str?, id: str?, type: str?, prefix: str?, name: str, description: str?, hash: str?, secret_jwt_template: map?, inserted_at: str(date-time)?, updated_at: str(date-time)?}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/api-keys/legacy
+@required {ref: str}
+@returns(200) {enabled: bool}
+@errors {401, 403, 429}
+
+@endpoint PUT /v1/projects/{ref}/api-keys/legacy
+@required {ref: str, enabled: bool}
+@returns(200) {enabled: bool}
+@errors {401, 403, 429}
+
+@endpoint PATCH /v1/projects/{ref}/api-keys/{id}
+@required {ref: str, id: str(uuid)}
+@optional {reveal: bool, name: str, description: str, secret_jwt_template: map}
+@returns(200) {api_key: str?, id: str?, type: str?, prefix: str?, name: str, description: str?, hash: str?, secret_jwt_template: map?, inserted_at: str(date-time)?, updated_at: str(date-time)?}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/api-keys/{id}
+@required {ref: str, id: str(uuid)}
+@optional {reveal: bool}
+@returns(200) {api_key: str?, id: str?, type: str?, prefix: str?, name: str, description: str?, hash: str?, secret_jwt_template: map?, inserted_at: str(date-time)?, updated_at: str(date-time)?}
+@errors {401, 403, 429}
+
+@endpoint DELETE /v1/projects/{ref}/api-keys/{id}
+@required {ref: str, id: str(uuid)}
+@optional {reveal: bool, was_compromised: bool, reason: str}
+@returns(200) {api_key: str?, id: str?, type: str?, prefix: str?, name: str, description: str?, hash: str?, secret_jwt_template: map?, inserted_at: str(date-time)?, updated_at: str(date-time)?}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/branches
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/branches
+@required {ref: str, branch_name: str}
+@optional {git_branch: str, is_default: bool, persistent: bool, region: str, desired_instance_size: str(pico/nano/micro/small/medium/large/xlarge/2xlarge/4xlarge/8xlarge/12xlarge/16xlarge/24xlarge/24xlarge_optimized_memory/24xlarge_optimized_cpu/24xlarge_high_memory/48xlarge/48xlarge_optimized_memory/48xlarge_optimized_cpu/48xlarge_high_memory), release_channel: str(internal/alpha/beta/ga/withdrawn/preview), postgres_engine: str(15/17/17-oriole), secrets: map, with_data: bool, notify_url: str(uri)}
+@returns(201) {id: str(uuid), name: str, project_ref: str, parent_project_ref: str, is_default: bool, git_branch: str, pr_number: int(int32), latest_check_run_id: num, persistent: bool, status: str, created_at: str(date-time), updated_at: str(date-time), review_requested_at: str(date-time), with_data: bool, notify_url: str(uri), deletion_scheduled_at: str(date-time), preview_project_status: str}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/branches
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/branches/{name}
+@required {ref: str, name: str}
+@returns(200) {id: str(uuid), name: str, project_ref: str, parent_project_ref: str, is_default: bool, git_branch: str, pr_number: int(int32), latest_check_run_id: num, persistent: bool, status: str, created_at: str(date-time), updated_at: str(date-time), review_requested_at: str(date-time), with_data: bool, notify_url: str(uri), deletion_scheduled_at: str(date-time), preview_project_status: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/custom-hostname
+@required {ref: str}
+@returns(200) {status: str, custom_hostname: str, data: map{success: bool, errors: [any], messages: [any], result: map{id: str, hostname: str, ssl: map{status: str, validation_records: [map], validation_errors: [map]}, ownership_verification: map{type: str, name: str, value: str}, custom_origin_server: str, verification_errors: [str], status: str}}}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/custom-hostname
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/custom-hostname/initialize
+@required {ref: str, custom_hostname: str}
+@returns(201) {status: str, custom_hostname: str, data: map{success: bool, errors: [any], messages: [any], result: map{id: str, hostname: str, ssl: map{status: str, validation_records: [map], validation_errors: [map]}, ownership_verification: map{type: str, name: str, value: str}, custom_origin_server: str, verification_errors: [str], status: str}}}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/custom-hostname/reverify
+@required {ref: str}
+@returns(201) {status: str, custom_hostname: str, data: map{success: bool, errors: [any], messages: [any], result: map{id: str, hostname: str, ssl: map{status: str, validation_records: [map], validation_errors: [map]}, ownership_verification: map{type: str, name: str, value: str}, custom_origin_server: str, verification_errors: [str], status: str}}}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/custom-hostname/activate
+@required {ref: str}
+@returns(201) {status: str, custom_hostname: str, data: map{success: bool, errors: [any], messages: [any], result: map{id: str, hostname: str, ssl: map{status: str, validation_records: [map], validation_errors: [map]}, ownership_verification: map{type: str, name: str, value: str}, custom_origin_server: str, verification_errors: [str], status: str}}}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/jit-access
+@required {ref: str}
+@returns(200) {user_id: str(uuid), user_roles: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/jit-access
+@required {ref: str, state: str(enabled/disabled/unavailable)}
+@returns(200) {user_id: str(uuid), user_roles: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/network-bans/retrieve
+@required {ref: str}
+@returns(201) {banned_ipv4_addresses: [str]}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/network-bans/retrieve/enriched
+@required {ref: str}
+@returns(201) {banned_ipv4_addresses: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/network-bans
+@required {ref: str, ipv4_addresses: [str]}
+@optional {requester_ip: bool=False, identifier: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/network-restrictions
+@required {ref: str}
+@returns(200) {entitlement: str, config: map{dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}, old_config: map{dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}, status: str, updated_at: str(date-time), applied_at: str(date-time)}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/network-restrictions
+@required {ref: str}
+@optional {add: map{dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}, remove: map{dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}}
+@returns(200) {entitlement: str, config: map{dbAllowedCidrs: [map]}, old_config: map{dbAllowedCidrs: [map]}, updated_at: str(date-time), applied_at: str(date-time), status: str}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/network-restrictions/apply
+@required {ref: str}
+@optional {dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}
+@returns(201) {entitlement: str, config: map{dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}, old_config: map{dbAllowedCidrs: [str], dbAllowedCidrsV6: [str]}, status: str, updated_at: str(date-time), applied_at: str(date-time)}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/pgsodium
+@required {ref: str}
+@returns(200) {root_key: str}
+@errors {401, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/pgsodium
+@required {ref: str, root_key: str}
+@returns(200) {root_key: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/postgrest
+@required {ref: str}
+@returns(200) {db_schema: str, max_rows: int, db_extra_search_path: str, db_pool: int?, jwt_secret: str}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/postgrest
+@required {ref: str}
+@optional {db_extra_search_path: str, db_schema: str, max_rows: int, db_pool: int}
+@returns(200) {db_schema: str, max_rows: int, db_extra_search_path: str, db_pool: int?}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}
+@required {ref: str}
+@returns(200) {id: str, ref: str, organization_id: str, organization_slug: str, name: str, region: str, created_at: str, status: str, database: map{host: str, version: str, postgres_engine: str, release_channel: str}}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}
+@required {ref: str}
+@returns(200) {id: int, ref: str, name: str}
+@errors {401, 403, 429}
+
+@endpoint PATCH /v1/projects/{ref}
+@required {ref: str, name: str}
+@returns(200) {id: int, ref: str, name: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/secrets
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/secrets
+@required {ref: str}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/secrets
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/ssl-enforcement
+@required {ref: str}
+@returns(200) {currentConfig: map{database: bool}, appliedSuccessfully: bool}
+@errors {401, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/ssl-enforcement
+@required {ref: str, requestedConfig: map{database!: bool}}
+@returns(200) {currentConfig: map{database: bool}, appliedSuccessfully: bool}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/types/typescript
+@required {ref: str}
+@optional {included_schemas: str=public}
+@returns(200) {types: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/vanity-subdomain
+@required {ref: str}
+@returns(200) {status: str, custom_domain: str}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/vanity-subdomain
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/vanity-subdomain/check-availability
+@required {ref: str, vanity_subdomain: str}
+@returns(201) {available: bool}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/vanity-subdomain/activate
+@required {ref: str, vanity_subdomain: str}
+@returns(201) {custom_domain: str}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/upgrade
+@required {ref: str, target_version: str}
+@optional {release_channel: str(internal/alpha/beta/ga/withdrawn/preview)}
+@returns(201) {tracking_id: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/upgrade/eligibility
+@required {ref: str}
+@returns(200) {eligible: bool, current_app_version: str, current_app_version_release_channel: str, latest_app_version: str, target_upgrade_versions: [map], duration_estimate_hours: num, legacy_auth_custom_roles: [str], objects_to_be_dropped: [str], unsupported_extensions: [str], user_defined_objects_in_internal_schemas: [str], validation_errors: [any]}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/upgrade/status
+@required {ref: str}
+@optional {tracking_id: str}
+@returns(200) {databaseUpgradeStatus: map?{initiated_at: str, latest_status_at: str, target_version: num, error: str, progress: str, status: num}}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/readonly
+@required {ref: str}
+@returns(200) {enabled: bool, override_enabled: bool, override_active_until: str}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/readonly/temporary-disable
+@required {ref: str}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/read-replicas/setup
+@required {ref: str, read_replica_region: str(us-east-1/us-east-2/us-west-1/us-west-2/ap-east-1/ap-southeast-1/ap-northeast-1/ap-northeast-2/ap-southeast-2/eu-west-1/eu-west-2/eu-west-3/eu-north-1/eu-central-1/eu-central-2/ca-central-1/ap-south-1/sa-east-1)}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/read-replicas/remove
+@required {ref: str, database_identifier: str}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/health
+@required {ref: str, services: [str]}
+@optional {timeout_ms: int}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/config/auth/signing-keys/legacy
+@required {ref: str}
+@returns(201) {id: str(uuid), algorithm: str, status: str, public_jwk: any?, created_at: str(date-time), updated_at: str(date-time)}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/signing-keys/legacy
+@required {ref: str}
+@returns(200) {id: str(uuid), algorithm: str, status: str, public_jwk: any?, created_at: str(date-time), updated_at: str(date-time)}
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/config/auth/signing-keys
+@required {ref: str, algorithm: str(EdDSA/ES256/RS256/HS256)}
+@optional {status: str(in_use/standby), private_jwk: any}
+@returns(201) {id: str(uuid), algorithm: str, status: str, public_jwk: any?, created_at: str(date-time), updated_at: str(date-time)}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/signing-keys
+@required {ref: str}
+@returns(200) {keys: [map]}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/signing-keys/{id}
+@required {id: str(uuid), ref: str}
+@returns(200) {id: str(uuid), algorithm: str, status: str, public_jwk: any?, created_at: str(date-time), updated_at: str(date-time)}
+@errors {401, 403, 429}
+
+@endpoint DELETE /v1/projects/{ref}/config/auth/signing-keys/{id}
+@required {id: str(uuid), ref: str}
+@returns(200) {id: str(uuid), algorithm: str, status: str, public_jwk: any?, created_at: str(date-time), updated_at: str(date-time)}
+@errors {401, 403, 429}
+
+@endpoint PATCH /v1/projects/{ref}/config/auth/signing-keys/{id}
+@required {id: str(uuid), ref: str, status: str(in_use/previously_used/revoked/standby)}
+@returns(200) {id: str(uuid), algorithm: str, status: str, public_jwk: any?, created_at: str(date-time), updated_at: str(date-time)}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth
+@required {ref: str}
+@returns(200) {api_max_request_duration: int?, db_max_pool_size: int?, db_max_pool_size_unit: str?, disable_signup: bool?, external_anonymous_users_enabled: bool?, external_apple_additional_client_ids: str?, external_apple_client_id: str?, external_apple_email_optional: bool?, external_apple_enabled: bool?, external_apple_secret: str?, external_azure_client_id: str?, external_azure_email_optional: bool?, external_azure_enabled: bool?, external_azure_secret: str?, external_azure_url: str?, external_bitbucket_client_id: str?, external_bitbucket_email_optional: bool?, external_bitbucket_enabled: bool?, external_bitbucket_secret: str?, external_discord_client_id: str?, external_discord_email_optional: bool?, external_discord_enabled: bool?, external_discord_secret: str?, external_email_enabled: bool?, external_facebook_client_id: str?, external_facebook_email_optional: bool?, external_facebook_enabled: bool?, external_facebook_secret: str?, external_figma_client_id: str?, external_figma_email_optional: bool?, external_figma_enabled: bool?, external_figma_secret: str?, external_github_client_id: str?, external_github_email_optional: bool?, external_github_enabled: bool?, external_github_secret: str?, external_gitlab_client_id: str?, external_gitlab_email_optional: bool?, external_gitlab_enabled: bool?, external_gitlab_secret: str?, external_gitlab_url: str?, external_google_additional_client_ids: str?, external_google_client_id: str?, external_google_email_optional: bool?, external_google_enabled: bool?, external_google_secret: str?, external_google_skip_nonce_check: bool?, external_kakao_client_id: str?, external_kakao_email_optional: bool?, external_kakao_enabled: bool?, external_kakao_secret: str?, external_keycloak_client_id: str?, external_keycloak_email_optional: bool?, external_keycloak_enabled: bool?, external_keycloak_secret: str?, external_keycloak_url: str?, external_linkedin_oidc_client_id: str?, external_linkedin_oidc_email_optional: bool?, external_linkedin_oidc_enabled: bool?, external_linkedin_oidc_secret: str?, external_slack_oidc_client_id: str?, external_slack_oidc_email_optional: bool?, external_slack_oidc_enabled: bool?, external_slack_oidc_secret: str?, external_notion_client_id: str?, external_notion_email_optional: bool?, external_notion_enabled: bool?, external_notion_secret: str?, external_phone_enabled: bool?, external_slack_client_id: str?, external_slack_email_optional: bool?, external_slack_enabled: bool?, external_slack_secret: str?, external_spotify_client_id: str?, external_spotify_email_optional: bool?, external_spotify_enabled: bool?, external_spotify_secret: str?, external_twitch_client_id: str?, external_twitch_email_optional: bool?, external_twitch_enabled: bool?, external_twitch_secret: str?, external_twitter_client_id: str?, external_twitter_email_optional: bool?, external_twitter_enabled: bool?, external_twitter_secret: str?, external_x_client_id: str?, external_x_email_optional: bool?, external_x_enabled: bool?, external_x_secret: str?, external_workos_client_id: str?, external_workos_enabled: bool?, external_workos_secret: str?, external_workos_url: str?, external_web3_solana_enabled: bool?, external_web3_ethereum_enabled: bool?, external_zoom_client_id: str?, external_zoom_email_optional: bool?, external_zoom_enabled: bool?, external_zoom_secret: str?, hook_custom_access_token_enabled: bool?, hook_custom_access_token_uri: str?, hook_custom_access_token_secrets: str?, hook_mfa_verification_attempt_enabled: bool?, hook_mfa_verification_attempt_uri: str?, hook_mfa_verification_attempt_secrets: str?, hook_password_verification_attempt_enabled: bool?, hook_password_verification_attempt_uri: str?, hook_password_verification_attempt_secrets: str?, hook_send_sms_enabled: bool?, hook_send_sms_uri: str?, hook_send_sms_secrets: str?, hook_send_email_enabled: bool?, hook_send_email_uri: str?, hook_send_email_secrets: str?, hook_before_user_created_enabled: bool?, hook_before_user_created_uri: str?, hook_before_user_created_secrets: str?, hook_after_user_created_enabled: bool?, hook_after_user_created_uri: str?, hook_after_user_created_secrets: str?, jwt_exp: int?, mailer_allow_unverified_email_sign_ins: bool?, mailer_autoconfirm: bool?, mailer_otp_exp: int, mailer_otp_length: int?, mailer_secure_email_change_enabled: bool?, mailer_subjects_confirmation: str?, mailer_subjects_email_change: str?, mailer_subjects_invite: str?, mailer_subjects_magic_link: str?, mailer_subjects_reauthentication: str?, mailer_subjects_recovery: str?, mailer_subjects_password_changed_notification: str?, mailer_subjects_email_changed_notification: str?, mailer_subjects_phone_changed_notification: str?, mailer_subjects_mfa_factor_enrolled_notification: str?, mailer_subjects_mfa_factor_unenrolled_notification: str?, mailer_subjects_identity_linked_notification: str?, mailer_subjects_identity_unlinked_notification: str?, mailer_templates_confirmation_content: str?, mailer_templates_email_change_content: str?, mailer_templates_invite_content: str?, mailer_templates_magic_link_content: str?, mailer_templates_reauthentication_content: str?, mailer_templates_recovery_content: str?, mailer_templates_password_changed_notification_content: str?, mailer_templates_email_changed_notification_content: str?, mailer_templates_phone_changed_notification_content: str?, mailer_templates_mfa_factor_enrolled_notification_content: str?, mailer_templates_mfa_factor_unenrolled_notification_content: str?, mailer_templates_identity_linked_notification_content: str?, mailer_templates_identity_unlinked_notification_content: str?, mailer_notifications_password_changed_enabled: bool?, mailer_notifications_email_changed_enabled: bool?, mailer_notifications_phone_changed_enabled: bool?, mailer_notifications_mfa_factor_enrolled_enabled: bool?, mailer_notifications_mfa_factor_unenrolled_enabled: bool?, mailer_notifications_identity_linked_enabled: bool?, mailer_notifications_identity_unlinked_enabled: bool?, mfa_max_enrolled_factors: int?, mfa_totp_enroll_enabled: bool?, mfa_totp_verify_enabled: bool?, mfa_phone_enroll_enabled: bool?, mfa_phone_verify_enabled: bool?, mfa_web_authn_enroll_enabled: bool?, mfa_web_authn_verify_enabled: bool?, mfa_phone_otp_length: int, mfa_phone_template: str?, mfa_phone_max_frequency: int?, nimbus_oauth_client_id: str?, nimbus_oauth_email_optional: bool?, nimbus_oauth_client_secret: str?, password_hibp_enabled: bool?, password_min_length: int?, password_required_characters: str?, rate_limit_anonymous_users: int?, rate_limit_email_sent: int?, rate_limit_sms_sent: int?, rate_limit_token_refresh: int?, rate_limit_verify: int?, rate_limit_otp: int?, rate_limit_web3: int?, refresh_token_rotation_enabled: bool?, saml_enabled: bool?, saml_external_url: str?, saml_allow_encrypted_assertions: bool?, security_sb_forwarded_for_enabled: bool?, security_captcha_enabled: bool?, security_captcha_provider: str?, security_captcha_secret: str?, security_manual_linking_enabled: bool?, security_refresh_token_reuse_interval: int?, security_update_password_require_reauthentication: bool?, sessions_inactivity_timeout: int?, sessions_single_per_user: bool?, sessions_tags: str?, sessions_timebox: int?, site_url: str?, sms_autoconfirm: bool?, sms_max_frequency: int?, sms_messagebird_access_key: str?, sms_messagebird_originator: str?, sms_otp_exp: int?, sms_otp_length: int, sms_provider: str?, sms_template: str?, sms_test_otp: str?, sms_test_otp_valid_until: str(date-time)?, sms_textlocal_api_key: str?, sms_textlocal_sender: str?, sms_twilio_account_sid: str?, sms_twilio_auth_token: str?, sms_twilio_content_sid: str?, sms_twilio_message_service_sid: str?, sms_twilio_verify_account_sid: str?, sms_twilio_verify_auth_token: str?, sms_twilio_verify_message_service_sid: str?, sms_vonage_api_key: str?, sms_vonage_api_secret: str?, sms_vonage_from: str?, smtp_admin_email: str(email)?, smtp_host: str?, smtp_max_frequency: int?, smtp_pass: str?, smtp_port: str?, smtp_sender_name: str?, smtp_user: str?, uri_allow_list: str?, oauth_server_enabled: bool, oauth_server_allow_dynamic_registration: bool, oauth_server_authorization_path: str?, custom_oauth_enabled: bool, custom_oauth_max_providers: int}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/config/auth
+@required {ref: str}
+@optional {site_url: str, disable_signup: bool, jwt_exp: int, smtp_admin_email: str(email), smtp_host: str, smtp_port: str, smtp_user: str, smtp_pass: str, smtp_max_frequency: int, smtp_sender_name: str, mailer_allow_unverified_email_sign_ins: bool, mailer_autoconfirm: bool, mailer_subjects_invite: str, mailer_subjects_confirmation: str, mailer_subjects_recovery: str, mailer_subjects_email_change: str, mailer_subjects_magic_link: str, mailer_subjects_reauthentication: str, mailer_subjects_password_changed_notification: str, mailer_subjects_email_changed_notification: str, mailer_subjects_phone_changed_notification: str, mailer_subjects_mfa_factor_enrolled_notification: str, mailer_subjects_mfa_factor_unenrolled_notification: str, mailer_subjects_identity_linked_notification: str, mailer_subjects_identity_unlinked_notification: str, mailer_templates_invite_content: str, mailer_templates_confirmation_content: str, mailer_templates_recovery_content: str, mailer_templates_email_change_content: str, mailer_templates_magic_link_content: str, mailer_templates_reauthentication_content: str, mailer_templates_password_changed_notification_content: str, mailer_templates_email_changed_notification_content: str, mailer_templates_phone_changed_notification_content: str, mailer_templates_mfa_factor_enrolled_notification_content: str, mailer_templates_mfa_factor_unenrolled_notification_content: str, mailer_templates_identity_linked_notification_content: str, mailer_templates_identity_unlinked_notification_content: str, mailer_notifications_password_changed_enabled: bool, mailer_notifications_email_changed_enabled: bool, mailer_notifications_phone_changed_enabled: bool, mailer_notifications_mfa_factor_enrolled_enabled: bool, mailer_notifications_mfa_factor_unenrolled_enabled: bool, mailer_notifications_identity_linked_enabled: bool, mailer_notifications_identity_unlinked_enabled: bool, mfa_max_enrolled_factors: int, uri_allow_list: str, external_anonymous_users_enabled: bool, external_email_enabled: bool, external_phone_enabled: bool, saml_enabled: bool, saml_external_url: str, security_sb_forwarded_for_enabled: bool, security_captcha_enabled: bool, security_captcha_provider: str(turnstile/hcaptcha), security_captcha_secret: str, sessions_timebox: int, sessions_inactivity_timeout: int, sessions_single_per_user: bool, sessions_tags: str, rate_limit_anonymous_users: int, rate_limit_email_sent: int, rate_limit_sms_sent: int, rate_limit_verify: int, rate_limit_token_refresh: int, rate_limit_otp: int, rate_limit_web3: int, mailer_secure_email_change_enabled: bool, refresh_token_rotation_enabled: bool, password_hibp_enabled: bool, password_min_length: int, password_required_characters: str(abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789/abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789/abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789:!@#$%^&*()_+-=[]{};'\\:"|<>?,./`~/), security_manual_linking_enabled: bool, security_update_password_require_reauthentication: bool, security_refresh_token_reuse_interval: int, mailer_otp_exp: int, mailer_otp_length: int, sms_autoconfirm: bool, sms_max_frequency: int, sms_otp_exp: int, sms_otp_length: int, sms_provider: str(messagebird/textlocal/twilio/twilio_verify/vonage), sms_messagebird_access_key: str, sms_messagebird_originator: str, sms_test_otp: str, sms_test_otp_valid_until: str(date-time), sms_textlocal_api_key: str, sms_textlocal_sender: str, sms_twilio_account_sid: str, sms_twilio_auth_token: str, sms_twilio_content_sid: str, sms_twilio_message_service_sid: str, sms_twilio_verify_account_sid: str, sms_twilio_verify_auth_token: str, sms_twilio_verify_message_service_sid: str, sms_vonage_api_key: str, sms_vonage_api_secret: str, sms_vonage_from: str, sms_template: str, hook_mfa_verification_attempt_enabled: bool, hook_mfa_verification_attempt_uri: str, hook_mfa_verification_attempt_secrets: str, hook_password_verification_attempt_enabled: bool, hook_password_verification_attempt_uri: str, hook_password_verification_attempt_secrets: str, hook_custom_access_token_enabled: bool, hook_custom_access_token_uri: str, hook_custom_access_token_secrets: str, hook_send_sms_enabled: bool, hook_send_sms_uri: str, hook_send_sms_secrets: str, hook_send_email_enabled: bool, hook_send_email_uri: str, hook_send_email_secrets: str, hook_before_user_created_enabled: bool, hook_before_user_created_uri: str, hook_before_user_created_secrets: str, hook_after_user_created_enabled: bool, hook_after_user_created_uri: str, hook_after_user_created_secrets: str, external_apple_enabled: bool, external_apple_client_id: str, external_apple_email_optional: bool, external_apple_secret: str, external_apple_additional_client_ids: str, external_azure_enabled: bool, external_azure_client_id: str, external_azure_email_optional: bool, external_azure_secret: str, external_azure_url: str, external_bitbucket_enabled: bool, external_bitbucket_client_id: str, external_bitbucket_email_optional: bool, external_bitbucket_secret: str, external_discord_enabled: bool, external_discord_client_id: str, external_discord_email_optional: bool, external_discord_secret: str, external_facebook_enabled: bool, external_facebook_client_id: str, external_facebook_email_optional: bool, external_facebook_secret: str, external_figma_enabled: bool, external_figma_client_id: str, external_figma_email_optional: bool, external_figma_secret: str, external_github_enabled: bool, external_github_client_id: str, external_github_email_optional: bool, external_github_secret: str, external_gitlab_enabled: bool, external_gitlab_client_id: str, external_gitlab_email_optional: bool, external_gitlab_secret: str, external_gitlab_url: str, external_google_enabled: bool, external_google_client_id: str, external_google_email_optional: bool, external_google_secret: str, external_google_additional_client_ids: str, external_google_skip_nonce_check: bool, external_kakao_enabled: bool, external_kakao_client_id: str, external_kakao_email_optional: bool, external_kakao_secret: str, external_keycloak_enabled: bool, external_keycloak_client_id: str, external_keycloak_email_optional: bool, external_keycloak_secret: str, external_keycloak_url: str, external_linkedin_oidc_enabled: bool, external_linkedin_oidc_client_id: str, external_linkedin_oidc_email_optional: bool, external_linkedin_oidc_secret: str, external_slack_oidc_enabled: bool, external_slack_oidc_client_id: str, external_slack_oidc_email_optional: bool, external_slack_oidc_secret: str, external_notion_enabled: bool, external_notion_client_id: str, external_notion_email_optional: bool, external_notion_secret: str, external_slack_enabled: bool, external_slack_client_id: str, external_slack_email_optional: bool, external_slack_secret: str, external_spotify_enabled: bool, external_spotify_client_id: str, external_spotify_email_optional: bool, external_spotify_secret: str, external_twitch_enabled: bool, external_twitch_client_id: str, external_twitch_email_optional: bool, external_twitch_secret: str, external_twitter_enabled: bool, external_twitter_client_id: str, external_twitter_email_optional: bool, external_twitter_secret: str, external_x_enabled: bool, external_x_client_id: str, external_x_email_optional: bool, external_x_secret: str, external_workos_enabled: bool, external_workos_client_id: str, external_workos_secret: str, external_workos_url: str, external_web3_solana_enabled: bool, external_web3_ethereum_enabled: bool, external_zoom_enabled: bool, external_zoom_client_id: str, external_zoom_email_optional: bool, external_zoom_secret: str, db_max_pool_size: int, db_max_pool_size_unit: str(connections/percent), api_max_request_duration: int, mfa_totp_enroll_enabled: bool, mfa_totp_verify_enabled: bool, mfa_web_authn_enroll_enabled: bool, mfa_web_authn_verify_enabled: bool, mfa_phone_enroll_enabled: bool, mfa_phone_verify_enabled: bool, mfa_phone_max_frequency: int, mfa_phone_otp_length: int, mfa_phone_template: str, nimbus_oauth_client_id: str, nimbus_oauth_client_secret: str, oauth_server_enabled: bool, oauth_server_allow_dynamic_registration: bool, oauth_server_authorization_path: str, custom_oauth_enabled: bool}
+@returns(200) {api_max_request_duration: int?, db_max_pool_size: int?, db_max_pool_size_unit: str?, disable_signup: bool?, external_anonymous_users_enabled: bool?, external_apple_additional_client_ids: str?, external_apple_client_id: str?, external_apple_email_optional: bool?, external_apple_enabled: bool?, external_apple_secret: str?, external_azure_client_id: str?, external_azure_email_optional: bool?, external_azure_enabled: bool?, external_azure_secret: str?, external_azure_url: str?, external_bitbucket_client_id: str?, external_bitbucket_email_optional: bool?, external_bitbucket_enabled: bool?, external_bitbucket_secret: str?, external_discord_client_id: str?, external_discord_email_optional: bool?, external_discord_enabled: bool?, external_discord_secret: str?, external_email_enabled: bool?, external_facebook_client_id: str?, external_facebook_email_optional: bool?, external_facebook_enabled: bool?, external_facebook_secret: str?, external_figma_client_id: str?, external_figma_email_optional: bool?, external_figma_enabled: bool?, external_figma_secret: str?, external_github_client_id: str?, external_github_email_optional: bool?, external_github_enabled: bool?, external_github_secret: str?, external_gitlab_client_id: str?, external_gitlab_email_optional: bool?, external_gitlab_enabled: bool?, external_gitlab_secret: str?, external_gitlab_url: str?, external_google_additional_client_ids: str?, external_google_client_id: str?, external_google_email_optional: bool?, external_google_enabled: bool?, external_google_secret: str?, external_google_skip_nonce_check: bool?, external_kakao_client_id: str?, external_kakao_email_optional: bool?, external_kakao_enabled: bool?, external_kakao_secret: str?, external_keycloak_client_id: str?, external_keycloak_email_optional: bool?, external_keycloak_enabled: bool?, external_keycloak_secret: str?, external_keycloak_url: str?, external_linkedin_oidc_client_id: str?, external_linkedin_oidc_email_optional: bool?, external_linkedin_oidc_enabled: bool?, external_linkedin_oidc_secret: str?, external_slack_oidc_client_id: str?, external_slack_oidc_email_optional: bool?, external_slack_oidc_enabled: bool?, external_slack_oidc_secret: str?, external_notion_client_id: str?, external_notion_email_optional: bool?, external_notion_enabled: bool?, external_notion_secret: str?, external_phone_enabled: bool?, external_slack_client_id: str?, external_slack_email_optional: bool?, external_slack_enabled: bool?, external_slack_secret: str?, external_spotify_client_id: str?, external_spotify_email_optional: bool?, external_spotify_enabled: bool?, external_spotify_secret: str?, external_twitch_client_id: str?, external_twitch_email_optional: bool?, external_twitch_enabled: bool?, external_twitch_secret: str?, external_twitter_client_id: str?, external_twitter_email_optional: bool?, external_twitter_enabled: bool?, external_twitter_secret: str?, external_x_client_id: str?, external_x_email_optional: bool?, external_x_enabled: bool?, external_x_secret: str?, external_workos_client_id: str?, external_workos_enabled: bool?, external_workos_secret: str?, external_workos_url: str?, external_web3_solana_enabled: bool?, external_web3_ethereum_enabled: bool?, external_zoom_client_id: str?, external_zoom_email_optional: bool?, external_zoom_enabled: bool?, external_zoom_secret: str?, hook_custom_access_token_enabled: bool?, hook_custom_access_token_uri: str?, hook_custom_access_token_secrets: str?, hook_mfa_verification_attempt_enabled: bool?, hook_mfa_verification_attempt_uri: str?, hook_mfa_verification_attempt_secrets: str?, hook_password_verification_attempt_enabled: bool?, hook_password_verification_attempt_uri: str?, hook_password_verification_attempt_secrets: str?, hook_send_sms_enabled: bool?, hook_send_sms_uri: str?, hook_send_sms_secrets: str?, hook_send_email_enabled: bool?, hook_send_email_uri: str?, hook_send_email_secrets: str?, hook_before_user_created_enabled: bool?, hook_before_user_created_uri: str?, hook_before_user_created_secrets: str?, hook_after_user_created_enabled: bool?, hook_after_user_created_uri: str?, hook_after_user_created_secrets: str?, jwt_exp: int?, mailer_allow_unverified_email_sign_ins: bool?, mailer_autoconfirm: bool?, mailer_otp_exp: int, mailer_otp_length: int?, mailer_secure_email_change_enabled: bool?, mailer_subjects_confirmation: str?, mailer_subjects_email_change: str?, mailer_subjects_invite: str?, mailer_subjects_magic_link: str?, mailer_subjects_reauthentication: str?, mailer_subjects_recovery: str?, mailer_subjects_password_changed_notification: str?, mailer_subjects_email_changed_notification: str?, mailer_subjects_phone_changed_notification: str?, mailer_subjects_mfa_factor_enrolled_notification: str?, mailer_subjects_mfa_factor_unenrolled_notification: str?, mailer_subjects_identity_linked_notification: str?, mailer_subjects_identity_unlinked_notification: str?, mailer_templates_confirmation_content: str?, mailer_templates_email_change_content: str?, mailer_templates_invite_content: str?, mailer_templates_magic_link_content: str?, mailer_templates_reauthentication_content: str?, mailer_templates_recovery_content: str?, mailer_templates_password_changed_notification_content: str?, mailer_templates_email_changed_notification_content: str?, mailer_templates_phone_changed_notification_content: str?, mailer_templates_mfa_factor_enrolled_notification_content: str?, mailer_templates_mfa_factor_unenrolled_notification_content: str?, mailer_templates_identity_linked_notification_content: str?, mailer_templates_identity_unlinked_notification_content: str?, mailer_notifications_password_changed_enabled: bool?, mailer_notifications_email_changed_enabled: bool?, mailer_notifications_phone_changed_enabled: bool?, mailer_notifications_mfa_factor_enrolled_enabled: bool?, mailer_notifications_mfa_factor_unenrolled_enabled: bool?, mailer_notifications_identity_linked_enabled: bool?, mailer_notifications_identity_unlinked_enabled: bool?, mfa_max_enrolled_factors: int?, mfa_totp_enroll_enabled: bool?, mfa_totp_verify_enabled: bool?, mfa_phone_enroll_enabled: bool?, mfa_phone_verify_enabled: bool?, mfa_web_authn_enroll_enabled: bool?, mfa_web_authn_verify_enabled: bool?, mfa_phone_otp_length: int, mfa_phone_template: str?, mfa_phone_max_frequency: int?, nimbus_oauth_client_id: str?, nimbus_oauth_email_optional: bool?, nimbus_oauth_client_secret: str?, password_hibp_enabled: bool?, password_min_length: int?, password_required_characters: str?, rate_limit_anonymous_users: int?, rate_limit_email_sent: int?, rate_limit_sms_sent: int?, rate_limit_token_refresh: int?, rate_limit_verify: int?, rate_limit_otp: int?, rate_limit_web3: int?, refresh_token_rotation_enabled: bool?, saml_enabled: bool?, saml_external_url: str?, saml_allow_encrypted_assertions: bool?, security_sb_forwarded_for_enabled: bool?, security_captcha_enabled: bool?, security_captcha_provider: str?, security_captcha_secret: str?, security_manual_linking_enabled: bool?, security_refresh_token_reuse_interval: int?, security_update_password_require_reauthentication: bool?, sessions_inactivity_timeout: int?, sessions_single_per_user: bool?, sessions_tags: str?, sessions_timebox: int?, site_url: str?, sms_autoconfirm: bool?, sms_max_frequency: int?, sms_messagebird_access_key: str?, sms_messagebird_originator: str?, sms_otp_exp: int?, sms_otp_length: int, sms_provider: str?, sms_template: str?, sms_test_otp: str?, sms_test_otp_valid_until: str(date-time)?, sms_textlocal_api_key: str?, sms_textlocal_sender: str?, sms_twilio_account_sid: str?, sms_twilio_auth_token: str?, sms_twilio_content_sid: str?, sms_twilio_message_service_sid: str?, sms_twilio_verify_account_sid: str?, sms_twilio_verify_auth_token: str?, sms_twilio_verify_message_service_sid: str?, sms_vonage_api_key: str?, sms_vonage_api_secret: str?, sms_vonage_from: str?, smtp_admin_email: str(email)?, smtp_host: str?, smtp_max_frequency: int?, smtp_pass: str?, smtp_port: str?, smtp_sender_name: str?, smtp_user: str?, uri_allow_list: str?, oauth_server_enabled: bool, oauth_server_allow_dynamic_registration: bool, oauth_server_authorization_path: str?, custom_oauth_enabled: bool, custom_oauth_max_providers: int}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/config/auth/third-party-auth
+@required {ref: str}
+@optional {oidc_issuer_url: str, jwks_url: str, custom_jwks: any}
+@returns(201) {id: str(uuid), type: str, oidc_issuer_url: str?, jwks_url: str?, custom_jwks: any?, resolved_jwks: any?, inserted_at: str, updated_at: str, resolved_at: str?}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/third-party-auth
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint DELETE /v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
+@required {ref: str, tpa_id: str(uuid)}
+@returns(200) {id: str(uuid), type: str, oidc_issuer_url: str?, jwks_url: str?, custom_jwks: any?, resolved_jwks: any?, inserted_at: str, updated_at: str, resolved_at: str?}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
+@required {ref: str, tpa_id: str(uuid)}
+@returns(200) {id: str(uuid), type: str, oidc_issuer_url: str?, jwks_url: str?, custom_jwks: any?, resolved_jwks: any?, inserted_at: str, updated_at: str, resolved_at: str?}
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/pause
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/restore
+@required {ref: str}
+@returns(200) {available_versions: [map]}
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/restore
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/restore/cancel
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/billing/addons
+@required {ref: str}
+@returns(200) {selected_addons: [map], available_addons: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/billing/addons
+@required {ref: str, addon_variant: any, addon_type: str(custom_domain/compute_instance/pitr/ipv4/auth_mfa_phone/auth_mfa_web_authn/log_drain)}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/billing/addons/{addon_variant}
+@required {ref: str, addon_variant: any}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/claim-token
+@required {ref: str}
+@returns(200) {token_alias: str, expires_at: str, created_at: str, created_by: str(uuid)}
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/claim-token
+@required {ref: str}
+@returns(200) {token: str, token_alias: str, expires_at: str, created_at: str, created_by: str(uuid)}
+@errors {401, 403, 429}
+
+@endpoint DELETE /v1/projects/{ref}/claim-token
+@required {ref: str}
+@returns(204)
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/advisors/performance
+@required {ref: str}
+@returns(200) {lints: [map]}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/advisors/security
+@required {ref: str}
+@optional {lint_type: str}
+@returns(200) {lints: [map]}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/analytics/endpoints/logs.all
+@required {ref: str}
+@optional {sql: str, iso_timestamp_start: str(date-time), iso_timestamp_end: str(date-time)}
+@returns(200) {result: [any], error: any}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/analytics/endpoints/usage.api-counts
+@required {ref: str}
+@optional {interval: str(15min/30min/1hr/3hr/1day/3day/7day)}
+@returns(200) {result: [map], error: any}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/analytics/endpoints/usage.api-requests-count
+@required {ref: str}
+@returns(200) {result: [map], error: any}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/analytics/endpoints/functions.combined-stats
+@required {ref: str, interval: str(15min/1hr/3hr/1day), function_id: str}
+@returns(200) {result: [any], error: any}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/cli/login-role
+@required {ref: str, read_only: bool}
+@returns(201) {role: str, password: str, ttl_seconds: int(int64)}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/cli/login-role
+@required {ref: str}
+@returns(200) {message: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/database/migrations
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/migrations
+@required {ref: str, query: str}
+@optional {Idempotency-Key: str, name: str, rollback: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/database/migrations
+@required {ref: str, query: str}
+@optional {Idempotency-Key: str, name: str, rollback: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/database/migrations
+@required {ref: str, gte: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/database/migrations/{version}
+@required {ref: str, version: str}
+@returns(200) {version: str, name: str, statements: [str], rollback: [str], created_by: str, idempotency_key: str}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/database/migrations/{version}
+@required {ref: str, version: str}
+@optional {name: str, rollback: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/query
+@required {ref: str, query: str}
+@optional {parameters: [any], read_only: bool}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/query/read-only
+@required {ref: str, query: str}
+@optional {parameters: [any]}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/webhooks/enable
+@required {ref: str}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/database/context
+@required {ref: str}
+@returns(200) {databases: [map]}
+@errors {401, 403, 429}
+
+@endpoint PATCH /v1/projects/{ref}/database/password
+@required {ref: str, password: str}
+@returns(200) {message: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/database/jit
+@required {ref: str}
+@returns(200) {user_id: str(uuid), user_roles: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/jit
+@required {ref: str, role: str, rhost: str}
+@returns(200) {user_id: str(uuid), user_role: map{role: str, expires_at: num, allowed_networks: map{allowed_cidrs: [map], allowed_cidrs_v6: [map]}}}
+@errors {401, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/database/jit
+@required {ref: str, user_id: str(uuid), roles: [map{role!: str, expires_at: num, allowed_networks: map{allowed_cidrs: [map], allowed_cidrs_v6: [map]}}]}
+@returns(200) {user_id: str(uuid), user_roles: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/database/jit/list
+@required {ref: str}
+@returns(200) {items: [map]}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/database/jit/{user_id}
+@required {ref: str, user_id: str(uuid)}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/functions
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/functions
+@required {ref: str, slug: str, name: str, body: str}
+@optional {slug: str, name: str, verify_jwt: bool, import_map: bool, entrypoint_path: str, import_map_path: str, ezbr_sha256: str, verify_jwt: bool}
+@returns(201) {id: str, slug: str, name: str, status: str, version: int, created_at: int(int64), updated_at: int(int64), verify_jwt: bool, import_map: bool, entrypoint_path: str, import_map_path: str, ezbr_sha256: str}
+@errors {401, 402, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/functions
+@required {ref: str}
+@returns(200) {functions: [map]}
+@errors {401, 402, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/functions/deploy
+@required {ref: str}
+@optional {slug: str, bundleOnly: bool}
+@returns(201) {id: str, slug: str, name: str, status: str, version: int, created_at: int(int64), updated_at: int(int64), verify_jwt: bool, import_map: bool, entrypoint_path: str, import_map_path: str, ezbr_sha256: str}
+@errors {401, 402, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/functions/{function_slug}
+@required {ref: str, function_slug: str}
+@returns(200) {id: str, slug: str, name: str, status: str, version: int, created_at: int(int64), updated_at: int(int64), verify_jwt: bool, import_map: bool, entrypoint_path: str, import_map_path: str, ezbr_sha256: str}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/functions/{function_slug}
+@required {ref: str, function_slug: str}
+@optional {slug: str, name: str, verify_jwt: bool, import_map: bool, entrypoint_path: str, import_map_path: str, ezbr_sha256: str, name: str, body: str, verify_jwt: bool}
+@returns(200) {id: str, slug: str, name: str, status: str, version: int, created_at: int(int64), updated_at: int(int64), verify_jwt: bool, import_map: bool, entrypoint_path: str, import_map_path: str, ezbr_sha256: str}
+@errors {401, 403, 429, 500}
+
+@endpoint DELETE /v1/projects/{ref}/functions/{function_slug}
+@required {ref: str, function_slug: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/functions/{function_slug}/body
+@required {ref: str, function_slug: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/storage/buckets
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/disk
+@required {ref: str}
+@returns(200) {attributes: any, last_modified_at: str}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/config/disk
+@required {ref: str, attributes: any}
+@returns(201)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/disk/util
+@required {ref: str}
+@returns(200) {timestamp: str, metrics: map{fs_size_bytes: num, fs_avail_bytes: num, fs_used_bytes: num}}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/disk/autoscale
+@required {ref: str}
+@returns(200) {growth_percent: int?, min_increment_gb: int?, max_size_gb: int?}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/storage
+@required {ref: str}
+@returns(200) {fileSizeLimit: int(int64), features: map{imageTransformation: map{enabled: bool}, s3Protocol: map{enabled: bool}, icebergCatalog: map{enabled: bool, maxNamespaces: int, maxTables: int, maxCatalogs: int}, vectorBuckets: map{enabled: bool, maxBuckets: int, maxIndexes: int}}, capabilities: map{list_v2: bool, iceberg_catalog: bool}, external: map{upstreamTarget: str}, migrationVersion: str, databasePoolMode: str}
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/config/storage
+@required {ref: str}
+@optional {fileSizeLimit: int(int64), features: map{imageTransformation: map{enabled!: bool}, s3Protocol: map{enabled!: bool}, icebergCatalog: map{enabled!: bool, maxNamespaces!: int, maxTables!: int, maxCatalogs!: int}, vectorBuckets: map{enabled!: bool, maxBuckets!: int, maxIndexes!: int}}, external: map{upstreamTarget!: str}}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/database/pgbouncer
+@required {ref: str}
+@returns(200) {default_pool_size: int, ignore_startup_parameters: str, max_client_conn: int, pool_mode: str, connection_string: str, server_idle_timeout: int, server_lifetime: int, query_wait_timeout: int, reserve_pool_size: int}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/database/pooler
+@required {ref: str}
+@returns(200)
+@errors {401, 403, 429, 500}
+
+@endpoint PATCH /v1/projects/{ref}/config/database/pooler
+@required {ref: str}
+@optional {default_pool_size: int, pool_mode: str(transaction/session)}
+@returns(200) {default_pool_size: int?, pool_mode: str}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/database/postgres
+@required {ref: str}
+@returns(200) {effective_cache_size: str, logical_decoding_work_mem: str, maintenance_work_mem: str, track_activity_query_size: str, max_connections: int, max_locks_per_transaction: int, max_parallel_maintenance_workers: int, max_parallel_workers: int, max_parallel_workers_per_gather: int, max_replication_slots: int, max_slot_wal_keep_size: str, max_standby_archive_delay: str, max_standby_streaming_delay: str, max_wal_size: str, max_wal_senders: int, max_worker_processes: int, session_replication_role: str, shared_buffers: str, statement_timeout: str, track_commit_timestamp: bool, wal_keep_size: str, wal_sender_timeout: str, work_mem: str, checkpoint_timeout: str, hot_standby_feedback: bool}
+@errors {401, 403, 429, 500}
+
+@endpoint PUT /v1/projects/{ref}/config/database/postgres
+@required {ref: str}
+@optional {effective_cache_size: str, logical_decoding_work_mem: str, maintenance_work_mem: str, track_activity_query_size: str, max_connections: int, max_locks_per_transaction: int, max_parallel_maintenance_workers: int, max_parallel_workers: int, max_parallel_workers_per_gather: int, max_replication_slots: int, max_slot_wal_keep_size: str, max_standby_archive_delay: str, max_standby_streaming_delay: str, max_wal_size: str, max_wal_senders: int, max_worker_processes: int, session_replication_role: str(origin/replica/local), shared_buffers: str, statement_timeout: str, track_commit_timestamp: bool, wal_keep_size: str, wal_sender_timeout: str, work_mem: str, checkpoint_timeout: str, hot_standby_feedback: bool, restart_database: bool}
+@returns(200) {effective_cache_size: str, logical_decoding_work_mem: str, maintenance_work_mem: str, track_activity_query_size: str, max_connections: int, max_locks_per_transaction: int, max_parallel_maintenance_workers: int, max_parallel_workers: int, max_parallel_workers_per_gather: int, max_replication_slots: int, max_slot_wal_keep_size: str, max_standby_archive_delay: str, max_standby_streaming_delay: str, max_wal_size: str, max_wal_senders: int, max_worker_processes: int, session_replication_role: str, shared_buffers: str, statement_timeout: str, track_commit_timestamp: bool, wal_keep_size: str, wal_sender_timeout: str, work_mem: str, checkpoint_timeout: str, hot_standby_feedback: bool}
+@errors {401, 403, 429, 500}
+
+@endpoint GET /v1/projects/{ref}/config/realtime
+@required {ref: str}
+@returns(200) {private_only: bool?, connection_pool: int?, max_concurrent_users: int?, max_events_per_second: int?, max_bytes_per_second: int?, max_channels_per_client: int?, max_joins_per_second: int?, max_presence_events_per_second: int?, max_payload_size_in_kb: int?, suspend: bool?}
+@errors {401, 403, 429}
+
+@endpoint PATCH /v1/projects/{ref}/config/realtime
+@required {ref: str}
+@optional {private_only: bool, connection_pool: int, max_concurrent_users: int, max_events_per_second: int, max_bytes_per_second: int, max_channels_per_client: int, max_joins_per_second: int, max_presence_events_per_second: int, max_payload_size_in_kb: int, suspend: bool}
+@returns(204)
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/config/realtime/shutdown
+@required {ref: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint POST /v1/projects/{ref}/config/auth/sso/providers
+@required {ref: str, type: str}
+@optional {metadata_xml: str, metadata_url: str, domains: [str], attribute_mapping: map{keys!: map}, name_id_format: str(urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified/urn:oasis:names:tc:SAML:2.0:nameid-format:transient/urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress/urn:oasis:names:tc:SAML:2.0:nameid-format:persistent)}
+@returns(201) {id: str, saml: map{id: str, entity_id: str, metadata_url: str, metadata_xml: str, attribute_mapping: map{keys: map}, name_id_format: str}, domains: [map], created_at: str, updated_at: str}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/sso/providers
+@required {ref: str}
+@returns(200) {items: [map]}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+@required {ref: str, provider_id: str(uuid)}
+@returns(200) {id: str, saml: map{id: str, entity_id: str, metadata_url: str, metadata_xml: str, attribute_mapping: map{keys: map}, name_id_format: str}, domains: [map], created_at: str, updated_at: str}
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+@required {ref: str, provider_id: str(uuid)}
+@optional {metadata_xml: str, metadata_url: str, domains: [str], attribute_mapping: map{keys!: map}, name_id_format: str(urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified/urn:oasis:names:tc:SAML:2.0:nameid-format:transient/urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress/urn:oasis:names:tc:SAML:2.0:nameid-format:persistent)}
+@returns(200) {id: str, saml: map{id: str, entity_id: str, metadata_url: str, metadata_xml: str, attribute_mapping: map{keys: map}, name_id_format: str}, domains: [map], created_at: str, updated_at: str}
+@errors {401, 403, 404, 429}
+
+@endpoint DELETE /v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+@required {ref: str, provider_id: str(uuid)}
+@returns(200) {id: str, saml: map{id: str, entity_id: str, metadata_url: str, metadata_xml: str, attribute_mapping: map{keys: map}, name_id_format: str}, domains: [map], created_at: str, updated_at: str}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /v1/projects/{ref}/database/backups
+@required {ref: str}
+@returns(200) {region: str, walg_enabled: bool, pitr_enabled: bool, backups: [map], physical_backup_data: map{earliest_physical_backup_date_unix: int, latest_physical_backup_date_unix: int}}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/backups/restore-pitr
+@required {ref: str, recovery_time_target_unix: int(int64)}
+@returns(201)
+@errors {401, 403, 429}
+
+@endpoint POST /v1/projects/{ref}/database/backups/restore-point
+@required {ref: str, name: str}
+@returns(201) {name: str, status: str}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/projects/{ref}/database/backups/restore-point
+@required {ref: str}
+@optional {name: str}
+@returns(200) {name: str, status: str}
+@errors {401, 403, 429, 500}
+
+@endpoint POST /v1/projects/{ref}/database/backups/undo
+@required {ref: str, name: str}
+@returns(201)
+@errors {401, 403, 429}
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations/{slug}/members
+@required {slug: str}
+@returns(200)
+
+@endpoint GET /v1/organizations/{slug}
+@required {slug: str}
+@returns(200) {id: str, name: str, plan: str, opt_in_tags: [str], allowed_release_channels: [str]}
+@errors {401, 403, 429}
+
+@endpoint GET /v1/organizations/{slug}/project-claim/{token}
+@required {slug: str, token: str}
+@returns(200) {project: map{ref: str, name: str}, preview: map{valid: bool, warnings: [map], errors: [map], info: [map], members_exceeding_free_project_limit: [map], source_subscription_plan: str, target_subscription_plan: str?}, expires_at: str, created_at: str, created_by: str(uuid)}
+@errors {401, 403, 429}
+
+@endpoint POST /v1/organizations/{slug}/project-claim/{token}
+@required {slug: str, token: str}
+@returns(204)
+@errors {401, 403, 429}
+
+@endpoint GET /v1/organizations/{slug}/projects
+@required {slug: str}
+@optional {offset: int=0, limit: int=100, search: str, sort: str(name_asc/name_desc/created_asc/created_desc)=name_asc, statuses: str}
+@returns(200) {projects: [map], pagination: map{count: num, limit: num, offset: num}}
+@errors {500}
+
+@endgroup
+
+@end

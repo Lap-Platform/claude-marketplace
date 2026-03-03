@@ -1,0 +1,578 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Backup
+@version 2018-11-15
+@auth AWS SigV4
+@endpoints 91
+@hint download_for_search
+@toc legal-holds(5), backup(14), backup-vaults(20), audit(16), logically-air-gapped-backup-vaults(1), restore-testing(11), backup-jobs(4), copy-jobs(3), global-settings(2), resources(4), account-settings(2), restore-jobs(5), supported-resource-types(1), tags(2), untag(1)
+
+@group legal-holds
+@endpoint DELETE /legal-holds/{legalHoldId}
+@required {LegalHoldId: str, cancelDescription: str}
+@optional {retainRecordInDays: int(i64)}
+
+@endgroup
+
+@group backup
+@endpoint PUT /backup/plans/
+@required {BackupPlan: BackupPlanInput}
+@optional {BackupPlanTags: map<str,str>, CreatorRequestId: str}
+@returns(200) {BackupPlanId: str?, BackupPlanArn: str?, CreationDate: str(timestamp)?, VersionId: str?, AdvancedBackupSettings: [AdvancedBackupSetting]?}
+
+@endpoint PUT /backup/plans/{backupPlanId}/selections/
+@required {BackupPlanId: str, BackupSelection: BackupSelection}
+@optional {CreatorRequestId: str}
+@returns(200) {SelectionId: str?, BackupPlanId: str?, CreationDate: str(timestamp)?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint PUT /backup-vaults/{backupVaultName}
+@required {BackupVaultName: str}
+@optional {BackupVaultTags: map<str,str>, EncryptionKeyArn: str, CreatorRequestId: str}
+@returns(200) {BackupVaultName: str?, BackupVaultArn: str?, CreationDate: str(timestamp)?}
+
+@endgroup
+
+@group audit
+@endpoint POST /audit/frameworks
+@required {FrameworkName: str, FrameworkControls: [FrameworkControl]}
+@optional {FrameworkDescription: str, IdempotencyToken: str, FrameworkTags: map<str,str>}
+@returns(200) {FrameworkName: str?, FrameworkArn: str?}
+
+@endgroup
+
+@group legal-holds
+@endpoint POST /legal-holds/
+@required {Title: str, Description: str}
+@optional {IdempotencyToken: str, RecoveryPointSelection: RecoveryPointSelection, Tags: map<str,str>}
+@returns(200) {Title: str?, Status: str?, Description: str?, LegalHoldId: str?, LegalHoldArn: str?, CreationDate: str(timestamp)?, RecoveryPointSelection: RecoveryPointSelection?{VaultNames: [str]?, ResourceIdentifiers: [str]?, DateRange: DateRange?{FromDate: str(timestamp), ToDate: str(timestamp)}}}
+
+@endgroup
+
+@group logically-air-gapped-backup-vaults
+@endpoint PUT /logically-air-gapped-backup-vaults/{backupVaultName}
+@required {BackupVaultName: str, MinRetentionDays: int(i64), MaxRetentionDays: int(i64)}
+@optional {BackupVaultTags: map<str,str>, CreatorRequestId: str}
+@returns(200) {BackupVaultName: str?, BackupVaultArn: str?, CreationDate: str(timestamp)?, VaultState: str?}
+
+@endgroup
+
+@group audit
+@endpoint POST /audit/report-plans
+@required {ReportPlanName: str, ReportDeliveryChannel: ReportDeliveryChannel, ReportSetting: ReportSetting}
+@optional {ReportPlanDescription: str, ReportPlanTags: map<str,str>, IdempotencyToken: str}
+@returns(200) {ReportPlanName: str?, ReportPlanArn: str?, CreationTime: str(timestamp)?}
+
+@endgroup
+
+@group restore-testing
+@endpoint PUT /restore-testing/plans
+@required {RestoreTestingPlan: RestoreTestingPlanForCreate}
+@optional {CreatorRequestId: str, Tags: map<str,str>}
+@returns(200) {CreationTime: str(timestamp), RestoreTestingPlanArn: str, RestoreTestingPlanName: str}
+
+@endpoint PUT /restore-testing/plans/{RestoreTestingPlanName}/selections
+@required {RestoreTestingPlanName: str, RestoreTestingSelection: RestoreTestingSelectionForCreate}
+@optional {CreatorRequestId: str}
+@returns(200) {CreationTime: str(timestamp), RestoreTestingPlanArn: str, RestoreTestingPlanName: str, RestoreTestingSelectionName: str}
+
+@endgroup
+
+@group backup
+@endpoint DELETE /backup/plans/{backupPlanId}
+@required {BackupPlanId: str}
+@returns(200) {BackupPlanId: str?, BackupPlanArn: str?, DeletionDate: str(timestamp)?, VersionId: str?}
+
+@endpoint DELETE /backup/plans/{backupPlanId}/selections/{selectionId}
+@required {BackupPlanId: str, SelectionId: str}
+
+@endgroup
+
+@group backup-vaults
+@endpoint DELETE /backup-vaults/{backupVaultName}
+@required {BackupVaultName: str}
+
+@endpoint DELETE /backup-vaults/{backupVaultName}/access-policy
+@required {BackupVaultName: str}
+
+@endpoint DELETE /backup-vaults/{backupVaultName}/vault-lock
+@required {BackupVaultName: str}
+
+@endpoint DELETE /backup-vaults/{backupVaultName}/notification-configuration
+@required {BackupVaultName: str}
+
+@endgroup
+
+@group audit
+@endpoint DELETE /audit/frameworks/{frameworkName}
+@required {FrameworkName: str}
+
+@endgroup
+
+@group backup-vaults
+@endpoint DELETE /backup-vaults/{backupVaultName}/recovery-points/{recoveryPointArn}
+@required {BackupVaultName: str, RecoveryPointArn: str}
+
+@endgroup
+
+@group audit
+@endpoint DELETE /audit/report-plans/{reportPlanName}
+@required {ReportPlanName: str}
+
+@endgroup
+
+@group restore-testing
+@endpoint DELETE /restore-testing/plans/{RestoreTestingPlanName}
+@required {RestoreTestingPlanName: str}
+
+@endpoint DELETE /restore-testing/plans/{RestoreTestingPlanName}/selections/{RestoreTestingSelectionName}
+@required {RestoreTestingPlanName: str, RestoreTestingSelectionName: str}
+
+@endgroup
+
+@group backup-jobs
+@endpoint GET /backup-jobs/{backupJobId}
+@required {BackupJobId: str}
+@returns(200) {AccountId: str?, BackupJobId: str?, BackupVaultName: str?, BackupVaultArn: str?, RecoveryPointArn: str?, ResourceArn: str?, CreationDate: str(timestamp)?, CompletionDate: str(timestamp)?, State: str?, StatusMessage: str?, PercentDone: str?, BackupSizeInBytes: int(i64)?, IamRoleArn: str?, CreatedBy: RecoveryPointCreator?{BackupPlanId: str?, BackupPlanArn: str?, BackupPlanVersion: str?, BackupRuleId: str?}, ResourceType: str?, BytesTransferred: int(i64)?, ExpectedCompletionDate: str(timestamp)?, StartBy: str(timestamp)?, BackupOptions: map<str,str>?, BackupType: str?, ParentJobId: str?, IsParent: bool?, NumberOfChildJobs: int(i64)?, ChildJobsInState: map<str,int(i64)>?, ResourceName: str?, InitiationDate: str(timestamp)?, MessageCategory: str?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint GET /backup-vaults/{backupVaultName}
+@required {BackupVaultName: str}
+@optional {backupVaultAccountId: str}
+@returns(200) {BackupVaultName: str?, BackupVaultArn: str?, VaultType: str?, VaultState: str?, EncryptionKeyArn: str?, CreationDate: str(timestamp)?, CreatorRequestId: str?, NumberOfRecoveryPoints: int(i64)?, Locked: bool?, MinRetentionDays: int(i64)?, MaxRetentionDays: int(i64)?, LockDate: str(timestamp)?}
+
+@endgroup
+
+@group copy-jobs
+@endpoint GET /copy-jobs/{copyJobId}
+@required {CopyJobId: str}
+@returns(200) {CopyJob: CopyJob?{AccountId: str?, CopyJobId: str?, SourceBackupVaultArn: str?, SourceRecoveryPointArn: str?, DestinationBackupVaultArn: str?, DestinationRecoveryPointArn: str?, ResourceArn: str?, CreationDate: str(timestamp)?, CompletionDate: str(timestamp)?, State: str?, StatusMessage: str?, BackupSizeInBytes: int(i64)?, IamRoleArn: str?, CreatedBy: RecoveryPointCreator?{BackupPlanId: str?, BackupPlanArn: str?, BackupPlanVersion: str?, BackupRuleId: str?}, ResourceType: str?, ParentJobId: str?, IsParent: bool?, CompositeMemberIdentifier: str?, NumberOfChildJobs: int(i64)?, ChildJobsInState: map<str,int(i64)>?, ResourceName: str?, MessageCategory: str?}}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/frameworks/{frameworkName}
+@required {FrameworkName: str}
+@returns(200) {FrameworkName: str?, FrameworkArn: str?, FrameworkDescription: str?, FrameworkControls: [FrameworkControl]?, CreationTime: str(timestamp)?, DeploymentStatus: str?, FrameworkStatus: str?, IdempotencyToken: str?}
+
+@endgroup
+
+@group global-settings
+@endpoint GET /global-settings
+@returns(200) {GlobalSettings: map<str,str>?, LastUpdateTime: str(timestamp)?}
+
+@endgroup
+
+@group resources
+@endpoint GET /resources/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {ResourceArn: str?, ResourceType: str?, LastBackupTime: str(timestamp)?, ResourceName: str?, LastBackupVaultArn: str?, LastRecoveryPointArn: str?, LatestRestoreExecutionTimeMinutes: int(i64)?, LatestRestoreJobCreationDate: str(timestamp)?, LatestRestoreRecoveryPointCreationDate: str(timestamp)?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint GET /backup-vaults/{backupVaultName}/recovery-points/{recoveryPointArn}
+@required {BackupVaultName: str, RecoveryPointArn: str}
+@optional {backupVaultAccountId: str}
+@returns(200) {RecoveryPointArn: str?, BackupVaultName: str?, BackupVaultArn: str?, SourceBackupVaultArn: str?, ResourceArn: str?, ResourceType: str?, CreatedBy: RecoveryPointCreator?{BackupPlanId: str?, BackupPlanArn: str?, BackupPlanVersion: str?, BackupRuleId: str?}, IamRoleArn: str?, Status: str?, StatusMessage: str?, CreationDate: str(timestamp)?, CompletionDate: str(timestamp)?, BackupSizeInBytes: int(i64)?, CalculatedLifecycle: CalculatedLifecycle?{MoveToColdStorageAt: str(timestamp)?, DeleteAt: str(timestamp)?}, Lifecycle: Lifecycle?{MoveToColdStorageAfterDays: int(i64)?, DeleteAfterDays: int(i64)?, OptInToArchiveForSupportedResources: bool?}, EncryptionKeyArn: str?, IsEncrypted: bool?, StorageClass: str?, LastRestoreTime: str(timestamp)?, ParentRecoveryPointArn: str?, CompositeMemberIdentifier: str?, IsParent: bool?, ResourceName: str?, VaultType: str?}
+
+@endgroup
+
+@group account-settings
+@endpoint GET /account-settings
+@returns(200) {ResourceTypeOptInPreference: map<str,bool>?, ResourceTypeManagementPreference: map<str,bool>?}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/report-jobs/{reportJobId}
+@required {ReportJobId: str}
+@returns(200) {ReportJob: ReportJob?{ReportJobId: str?, ReportPlanArn: str?, ReportTemplate: str?, CreationTime: str(timestamp)?, CompletionTime: str(timestamp)?, Status: str?, StatusMessage: str?, ReportDestination: ReportDestination?{S3BucketName: str?, S3Keys: [str]?}}}
+
+@endpoint GET /audit/report-plans/{reportPlanName}
+@required {ReportPlanName: str}
+@returns(200) {ReportPlan: ReportPlan?{ReportPlanArn: str?, ReportPlanName: str?, ReportPlanDescription: str?, ReportSetting: ReportSetting?{ReportTemplate: str, FrameworkArns: [str]?, NumberOfFrameworks: int?, Accounts: [str]?, OrganizationUnits: [str]?, Regions: [str]?}, ReportDeliveryChannel: ReportDeliveryChannel?{S3BucketName: str, S3KeyPrefix: str?, Formats: [str]?}, DeploymentStatus: str?, CreationTime: str(timestamp)?, LastAttemptedExecutionTime: str(timestamp)?, LastSuccessfulExecutionTime: str(timestamp)?}}
+
+@endgroup
+
+@group restore-jobs
+@endpoint GET /restore-jobs/{restoreJobId}
+@required {RestoreJobId: str}
+@returns(200) {AccountId: str?, RestoreJobId: str?, RecoveryPointArn: str?, CreationDate: str(timestamp)?, CompletionDate: str(timestamp)?, Status: str?, StatusMessage: str?, PercentDone: str?, BackupSizeInBytes: int(i64)?, IamRoleArn: str?, ExpectedCompletionTimeMinutes: int(i64)?, CreatedResourceArn: str?, ResourceType: str?, RecoveryPointCreationDate: str(timestamp)?, CreatedBy: RestoreJobCreator?{RestoreTestingPlanArn: str?}, ValidationStatus: str?, ValidationStatusMessage: str?, DeletionStatus: str?, DeletionStatusMessage: str?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint POST /backup-vaults/{backupVaultName}/recovery-points/{recoveryPointArn}/disassociate
+@required {BackupVaultName: str, RecoveryPointArn: str}
+
+@endpoint DELETE /backup-vaults/{backupVaultName}/recovery-points/{recoveryPointArn}/parentAssociation
+@required {BackupVaultName: str, RecoveryPointArn: str}
+
+@endgroup
+
+@group backup
+@endpoint GET /backup/plans/{backupPlanId}/toTemplate/
+@required {BackupPlanId: str}
+@returns(200) {BackupPlanTemplateJson: str?}
+
+@endpoint GET /backup/plans/{backupPlanId}/
+@required {BackupPlanId: str}
+@optional {versionId: str}
+@returns(200) {BackupPlan: BackupPlan?{BackupPlanName: str, Rules: [BackupRule], AdvancedBackupSettings: [AdvancedBackupSetting]?}, BackupPlanId: str?, BackupPlanArn: str?, VersionId: str?, CreatorRequestId: str?, CreationDate: str(timestamp)?, DeletionDate: str(timestamp)?, LastExecutionDate: str(timestamp)?, AdvancedBackupSettings: [AdvancedBackupSetting]?}
+
+@endpoint POST /backup/template/json/toPlan
+@required {BackupPlanTemplateJson: str}
+@returns(200) {BackupPlan: BackupPlan?{BackupPlanName: str, Rules: [BackupRule], AdvancedBackupSettings: [AdvancedBackupSetting]?}}
+
+@endpoint GET /backup/template/plans/{templateId}/toPlan
+@required {BackupPlanTemplateId: str}
+@returns(200) {BackupPlanDocument: BackupPlan?{BackupPlanName: str, Rules: [BackupRule], AdvancedBackupSettings: [AdvancedBackupSetting]?}}
+
+@endpoint GET /backup/plans/{backupPlanId}/selections/{selectionId}
+@required {BackupPlanId: str, SelectionId: str}
+@returns(200) {BackupSelection: BackupSelection?{SelectionName: str, IamRoleArn: str, Resources: [str]?, ListOfTags: [Condition]?, NotResources: [str]?, Conditions: Conditions?{StringEquals: [ConditionParameter]?, StringNotEquals: [ConditionParameter]?, StringLike: [ConditionParameter]?, StringNotLike: [ConditionParameter]?}}, SelectionId: str?, BackupPlanId: str?, CreationDate: str(timestamp)?, CreatorRequestId: str?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint GET /backup-vaults/{backupVaultName}/access-policy
+@required {BackupVaultName: str}
+@returns(200) {BackupVaultName: str?, BackupVaultArn: str?, Policy: str?}
+
+@endpoint GET /backup-vaults/{backupVaultName}/notification-configuration
+@required {BackupVaultName: str}
+@returns(200) {BackupVaultName: str?, BackupVaultArn: str?, SNSTopicArn: str?, BackupVaultEvents: [str]?}
+
+@endgroup
+
+@group legal-holds
+@endpoint GET /legal-holds/{legalHoldId}/
+@required {LegalHoldId: str}
+@returns(200) {Title: str?, Status: str?, Description: str?, CancelDescription: str?, LegalHoldId: str?, LegalHoldArn: str?, CreationDate: str(timestamp)?, CancellationDate: str(timestamp)?, RetainRecordUntil: str(timestamp)?, RecoveryPointSelection: RecoveryPointSelection?{VaultNames: [str]?, ResourceIdentifiers: [str]?, DateRange: DateRange?{FromDate: str(timestamp), ToDate: str(timestamp)}}}
+
+@endgroup
+
+@group backup-vaults
+@endpoint GET /backup-vaults/{backupVaultName}/recovery-points/{recoveryPointArn}/restore-metadata
+@required {BackupVaultName: str, RecoveryPointArn: str}
+@optional {backupVaultAccountId: str}
+@returns(200) {BackupVaultArn: str?, RecoveryPointArn: str?, RestoreMetadata: map<str,str>?, ResourceType: str?}
+
+@endgroup
+
+@group restore-jobs
+@endpoint GET /restore-jobs/{restoreJobId}/metadata
+@required {RestoreJobId: str}
+@returns(200) {RestoreJobId: str?, Metadata: map<str,str>?}
+
+@endgroup
+
+@group restore-testing
+@endpoint GET /restore-testing/inferred-metadata
+@required {BackupVaultName: str, RecoveryPointArn: str}
+@optional {BackupVaultAccountId: str}
+@returns(200) {InferredMetadata: map<str,str>}
+
+@endpoint GET /restore-testing/plans/{RestoreTestingPlanName}
+@required {RestoreTestingPlanName: str}
+@returns(200) {RestoreTestingPlan: RestoreTestingPlanForGet{CreationTime: str(timestamp), CreatorRequestId: str?, LastExecutionTime: str(timestamp)?, LastUpdateTime: str(timestamp)?, RecoveryPointSelection: RestoreTestingRecoveryPointSelection{Algorithm: str?, ExcludeVaults: [str]?, IncludeVaults: [str]?, RecoveryPointTypes: [str]?, SelectionWindowDays: int?}, RestoreTestingPlanArn: str, RestoreTestingPlanName: str, ScheduleExpression: str, ScheduleExpressionTimezone: str?, StartWindowHours: int?}}
+
+@endpoint GET /restore-testing/plans/{RestoreTestingPlanName}/selections/{RestoreTestingSelectionName}
+@required {RestoreTestingPlanName: str, RestoreTestingSelectionName: str}
+@returns(200) {RestoreTestingSelection: RestoreTestingSelectionForGet{CreationTime: str(timestamp), CreatorRequestId: str?, IamRoleArn: str, ProtectedResourceArns: [str]?, ProtectedResourceConditions: ProtectedResourceConditions?{StringEquals: [KeyValue]?, StringNotEquals: [KeyValue]?}, ProtectedResourceType: str, RestoreMetadataOverrides: map<str,str>?, RestoreTestingPlanName: str, RestoreTestingSelectionName: str, ValidationWindowHours: int?}}
+
+@endgroup
+
+@group supported-resource-types
+@endpoint GET /supported-resource-types
+@returns(200) {ResourceTypes: [str]?}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/backup-job-summaries
+@optional {AccountId: str, State: str, ResourceType: str, MessageCategory: str, AggregationPeriod: str, MaxResults: int, NextToken: str}
+@returns(200) {BackupJobSummaries: [BackupJobSummary]?, AggregationPeriod: str?, NextToken: str?}
+
+@endgroup
+
+@group backup-jobs
+@endpoint GET /backup-jobs/
+@optional {nextToken: str, maxResults: int, resourceArn: str, state: str, backupVaultName: str, createdBefore: str(timestamp), createdAfter: str(timestamp), resourceType: str, accountId: str, completeAfter: str(timestamp), completeBefore: str(timestamp), parentJobId: str, messageCategory: str}
+@returns(200) {BackupJobs: [BackupJob]?, NextToken: str?}
+
+@endgroup
+
+@group backup
+@endpoint GET /backup/template/plans
+@optional {nextToken: str, maxResults: int}
+@returns(200) {NextToken: str?, BackupPlanTemplatesList: [BackupPlanTemplatesListMember]?}
+
+@endpoint GET /backup/plans/{backupPlanId}/versions/
+@required {BackupPlanId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {NextToken: str?, BackupPlanVersionsList: [BackupPlansListMember]?}
+
+@endpoint GET /backup/plans/
+@optional {nextToken: str, maxResults: int, includeDeleted: bool}
+@returns(200) {NextToken: str?, BackupPlansList: [BackupPlansListMember]?}
+
+@endpoint GET /backup/plans/{backupPlanId}/selections/
+@required {BackupPlanId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {NextToken: str?, BackupSelectionsList: [BackupSelectionsListMember]?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint GET /backup-vaults/
+@optional {vaultType: str, shared: bool, nextToken: str, maxResults: int}
+@returns(200) {BackupVaultList: [BackupVaultListMember]?, NextToken: str?}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/copy-job-summaries
+@optional {AccountId: str, State: str, ResourceType: str, MessageCategory: str, AggregationPeriod: str, MaxResults: int, NextToken: str}
+@returns(200) {CopyJobSummaries: [CopyJobSummary]?, AggregationPeriod: str?, NextToken: str?}
+
+@endgroup
+
+@group copy-jobs
+@endpoint GET /copy-jobs/
+@optional {nextToken: str, maxResults: int, resourceArn: str, state: str, createdBefore: str(timestamp), createdAfter: str(timestamp), resourceType: str, destinationVaultArn: str, accountId: str, completeBefore: str(timestamp), completeAfter: str(timestamp), parentJobId: str, messageCategory: str}
+@returns(200) {CopyJobs: [CopyJob]?, NextToken: str?}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/frameworks
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Frameworks: [Framework]?, NextToken: str?}
+
+@endgroup
+
+@group legal-holds
+@endpoint GET /legal-holds/
+@optional {nextToken: str, maxResults: int}
+@returns(200) {NextToken: str?, LegalHolds: [LegalHold]?}
+
+@endgroup
+
+@group resources
+@endpoint GET /resources/
+@optional {nextToken: str, maxResults: int}
+@returns(200) {Results: [ProtectedResource]?, NextToken: str?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint GET /backup-vaults/{backupVaultName}/resources/
+@required {BackupVaultName: str}
+@optional {backupVaultAccountId: str, nextToken: str, maxResults: int}
+@returns(200) {Results: [ProtectedResource]?, NextToken: str?}
+
+@endpoint GET /backup-vaults/{backupVaultName}/recovery-points/
+@required {BackupVaultName: str}
+@optional {backupVaultAccountId: str, nextToken: str, maxResults: int, resourceArn: str, resourceType: str, backupPlanId: str, createdBefore: str(timestamp), createdAfter: str(timestamp), parentRecoveryPointArn: str}
+@returns(200) {NextToken: str?, RecoveryPoints: [RecoveryPointByBackupVault]?}
+
+@endgroup
+
+@group legal-holds
+@endpoint GET /legal-holds/{legalHoldId}/recovery-points
+@required {LegalHoldId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {RecoveryPoints: [RecoveryPointMember]?, NextToken: str?}
+
+@endgroup
+
+@group resources
+@endpoint GET /resources/{resourceArn}/recovery-points/
+@required {ResourceArn: str}
+@optional {nextToken: str, maxResults: int, managedByAWSBackupOnly: bool}
+@returns(200) {NextToken: str?, RecoveryPoints: [RecoveryPointByResource]?}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/report-jobs
+@optional {ReportPlanName: str, CreationBefore: str(timestamp), CreationAfter: str(timestamp), Status: str, MaxResults: int, NextToken: str}
+@returns(200) {ReportJobs: [ReportJob]?, NextToken: str?}
+
+@endpoint GET /audit/report-plans
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {ReportPlans: [ReportPlan]?, NextToken: str?}
+
+@endpoint GET /audit/restore-job-summaries
+@optional {AccountId: str, State: str, ResourceType: str, AggregationPeriod: str, MaxResults: int, NextToken: str}
+@returns(200) {RestoreJobSummaries: [RestoreJobSummary]?, AggregationPeriod: str?, NextToken: str?}
+
+@endgroup
+
+@group restore-jobs
+@endpoint GET /restore-jobs/
+@optional {nextToken: str, maxResults: int, accountId: str, resourceType: str, createdBefore: str(timestamp), createdAfter: str(timestamp), status: str, completeBefore: str(timestamp), completeAfter: str(timestamp), restoreTestingPlanArn: str}
+@returns(200) {RestoreJobs: [RestoreJobsListMember]?, NextToken: str?}
+
+@endgroup
+
+@group resources
+@endpoint GET /resources/{resourceArn}/restore-jobs/
+@required {ResourceArn: str}
+@optional {status: str, recoveryPointCreationDateAfter: str(timestamp), recoveryPointCreationDateBefore: str(timestamp), nextToken: str, maxResults: int}
+@returns(200) {RestoreJobs: [RestoreJobsListMember]?, NextToken: str?}
+
+@endgroup
+
+@group restore-testing
+@endpoint GET /restore-testing/plans
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {NextToken: str?, RestoreTestingPlans: [RestoreTestingPlanForList]}
+
+@endpoint GET /restore-testing/plans/{RestoreTestingPlanName}/selections
+@required {RestoreTestingPlanName: str}
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {NextToken: str?, RestoreTestingSelections: [RestoreTestingSelectionForList]}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}/
+@required {ResourceArn: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {NextToken: str?, Tags: map<str,str>?}
+
+@endgroup
+
+@group backup-vaults
+@endpoint PUT /backup-vaults/{backupVaultName}/access-policy
+@required {BackupVaultName: str}
+@optional {Policy: str}
+
+@endpoint PUT /backup-vaults/{backupVaultName}/vault-lock
+@required {BackupVaultName: str}
+@optional {MinRetentionDays: int(i64), MaxRetentionDays: int(i64), ChangeableForDays: int(i64)}
+
+@endpoint PUT /backup-vaults/{backupVaultName}/notification-configuration
+@required {BackupVaultName: str, SNSTopicArn: str, BackupVaultEvents: [str]}
+
+@endgroup
+
+@group restore-jobs
+@endpoint PUT /restore-jobs/{restoreJobId}/validations
+@required {RestoreJobId: str, ValidationStatus: str}
+@optional {ValidationStatusMessage: str}
+
+@endgroup
+
+@group backup-jobs
+@endpoint PUT /backup-jobs
+@required {BackupVaultName: str, ResourceArn: str, IamRoleArn: str}
+@optional {IdempotencyToken: str, StartWindowMinutes: int(i64), CompleteWindowMinutes: int(i64), Lifecycle: Lifecycle, RecoveryPointTags: map<str,str>, BackupOptions: map<str,str>}
+@returns(200) {BackupJobId: str?, RecoveryPointArn: str?, CreationDate: str(timestamp)?, IsParent: bool?}
+
+@endgroup
+
+@group copy-jobs
+@endpoint PUT /copy-jobs
+@required {RecoveryPointArn: str, SourceBackupVaultName: str, DestinationBackupVaultArn: str, IamRoleArn: str}
+@optional {IdempotencyToken: str, Lifecycle: Lifecycle}
+@returns(200) {CopyJobId: str?, CreationDate: str(timestamp)?, IsParent: bool?}
+
+@endgroup
+
+@group audit
+@endpoint POST /audit/report-jobs/{reportPlanName}
+@required {ReportPlanName: str}
+@optional {IdempotencyToken: str}
+@returns(200) {ReportJobId: str?}
+
+@endgroup
+
+@group restore-jobs
+@endpoint PUT /restore-jobs
+@required {RecoveryPointArn: str, Metadata: map<str,str>}
+@optional {IamRoleArn: str, IdempotencyToken: str, ResourceType: str, CopySourceTagsToRestoredResource: bool}
+@returns(200) {RestoreJobId: str?}
+
+@endgroup
+
+@group backup-jobs
+@endpoint POST /backup-jobs/{backupJobId}
+@required {BackupJobId: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endgroup
+
+@group untag
+@endpoint POST /untag/{resourceArn}
+@required {ResourceArn: str, TagKeyList: [str]}
+
+@endgroup
+
+@group backup
+@endpoint POST /backup/plans/{backupPlanId}
+@required {BackupPlanId: str, BackupPlan: BackupPlanInput}
+@returns(200) {BackupPlanId: str?, BackupPlanArn: str?, CreationDate: str(timestamp)?, VersionId: str?, AdvancedBackupSettings: [AdvancedBackupSetting]?}
+
+@endgroup
+
+@group audit
+@endpoint PUT /audit/frameworks/{frameworkName}
+@required {FrameworkName: str}
+@optional {FrameworkDescription: str, FrameworkControls: [FrameworkControl], IdempotencyToken: str}
+@returns(200) {FrameworkName: str?, FrameworkArn: str?, CreationTime: str(timestamp)?}
+
+@endgroup
+
+@group global-settings
+@endpoint PUT /global-settings
+@optional {GlobalSettings: map<str,str>}
+
+@endgroup
+
+@group backup-vaults
+@endpoint POST /backup-vaults/{backupVaultName}/recovery-points/{recoveryPointArn}
+@required {BackupVaultName: str, RecoveryPointArn: str}
+@optional {Lifecycle: Lifecycle}
+@returns(200) {BackupVaultArn: str?, RecoveryPointArn: str?, Lifecycle: Lifecycle?{MoveToColdStorageAfterDays: int(i64)?, DeleteAfterDays: int(i64)?, OptInToArchiveForSupportedResources: bool?}, CalculatedLifecycle: CalculatedLifecycle?{MoveToColdStorageAt: str(timestamp)?, DeleteAt: str(timestamp)?}}
+
+@endgroup
+
+@group account-settings
+@endpoint PUT /account-settings
+@optional {ResourceTypeOptInPreference: map<str,bool>, ResourceTypeManagementPreference: map<str,bool>}
+
+@endgroup
+
+@group audit
+@endpoint PUT /audit/report-plans/{reportPlanName}
+@required {ReportPlanName: str}
+@optional {ReportPlanDescription: str, ReportDeliveryChannel: ReportDeliveryChannel, ReportSetting: ReportSetting, IdempotencyToken: str}
+@returns(200) {ReportPlanName: str?, ReportPlanArn: str?, CreationTime: str(timestamp)?}
+
+@endgroup
+
+@group restore-testing
+@endpoint PUT /restore-testing/plans/{RestoreTestingPlanName}
+@required {RestoreTestingPlanName: str, RestoreTestingPlan: RestoreTestingPlanForUpdate}
+@returns(200) {CreationTime: str(timestamp), RestoreTestingPlanArn: str, RestoreTestingPlanName: str, UpdateTime: str(timestamp)}
+
+@endpoint PUT /restore-testing/plans/{RestoreTestingPlanName}/selections/{RestoreTestingSelectionName}
+@required {RestoreTestingPlanName: str, RestoreTestingSelectionName: str, RestoreTestingSelection: RestoreTestingSelectionForUpdate}
+@returns(200) {CreationTime: str(timestamp), RestoreTestingPlanArn: str, RestoreTestingPlanName: str, RestoreTestingSelectionName: str, UpdateTime: str(timestamp)}
+
+@endgroup
+
+@end

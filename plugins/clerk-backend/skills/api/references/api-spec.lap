@@ -1,0 +1,1150 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Clerk Backend API
+@base https://api.clerk.com/v1
+@version 2025-11-10
+@auth Bearer bearer
+@endpoints 195
+@hint download_for_search
+@toc public(1), jwks(1), clients(3), email_addresses(4), phone_numbers(4), sessions(7), templates(6), users(29), invitations(4), organization_invitations(1), allowlist_identifiers(3), blocklist_identifiers(3), beta_features(2), actor_tokens(2), domains(4), instance(7), webhooks(3), jwt_templates(5), machines(9), organizations(24), organization_roles(7), organization_domains(1), proxy_checks(1), redirect_urls(4), sign_in_tokens(2), sign_ups(2), oauth_applications(7), saml_connections(5), testing_tokens(1), agents(2), organization_memberships(1), waitlist_entries(6), billing(10), organization_permissions(5), role_sets(7), api_keys(8), m2m_tokens(4)
+
+@group public
+@endpoint GET /public/interstitial
+@optional {frontendApi: str, frontend_api: str, publishable_key: str, proxy_url: str, domain: str, sign_in_url: str, use_domain_for_script: bool}
+@returns(200)
+@errors {400, 500}
+
+@endgroup
+
+@group jwks
+@endpoint GET /jwks
+@returns(200) {keys: [any]}
+
+@endgroup
+
+@group clients
+@endpoint GET /clients
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+@errors {400, 401, 410, 422}
+
+@endpoint POST /clients/verify
+@required {token: str}
+@returns(200) {object: str, id: str, session_ids: [str], sessions: [map], sign_in_id: str?, sign_up_id: str?, last_active_session_id: str?, last_authentication_strategy: str?, updated_at: int(int64), created_at: int(int64)}
+@errors {400, 401, 404}
+
+@endpoint GET /clients/{client_id}
+@required {client_id: str}
+@returns(200) {object: str, id: str, session_ids: [str], sessions: [map], sign_in_id: str?, sign_up_id: str?, last_active_session_id: str?, last_authentication_strategy: str?, updated_at: int(int64), created_at: int(int64)}
+@errors {400, 401, 404}
+
+@endgroup
+
+@group email_addresses
+@endpoint POST /email_addresses
+@required {user_id: str, email_address: str}
+@optional {verified: bool, primary: bool}
+@returns(200) {id: str, object: str, email_address: str, reserved: bool, verification: map?, linked_to: [map], matches_sso_connection: bool, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 409, 422}
+
+@endpoint GET /email_addresses/{email_address_id}
+@required {email_address_id: str}
+@returns(200) {id: str, object: str, email_address: str, reserved: bool, verification: map?, linked_to: [map], matches_sso_connection: bool, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /email_addresses/{email_address_id}
+@required {email_address_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 401, 403, 404}
+
+@endpoint PATCH /email_addresses/{email_address_id}
+@required {email_address_id: str}
+@optional {verified: bool, primary: bool}
+@returns(200) {id: str, object: str, email_address: str, reserved: bool, verification: map?, linked_to: [map], matches_sso_connection: bool, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 409}
+
+@endgroup
+
+@group phone_numbers
+@endpoint POST /phone_numbers
+@required {user_id: str, phone_number: str}
+@optional {verified: bool, primary: bool, reserved_for_second_factor: bool}
+@returns(200) {id: str, object: str, phone_number: str, reserved_for_second_factor: bool, default_second_factor: bool, reserved: bool, verification: map?, linked_to: [map], backup_codes: [str]?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint GET /phone_numbers/{phone_number_id}
+@required {phone_number_id: str}
+@returns(200) {id: str, object: str, phone_number: str, reserved_for_second_factor: bool, default_second_factor: bool, reserved: bool, verification: map?, linked_to: [map], backup_codes: [str]?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /phone_numbers/{phone_number_id}
+@required {phone_number_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 401, 403, 404}
+
+@endpoint PATCH /phone_numbers/{phone_number_id}
+@required {phone_number_id: str}
+@optional {verified: bool, primary: bool, reserved_for_second_factor: bool}
+@returns(200) {id: str, object: str, phone_number: str, reserved_for_second_factor: bool, default_second_factor: bool, reserved: bool, verification: map?, linked_to: [map], backup_codes: [str]?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group sessions
+@endpoint GET /sessions
+@optional {client_id: str, user_id: str, status: str(abandoned/active/ended/expired/removed/replaced/revoked), paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+@errors {400, 401, 422}
+
+@endpoint POST /sessions
+@required {user_id: str}
+@optional {active_organization_id: str}
+@returns(200) {object: str, id: str, user_id: str, client_id: str, actor: map?, status: str, last_active_organization_id: str?, last_active_at: int, latest_activity: map?{object: str, id: str, device_type: str, is_mobile: bool, browser_name: str, browser_version: str, ip_address: str, city: str, country: str}, expire_at: int(int64), abandon_at: int(int64), updated_at: int(int64), created_at: int(int64), tasks: [map]?}
+@errors {400, 401, 404, 422}
+
+@endpoint GET /sessions/{session_id}
+@required {session_id: str}
+@returns(200) {object: str, id: str, user_id: str, client_id: str, actor: map?, status: str, last_active_organization_id: str?, last_active_at: int, latest_activity: map?{object: str, id: str, device_type: str, is_mobile: bool, browser_name: str, browser_version: str, ip_address: str, city: str, country: str}, expire_at: int(int64), abandon_at: int(int64), updated_at: int(int64), created_at: int(int64), tasks: [map]?}
+@errors {400, 401, 404}
+
+@endpoint POST /sessions/{session_id}/refresh
+@required {session_id: str, expired_token: str, refresh_token: str, request_origin: str}
+@optional {request_headers: map, format: str(token/cookie)=token, request_originating_ip: str}
+@returns(200)
+@errors {400, 401}
+
+@endpoint POST /sessions/{session_id}/revoke
+@required {session_id: str}
+@returns(200) {object: str, id: str, user_id: str, client_id: str, actor: map?, status: str, last_active_organization_id: str?, last_active_at: int, latest_activity: map?{object: str, id: str, device_type: str, is_mobile: bool, browser_name: str, browser_version: str, ip_address: str, city: str, country: str}, expire_at: int(int64), abandon_at: int(int64), updated_at: int(int64), created_at: int(int64), tasks: [map]?}
+@errors {400, 401, 404}
+
+@endpoint POST /sessions/{session_id}/tokens
+@required {session_id: str}
+@optional {expires_in_seconds: int}
+@returns(200) {object: str, jwt: str}
+@errors {401, 404}
+
+@endpoint POST /sessions/{session_id}/tokens/{template_name}
+@required {session_id: str, template_name: str}
+@optional {expires_in_seconds: int}
+@returns(200) {object: str, jwt: str}
+@errors {401, 404}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates/{template_type}
+@required {template_type: str(email/sms)}
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+@errors {400, 401, 422}
+
+@endpoint GET /templates/{template_type}/{slug}
+@required {template_type: str(email/sms), slug: str}
+@returns(200) {id: str, object: str, instance_id: str?, resource_type: str, template_type: str, name: str, slug: str, position: int, can_revert: bool, can_delete: bool, can_edit_body: bool, can_toggle: bool, subject: str?, markup: str, body: str, available_variables: [str], required_variables: [str], from_email_name: str, reply_to_email_name: str, delivered_by_clerk: bool, enabled: bool, flagged_as_suspicious: bool, updated_at: int(int64), created_at: int(int64)}
+@errors {400, 401, 404}
+
+@endpoint PUT /templates/{template_type}/{slug}
+@required {template_type: str(email/sms), slug: str}
+@optional {name: str, subject: str, markup: str, body: str, delivered_by_clerk: bool, from_email_name: str, reply_to_email_name: str}
+@returns(200) {id: str, object: str, instance_id: str?, resource_type: str, template_type: str, name: str, slug: str, position: int, can_revert: bool, can_delete: bool, can_edit_body: bool, can_toggle: bool, subject: str?, markup: str, body: str, available_variables: [str], required_variables: [str], from_email_name: str, reply_to_email_name: str, delivered_by_clerk: bool, enabled: bool, flagged_as_suspicious: bool, updated_at: int(int64), created_at: int(int64)}
+@errors {400, 401, 402, 403, 404, 422}
+
+@endpoint POST /templates/{template_type}/{slug}/revert
+@required {template_type: str(email/sms), slug: str}
+@returns(200) {id: str, object: str, instance_id: str?, resource_type: str, template_type: str, name: str, slug: str, position: int, can_revert: bool, can_delete: bool, can_edit_body: bool, can_toggle: bool, subject: str?, markup: str, body: str, available_variables: [str], required_variables: [str], from_email_name: str, reply_to_email_name: str, delivered_by_clerk: bool, enabled: bool, flagged_as_suspicious: bool, updated_at: int(int64), created_at: int(int64)}
+@errors {400, 401, 402, 404}
+
+@endpoint POST /templates/{template_type}/{slug}/preview
+@required {template_type: str, slug: str}
+@optional {subject: str, body: str, from_email_name: str, reply_to_email_name: str}
+@returns(200)
+@errors {400, 401, 404, 422}
+
+@endpoint POST /templates/{template_type}/{slug}/toggle_delivery
+@required {template_type: str(email/sms), slug: str}
+@optional {delivered_by_clerk: bool}
+@returns(200) {id: str, object: str, instance_id: str?, resource_type: str, template_type: str, name: str, slug: str, position: int, can_revert: bool, can_delete: bool, can_edit_body: bool, can_toggle: bool, subject: str?, markup: str, body: str, available_variables: [str], required_variables: [str], from_email_name: str, reply_to_email_name: str, delivered_by_clerk: bool, enabled: bool, flagged_as_suspicious: bool, updated_at: int(int64), created_at: int(int64)}
+@errors {400, 401, 404}
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@optional {email_address: [str], phone_number: [str], external_id: [str], username: [str], web3_wallet: [str], user_id: [str], organization_id: [str], query: str, email_address_query: str, phone_number_query: str, username_query: str, name_query: str, banned: bool, last_active_at_before: int, last_active_at_after: int, last_active_at_since: int, created_at_before: int, created_at_after: int, last_sign_in_at_before: int, last_sign_in_at_after: int, provider: str, provider_user_id: [str], limit: int=10, offset: int=0, order_by: str=-created_at}
+@returns(200)
+@errors {400, 401, 422}
+
+@endpoint POST /users
+@optional {external_id: str, first_name: str, last_name: str, locale: str, email_address: [str], phone_number: [str], web3_wallet: [str], username: str, password: str, password_digest: str, password_hasher: str, skip_password_checks: bool, skip_password_requirement: bool, totp_secret: str, backup_codes: [str], public_metadata: map, private_metadata: map, unsafe_metadata: map, delete_self_enabled: bool, legal_accepted_at: str, skip_legal_checks: bool, skip_user_requirement: bool, create_organization_enabled: bool, create_organizations_limit: int, created_at: str, bypass_client_trust: bool}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 403, 422}
+
+@endpoint GET /users/count
+@optional {email_address: [str], phone_number: [str], external_id: [str], username: [str], web3_wallet: [str], user_id: [str], organization_id: [str], query: str, email_address_query: str, phone_number_query: str, username_query: str, name_query: str, banned: bool, last_active_at_before: int, last_active_at_after: int, last_active_at_since: int, created_at_before: int, created_at_after: int, last_sign_in_at_before: int, last_sign_in_at_after: int, provider: str, provider_user_id: [str]}
+@returns(200) {object: str, total_count: int(int64)}
+@errors {422}
+
+@endpoint GET /users/{user_id}
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 404}
+
+@endpoint PATCH /users/{user_id}
+@required {user_id: str}
+@optional {external_id: str, first_name: str, last_name: str, locale: str, primary_email_address_id: str, notify_primary_email_address_changed: bool=False, primary_phone_number_id: str, primary_web3_wallet_id: str, username: str, profile_image_id: str, password: str, password_digest: str, password_hasher: str, skip_password_checks: bool, sign_out_of_other_sessions: bool, totp_secret: str, backup_codes: [str], public_metadata: map, private_metadata: map, unsafe_metadata: map, delete_self_enabled: bool, create_organization_enabled: bool, legal_accepted_at: str, skip_legal_checks: bool, create_organizations_limit: int, created_at: str, bypass_client_trust: bool}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 404, 409, 422}
+
+@endpoint DELETE /users/{user_id}
+@required {user_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 401, 404}
+
+@endpoint POST /users/{user_id}/ban
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {402}
+
+@endpoint POST /users/{user_id}/unban
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {402}
+
+@endpoint POST /users/ban
+@required {user_ids: [str]}
+@returns(200)
+@errors {400, 402}
+
+@endpoint POST /users/unban
+@required {user_ids: [str]}
+@returns(200)
+@errors {400, 402}
+
+@endpoint POST /users/{user_id}/lock
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {403}
+
+@endpoint POST /users/{user_id}/unlock
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {403}
+
+@endpoint POST /users/{user_id}/profile_image
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 404}
+
+@endpoint DELETE /users/{user_id}/profile_image
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {404}
+
+@endpoint PATCH /users/{user_id}/metadata
+@required {user_id: str}
+@optional {public_metadata: map, private_metadata: map, unsafe_metadata: map}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 404, 422}
+
+@endpoint GET /users/{user_id}/billing/subscription
+@required {user_id: str}
+@returns(200) {object: str, id: str, instance_id: str, status: str, payer_id: str, created_at: int(int64), updated_at: int(int64), active_at: int(int64)?, past_due_at: int(int64)?, subscription_items: [map], next_payment: map{date: int(int64), amount: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}}, eligible_for_free_trial: bool}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint GET /users/{user_id}/oauth_access_tokens/{provider}
+@required {user_id: str, provider: str}
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+@errors {400, 404, 422}
+
+@endpoint GET /users/{user_id}/organization_memberships
+@required {user_id: str}
+@optional {limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {403}
+
+@endpoint GET /users/{user_id}/organization_invitations
+@required {user_id: str}
+@optional {limit: int=10, offset: int=0, status: str(pending/accepted/revoked/expired)}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 403, 404}
+
+@endpoint POST /users/{user_id}/verify_password
+@required {user_id: str, password: str}
+@returns(200) {verified: bool}
+@errors {400, 404, 422, 500}
+
+@endpoint POST /users/{user_id}/verify_totp
+@required {user_id: str, code: str}
+@returns(200) {verified: bool, code_type: str}
+@errors {400, 404, 422, 500}
+
+@endpoint DELETE /users/{user_id}/mfa
+@required {user_id: str}
+@returns(200) {user_id: str}
+@errors {404, 500}
+
+@endpoint DELETE /users/{user_id}/backup_code
+@required {user_id: str}
+@returns(200) {user_id: str}
+@errors {404, 500}
+
+@endpoint DELETE /users/{user_id}/passkeys/{passkey_identification_id}
+@required {user_id: str, passkey_identification_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {403, 404, 500}
+
+@endpoint DELETE /users/{user_id}/web3_wallets/{web3_wallet_identification_id}
+@required {user_id: str, web3_wallet_identification_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /users/{user_id}/totp
+@required {user_id: str}
+@returns(200) {user_id: str}
+@errors {404, 500}
+
+@endpoint DELETE /users/{user_id}/external_accounts/{external_account_id}
+@required {user_id: str, external_account_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 403, 404, 500}
+
+@endpoint POST /users/{user_id}/password/set_compromised
+@required {user_id: str}
+@optional {revoke_all_sessions: bool}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint POST /users/{user_id}/password/unset_compromised
+@required {user_id: str}
+@returns(200) {id: str, object: str, external_id: str?, primary_email_address_id: str?, primary_phone_number_id: str?, primary_web3_wallet_id: str?, username: str?, first_name: str?, last_name: str?, locale: str?, profile_image_url: str, image_url: str, has_image: bool, public_metadata: map, private_metadata: map?, unsafe_metadata: map, email_addresses: [map], phone_numbers: [map], web3_wallets: [map], passkeys: [map], password_enabled: bool, two_factor_enabled: bool, totp_enabled: bool, backup_code_enabled: bool, mfa_enabled_at: int(int64)?, mfa_disabled_at: int(int64)?, password_last_updated_at: int(int64)?, external_accounts: [map], saml_accounts: [map], enterprise_accounts: [map], organization_memberships: [map], last_sign_in_at: int(int64)?, banned: bool, locked: bool, lockout_expires_in_seconds: int(int64)?, verification_attempts_remaining: int(int64)?, updated_at: int(int64), created_at: int(int64), delete_self_enabled: bool, create_organization_enabled: bool, create_organizations_limit: int?, last_active_at: int(int64)?, legal_accepted_at: int(int64)?, bypass_client_trust: bool}
+@errors {400, 401, 403, 404, 422}
+
+@endgroup
+
+@group invitations
+@endpoint POST /invitations
+@required {email_address: str}
+@optional {public_metadata: map, redirect_url: str, notify: bool=True, ignore_existing: bool=False, expires_in_days: int, template_slug: str(invitation/waitlist_invitation)}
+@returns(200) {object: str, id: str, email_address: str(email), public_metadata: map, revoked: bool, status: str, url: str, expires_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 422}
+
+@endpoint GET /invitations
+@optional {status: str(pending/accepted/revoked/expired), query: str, order_by: str=-created_at, paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+
+@endpoint POST /invitations/bulk
+@returns(200)
+@errors {400, 422}
+
+@endpoint POST /invitations/{invitation_id}/revoke
+@required {invitation_id: str}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group organization_invitations
+@endpoint GET /organization_invitations
+@optional {order_by: str=-created_at, status: str(pending/accepted/revoked/expired), query: str, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 404, 422, 500}
+
+@endgroup
+
+@group allowlist_identifiers
+@endpoint GET /allowlist_identifiers
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+@errors {401, 402}
+
+@endpoint POST /allowlist_identifiers
+@required {identifier: str}
+@optional {notify: bool=False}
+@returns(200) {object: str, id: str, invitation_id: str, identifier: str, identifier_type: str, instance_id: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 402, 422}
+
+@endpoint DELETE /allowlist_identifiers/{identifier_id}
+@required {identifier_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {402, 404}
+
+@endgroup
+
+@group blocklist_identifiers
+@endpoint GET /blocklist_identifiers
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {401, 402}
+
+@endpoint POST /blocklist_identifiers
+@required {identifier: str}
+@returns(200) {object: str, id: str, identifier: str, identifier_type: str, instance_id: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 402, 422}
+
+@endpoint DELETE /blocklist_identifiers/{identifier_id}
+@required {identifier_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {402, 404}
+
+@endgroup
+
+@group beta_features
+@endpoint PATCH /beta_features/instance_settings
+@optional {restricted_to_allowlist: bool=False, from_email_address: str, progressive_sign_up: bool, test_mode: bool}
+@returns(200) {object: str, id: str, restricted_to_allowlist: bool, from_email_address: str, progressive_sign_up: bool, enhanced_email_deliverability: bool}
+@errors {402, 422}
+
+@endpoint PUT /beta_features/domain
+@optional {home_url: str, is_secondary: bool}
+@returns(202)
+@errors {400, 422}
+
+@endgroup
+
+@group actor_tokens
+@endpoint POST /actor_tokens
+@required {user_id: str, actor: map{sub!: str}}
+@optional {expires_in_seconds: int=3600, session_max_duration_in_seconds: int=1800}
+@returns(200) {object: str, id: str, status: str, user_id: str, actor: map, token: str, url: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 402, 422}
+
+@endpoint POST /actor_tokens/{actor_token_id}/revoke
+@required {actor_token_id: str}
+@returns(200) {object: str, id: str, status: str, user_id: str, actor: map, token: str, url: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 404}
+
+@endgroup
+
+@group domains
+@endpoint GET /domains
+@returns(200) {data: [map], total_count: int(int64)}
+
+@endpoint POST /domains
+@required {name: str, is_satellite: bool}
+@optional {proxy_url: str}
+@returns(200) {object: str, id: str, name: str, is_satellite: bool, frontend_api_url: str, accounts_portal_url: str?, proxy_url: str?, development_origin: str, cname_targets: [map]?}
+@errors {400, 402, 422}
+
+@endpoint DELETE /domains/{domain_id}
+@required {domain_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {403, 404}
+
+@endpoint PATCH /domains/{domain_id}
+@required {domain_id: str}
+@optional {name: str, proxy_url: str, is_secondary: bool}
+@returns(200) {object: str, id: str, name: str, is_satellite: bool, frontend_api_url: str, accounts_portal_url: str?, proxy_url: str?, development_origin: str, cname_targets: [map]?}
+@errors {400, 404, 422}
+
+@endgroup
+
+@group instance
+@endpoint GET /instance
+@returns(200) {object: str, id: str, environment_type: str, allowed_origins: [str]?}
+
+@endpoint PATCH /instance
+@optional {test_mode: bool, hibp: bool, support_email: str, clerk_js_version: str, development_origin: str, allowed_origins: [str], cookieless_dev: bool, url_based_session_syncing: bool}
+@returns(204)
+@errors {422}
+
+@endpoint PATCH /instance/restrictions
+@optional {allowlist: bool, blocklist: bool, allowlist_blocklist_disabled_on_sign_in: bool, block_email_subaddresses: bool, block_disposable_email_domains: bool}
+@returns(200) {object: str, allowlist: bool, blocklist: bool, allowlist_blocklist_disabled_on_sign_in: bool, block_email_subaddresses: bool, block_disposable_email_domains: bool}
+@errors {402, 422}
+
+@endpoint GET /instance/protect
+@returns(200) {object: str, rules_enabled: bool, specter_enabled: bool}
+
+@endpoint PATCH /instance/protect
+@optional {rules_enabled: bool, specter_enabled: bool}
+@returns(200) {object: str, rules_enabled: bool, specter_enabled: bool}
+@errors {422}
+
+@endpoint POST /instance/change_domain
+@optional {home_url: str, is_secondary: bool}
+@returns(202)
+@errors {400, 422}
+
+@endpoint PATCH /instance/organization_settings
+@optional {enabled: bool, max_allowed_memberships: int, admin_delete_enabled: bool, domains_enabled: bool, slug_disabled: bool, domains_enrollment_modes: [str], creator_role_id: str, domains_default_role_id: str}
+@returns(200) {object: str, enabled: bool, max_allowed_memberships: int, max_allowed_roles: int, max_role_sets_allowed: int, max_allowed_permissions: int, creator_role: str, admin_delete_enabled: bool, domains_enabled: bool, slug_disabled: bool, domains_enrollment_modes: [str], domains_default_role: str, initial_role_set_key: str?}
+@errors {400, 402, 404, 422}
+
+@endgroup
+
+@group webhooks
+@endpoint POST /webhooks/svix
+@returns(200) {svix_url: str}
+@errors {400}
+
+@endpoint DELETE /webhooks/svix
+@returns(204)
+@errors {400}
+
+@endpoint POST /webhooks/svix_url
+@returns(200) {svix_url: str}
+@errors {400}
+
+@endgroup
+
+@group jwt_templates
+@endpoint GET /jwt_templates
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+
+@endpoint POST /jwt_templates
+@required {name: str, claims: map}
+@optional {lifetime: int, allowed_clock_skew: int, custom_signing_key: bool, signing_algorithm: str, signing_key: str}
+@returns(200) {object: str, id: str, name: str, claims: map, lifetime: int, allowed_clock_skew: int, custom_signing_key: bool, signing_algorithm: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 402, 422}
+
+@endpoint GET /jwt_templates/{template_id}
+@required {template_id: str}
+@returns(200) {object: str, id: str, name: str, claims: map, lifetime: int, allowed_clock_skew: int, custom_signing_key: bool, signing_algorithm: str, created_at: int(int64), updated_at: int(int64)}
+@errors {404}
+
+@endpoint PATCH /jwt_templates/{template_id}
+@required {template_id: str, name: str, claims: map}
+@optional {lifetime: int, allowed_clock_skew: int, custom_signing_key: bool, signing_algorithm: str, signing_key: str}
+@returns(200) {object: str, id: str, name: str, claims: map, lifetime: int, allowed_clock_skew: int, custom_signing_key: bool, signing_algorithm: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 402, 422}
+
+@endpoint DELETE /jwt_templates/{template_id}
+@required {template_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {403, 404}
+
+@endgroup
+
+@group machines
+@endpoint GET /machines
+@optional {limit: int=10, offset: int=0, query: str, order_by: str=-created_at}
+@returns(200) {data: [any], total_count: int}
+@errors {400, 401, 403, 422}
+
+@endpoint POST /machines
+@required {name: str}
+@optional {scoped_machines: [str], default_token_ttl: int=3600}
+@returns(200)
+@errors {400, 401, 403, 422}
+
+@endpoint GET /machines/{machine_id}
+@required {machine_id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 422}
+
+@endpoint PATCH /machines/{machine_id}
+@required {machine_id: str}
+@optional {name: str, default_token_ttl: int}
+@returns(200)
+@errors {400, 401, 403, 404, 422}
+
+@endpoint DELETE /machines/{machine_id}
+@required {machine_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint GET /machines/{machine_id}/secret_key
+@required {machine_id: str}
+@returns(200) {object: str, secret: str}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /machines/{machine_id}/secret_key/rotate
+@required {machine_id: str, previous_token_ttl: int}
+@returns(200) {object: str, secret: str}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint POST /machines/{machine_id}/scopes
+@required {machine_id: str, to_machine_id: str}
+@returns(200) {object: str, from_machine_id: str, to_machine_id: str, created_at: int(int64)}
+@errors {400, 401, 403, 404, 409, 422}
+
+@endpoint DELETE /machines/{machine_id}/scopes/{other_machine_id}
+@required {machine_id: str, other_machine_id: str}
+@returns(200) {object: str, from_machine_id: str, to_machine_id: str, deleted: bool}
+@errors {400, 401, 403, 404, 422}
+
+@endgroup
+
+@group organizations
+@endpoint GET /organizations
+@optional {include_members_count: bool, include_missing_member_with_elevated_permissions: bool, query: str, user_id: [str], organization_id: [str], order_by: str=-created_at, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 403, 422}
+
+@endpoint POST /organizations
+@required {name: str}
+@optional {created_by: str, private_metadata: map, public_metadata: map, slug: str, max_allowed_memberships: int, created_at: str, role_set_key: str}
+@returns(200) {object: str, id: str, name: str, slug: str, image_url: str, has_image: bool, members_count: int, missing_member_with_elevated_permissions: bool, pending_invitations_count: int, max_allowed_memberships: int, admin_delete_enabled: bool, public_metadata: map, private_metadata: map, created_by: str, created_at: int(int64), updated_at: int(int64), last_active_at: int(int64), role_set_key: str?}
+@errors {400, 402, 403, 422}
+
+@endpoint GET /organizations/{organization_id}
+@required {organization_id: str}
+@optional {include_members_count: bool, include_missing_member_with_elevated_permissions: bool}
+@returns(200) {object: str, id: str, name: str, slug: str, image_url: str, has_image: bool, members_count: int, missing_member_with_elevated_permissions: bool, pending_invitations_count: int, max_allowed_memberships: int, admin_delete_enabled: bool, public_metadata: map, private_metadata: map, created_by: str, created_at: int(int64), updated_at: int(int64), last_active_at: int(int64), role_set_key: str?}
+@errors {403, 404}
+
+@endpoint PATCH /organizations/{organization_id}
+@required {organization_id: str}
+@optional {public_metadata: map, private_metadata: map, name: str, slug: str, max_allowed_memberships: int, admin_delete_enabled: bool, created_at: str, role_set_key: str}
+@returns(200) {object: str, id: str, name: str, slug: str, image_url: str, has_image: bool, members_count: int, missing_member_with_elevated_permissions: bool, pending_invitations_count: int, max_allowed_memberships: int, admin_delete_enabled: bool, public_metadata: map, private_metadata: map, created_by: str, created_at: int(int64), updated_at: int(int64), last_active_at: int(int64), role_set_key: str?}
+@errors {402, 403, 404, 422}
+
+@endpoint DELETE /organizations/{organization_id}
+@required {organization_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {404}
+
+@endpoint PATCH /organizations/{organization_id}/metadata
+@required {organization_id: str}
+@optional {public_metadata: map, private_metadata: map}
+@returns(200) {object: str, id: str, name: str, slug: str, image_url: str, has_image: bool, members_count: int, missing_member_with_elevated_permissions: bool, pending_invitations_count: int, max_allowed_memberships: int, admin_delete_enabled: bool, public_metadata: map, private_metadata: map, created_by: str, created_at: int(int64), updated_at: int(int64), last_active_at: int(int64), role_set_key: str?}
+@errors {400, 401, 404, 422}
+
+@endpoint PUT /organizations/{organization_id}/logo
+@required {organization_id: str}
+@returns(200)
+@errors {400, 403, 404, 413}
+
+@endpoint DELETE /organizations/{organization_id}/logo
+@required {organization_id: str}
+@returns(200) {object: str, id: str, name: str, slug: str, image_url: str, has_image: bool, members_count: int, missing_member_with_elevated_permissions: bool, pending_invitations_count: int, max_allowed_memberships: int, admin_delete_enabled: bool, public_metadata: map, private_metadata: map, created_by: str, created_at: int(int64), updated_at: int(int64), last_active_at: int(int64), role_set_key: str?}
+@errors {404}
+
+@endpoint GET /organizations/{organization_id}/billing/subscription
+@required {organization_id: str}
+@returns(200) {object: str, id: str, instance_id: str, status: str, payer_id: str, created_at: int(int64), updated_at: int(int64), active_at: int(int64)?, past_due_at: int(int64)?, subscription_items: [map], next_payment: map{date: int(int64), amount: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}}, eligible_for_free_trial: bool}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /organizations/{organization_id}/invitations
+@required {organization_id: str, email_address: str, role: str}
+@optional {inviter_user_id: str, public_metadata: map, private_metadata: map, redirect_url: str, expires_in_days: int, notify: bool=True}
+@returns(200) {object: str, id: str, email_address: str, role: str, role_name: str, organization_id: str, inviter_id: str?, public_inviter_data: map?{user_id: str, first_name: str?, last_name: str?, image_url: str, has_image: bool, identifier: str}, status: str, public_metadata: map, private_metadata: map, url: str?, expires_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 403, 404, 422}
+
+@endpoint GET /organizations/{organization_id}/invitations
+@required {organization_id: str}
+@optional {status: str(pending/accepted/revoked/expired), email_address: str, order_by: str=-created_at, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 404, 422}
+
+@endpoint POST /organizations/{organization_id}/invitations/bulk
+@required {organization_id: str}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 403, 404, 422}
+
+@endpoint GET /organizations/{organization_id}/invitations/pending
+@required {organization_id: str}
+@optional {limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 404}
+
+@endpoint GET /organizations/{organization_id}/invitations/{invitation_id}
+@required {organization_id: str, invitation_id: str}
+@returns(200) {object: str, id: str, email_address: str, role: str, role_name: str, organization_id: str, inviter_id: str?, public_inviter_data: map?{user_id: str, first_name: str?, last_name: str?, image_url: str, has_image: bool, identifier: str}, status: str, public_metadata: map, private_metadata: map, url: str?, expires_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 403, 404}
+
+@endpoint POST /organizations/{organization_id}/invitations/{invitation_id}/revoke
+@required {organization_id: str, invitation_id: str}
+@optional {requesting_user_id: str}
+@returns(200) {object: str, id: str, email_address: str, role: str, role_name: str, organization_id: str, inviter_id: str?, public_inviter_data: map?{user_id: str, first_name: str?, last_name: str?, image_url: str, has_image: bool, identifier: str}, status: str, public_metadata: map, private_metadata: map, url: str?, expires_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 403, 404}
+
+@endgroup
+
+@group organization_roles
+@endpoint GET /organization_roles
+@optional {query: str, order_by: str=-created_at, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 403, 422}
+
+@endpoint POST /organization_roles
+@required {name: str, key: str}
+@optional {description: str, permissions: [str], include_in_initial_role_set: bool}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, is_creator_eligible: bool, permissions: [map], created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 402, 403, 404, 422}
+
+@endpoint GET /organization_roles/{organization_role_id}
+@required {organization_role_id: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, is_creator_eligible: bool, permissions: [map], created_at: int(int64), updated_at: int(int64)}
+@errors {401, 403, 404}
+
+@endpoint PATCH /organization_roles/{organization_role_id}
+@required {organization_role_id: str}
+@optional {name: str, key: str, description: str, permissions: [str]}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, is_creator_eligible: bool, permissions: [map], created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint DELETE /organization_roles/{organization_role_id}
+@required {organization_role_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {401, 403, 404, 422}
+
+@endpoint POST /organization_roles/{organization_role_id}/permissions/{permission_id}
+@required {organization_role_id: str, permission_id: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, is_creator_eligible: bool, permissions: [map], created_at: int(int64), updated_at: int(int64)}
+@errors {401, 403, 404, 409}
+
+@endpoint DELETE /organization_roles/{organization_role_id}/permissions/{permission_id}
+@required {organization_role_id: str, permission_id: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, is_creator_eligible: bool, permissions: [map], created_at: int(int64), updated_at: int(int64)}
+@errors {401, 403, 404, 422}
+
+@endgroup
+
+@group organizations
+@endpoint POST /organizations/{organization_id}/memberships
+@required {organization_id: str, user_id: str, role: str}
+@optional {public_metadata: map, private_metadata: map}
+@returns(200) {id: str, object: str, role: str, role_name: str, permissions: [str], public_metadata: map, private_metadata: map, organization: map, public_user_data: map{user_id: str, first_name: str?, last_name: str?, profile_image_url: str?, image_url: str, has_image: bool, identifier: str?, username: str?}, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 403, 404, 422}
+
+@endpoint GET /organizations/{organization_id}/memberships
+@required {organization_id: str}
+@optional {order_by: str, user_id: [str], email_address: [str], phone_number: [str], username: [str], web3_wallet: [str], role: [str], query: str, email_address_query: str, phone_number_query: str, username_query: str, name_query: str, last_active_at_before: int, last_active_at_after: int, created_at_before: int, created_at_after: int, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {401, 422}
+
+@endpoint PATCH /organizations/{organization_id}/memberships/{user_id}
+@required {organization_id: str, user_id: str, role: str}
+@returns(200) {id: str, object: str, role: str, role_name: str, permissions: [str], public_metadata: map, private_metadata: map, organization: map, public_user_data: map{user_id: str, first_name: str?, last_name: str?, profile_image_url: str?, image_url: str, has_image: bool, identifier: str?, username: str?}, created_at: int(int64), updated_at: int(int64)}
+@errors {404, 422}
+
+@endpoint DELETE /organizations/{organization_id}/memberships/{user_id}
+@required {organization_id: str, user_id: str}
+@returns(200) {id: str, object: str, role: str, role_name: str, permissions: [str], public_metadata: map, private_metadata: map, organization: map, public_user_data: map{user_id: str, first_name: str?, last_name: str?, profile_image_url: str?, image_url: str, has_image: bool, identifier: str?, username: str?}, created_at: int(int64), updated_at: int(int64)}
+@errors {401, 404, 422}
+
+@endpoint PATCH /organizations/{organization_id}/memberships/{user_id}/metadata
+@required {organization_id: str, user_id: str}
+@optional {public_metadata: map, private_metadata: map}
+@returns(200) {id: str, object: str, role: str, role_name: str, permissions: [str], public_metadata: map, private_metadata: map, organization: map, public_user_data: map{user_id: str, first_name: str?, last_name: str?, profile_image_url: str?, image_url: str, has_image: bool, identifier: str?, username: str?}, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 404, 422}
+
+@endpoint POST /organizations/{organization_id}/domains
+@required {organization_id: str}
+@optional {name: str, enrollment_mode: str, verified: bool}
+@returns(200) {object: str, id: str, organization_id: str, name: str, enrollment_mode: str, affiliation_email_address: str?, verification: map?, total_pending_invitations: int(int32), total_pending_suggestions: int(int32), public_organization_data: map?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 403, 404, 422}
+
+@endpoint GET /organizations/{organization_id}/domains
+@required {organization_id: str}
+@optional {verified: str, enrollment_mode: str, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {401, 422}
+
+@endpoint PATCH /organizations/{organization_id}/domains/{domain_id}
+@required {organization_id: str, domain_id: str}
+@optional {enrollment_mode: str, verified: bool}
+@returns(200) {object: str, id: str, organization_id: str, name: str, enrollment_mode: str, affiliation_email_address: str?, verification: map?, total_pending_invitations: int(int32), total_pending_suggestions: int(int32), public_organization_data: map?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 404, 422}
+
+@endpoint DELETE /organizations/{organization_id}/domains/{domain_id}
+@required {organization_id: str, domain_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 401, 404}
+
+@endgroup
+
+@group organization_domains
+@endpoint GET /organization_domains
+@optional {organization_id: str, verified: str(true/false), enrollment_mode: [str], query: str, domains: [str], order_by: str=-created_at, offset: int=0, limit: int=10}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {401, 403, 422}
+
+@endgroup
+
+@group proxy_checks
+@endpoint POST /proxy_checks
+@optional {domain_id: str, proxy_url: str}
+@returns(200) {object: str, id: str, domain_id: str, last_run_at: int(int64)?, proxy_url: str, successful: bool, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 422}
+
+@endgroup
+
+@group redirect_urls
+@endpoint GET /redirect_urls
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200)
+
+@endpoint POST /redirect_urls
+@required {url: str}
+@returns(200) {object: str, id: str, url: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 422}
+
+@endpoint GET /redirect_urls/{id}
+@required {id: str}
+@returns(200) {object: str, id: str, url: str, created_at: int(int64), updated_at: int(int64)}
+@errors {404}
+
+@endpoint DELETE /redirect_urls/{id}
+@required {id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {404}
+
+@endgroup
+
+@group sign_in_tokens
+@endpoint POST /sign_in_tokens
+@required {user_id: str}
+@optional {expires_in_seconds: int=2592000}
+@returns(200) {object: str, id: str, status: str, user_id: str, token: str, url: str?, created_at: int(int64), updated_at: int(int64)}
+@errors {404, 422}
+
+@endpoint POST /sign_in_tokens/{sign_in_token_id}/revoke
+@required {sign_in_token_id: str}
+@returns(200) {object: str, id: str, status: str, user_id: str, token: str, url: str?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 404}
+
+@endgroup
+
+@group sign_ups
+@endpoint GET /sign_ups/{id}
+@required {id: str}
+@returns(200) {object: str, id: str, status: str, required_fields: [str], optional_fields: [str], missing_fields: [str], unverified_fields: [str], verifications: map{email_address: map?{next_action: str, supported_strategies: [str]}, phone_number: map?{next_action: str, supported_strategies: [str]}, web3_wallet: map?{next_action: str, supported_strategies: [str]}, external_account: map?}, username: str?, email_address: str?, phone_number: str?, web3_wallet: str?, password_enabled: bool, first_name: str?, last_name: str?, unsafe_metadata: map, public_metadata: map, custom_action: bool, external_id: str?, created_session_id: str?, created_user_id: str?, abandon_at: int(int64), legal_accepted_at: int(int64)?, locale: str?, external_account: map}
+@errors {403}
+
+@endpoint PATCH /sign_ups/{id}
+@required {id: str}
+@optional {external_id: str, custom_action: bool}
+@returns(200) {object: str, id: str, status: str, required_fields: [str], optional_fields: [str], missing_fields: [str], unverified_fields: [str], verifications: map{email_address: map?{next_action: str, supported_strategies: [str]}, phone_number: map?{next_action: str, supported_strategies: [str]}, web3_wallet: map?{next_action: str, supported_strategies: [str]}, external_account: map?}, username: str?, email_address: str?, phone_number: str?, web3_wallet: str?, password_enabled: bool, first_name: str?, last_name: str?, unsafe_metadata: map, public_metadata: map, custom_action: bool, external_id: str?, created_session_id: str?, created_user_id: str?, abandon_at: int(int64), legal_accepted_at: int(int64)?, locale: str?, external_account: map}
+@errors {403}
+
+@endgroup
+
+@group oauth_applications
+@endpoint GET /oauth_applications
+@optional {limit: int=10, offset: int=0, order_by: str=+created_at, name_query: str}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 403, 422}
+
+@endpoint POST /oauth_applications
+@required {name: str}
+@optional {redirect_uris: [str], callback_url: str, scopes: str=profile email, consent_screen_enabled: bool=True, pkce_required: bool=False, public: bool}
+@returns(200)
+@errors {400, 403, 422}
+
+@endpoint GET /oauth_applications/{oauth_application_id}
+@required {oauth_application_id: str}
+@returns(200) {object: str, id: str, instance_id: str, name: str, client_id: str, client_uri: str?, client_image_url: str?, dynamically_registered: bool, consent_screen_enabled: bool, pkce_required: bool, public: bool, scopes: str, redirect_uris: [str], callback_url: str, authorize_url: str, token_fetch_url: str, user_info_url: str, discovery_url: str, token_introspection_url: str, created_at: int(int64), updated_at: int(int64)}
+@errors {403, 404}
+
+@endpoint PATCH /oauth_applications/{oauth_application_id}
+@required {oauth_application_id: str}
+@optional {name: str, redirect_uris: [str], callback_url: str, scopes: str=profile email, consent_screen_enabled: bool, pkce_required: bool, public: bool}
+@returns(200) {object: str, id: str, instance_id: str, name: str, client_id: str, client_uri: str?, client_image_url: str?, dynamically_registered: bool, consent_screen_enabled: bool, pkce_required: bool, public: bool, scopes: str, redirect_uris: [str], callback_url: str, authorize_url: str, token_fetch_url: str, user_info_url: str, discovery_url: str, token_introspection_url: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 403, 404, 422}
+
+@endpoint DELETE /oauth_applications/{oauth_application_id}
+@required {oauth_application_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {403, 404}
+
+@endpoint POST /oauth_applications/{oauth_application_id}/rotate_secret
+@required {oauth_application_id: str}
+@returns(200)
+@errors {403, 404}
+
+@endgroup
+
+@group saml_connections
+@endpoint GET /saml_connections
+@optional {limit: int=10, offset: int=0, query: str, order_by: str, organization_id: [str]}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {402, 403, 422}
+
+@endpoint POST /saml_connections
+@required {name: str, provider: str(saml_custom/saml_okta/saml_google/saml_microsoft)}
+@optional {domain: str, domains: [str], idp_entity_id: str, idp_sso_url: str, idp_certificate: str, idp_metadata_url: str, idp_metadata: str, organization_id: str, attribute_mapping: map{user_id: str, email_address: str, first_name: str, last_name: str}, force_authn: bool}
+@returns(200) {object: str, id: str, name: str, domain: str, domains: [str], idp_entity_id: str?, idp_sso_url: str?, idp_certificate: str?, idp_metadata_url: str?, idp_metadata: str?, acs_url: str, sp_entity_id: str, sp_metadata_url: str, organization_id: str?, attribute_mapping: map{user_id: str, email_address: str, first_name: str, last_name: str}, active: bool, provider: str, user_count: int, sync_user_attributes: bool, allow_subdomains: bool, allow_idp_initiated: bool, disable_additional_identifications: bool, force_authn: bool, enterprise_connection_id: str?, created_at: int(int64), updated_at: int(int64)}
+@errors {402, 403, 404, 422}
+
+@endpoint GET /saml_connections/{saml_connection_id}
+@required {saml_connection_id: str}
+@returns(200) {object: str, id: str, name: str, domain: str, domains: [str], idp_entity_id: str?, idp_sso_url: str?, idp_certificate: str?, idp_metadata_url: str?, idp_metadata: str?, acs_url: str, sp_entity_id: str, sp_metadata_url: str, organization_id: str?, attribute_mapping: map{user_id: str, email_address: str, first_name: str, last_name: str}, active: bool, provider: str, user_count: int, sync_user_attributes: bool, allow_subdomains: bool, allow_idp_initiated: bool, disable_additional_identifications: bool, force_authn: bool, enterprise_connection_id: str?, created_at: int(int64), updated_at: int(int64)}
+@errors {402, 403, 404}
+
+@endpoint PATCH /saml_connections/{saml_connection_id}
+@required {saml_connection_id: str}
+@optional {name: str, domain: str, domains: [str], idp_entity_id: str, idp_sso_url: str, idp_certificate: str, idp_metadata_url: str, idp_metadata: str, organization_id: str, attribute_mapping: map{user_id: str, email_address: str, first_name: str, last_name: str}, active: bool, sync_user_attributes: bool, allow_subdomains: bool, allow_idp_initiated: bool, disable_additional_identifications: bool, force_authn: bool, consent_verified_domains_deletion: bool}
+@returns(200) {object: str, id: str, name: str, domain: str, domains: [str], idp_entity_id: str?, idp_sso_url: str?, idp_certificate: str?, idp_metadata_url: str?, idp_metadata: str?, acs_url: str, sp_entity_id: str, sp_metadata_url: str, organization_id: str?, attribute_mapping: map{user_id: str, email_address: str, first_name: str, last_name: str}, active: bool, provider: str, user_count: int, sync_user_attributes: bool, allow_subdomains: bool, allow_idp_initiated: bool, disable_additional_identifications: bool, force_authn: bool, enterprise_connection_id: str?, created_at: int(int64), updated_at: int(int64)}
+@errors {402, 403, 404, 422}
+
+@endpoint DELETE /saml_connections/{saml_connection_id}
+@required {saml_connection_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {402, 403, 404}
+
+@endgroup
+
+@group testing_tokens
+@endpoint POST /testing_tokens
+@returns(200) {object: str, token: str, expires_at: int(int64)}
+
+@endgroup
+
+@group agents
+@endpoint POST /agents/tasks
+@required {on_behalf_of: map{user_id: str, identifier: str}, permissions: str, agent_name: str, task_description: str, redirect_url: str(uri)}
+@optional {session_max_duration_in_seconds: int=1800}
+@returns(200) {object: str, agent_id: str, task_id: str, url: str}
+@errors {400, 404, 422}
+
+@endpoint POST /agents/tasks/{agent_task_id}/revoke
+@required {agent_task_id: str}
+@returns(200) {object: str, agent_id: str, task_id: str, url: str}
+@errors {400, 404}
+
+@endgroup
+
+@group organization_memberships
+@endpoint GET /organization_memberships
+@optional {order_by: str, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 422, 500}
+
+@endgroup
+
+@group waitlist_entries
+@endpoint GET /waitlist_entries
+@optional {limit: int=10, offset: int=0, query: str, status: str(pending/invited/completed/rejected), order_by: str=-created_at}
+@returns(200) {data: [map], total_count: int}
+
+@endpoint POST /waitlist_entries
+@required {email_address: str}
+@optional {notify: bool=True}
+@returns(200) {object: str, id: str, email_address: str(email), status: str, is_locked: bool, created_at: int(int64), updated_at: int(int64), invitation: map?}
+@errors {400, 422}
+
+@endpoint POST /waitlist_entries/bulk
+@returns(200)
+@errors {400, 422}
+
+@endpoint DELETE /waitlist_entries/{waitlist_entry_id}
+@required {waitlist_entry_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 404, 409, 422}
+
+@endpoint POST /waitlist_entries/{waitlist_entry_id}/invite
+@required {waitlist_entry_id: str}
+@optional {ignore_existing: bool=False}
+@returns(200) {object: str, id: str, email_address: str(email), status: str, is_locked: bool, created_at: int(int64), updated_at: int(int64), invitation: map?}
+@errors {400, 404, 409, 422}
+
+@endpoint POST /waitlist_entries/{waitlist_entry_id}/reject
+@required {waitlist_entry_id: str}
+@returns(200) {object: str, id: str, email_address: str(email), status: str, is_locked: bool, created_at: int(int64), updated_at: int(int64), invitation: map?}
+@errors {400, 404, 409, 422}
+
+@endgroup
+
+@group billing
+@endpoint GET /billing/plans
+@optional {paginated: bool, limit: int=10, offset: int=0, payer_type: str(user/org)}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 422, 500}
+
+@endpoint GET /billing/prices
+@optional {paginated: bool, limit: int=10, offset: int=0, plan_id: str}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint POST /billing/prices
+@required {plan_id: str, amount: int(int64)}
+@optional {currency: str=USD, annual_monthly_amount: int(int64), description: str}
+@returns(200) {object: str, id: str, plan_id: str, instance_id: str, currency: str, currency_symbol: str, amount: int(int64), annual_monthly_amount: int(int64), fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, annual_monthly_fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, description: str?, is_default: bool, created_at: int(int64)}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint GET /billing/subscription_items
+@optional {paginated: bool, limit: int=10, offset: int=0, status: str(active/ended/past_due/upcoming/free_trial), payer_type: str(user/org), plan_id: str, include_free: bool=False, query: str}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 422, 500}
+
+@endpoint DELETE /billing/subscription_items/{subscription_item_id}
+@required {subscription_item_id: str}
+@optional {end_now: bool=False}
+@returns(200) {object: str, id: str, instance_id: str, status: str, credit: map{amount: any?, cycle_remaining_percent: num(float)}, plan_id: str?, price_id: str, plan: any?, plan_period: str, payment_method: map{object: str, id: str, payer_id: str, payment_type: str, is_default: bool, gateway: str, gateway_external_id: str, gateway_external_account_id: str?, last4: str?, status: str, wallet_type: str?, card_type: str?, expiry_year: int?, expiry_month: int?, created_at: int(int64), updated_at: int(int64), is_removable: bool}, lifetime_paid: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, next_payment: any?, payer_id: str, payer: map{object: str, id: str, instance_id: str, user_id: str?, first_name: str?, last_name: str?, email: str?, organization_id: str?, organization_name: str?, image_url: str, credits_balance: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, created_at: int(int64), updated_at: int(int64)}, is_free_trial: bool, period_start: int(int64), period_end: int(int64)?, proration_date: str(date), canceled_at: int(int64)?, past_due_at: int(int64)?, ended_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /billing/subscription_items/{subscription_item_id}/extend_free_trial
+@required {subscription_item_id: str, extend_to: str(date-time)}
+@returns(200) {object: str, id: str, instance_id: str, status: str, credit: any?, plan_id: str, price_id: str, plan: any?, plan_period: str, payment_source_id: str, payment_source: any?, lifetime_paid: any?, amount: any?, next_invoice: any?, next_payment: any?, payer_id: str, payer: any?, is_free_trial: bool, period_start: int(int64)?, period_end: int(int64)?, proration_date: str, canceled_at: int(int64)?, past_due_at: int(int64)?, ended_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422, 500}
+
+@endpoint POST /billing/subscription_items/{subscription_item_id}/price_transition
+@required {subscription_item_id: str, from_price_id: str, to_price_id: str}
+@returns(200) {object: str, subscription_item: map{object: str, id: str, instance_id: str, status: str, credit: any?, plan_id: str, price_id: str, plan: any?, plan_period: str, payment_source_id: str, payment_source: any?, lifetime_paid: any?, amount: any?, next_invoice: any?, next_payment: any?, payer_id: str, payer: any?, is_free_trial: bool, period_start: int(int64)?, period_end: int(int64)?, proration_date: str, canceled_at: int(int64)?, past_due_at: int(int64)?, ended_at: int(int64)?, created_at: int(int64), updated_at: int(int64)}, transition: map{previous_plan: map{object: str, id: str, name: str, fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, annual_monthly_fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, annual_fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, amount: int(int64), amount_formatted: str, annual_monthly_amount: int(int64), annual_monthly_amount_formatted: str, annual_amount: int(int64), annual_amount_formatted: str, currency_symbol: str, currency: str, description: str, product_id: str, is_default: bool, is_recurring: bool, publicly_visible: bool, has_base_fee: bool, payer_type: [str], for_payer_type: str, slug: str, avatar_url: str, period: str, interval: int(int64), features: [map], free_trial_enabled: bool, free_trial_days: int(int64)?}, previous_price: map{object: str, id: str, plan_id: str, instance_id: str, currency: str, currency_symbol: str, amount: int(int64), annual_monthly_amount: int(int64), fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, annual_monthly_fee: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, description: str?, is_default: bool, created_at: int(int64)}, effective_at: int(int64), effective_mode: str, next_billing_date: int(int64)?, charged_immediately: bool, immediate_charge: any?, previous_subscription_item_status: str, previous_subscription_item_id: str}}
+@errors {400, 401, 403, 404, 409, 422, 500}
+
+@endpoint GET /billing/statements
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 422, 500}
+
+@endpoint GET /billing/statements/{statementID}
+@required {statementID: str}
+@returns(200) {object: str, id: str, instance_id: str, timestamp: int(int64), payer: map{object: str, id: str, instance_id: str, user_id: str?, first_name: str?, last_name: str?, email: str?, organization_id: str?, organization_name: str?, image_url: str, credits_balance: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, created_at: int(int64), updated_at: int(int64)}, status: str, totals: map{grand_total: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, subtotal: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}, tax_total: map{amount: int(int64), amount_formatted: str, currency: str, currency_symbol: str}}, groups: [map]}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint GET /billing/statements/{statementID}/payment_attempts
+@required {statementID: str}
+@optional {paginated: bool, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 404, 422, 500}
+
+@endgroup
+
+@group organization_permissions
+@endpoint GET /organization_permissions
+@optional {query: str, order_by: str, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {401, 422}
+
+@endpoint POST /organization_permissions
+@required {name: str, key: str}
+@optional {description: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str, type: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 402, 404, 422}
+
+@endpoint GET /organization_permissions/{permission_id}
+@required {permission_id: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str, type: str, created_at: int(int64), updated_at: int(int64)}
+@errors {401, 404}
+
+@endpoint PATCH /organization_permissions/{permission_id}
+@required {permission_id: str}
+@optional {name: str, key: str, description: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str, type: str, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint DELETE /organization_permissions/{permission_id}
+@required {permission_id: str}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {401, 403, 404}
+
+@endgroup
+
+@group role_sets
+@endpoint GET /role_sets
+@optional {query: str, order_by: str=-created_at, limit: int=10, offset: int=0}
+@returns(200) {data: [map], total_count: int(int64)}
+@errors {400, 401, 403, 422}
+
+@endpoint POST /role_sets
+@required {name: str, default_role_key: str, creator_role_key: str, roles: [str]}
+@optional {key: str, description: str, type: str(initial/custom)}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, roles: [map], default_role: any?, creator_role: any?, type: str, role_set_migration: any?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 402, 403, 404, 422}
+
+@endpoint GET /role_sets/{role_set_key_or_id}
+@required {role_set_key_or_id: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, roles: [map], default_role: any?, creator_role: any?, type: str, role_set_migration: any?, created_at: int(int64), updated_at: int(int64)}
+@errors {401, 403, 404}
+
+@endpoint PATCH /role_sets/{role_set_key_or_id}
+@required {role_set_key_or_id: str}
+@optional {name: str, key: str, description: str, type: str, default_role_key: str, creator_role_key: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, roles: [map], default_role: any?, creator_role: any?, type: str, role_set_migration: any?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint POST /role_sets/{role_set_key_or_id}/replace
+@required {role_set_key_or_id: str, dest_role_set_key: str}
+@optional {reassignment_mappings: any}
+@returns(200) {object: str, id: str, slug: str, deleted: bool, external_id: str}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint POST /role_sets/{role_set_key_or_id}/roles
+@required {role_set_key_or_id: str, role_keys: [str]}
+@optional {default_role_key: str, creator_role_key: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, roles: [map], default_role: any?, creator_role: any?, type: str, role_set_migration: any?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422}
+
+@endpoint POST /role_sets/{role_set_key_or_id}/roles/replace
+@required {role_set_key_or_id: str, role_key: str, to_role_key: str}
+@returns(200) {object: str, id: str, name: str, key: str, description: str?, roles: [map], default_role: any?, creator_role: any?, type: str, role_set_migration: any?, created_at: int(int64), updated_at: int(int64)}
+@errors {400, 401, 403, 404, 422}
+
+@endgroup
+
+@group api_keys
+@endpoint POST /api_keys
+@required {name: str, subject: str}
+@optional {type: str=api_key, description: str, claims: any, scopes: [str]=[], created_by: str, seconds_until_expiration: num}
+@returns(200) {object: str, id: str, type: str, subject: str, name: str, description: str?, claims: any?, scopes: [str], secret: str, revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, created_by: str?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 409}
+
+@endpoint GET /api_keys
+@required {subject: str}
+@optional {type: str=api_key, include_invalid: str(true/false)=false, limit: num=10, offset: num=0, query: str}
+@returns(200) {data: [map], total_count: num}
+@errors {400, 404}
+
+@endpoint GET /api_keys/{apiKeyID}
+@required {apiKeyID: str}
+@returns(200) {object: str, id: str, type: str, subject: str, name: str, description: str?, claims: any?, scopes: [str], revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, created_by: str?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 404}
+
+@endpoint PATCH /api_keys/{apiKeyID}
+@required {apiKeyID: str}
+@optional {claims: any, scopes: [str], description: str, subject: str, seconds_until_expiration: num}
+@returns(200) {object: str, id: str, type: str, subject: str, name: str, description: str?, claims: any?, scopes: [str], revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, created_by: str?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 404}
+
+@endpoint DELETE /api_keys/{apiKeyID}
+@required {apiKeyID: str}
+@returns(200) {id: str, object: str, deleted: bool}
+@errors {400, 404}
+
+@endpoint GET /api_keys/{apiKeyID}/secret
+@required {apiKeyID: str}
+@returns(200) {secret: str}
+@errors {400, 404}
+
+@endpoint POST /api_keys/{apiKeyID}/revoke
+@required {apiKeyID: str}
+@optional {revocation_reason: str}
+@returns(200) {object: str, id: str, type: str, subject: str, name: str, description: str?, claims: any?, scopes: [str], revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, created_by: str?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 404}
+
+@endpoint POST /api_keys/verify
+@required {secret: str}
+@returns(200) {object: str, id: str, type: str, subject: str, name: str, description: str?, claims: any?, scopes: [str], revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, created_by: str?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 404}
+
+@endgroup
+
+@group m2m_tokens
+@endpoint POST /m2m_tokens
+@optional {token_format: str(opaque/jwt)=opaque, seconds_until_expiration: num, claims: any}
+@returns(201) {object: str, id: str, subject: str, claims: any?, scopes: [str], token: str, revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 409}
+
+@endpoint GET /m2m_tokens
+@required {subject: str}
+@optional {revoked: bool=False, expired: bool=False, limit: num=10, offset: num=0}
+@returns(200) {m2m_tokens: [map], total_count: num}
+@errors {400, 403, 404}
+
+@endpoint POST /m2m_tokens/{m2m_token_id}/revoke
+@required {m2m_token_id: str}
+@optional {revocation_reason: str}
+@returns(200) {object: str, id: str, subject: str, claims: any?, scopes: [str], revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 404}
+
+@endpoint POST /m2m_tokens/verify
+@required {token: str}
+@returns(200) {object: str, id: str, subject: str, claims: any?, scopes: [str], revoked: bool, revocation_reason: str?, expired: bool, expiration: num?, last_used_at: num?, created_at: num, updated_at: num}
+@errors {400, 404}
+
+@endgroup
+
+@group oauth_applications
+@endpoint POST /oauth_applications/access_tokens/verify
+@optional {access_token: str, secret: str}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@end

@@ -1,0 +1,1979 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Vimeo API
+@base https://api.vimeo.com
+@version 3.4
+@auth Bearer bearer | OAuth2
+@endpoints 328
+@hint download_for_search
+@toc root(1), categories(6), channels(43), contentratings(1), creativecommons(1), groups(9), languages(1), me(79), oauth(4), ondemand(41), tags(2), tokens(1), tutorial(1), users(88), videos(50)
+
+@group root
+@endpoint GET /
+@desc Get an API specification
+@optional {openapi: bool # Return an OpenAPI specification.}
+@returns(200) Standard request.
+
+@endgroup
+
+@group categories
+@endpoint GET /categories
+@desc Get all categories
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(last_video_featured_time/name) # The way to sort the results.}
+@returns(200) The categories were returned.
+
+@endpoint GET /categories/{category}
+@desc Get a specific category
+@required {category: str # The name of the category.}
+@returns(200) The category was returned.
+@errors {404: No such category exists.}
+
+@endpoint GET /categories/{category}/channels
+@desc Get all the channels in a category
+@required {category: str # The name of the category.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/followers/videos) # The way to sort the results.}
+@returns(200) The channels were returned.
+@errors {404: No such category exists.}
+
+@endpoint GET /categories/{category}/groups
+@desc Get all the groups in a category
+@required {category: str # The name of the category.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/members/videos) # The way to sort the results.}
+@returns(200) The groups were returned.
+@errors {404: No such category exists.}
+
+@endpoint GET /categories/{category}/videos
+@desc Get all the videos in a category
+@required {category: str # The name of the category.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(conditional_featured/embeddable) # The attribute by which to filter the results.  Option descriptions:  * `conditional_featured` - Featured (promoted) videos, filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/featured/likes/plays/relevant) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {404: No such category exists.}
+
+@endpoint GET /categories/{category}/videos/{video_id}
+@desc Check for a video in a category
+@required {category: str # The name of the category., video_id: num # The ID of the video.}
+@returns(200) The video belongs to the category.
+@errors {404: No such category exists, or the video doesn't belong to it.}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels
+@desc Get all channels
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/followers/relevant/videos) # The way to sort the results.  Option descriptions:  * `relevant` - Relevant sorting is available only for search queries.}
+@returns(200) The channels were returned.
+@errors {400: The relevant sort has no search query.}
+
+@endpoint POST /channels
+@desc Create a channel
+@returns(200) The channel was created.
+@errors {400: A parameter is invalid., 403: The authenticated user can't create a channel.}
+
+@endpoint DELETE /channels/{channel_id}
+@desc Delete a channel
+@required {channel_id: num # The ID of the channel.}
+@returns(204) The channel was deleted.
+@errors {403: The authenticated user doesn't own this channel.}
+
+@endpoint GET /channels/{channel_id}
+@desc Get a specific channel
+@required {channel_id: num # The ID of the channel.}
+@returns(200) The channel was returned.
+
+@endpoint PATCH /channels/{channel_id}
+@desc Edit a channel
+@required {channel_id: num # The ID of the channel.}
+@returns(200) The channel was edited.
+@errors {400: A parameter is invalid.}
+
+@endpoint GET /channels/{channel_id}/categories
+@desc Get all the categories in a channel
+@required {channel_id: num # The ID of the channel.}
+@returns(200) The categories were returned.
+@errors {404: No such channel exists.}
+
+@endpoint PUT /channels/{channel_id}/categories
+@desc Add a list of categories to a channel
+@required {channel_id: num # The ID of the channel., channels: [str] # The array of category URIs to add.}
+@returns(204) The categories were added.
+@errors {401: Error code 8003: The user credentials are invalid., 404: No such channel exists., 403: Error code 3200: The authenticated user can't add categories to the channel., 400: * Error code 2205: There was no request body, or the request body is malformed. * Error code 2204: You exceeded the maximum number of channel categories.}
+
+@endpoint DELETE /channels/{channel_id}/categories/{category}
+@desc Remove a category from a channel
+@required {category: str # The name of the category., channel_id: num # The ID of the channel.}
+@returns(204) The channel was removed.
+@errors {401: Error code 8003: The user credentials are invalid., 404: No such channel or category exists., 403: Error code 3200: The authenticated user doesn't own the channel or isn't a channel moderator.}
+
+@endpoint PUT /channels/{channel_id}/categories/{category}
+@desc Categorize a channel
+@required {category: str # The name of the category., channel_id: num # The ID of the channel.}
+@returns(204) The channel was categorized.
+@errors {400: Error code 2204: You exceeded the maximum number of channel categories., 401: Error code 8003: The user credentials are invalid., 404: No such channel or category exists., 403: Error code 3200: The authenticated user doesn't own the channel or isn't a channel moderator.}
+
+@endpoint DELETE /channels/{channel_id}/moderators
+@desc Remove a list of channel moderators
+@required {channel_id: num # The ID of the channel.}
+@returns(204) The moderators were removed.
+@errors {404: No such channel exists, or no such user exists., 403: The authenticated user doesn't own the channel, the user isn't a moderator of the channel, or you tried to remove the owner of the channel.}
+
+@endpoint GET /channels/{channel_id}/moderators
+@desc Get all the moderators in a channel
+@required {channel_id: num # The ID of the channel.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The moderators were returned.
+
+@endpoint PATCH /channels/{channel_id}/moderators
+@desc Replace the moderators of a channel
+@required {channel_id: num # The ID of the channel., user_uri: str # The URI of the user to add as a moderator.}
+@returns(200) The moderators were replaced.
+@errors {400: Error code 2908: The list contains more than 100 users., 404: No such channel exists., 403: The authenticated user owns this channel.}
+
+@endpoint PUT /channels/{channel_id}/moderators
+@desc Add a list of channel moderators
+@required {channel_id: num # The ID of the channel., user_uri: str # The URI of a user to add as a moderator.}
+@returns(200) The moderators were added.
+@errors {400: Error code 2908: The list contains more than 100 users., 404: No such channel exists, or no such user exists., 403: The authenticated user doesn't own the channel, a user is already a moderator of the channel, or you tried to add a user that the authenticated user doesn't follow.}
+
+@endpoint GET /channels/{channel_id}/moderators/{user_id}
+@desc Get a specific channel moderator
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(200) The moderator was returned.
+
+@endpoint DELETE /channels/{channel_id}/moderators/{user_id}
+@desc Remove a specific channel moderator
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(204) The moderator was removed.
+@errors {404: No such channel exists, or no such user exists., 403: The authenticated user doesn't own the channel, the user isn't a moderator of the channel, or you tried to remove the owner of the channel.}
+
+@endpoint PUT /channels/{channel_id}/moderators/{user_id}
+@desc Add a specific channel moderator
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@errors {404: No such channel exists, or no such user exists., 403: The authenticated user doesn't own the channel, a user is already a moderator of the channel, or you tried to add a user that the authenticated user doesn't follow.}
+
+@endpoint GET /channels/{channel_id}/privacy/users
+@desc Get all the users who can view a private channel
+@required {channel_id: num # The ID of the channel.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The users were returned.
+@errors {401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user doesn't own this channel., 404: Error code 2204: You can't add this user to a channel of this type.}
+
+@endpoint PUT /channels/{channel_id}/privacy/users
+@desc Permit a list of users to view a private channel
+@required {channel_id: num # The ID of the channel.}
+@returns(200) The users can now view the private channel.
+@errors {401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user doesn't own this channel., 404: Error code 2204: You can't add one or more of these users to a channel of this type., 400: * Error code 2205: There was no request body, or the request body is malformed. * Error code 2900: At least one of the specified user accounts doesn't exist.}
+
+@endpoint DELETE /channels/{channel_id}/privacy/users/{user_id}
+@desc Restrict a user from viewing a private channel
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(204) The user can no longer view the private channel.
+@errors {401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user doesn't own this channel., 404: Error code 2204: You can't add this user to a channel of this type.}
+
+@endpoint PUT /channels/{channel_id}/privacy/users/{user_id}
+@desc Permit a specific user to view a private channel
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(200) The user can now view the private channel.
+@errors {401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user doesn't own this channel., 404: Error code 2204: You can't add this user to a channel of this type.}
+
+@endpoint GET /channels/{channel_id}/tags
+@desc Get all the tags that have been added to a channel
+@required {channel_id: num # The ID of the channel.}
+@returns(200) The tags were returned.
+@errors {400: No such channel exists.}
+
+@endpoint PUT /channels/{channel_id}/tags
+@desc Add a list of tags to a channel
+@required {channel_id: num # The ID of the channel.}
+@returns(200) The tags were added.
+@errors {400: * No such channel exists, or a parameter is invalid. * Error code 2501: You tried to add more than 20 tags to the channel. * Error code 2205: There was no request body, or the request body is malformed., 401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user can't add tags to this channel.}
+
+@endpoint DELETE /channels/{channel_id}/tags/{word}
+@desc Remove a tag from a channel
+@required {channel_id: num # The ID of the channel., word: str # The word to use as the tag.}
+@returns(204) The tag was removed.
+@errors {400: The tag is invalid, or a parameter is invalid., 401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user can't remove tags from this channel.}
+
+@endpoint GET /channels/{channel_id}/tags/{word}
+@desc Check if a tag has been added to a channel
+@required {channel_id: num # The ID of the channel., word: str # The word to use as the tag.}
+@returns(204) The tag has been added to the channel.
+@errors {400: No such tag exists., 404: Error code 5000: The tag exists, but the channel isn't tagged by it.}
+
+@endpoint PUT /channels/{channel_id}/tags/{word}
+@desc Add a specific tag to a channel
+@required {channel_id: num # The ID of the channel., word: str # The word to use as the tag.}
+@returns(204) The tag was added.
+@errors {400: * The tag is invalid, or a parameter is invalid. * Error code 2501: The channel has already reached its maximum number of 20 tags., 401: Error code 8003: The user credentials are invalid., 403: Error code 3200: The authenticated user can't add tags to this channel.}
+
+@endpoint GET /channels/{channel_id}/users
+@desc Get all the followers of a channel
+@required {channel_id: num # The ID of the channel., filter: str # The attribute by which to filter the results.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The followers were returned.
+@errors {404: No such channel exists.}
+
+@endpoint DELETE /channels/{channel_id}/videos
+@desc Remove a list of videos from a channel
+@required {channel_id: num # The ID of the channel., video_uri: str # The URI of a video to remove.}
+@returns(204) {categories: [map], content_rating: [str], context: map{action: str, resource: map?, resource_type: str}, created_time: str, description: str?, duration: num, embed: any, height: num, language: str?, last_user_action_event_date: str?, license: str, link: str, metadata: map{connections: map{available_albums: map{options: [str], total: num, uri: str}, available_channels: map{options: [str], total: num, uri: str}, comments: map{options: [str], total: num, uri: str}, credits: map?{options: [str], total: num, uri: str}, likes: map{options: [str], total: num, uri: str}, ondemand: map{options: [str], resource_key: str, uri: str}, pictures: map{options: [str], total: num, uri: str}, playback: map{options: [str], uri: str}, recommendations: map?{options: [str], uri: str}, related: map?{options: [str], uri: str}, season: map{name: str, options: [str], uri: str}, texttracks: map{options: [str], total: num, uri: str}, trailer: map{options: [str], resource_key: str, uri: str}, users_with_access: map{options: [str], total: num, uri: str}, versions: map{current_uri: str, options: [str], resource_key: str, total: num, uri: str}}, interactions: map{buy: map?{currency: str?, display_price: str?, download: str, drm: bool, link: str?, price: num?, purchase_time: str?, stream: str, uri: str?}, channel: map?{options: [str], uri: str}, like: map{added: bool, added_time: str, options: [str], uri: str}, rent: map?{currency: str?, display_price: str?, drm: bool, expires_time: str?, link: str?, price: num?, purchase_time: str?, stream: str, uri: str?}, report: map{options: [str], reason: [str], uri: str}, subscribe: map?{drm: bool, expires_time: str, purchase_time: str, stream: str}, watched: map{added: bool, added_time: str, options: [str], uri: str}, watchlater: map{added: bool, added_time: str, options: [str], uri: str}}}, modified_time: str, name: str, parent_folder: any?, password: str, pictures: any, privacy: map{add: bool, comments: str, download: bool, embed: str, view: str}, release_time: str, resource_key: str, spatial: map{director_timeline: [map], field_of_view: num?, projection: str?, stereo_format: str?}, stats: map{plays: num?}, status: str?, tags: [map], transcode: map?{status: str}, type: str, upload: map?{approach: str, complete_uri: str, form: str, link: str, redirect_url: str, size: num, status: str, upload_link: str}, uri: str, user: any?, width: num} # The videos were removed.
+@errors {404: No such channel exists, or no such user exists., 403: The authenticated user isn't a moderator of this channel, or you can't remove this video from the channel.}
+
+@endpoint GET /channels/{channel_id}/videos
+@desc Get all the videos in a channel
+@required {channel_id: num # The ID of the channel.}
+@optional {containing_uri: str # The page that contains the video URI., direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(added/alphabetical/comments/date/default/duration/likes/manual/modified_time/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {304: No videos have been added to this channel since the given `If-Modified-Since` header., 404: No such channel exists., 400: The **sort** field is `default`, but the **direction** field has a value.}
+
+@endpoint PUT /channels/{channel_id}/videos
+@desc Add a list of videos to a channel
+@required {channel_id: num # The ID of the channel., video_uri: str # The URI of a video to add.}
+@returns(200) The videos were added.
+@errors {404: No such channel exists, or no such user exists., 403: The authenticated user isn't a moderator of the channel, or the video can't be added to the channel.}
+
+@endpoint DELETE /channels/{channel_id}/videos/{video_id}
+@desc Remove a specific video from a channel
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(204) The video was removed.
+@errors {404: No such channel exists, or no such video exists., 403: The authenticated user isn't a moderator of this channel.}
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}
+@desc Get a specific video in a channel
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(200) The video was returned.
+@errors {404: No such channel exists.}
+
+@endpoint PUT /channels/{channel_id}/videos/{video_id}
+@desc Add a specific video to a channel
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: No such channel exists, or no such video exists., 403: The video can't be added to channels, or the authenticated user isn't the moderator of this channel.}
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}/comments
+@desc Get all the comments on a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The comments were returned.
+
+@endpoint POST /channels/{channel_id}/videos/{video_id}/comments
+@desc Add a comment to a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(201) The comment was added.
+@errors {400: Error code 2207: The comment text is missing., 401: Error code 8003: The user credentials are invalid., 403: * Error code 3301: The comment was flagged as spam. * Error code 3411: The authenticated user is unverified. * Error code 3412: The authenticated user can't comment. * Error code 3413: Comments are disabled for this video.}
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}/credits
+@desc Get all the credited users in a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The credited users were returned.
+
+@endpoint POST /channels/{channel_id}/videos/{video_id}/credits
+@desc Credit a user in a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(201) The credit was added.
+@errors {400: * A parameter is invalid. * The authenticated user has an unverified email address. * There is a user block between the video owner and the person receiving credit., 403: The authenticated user doesn't own the video.}
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}/likes
+@desc Get all the users who have liked a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The users were returned.
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}/pictures
+@desc Get all the thumbnails of a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The thumbnails were returned.
+
+@endpoint POST /channels/{channel_id}/videos/{video_id}/pictures
+@desc Add a video thumbnail
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(201) The thumbnail was created.
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}/privacy/users
+@desc Get all the users who can view a private video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The users were returned.
+@errors {400: No users can view this private video by default.}
+
+@endpoint PUT /channels/{channel_id}/videos/{video_id}/privacy/users
+@desc Permit a list of users to view a private video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(200) The users can now view the private video.
+
+@endpoint GET /channels/{channel_id}/videos/{video_id}/texttracks
+@desc Get all the text tracks of a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(200) The text tracks were returned.
+@errors {404: No such video exists.}
+
+@endpoint POST /channels/{channel_id}/videos/{video_id}/texttracks
+@desc Add a text track to a video
+@required {channel_id: num # The ID of the channel., video_id: num # The ID of the video.}
+@returns(201) The text track was added.
+@errors {403: * The authenticated user can't add the text track. * Error code 2204: The request contains errors.}
+
+@endgroup
+
+@group contentratings
+@endpoint GET /contentratings
+@desc Get all content ratings
+@returns(200) The content ratings were returned.
+
+@endgroup
+
+@group creativecommons
+@endpoint GET /creativecommons
+@desc Get all Creative Commons licenses
+@returns(200) The Creative Commons licenses were returned.
+
+@endgroup
+
+@group groups
+@endpoint GET /groups
+@desc Get all groups
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/followers/relevant/videos) # The way to sort the results.  Option descriptions:  * `relevant` - Relevant sorting is available only for search queries.}
+@returns(200) The groups were returned.
+
+@endpoint POST /groups
+@desc Create a group
+@returns(200) The group was created.
+@errors {403: The authenticated user can't create groups., 400: A parameter is invalid.}
+
+@endpoint DELETE /groups/{group_id}
+@desc Delete a group
+@required {group_id: num # The ID of the group.}
+@returns(204) The group was deleted.
+@errors {403: The authenticated user isn't the group owner.}
+
+@endpoint GET /groups/{group_id}
+@desc Get a specific group
+@required {group_id: num # The ID of the group.}
+@returns(200) The group was returned.
+
+@endpoint GET /groups/{group_id}/users
+@desc Get all the members of a group
+@required {group_id: num # The ID of the group.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The members were returned.
+@errors {404: No such group exists.}
+
+@endpoint GET /groups/{group_id}/videos
+@desc Get all the videos in a group
+@required {group_id: num # The ID of the group.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {304: No videos have been added to this group since the given `If-Modified-Since` header., 404: No such group exists.}
+
+@endpoint DELETE /groups/{group_id}/videos/{video_id}
+@desc Remove a video from a group
+@required {group_id: num # The ID of the group., video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+@errors {403: The authenticated user can't modify this group's videos.}
+
+@endpoint GET /groups/{group_id}/videos/{video_id}
+@desc Get a specific video in a group
+@required {group_id: num # The ID of the group., video_id: num # The ID of the video.}
+@returns(200) The video was returned.
+@errors {404: No such video or group exists.}
+
+@endpoint PUT /groups/{group_id}/videos/{video_id}
+@desc Add a video to a group
+@required {group_id: num # The ID of the group., video_id: num # The ID of the video.}
+@returns(202) The video is in pending status.
+@returns(200) The video was added.
+@errors {403: * The video is already in the group. * The authenticated user can't add videos to the group.}
+
+@endgroup
+
+@group languages
+@endpoint GET /languages
+@desc Get all languages
+@optional {filter: str # The attribute by which to filter the results.  Option descriptions:  * `texttracks` - Only return text track supported languages}
+@returns(200) The languages were returned.
+
+@endgroup
+
+@group me
+@endpoint GET /me
+@desc Get a user
+@returns(200) The user's representation was returned.
+
+@endpoint PATCH /me
+@desc Edit a user
+@returns(200) The user's representation was edited.
+
+@endpoint GET /me/albums
+@desc Get all the albums that belong to a user
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/duration/videos) # The way to sort the results.}
+@returns(200) The albums were returned.
+@errors {400: A parameter is invalid.}
+
+@endpoint POST /me/albums
+@desc Create an album
+@returns(201) The album was created.
+@errors {400: A parameter is invalid., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't create an album.}
+
+@endpoint DELETE /me/albums/{album_id}
+@desc Delete an album
+@required {album_id: num # The ID of the album.}
+@returns(204) The album was deleted.
+@errors {404: No such album exists., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't delete the album.}
+
+@endpoint GET /me/albums/{album_id}
+@desc Get a specific album
+@required {album_id: num # The ID of the album.}
+@returns(200) The album was returned.
+@errors {404: No such album exists.}
+
+@endpoint PATCH /me/albums/{album_id}
+@desc Edit an album
+@required {album_id: num # The ID of the album.}
+@returns(200) The album was edited.
+@errors {400: A parameter is invalid., 403: The authenticated user doesn't own the album, the supplied token doesn't have the proper scopes, or the authenticated user can't edit the album., 404: No such album exists.}
+
+@endpoint GET /me/albums/{album_id}/videos
+@desc Get all the videos in an album
+@required {album_id: num # The ID of the album.}
+@optional {containing_uri: str # The page containing the video URI., direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., password: str # The password of the album., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/default/duration/likes/manual/modified_time/plays) # The way to sort the results., weak_search: bool # Whether to include private videos in the search. Please note that a separate search service provides this functionality. The service performs a partial text search on the video's name.}
+@returns(200) The videos were returned.
+@errors {404: No such album exists.}
+
+@endpoint PUT /me/albums/{album_id}/videos
+@desc Replace all the videos in an album
+@required {album_id: num # The ID of the album., videos: str # A comma-separated list of video URIs.}
+@returns(201) The videos were added.
+@errors {404: No such album exists., 403: The authenticated user can't add videos to albums.}
+
+@endpoint DELETE /me/albums/{album_id}/videos/{video_id}
+@desc Remove a video from an album
+@required {album_id: num # The ID of the album., video_id: num # The ID of the video.}
+@returns(204) The video was removed.
+@errors {404: No such album exists., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't edit the album.}
+
+@endpoint GET /me/albums/{album_id}/videos/{video_id}
+@desc Get a specific video in an album
+@required {album_id: num # The ID of the album., video_id: num # The ID of the video.}
+@optional {password: str # The password of the album.}
+@returns(200) The video was returned.
+@errors {404: No such album exists, or the video wasn't found in it.}
+
+@endpoint PUT /me/albums/{album_id}/videos/{video_id}
+@desc Add a specific video to an album
+@required {album_id: num # The ID of the album., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: No such album exists., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't edit the album.}
+
+@endpoint POST /me/albums/{album_id}/videos/{video_id}/set_album_thumbnail
+@desc Set a video as the album thumbnail
+@required {album_id: num # The ID of the album., video_id: num # The ID of the video.}
+@optional {time_code: num # The video frame time in seconds to use as the album thumbnail.}
+@returns(200) {allow_continuous_play: bool, allow_downloads: bool, allow_share: bool, autoplay: bool, brand_color: str?, created_time: str, custom_logo: any?, description: str?, domain: str?, duration: num, embed: map{html: str?}, embed_brand_color: bool?, embed_custom_logo: bool?, hide_nav: bool, hide_vimeo_logo: bool?, layout: str, link: str, loop: bool, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}, interactions: map?{add_custom_thumbnails: map{options: [str], uri: str}, add_logos: map{options: [str], uri: str}, add_to: map?{options: [str], uri: str}, add_videos: map{options: [str], uri: str}}}, modified_time: str, name: str, pictures: any, privacy: map{password: str, view: str}, resource_key: str, review_mode: bool, share_link: str, sort: str, theme: str, uri: str, url: str?, use_custom_domain: bool, user: any, web_brand_color: bool, web_custom_logo: bool} # The album was updated with a new thumbnail.
+@errors {404: Error code 5000: No such album, or user, or video exists., 403: Error code 3429: The authenticated user can't edit the album., 500: Error code 4016: Unexpected error while setting thumbnail.}
+
+@endpoint GET /me/appearances
+@desc Get all the videos in which a user appears
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+
+@endpoint GET /me/categories
+@desc Get all the categories that a user follows
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date/name) # The way to sort the results.}
+@returns(200) The categories were returned.
+@errors {403: Error code 3200: You can't view another user.}
+
+@endpoint DELETE /me/categories/{category}
+@desc Unsubscribe a user from a category
+@required {category: str # The name of the category.}
+@returns(204) The user was unsubscribed.
+
+@endpoint GET /me/categories/{category}
+@desc Check if a user follows a category
+@required {category: str # The name of the category.}
+@returns(204) The user is following the category.
+
+@endpoint PUT /me/categories/{category}
+@desc Subscribe a user to a single category
+@required {category: num # The name of the category.}
+@returns(204) The user was subscribed.
+
+@endpoint GET /me/channels
+@desc Get all the channels to which a user subscribes
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/followers/videos) # The way to sort the results.}
+@returns(200) The channels were returned.
+@errors {304: No channel has been followed since the given `If-Modified-Since` header.}
+
+@endpoint DELETE /me/channels/{channel_id}
+@desc Unsubscribe a user from a specific channel
+@required {channel_id: num # The ID of the channel.}
+@returns(204) The user is no longer a follower of the channel.
+@errors {404: No such channel exists.}
+
+@endpoint GET /me/channels/{channel_id}
+@desc Check if a user follows a channel
+@required {channel_id: num # The ID of the channel.}
+@returns(204) The user follows the channel.
+@errors {404: No such channel exists.}
+
+@endpoint PUT /me/channels/{channel_id}
+@desc Subscribe a user to a specific channel
+@required {channel_id: num # The ID of the channel.}
+@returns(204) The user is now a follower of the channel.
+@errors {404: No such channel exists.}
+
+@endpoint GET /me/customlogos
+@desc Get all the custom logos that belong to a user
+@returns(200) The custom logos were returned.
+@errors {403: * The authenticated user can't view this particular custom logo. * The authenticated user can't view custom logos in general.}
+
+@endpoint POST /me/customlogos
+@desc Add a custom logo
+@returns(201) The custom logo was created.
+@errors {403: * The authenticated user can't upload pictures to another user's video. * The authenticated user can't add a custom logo.}
+
+@endpoint GET /me/customlogos/{logo_id}
+@desc Get a specific custom logo
+@required {logo_id: num # The ID of the custom logo.}
+@returns(200) The custom logo was returned.
+@errors {403: The authenticated user can't view custom logos.}
+
+@endpoint GET /me/feed
+@desc Get all the videos in a user's feed
+@optional {offset: str # The pagination offset. We recommend that you use the pagination links in the feed response instead of working with this value directly. For more details, see our [pagination documentation](https://developer.vimeo.com/api/common-formats#using-the-pagination-parameter)., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., type: str(appears/category_featured/channel/facebook_feed/following/group/likes/ondemand_publish/share/tagged_with/twitter_timeline/uploads) # The feed type.}
+@returns(200) The videos were returned.
+
+@endpoint GET /me/followers
+@desc Get all the followers of a user
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The user's followers were returned.
+
+@endpoint GET /me/following
+@desc Get all the users that a user is following
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The followed users were returned.
+
+@endpoint POST /me/following
+@desc Follow a list of users
+@required {users: [str] # An array of user IDs for the authenticated user to follow.}
+@returns(204) The users were followed.
+@errors {401: Error code 8000: The user access token is invalid., 403: Error code 3417: The authenticated user can't follow other users., 400: * Error code 2205: The request body is empty, the users array is invalid, or the list of users doesn't contain URIs. * Error code 2900: A user in the list doesn't exist. * Error code 2901: The list contains more than 100 users., 500: Error code 4005: An unexpected error occurred., 429: Error code 9006: The authenticated user is rate-limited from following other users.}
+
+@endpoint DELETE /me/following/{follow_user_id}
+@desc Unfollow a user
+@required {follow_user_id: num # The ID of the user to unfollow.}
+@returns(204) The user was unfollowed.
+
+@endpoint GET /me/following/{follow_user_id}
+@desc Check if a user is following another user
+@required {follow_user_id: num # The ID of the user to follow.}
+@returns(204) The authenticated user follows the user in question.
+@errors {404: The authenticated user doesn't follow the user in question.}
+
+@endpoint PUT /me/following/{follow_user_id}
+@desc Follow a specific user
+@required {follow_user_id: num # The ID of the user to follow.}
+@returns(204) The user was followed.
+@errors {403: The authenticated user can't add followers.}
+
+@endpoint GET /me/groups
+@desc Get all the groups that a user has joined
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/members/videos) # The way to sort the results.}
+@returns(200) The groups were returned.
+
+@endpoint DELETE /me/groups/{group_id}
+@desc Remove a user from a group
+@required {group_id: num # The ID of the group.}
+@returns(204) The user left the group.
+@errors {403: The authenticated user owns the group. To remove this user, first apply a new group owner through PATCH.}
+
+@endpoint PUT /me/groups/{group_id}
+@desc Add a user to a group
+@required {group_id: num # The ID of the group.}
+@returns(204) The user joined the group.
+@errors {403: * The authenticated user can't join groups. * The group prohibits the authenticated user from joining, either because the group is not public or because the group's privacy setting is `members`.}
+
+@endpoint GET /me/groups/{group_id}
+@desc Check if a user has joined a group
+@required {group_id: num # The ID of the group.}
+@returns(204) The user belongs to the group.
+@errors {404: * No such group exists. * The authenticated user isn't a member of this group.}
+
+@endpoint GET /me/likes
+@desc Get all the videos that a user has liked
+@optional {filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+
+@endpoint DELETE /me/likes/{video_id}
+@desc Cause a user to unlike a video
+@required {video_id: num # The ID of the video.}
+@returns(204) The video was unliked.
+@errors {403: The authenticated user can't like videos.}
+
+@endpoint GET /me/likes/{video_id}
+@desc Check if a user has liked a video
+@required {video_id: num # The ID of the video.}
+@returns(204) The user has liked the video.
+@errors {404: The user hasn't liked the video.}
+
+@endpoint PUT /me/likes/{video_id}
+@desc Cause a user to like a video
+@required {video_id: num # The ID of the video.}
+@returns(204) The video was liked.
+@errors {403: The authenticated user can't like videos., 400: The authenticated user owns the video.}
+
+@endpoint GET /me/ondemand/pages
+@desc Get all the On Demand pages of a user
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(film/series) # The type of On Demand pages to return., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(added/alphabetical/date/modified_time/name/publish.time/rating) # The way to sort the results.}
+@returns(200) The On Demand pages were returned.
+@errors {404: No such user exists.}
+
+@endpoint POST /me/ondemand/pages
+@desc Create an On Demand page
+@required {content_rating: str(drugs/language/nudity/safe/unrated/violence) # One or more ratings, either as a comma-separated list or as a JSON array depending on the request format., description: str # The description of the On Demand page., name: str # The name of the On Demand page., type: str(film/series) # The type of On Demand page.}
+@optional {accepted_currencies: str(AUD/CAD/CHF/DKK/EUR/GBP/JPY/KRW/NOK/PLN/SEK/USD) # An array of accepted currencies.  Option descriptions:  * `AUD` - Australian Dollar  * `CAD` - Canadian Dollar  * `CHF` - Swiss Franc  * `DKK` - Danish Krone  * `EUR` - Euro  * `GBP` - British Pound  * `JPY` - Japanese Yen  * `KRW` - South Korean Won  * `NOK` - Norwegian Krone  * `PLN` - Polish Zloty  * `SEK` - Swedish Krona  * `USD` - US Dollar, buy: map{active: bool, download: bool, price: map{AUD: num, CAD: num, CHF: num, DKK: num, EUR: num, GBP: num, JPY: num, KRW: num, NOK: num, PLN: num, SEK: num, USD: num}}, domain_link: str # The custom domain of the On Demand page., episodes: map{buy: map{active: bool, download: bool, price: map}, rent: map{active: bool, period: str, price: map}}, link: str # The custom string to use in this On Demand page's Vimeo URL., rent: map{active: bool, period: str, price: map{AUD: num, CAD: num, CHF: num, DKK: num, EUR: num, GBP: num, JPY: num, KRW: num, NOK: num, PLN: num, SEK: num, USD: num}}, subscription: map{monthly: map{active: bool, price: map}}}
+@returns(201) {background: any?, colors: map{primary: str, secondary: str}, content_rating: [str], created_time: str, description: str?, domain_link: str?, episodes: map{buy: map{active: bool, price: num?}, rent: map{active: bool, period: str?, price: num?}}, film: any, genres: [map], link: str, metadata: map{connections: map{metadata: map{connections: map}}, interactions: any}, modified_time: str, name: str, pictures: any?, preorder: map{active: bool, cancel_time: str, publish_time: str, time: str}, published: map{enabled: bool, time: str}, rating: num?, resource_key: str, sku: str?, subscription: map?{active: bool, link: str?, period: str, price: map}, theme: str, thumbnail: any?, trailer: any?, type: str, uri: str, user: any?} # The On Demand page was created.
+
+@endpoint GET /me/ondemand/purchases
+@desc Get all the On Demand purchases and rentals that a user has made
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(all/expiring_soon/film/important/purchased/rented/series/subscription/unwatched/watched) # The type of On Demand videos to show.  Option descriptions:  * `important` - Will show all pages which are about to expire., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(added/alphabetical/date/name/purchase_time/rating/release_date) # The way to sort the results.}
+@returns(200) The purchases and rentals were returned.
+@errors {403: The authenticated user can't view the purchases and rentals for another user's account.}
+
+@endpoint GET /me/ondemand/purchases/{ondemand_id}
+@desc Check if a user has made a purchase or rental from an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) You have purchased the On Demand page.
+@errors {404: No such user or On Demand page exists., 403: The requested user isn't the same as the authenticated user.}
+
+@endpoint GET /me/pictures
+@desc Get all the pictures that belong to a user
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The portrait images were returned.
+
+@endpoint POST /me/pictures
+@desc Add a user picture
+@returns(200) The portrait image was added.
+
+@endpoint DELETE /me/pictures/{portraitset_id}
+@desc Delete a user picture
+@required {portraitset_id: num # The ID of the picture.}
+@returns(204) The portrait image was removed.
+
+@endpoint GET /me/pictures/{portraitset_id}
+@desc Get a specific user picture
+@required {portraitset_id: num # The ID of the picture.}
+@returns(200) The portrait image was returned.
+
+@endpoint PATCH /me/pictures/{portraitset_id}
+@desc Edit a user picture
+@required {portraitset_id: num # The ID of the picture.}
+@returns(200) The portrait image was edited.
+
+@endpoint GET /me/portfolios
+@desc Get all the portfolios that belong to a user
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The portfolios were returned.
+
+@endpoint GET /me/portfolios/{portfolio_id}
+@desc Get a specific portfolio
+@required {portfolio_id: num # The ID of the portfolio.}
+@returns(200) The portfolio was returned.
+
+@endpoint GET /me/portfolios/{portfolio_id}/videos
+@desc Get all the videos in a portfolio
+@required {portfolio_id: num # The ID of the portfolio.}
+@optional {containing_uri: str # The page that contains the video URI., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/comments/date/default/likes/manual/plays) # The way to sort the results.  Option descriptions:  * `default` - This will sort to the default sort set on the portfolio.}
+@returns(200) The videos were returned.
+
+@endpoint DELETE /me/portfolios/{portfolio_id}/videos/{video_id}
+@desc Remove a video from a portfolio
+@required {portfolio_id: num # The ID of the portfolio., video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+@errors {404: The portfolio wasn't found, or the video wasn't found.}
+
+@endpoint GET /me/portfolios/{portfolio_id}/videos/{video_id}
+@desc Get a specific video in a portfolio
+@required {portfolio_id: num # The ID of the portfolio., video_id: num # The ID of the video.}
+@returns(200) The video was returned.
+
+@endpoint PUT /me/portfolios/{portfolio_id}/videos/{video_id}
+@desc Add a video to a portfolio
+@required {portfolio_id: num # The ID of the portfolio., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: The portfolio wasn't found, or the video wasn't found.}
+
+@endpoint GET /me/presets
+@desc Get all the embed presets that a user has created
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The embed presets were returned.
+
+@endpoint GET /me/presets/{preset_id}
+@desc Get a specific embed preset
+@required {preset_id: num # The ID of the preset.}
+@returns(200) The embed preset was returned.
+
+@endpoint PATCH /me/presets/{preset_id}
+@desc Edit an embed preset
+@required {preset_id: num # The ID of the preset.}
+@returns(200) The embed preset was edited.
+@errors {404: * The preset doesn't exist. * The authenticated user doesn't own the preset., 400: The outro type is invalid.}
+
+@endpoint GET /me/presets/{preset_id}/videos
+@desc Get all the videos that have been added to an embed preset
+@required {preset_id: num # The ID of the embed preset.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The videos were returned.
+
+@endpoint GET /me/projects
+@desc Get all the projects that belong to a user
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(date/default/modified_time/name) # The way to sort the results.}
+@returns(200) The projects were returned.
+@errors {401: Error code 8000: The user credentials are invalid.}
+
+@endpoint POST /me/projects
+@desc Create a project
+@required {name: str # The name of the project.}
+@returns(201) {created_time: str, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}}, modified_time: str, name: str, resource_key: str, uri: str, user: any} # The project was created.
+@errors {401: Error code 8000: The user credentials are invalid., 400: * Error code 2205: The input is empty. * Error code 2204: The input is invalid., 403: Error code 3200: The authenticated user can't create projects.}
+
+@endpoint DELETE /me/projects/{project_id}
+@desc Delete a project
+@required {project_id: num # The ID of the project.}
+@optional {should_delete_clips: bool # Whether to delete all the videos in the project along with the project itself.}
+@returns(204) The project was deleted.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid., 403: Error code 3200: The authenticated user can't delete the project.}
+
+@endpoint GET /me/projects/{project_id}
+@desc Get a specific project
+@required {project_id: num # The ID of the project.}
+@returns(200) {created_time: str, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}}, modified_time: str, name: str, resource_key: str, uri: str, user: any} # The project was returned.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid.}
+
+@endpoint PATCH /me/projects/{project_id}
+@desc Edit a project
+@required {project_id: num # The ID of the project., name: str # The name of the project.}
+@returns(200) {created_time: str, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}}, modified_time: str, name: str, resource_key: str, uri: str, user: any} # The project was edited.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid., 400: * Error code 2204: The input is invalid. * Error code 2205: The input is empty., 403: Error code 3200: The authenticated user can't edit the project.}
+
+@endpoint DELETE /me/projects/{project_id}/videos
+@desc Remove a list of videos from a project
+@required {project_id: num # The ID of the project., uris: str # A comma-separated list of the video URIs to remove.}
+@optional {should_delete_clips: bool # Whether to delete the videos when removing them from the project.}
+@returns(204) The videos were removed.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid., 400: Error code 2204: The input is invalid.}
+
+@endpoint GET /me/projects/{project_id}/videos
+@desc Get all the videos in a project
+@required {project_id: num # The ID of the project.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date/default/duration/last_user_action_event_date) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid.}
+
+@endpoint PUT /me/projects/{project_id}/videos
+@desc Add a list of videos to a project
+@required {project_id: num # The ID of the project., uris: str # A comma-separated list of video URIs to add.}
+@returns(204) The videos were added.
+@errors {404: Error code 5000: No such project or video exists., 401: Error code 8000: The user credentials are invalid., 400: Error code 2204: The input is invalid.}
+
+@endpoint DELETE /me/projects/{project_id}/videos/{video_id}
+@desc Remove a specific video from a project
+@required {project_id: num # The ID of the project., video_id: num # The ID of the video.}
+@returns(204) The video was removed.
+@errors {404: Error code 5000: No such video exists in the project., 401: Error code 8000: The user credentials are invalid., 400: Error code 2204: The input is invalid.}
+
+@endpoint PUT /me/projects/{project_id}/videos/{video_id}
+@desc Add a specific video to a project
+@required {project_id: num # The ID of the project., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: Error code 5000: No such user, project, or video exists.}
+
+@endpoint GET /me/videos
+@desc Get all the videos that a user has uploaded
+@optional {containing_uri: str # The page that contains the video URI. Available only when not paired with **query**., direction: str(asc/desc) # The sort direction of the results., filter: str(app_only/embeddable/featured/playable) # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., filter_playable: bool # Whether to filter the results by playable videos (`true`) or non-playable videos (`false`)., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/default/duration/last_user_action_event_date/likes/modified_time/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {304: The authenticated user hasn't created any videos since the given **If-Modified-Since** header.}
+
+@endpoint POST /me/videos
+@desc Upload a video
+@returns(201) The upload procedure has begun.
+@errors {401: Error code 8002: No user is associated with the access token., 403: * Error code 4102: The authenticated user's allotted quota has been reached. * Error code 4101: The authenticated user's maximum disk space has been reached., 400: * Error code 2205: The body of the request isn't formatted properly. * Error code 2204: The request contains invalid body parameters. * Error code 2230: The upload type is invalid. * Error code 3116: The **type** payload parameter was supplied instead of **upload.approach**. Use **upload.approach** starting from API version 3.4., 500: Error code 4003: There is a problem initiating the upload.}
+
+@endpoint GET /me/videos/{video_id}
+@desc Check if a user owns a video
+@required {video_id: num # The ID of the video.}
+@returns(200) The user owns the video.
+@errors {404: The authenticated user doesn't own the video.}
+
+@endpoint DELETE /me/watched/videos
+@desc Delete a user's watch history
+@returns(204) The authenticated user's watch history was deleted.
+
+@endpoint GET /me/watched/videos
+@desc Get all the videos that a user has watched
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The videos were returned.
+@errors {403: The authenticated user can't view another user's watch history.}
+
+@endpoint DELETE /me/watched/videos/{video_id}
+@desc Delete a specific video from a user's watch history
+@required {video_id: num # The ID of the video.}
+@returns(204) The video was deleted from the authenticated user's watch history.
+
+@endpoint GET /me/watchlater
+@desc Get all the videos in a user's Watch Later queue
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {304: The user hasn't added any videos to their Watch Later queue since the given `If-Modified-Since` header.}
+
+@endpoint DELETE /me/watchlater/{video_id}
+@desc Remove a video from a user's Watch Later queue
+@required {video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+
+@endpoint GET /me/watchlater/{video_id}
+@desc Check if a user has added a specific video to their Watch Later queue
+@required {video_id: num # The ID of the video.}
+@returns(200) The video appears in the user's Watch Later queue.
+@errors {404: The video doesn't appear in the user's Watch Later queue.}
+
+@endpoint PUT /me/watchlater/{video_id}
+@desc Add a video to a user's Watch Later queue
+@required {video_id: num # The ID of the video.}
+@returns(204) The video was added.
+
+@endgroup
+
+@group oauth
+@endpoint POST /oauth/access_token
+@desc Exchange an authorization code for an access token
+@returns(200) The authorization code was exchanged.
+@errors {400: * The grant type is invalid. * The authorization code is invalid. * The redirect URI doesn't match the URI to create the authorization code.}
+
+@endpoint POST /oauth/authorize/client
+@desc Authorize a client with OAuth
+@returns(200) The authorization was successful.
+@errors {401: Error code 8001: No such client secret exists.}
+
+@endpoint POST /oauth/authorize/vimeo_oauth1
+@desc Convert OAuth 1 access tokens to OAuth 2 access tokens
+@returns(200) The tokens were converted.
+@errors {400: * The token is invalid. * The token has unauthorized scopes.}
+
+@endpoint GET /oauth/verify
+@desc Verify an OAuth 2 token
+@returns(200) The token was verified.
+@errors {401: The token isn't a valid OAuth 2 token.}
+
+@endgroup
+
+@group ondemand
+@endpoint GET /ondemand/genres
+@desc Get all On Demand genres
+@returns(200) The On Demand genres were returned.
+
+@endpoint GET /ondemand/genres/{genre_id}
+@desc Get a specific On Demand genre
+@required {genre_id: str # The ID of the genre.}
+@returns(200) The On Demand genre was returned.
+@errors {404: No such On Demand genre exists.}
+
+@endpoint GET /ondemand/genres/{genre_id}/pages
+@desc Get all the On Demand pages in a genre
+@required {genre_id: str # The ID of the genre.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(country/my_region) # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/name/publish.time/videos) # The way to sort the results.}
+@returns(200) The On Demand pages were returned.
+
+@endpoint GET /ondemand/genres/{genre_id}/pages/{ondemand_id}
+@desc Get a specific On Demand page in a genre
+@required {genre_id: str # The ID of the genre., ondemand_id: num # The ID of the On Demand.}
+@returns(200) The On Demand page belongs to the genre.
+@errors {404: No such On Demand page or genre exists.}
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}
+@desc Delete a draft of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(204) The page draft was deleted.
+@errors {404: No such On Demand page exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}
+@desc Get a specific On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The On Demand page was returned.
+@errors {404: No such On Demand page exists.}
+
+@endpoint PATCH /ondemand/pages/{ondemand_id}
+@desc Edit an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The On Demand page was edited.
+@errors {404: No such On Demand page exists., 403: The authenticated user can't edit the On Demand page.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/backgrounds
+@desc Get all the backgrounds of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The background images were returned.
+@errors {404: No such On Demand page exists.}
+
+@endpoint POST /ondemand/pages/{ondemand_id}/backgrounds
+@desc Add a background to an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The background was created.
+@errors {404: No such On Demand page exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}/backgrounds/{background_id}
+@desc Remove a background from an On Demand page
+@required {background_id: num # The ID of the background., ondemand_id: num # The ID of the On Demand.}
+@returns(204) The background image was deleted.
+@errors {404: No such On Demand page or background image exists., 403: If you are attempting to modify an On Demand page you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/backgrounds/{background_id}
+@desc Get a specific background of an On Demand page
+@required {background_id: num # The ID of the background., ondemand_id: num # The ID of the On Demand.}
+@returns(200) The background image was returned.
+@errors {404: No such On Demand page or background image exists., 403: You can't view another user's On Demand page background.}
+
+@endpoint PATCH /ondemand/pages/{ondemand_id}/backgrounds/{background_id}
+@desc Edit a background of an On Demand page
+@required {background_id: num # The ID of the background., ondemand_id: num # The ID of the On Demand.}
+@returns(200) The background was edited.
+@errors {404: No such On Demand page or background image exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/genres
+@desc Get all the genres of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The genres were returned.
+@errors {404: No such On Demand page exists.}
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}/genres/{genre_id}
+@desc Remove a genre from an On Demand page
+@required {genre_id: str # The ID of the genre., ondemand_id: num # The ID of the On Demand.}
+@returns(204) The On Demand genre was deleted.
+@errors {404: No such On Demand page or genre exists., 403: You can't modify an On Demand page that you don't own., 400: The On Demand page must belong to at least one genre.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/genres/{genre_id}
+@desc Check whether an On Demand page belongs to a genre
+@required {genre_id: str # The ID of the genre., ondemand_id: num # The ID of the On Demand.}
+@returns(200) The On Demand page's genre was returned.
+@errors {404: No such On Demand page or genre exists.}
+
+@endpoint PUT /ondemand/pages/{ondemand_id}/genres/{genre_id}
+@desc Add a genre to an On Demand page
+@required {genre_id: str # The ID of the genre., ondemand_id: num # The ID of the On Demand.}
+@returns(201) The genre was added.
+@errors {404: No such On Demand page or genre exists., 403: You can't modify an On Demand page that you don't own., 400: You can't add more than two genres to an On Demand page.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/likes
+@desc Get all the users who have liked a video on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand page.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(extra/main/trailer) # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The users were returned.
+
+@endpoint GET /ondemand/pages/{ondemand_id}/pictures
+@desc Get all the posters of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The posters were returned.
+@errors {404: No such On Demand page exists.}
+
+@endpoint POST /ondemand/pages/{ondemand_id}/pictures
+@desc Add a poster to an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(201) The poster was added.
+@errors {403: You can't modify another user's On Demand page.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/pictures/{poster_id}
+@desc Get a specific poster of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., poster_id: num # The ID of the picture.}
+@returns(200) The poster was returned.
+
+@endpoint PATCH /ondemand/pages/{ondemand_id}/pictures/{poster_id}
+@desc Edit a poster of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., poster_id: num # The ID of the picture.}
+@returns(200) The poster was edited.
+
+@endpoint GET /ondemand/pages/{ondemand_id}/promotions
+@desc Get all the promotions on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., filter: str(batch/default/single/vip) # The filter to apply to the results.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The promotions were returned.
+@errors {404: No such On Demand page exists., 403: You can't view promotions for an On Demand page that you don't own., 400: The filter is invalid.}
+
+@endpoint POST /ondemand/pages/{ondemand_id}/promotions
+@desc Add a promotion to an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The promotion was added.
+@errors {404: No such On Demand page exists., 403: You can't create promotions for an On Demand page that you don't own., 400: * There are errors in the request. * The promo code already exists.}
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}/promotions/{promotion_id}
+@desc Remove a promotion from an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., promotion_id: num # The ID of the promotion.}
+@returns(204) The promotion was deleted.
+@errors {404: No such On Demand page or promotion exists., 403: You can't delete a promotion for an On Demand page that you not own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/promotions/{promotion_id}
+@desc Get a specific promotion on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., promotion_id: num # The ID of the promotion.}
+@returns(200) The promotion was returned.
+@errors {404: No such On Demand page or promotion exists., 403: You can't view a promotion for an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/promotions/{promotion_id}/codes
+@desc Get all the codes of a promotion on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., promotion_id: num # The ID of the promotion.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The codes were returned.
+@errors {404: No such On Demand page exists., 403: You can't create promotions for an On Demand page that you don't own.}
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}/regions
+@desc Remove a list of regions from an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The On Demand regions were deleted.
+@errors {404: No such On Demand page or region exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/regions
+@desc Get all the regions of an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The regions were returned.
+@errors {404: No such On Demand page exists.}
+
+@endpoint PUT /ondemand/pages/{ondemand_id}/regions
+@desc Add a list of regions to an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@returns(200) The list of regions was set.
+@errors {404: No such On Demand page or region exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}/regions/{country}
+@desc Remove a specific region from an On Demand page
+@required {country: str # The country code., ondemand_id: num # The ID of the On Demand.}
+@returns(204) The On Demand region was deleted.
+@errors {404: No such On Demand page or region exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/regions/{country}
+@desc Get a specific region of an On Demand page
+@required {country: str # The country code., ondemand_id: num # The ID of the On Demand.}
+@returns(200) The On Demand page's region was returned.
+@errors {404: No such On Demand page or region exists.}
+
+@endpoint PUT /ondemand/pages/{ondemand_id}/regions/{country}
+@desc Add a specific region to an On Demand page
+@required {country: str # The country code., ondemand_id: num # The ID of the On Demand.}
+@returns(201) The region was added.
+@errors {404: No such On Demand page or region exists., 403: You can't modify an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/seasons
+@desc Get all the seasons on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(date/manual) # The way to sort the results.}
+@returns(200) The seasons were returned.
+@errors {404: No such On Demand page exists.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/seasons/{season_id}
+@desc Get a specific season on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., season_id: num # The ID of the season.}
+@returns(200) The season was returned.
+@errors {404: No such On Demand page or season exists.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/seasons/{season_id}/videos
+@desc Get all the videos in a season on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., season_id: num # The ID of the season.}
+@optional {filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(date/default/manual/name/purchase_time/release_date) # The way to sort the results.}
+@returns(200) The videos were returned.
+
+@endpoint GET /ondemand/pages/{ondemand_id}/videos
+@desc Get all the videos on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(all/buy/expiring_soon/extra/main/main.viewable/rent/trailer/unwatched/viewable/watched) # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(date/default/episode/manual/name/purchase_time/release_date) # The way to sort the results.}
+@returns(200) * The videos were returned. * The videos were returned.
+
+@endpoint DELETE /ondemand/pages/{ondemand_id}/videos/{video_id}
+@desc Remove a video from an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+@errors {403: You can't modify an On Demand page that you don't own.}
+
+@endpoint GET /ondemand/pages/{ondemand_id}/videos/{video_id}
+@desc Get a specific video on an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., video_id: num # The ID of the video.}
+@returns(200) The video is on the On Demand page.
+
+@endpoint PUT /ondemand/pages/{ondemand_id}/videos/{video_id}
+@desc Add a video to an On Demand page
+@required {ondemand_id: num # The ID of the On Demand., video_id: num # The ID of the video.}
+@returns(200) The video was added.
+@errors {403: You can't modify an On Demand page that you don't own., 400: You can't add the video to this On Demand page.}
+
+@endpoint GET /ondemand/regions
+@desc Get all the On Demand regions
+@returns(200) The On Demand regions were returned.
+
+@endpoint GET /ondemand/regions/{country}
+@desc Get a specific On Demand region
+@required {country: str # The country code.}
+@returns(200) The On Demand region was returned.
+@errors {404: No such On Demand region exists.}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{word}
+@desc Get a specific tag
+@required {word: str # The tag to return.}
+@returns(200) The tag was returned.
+
+@endpoint GET /tags/{word}/videos
+@desc Get all the videos with a specific tag
+@required {word: str # The tag word.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(created_time/duration/name) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {404: No such tag exists.}
+
+@endgroup
+
+@group tokens
+@endpoint DELETE /tokens
+@desc Revoke the current access token
+@returns(204) The token was revoked.
+@errors {400: You can't revoke access for an OAuth 1 token.}
+
+@endgroup
+
+@group tutorial
+@endpoint GET /tutorial
+@desc Get started with the Vimeo API
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@desc Search for users
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/followers/relevant/videos) # The way to sort the results.}
+@returns(200) The search results were returned.
+@errors {503: Search is disabled., 500: There was an internal search error.}
+
+@endpoint GET /users/{user_id}
+@desc Get a user
+@required {user_id: num # The ID of the user.}
+@returns(200) The user's representation was returned.
+
+@endpoint PATCH /users/{user_id}
+@desc Edit a user
+@required {user_id: num # The ID of the user.}
+@returns(200) The user's representation was edited.
+
+@endpoint GET /users/{user_id}/albums
+@desc Get all the albums that belong to a user
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/duration/videos) # The way to sort the results.}
+@returns(200) The albums were returned.
+@errors {400: A parameter is invalid.}
+
+@endpoint POST /users/{user_id}/albums
+@desc Create an album
+@required {user_id: num # The ID of the user.}
+@returns(201) The album was created.
+@errors {400: A parameter is invalid., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't create an album.}
+
+@endpoint DELETE /users/{user_id}/albums/{album_id}
+@desc Delete an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@returns(204) The album was deleted.
+@errors {404: No such album exists., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't delete the album.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}
+@desc Get a specific album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@returns(200) The album was returned.
+@errors {404: No such album exists.}
+
+@endpoint PATCH /users/{user_id}/albums/{album_id}
+@desc Edit an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@returns(200) The album was edited.
+@errors {400: A parameter is invalid., 403: The authenticated user doesn't own the album, the supplied token doesn't have the proper scopes, or the authenticated user can't edit the album., 404: No such album exists.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}/custom_thumbnails
+@desc Get all the custom upload thumbnails of an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The custom uploaded thumbnails were returned.
+@errors {404: No such album exists., 403: Error code 3200: The authenticated user cannot access uploaded thumbnails for the specified album.}
+
+@endpoint POST /users/{user_id}/albums/{album_id}/custom_thumbnails
+@desc Add a custom uploaded thumbnail
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@returns(201) The custom thumbnail was added to the album.
+@errors {404: No such album exists., 403: The authenticated user can't modify this album.}
+
+@endpoint DELETE /users/{user_id}/albums/{album_id}/custom_thumbnails/{thumbnail_id}
+@desc Remove a custom uploaded album thumbnail
+@required {album_id: num # The ID of the album., thumbnail_id: num # The ID of the custom thumbnail., user_id: num # The ID of the user.}
+@returns(204) The custom thumbnail was removed.
+@errors {404: No such album exists, or it doesn't contain the specified custom thumbnail., 403: The authenticated user can't modify this album.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}/custom_thumbnails/{thumbnail_id}
+@desc Get a specific custom uploaded album thumbnail
+@required {album_id: num # The ID of the album., thumbnail_id: num # The ID of the custom thumbnail., user_id: num # The ID of the user.}
+@returns(200) The custom thumbnail was returned.
+@errors {404: No such album exists, or it doesn't contain the specified custom thumbnail., 403: The authenticated user can't view this custom thumbnail.}
+
+@endpoint PATCH /users/{user_id}/albums/{album_id}/custom_thumbnails/{thumbnail_id}
+@desc Replace a custom uploaded album thumbnail
+@required {album_id: num # The ID of the album., thumbnail_id: num # The ID of the custom thumbnail., user_id: num # The ID of the user.}
+@returns(200) The custom thumbnail was replaced.
+@errors {404: No such album exists, or it doesn't contain the specified custom thumbnail., 403: The authenticated user can't modify this album.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}/logos
+@desc Get all the custom logos of an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The custom logos were returned.
+@errors {404: No such album exists.}
+
+@endpoint POST /users/{user_id}/albums/{album_id}/logos
+@desc Add a custom album logo
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@returns(201) The logo was added to the album.
+@errors {404: No such album exists., 403: The authenticated user can't modify this album.}
+
+@endpoint DELETE /users/{user_id}/albums/{album_id}/logos/{logo_id}
+@desc Remove a custom album logo
+@required {album_id: num # The ID of the album., logo_id: num # The ID of the custom logo., user_id: num # The ID of the user.}
+@returns(204) The custom logo was removed.
+@errors {404: No such album exists, or it doesn't contain the specified custom logo., 403: The authenticated user can't modify this album.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}/logos/{logo_id}
+@desc Get a specific custom album logo
+@required {album_id: num # The ID of the album., logo_id: num # The ID of the custom logo., user_id: num # The ID of the user.}
+@returns(200) The custom logo was returned.
+@errors {404: No such album exists, or it doesn't contain the specified custom logo., 403: The authenticated user can't view this custom logo.}
+
+@endpoint PATCH /users/{user_id}/albums/{album_id}/logos/{logo_id}
+@desc Replace a custom album logo
+@required {album_id: num # The ID of the album., logo_id: num # The ID of the custom logo., user_id: num # The ID of the user.}
+@returns(200) The custom logo was replaced.
+@errors {404: No such album exists, or it doesn't contain the specified custom logo., 403: The authenticated user can't modify this album.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}/videos
+@desc Get all the videos in an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user.}
+@optional {containing_uri: str # The page containing the video URI., direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., password: str # The password of the album., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/default/duration/likes/manual/modified_time/plays) # The way to sort the results., weak_search: bool # Whether to include private videos in the search. Please note that a separate search service provides this functionality. The service performs a partial text search on the video's name.}
+@returns(200) The videos were returned.
+@errors {404: No such album exists.}
+
+@endpoint PUT /users/{user_id}/albums/{album_id}/videos
+@desc Replace all the videos in an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user., videos: str # A comma-separated list of video URIs.}
+@returns(201) The videos were added.
+@errors {404: No such album exists., 403: The authenticated user can't add videos to albums.}
+
+@endpoint DELETE /users/{user_id}/albums/{album_id}/videos/{video_id}
+@desc Remove a video from an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was removed.
+@errors {404: No such album exists., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't edit the album.}
+
+@endpoint GET /users/{user_id}/albums/{album_id}/videos/{video_id}
+@desc Get a specific video in an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@optional {password: str # The password of the album.}
+@returns(200) The video was returned.
+@errors {404: No such album exists, or the video wasn't found in it.}
+
+@endpoint PUT /users/{user_id}/albums/{album_id}/videos/{video_id}
+@desc Add a specific video to an album
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: No such album exists., 403: The supplied token doesn't have the proper scopes, or the authenticated user can't edit the album.}
+
+@endpoint POST /users/{user_id}/albums/{album_id}/videos/{video_id}/set_album_thumbnail
+@desc Set a video as the album thumbnail
+@required {album_id: num # The ID of the album., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@optional {time_code: num # The video frame time in seconds to use as the album thumbnail.}
+@returns(200) {allow_continuous_play: bool, allow_downloads: bool, allow_share: bool, autoplay: bool, brand_color: str?, created_time: str, custom_logo: any?, description: str?, domain: str?, duration: num, embed: map{html: str?}, embed_brand_color: bool?, embed_custom_logo: bool?, hide_nav: bool, hide_vimeo_logo: bool?, layout: str, link: str, loop: bool, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}, interactions: map?{add_custom_thumbnails: map{options: [str], uri: str}, add_logos: map{options: [str], uri: str}, add_to: map?{options: [str], uri: str}, add_videos: map{options: [str], uri: str}}}, modified_time: str, name: str, pictures: any, privacy: map{password: str, view: str}, resource_key: str, review_mode: bool, share_link: str, sort: str, theme: str, uri: str, url: str?, use_custom_domain: bool, user: any, web_brand_color: bool, web_custom_logo: bool} # The album was updated with a new thumbnail.
+@errors {404: Error code 5000: No such album, or user, or video exists., 403: Error code 3429: The authenticated user can't edit the album., 500: Error code 4016: Unexpected error while setting thumbnail.}
+
+@endpoint GET /users/{user_id}/appearances
+@desc Get all the videos in which a user appears
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+
+@endpoint GET /users/{user_id}/categories
+@desc Get all the categories that a user follows
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date/name) # The way to sort the results.}
+@returns(200) The categories were returned.
+@errors {403: Error code 3200: You can't view another user.}
+
+@endpoint DELETE /users/{user_id}/categories/{category}
+@desc Unsubscribe a user from a category
+@required {category: str # The name of the category., user_id: num # The ID of the user.}
+@returns(204) The user was unsubscribed.
+
+@endpoint GET /users/{user_id}/categories/{category}
+@desc Check if a user follows a category
+@required {category: str # The name of the category., user_id: num # The ID of the user.}
+@returns(204) The user is following the category.
+
+@endpoint PUT /users/{user_id}/categories/{category}
+@desc Subscribe a user to a single category
+@required {category: num # The name of the category., user_id: num # The ID of the user.}
+@returns(204) The user was subscribed.
+
+@endpoint GET /users/{user_id}/channels
+@desc Get all the channels to which a user subscribes
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/followers/videos) # The way to sort the results.}
+@returns(200) The channels were returned.
+@errors {304: No channel has been followed since the given `If-Modified-Since` header.}
+
+@endpoint DELETE /users/{user_id}/channels/{channel_id}
+@desc Unsubscribe a user from a specific channel
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(204) The user is no longer a follower of the channel.
+@errors {404: No such channel exists.}
+
+@endpoint GET /users/{user_id}/channels/{channel_id}
+@desc Check if a user follows a channel
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(204) The user follows the channel.
+@errors {404: No such channel exists.}
+
+@endpoint PUT /users/{user_id}/channels/{channel_id}
+@desc Subscribe a user to a specific channel
+@required {channel_id: num # The ID of the channel., user_id: num # The ID of the user.}
+@returns(204) The user is now a follower of the channel.
+@errors {404: No such channel exists.}
+
+@endpoint GET /users/{user_id}/customlogos
+@desc Get all the custom logos that belong to a user
+@required {user_id: num # The ID of the user.}
+@returns(200) The custom logos were returned.
+@errors {403: * The authenticated user can't view this particular custom logo. * The authenticated user can't view custom logos in general.}
+
+@endpoint POST /users/{user_id}/customlogos
+@desc Add a custom logo
+@required {user_id: num # The ID of the user.}
+@returns(201) The custom logo was created.
+@errors {403: * The authenticated user can't upload pictures to another user's video. * The authenticated user can't add a custom logo.}
+
+@endpoint GET /users/{user_id}/customlogos/{logo_id}
+@desc Get a specific custom logo
+@required {logo_id: num # The ID of the custom logo., user_id: num # The ID of the user.}
+@returns(200) The custom logo was returned.
+@errors {403: The authenticated user can't view custom logos.}
+
+@endpoint GET /users/{user_id}/feed
+@desc Get all the videos in a user's feed
+@required {user_id: num # The ID of the user.}
+@optional {offset: str # The pagination offset. We recommend that you use the pagination links in the feed response instead of working with this value directly. For more details, see our [pagination documentation](https://developer.vimeo.com/api/common-formats#using-the-pagination-parameter)., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., type: str(appears/category_featured/channel/facebook_feed/following/group/likes/ondemand_publish/share/tagged_with/twitter_timeline/uploads) # The feed type.}
+@returns(200) The videos were returned.
+
+@endpoint GET /users/{user_id}/followers
+@desc Get all the followers of a user
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The user's followers were returned.
+
+@endpoint GET /users/{user_id}/following
+@desc Get all the users that a user is following
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The followed users were returned.
+
+@endpoint POST /users/{user_id}/following
+@desc Follow a list of users
+@required {user_id: num # The ID of the user., users: [str] # An array of user IDs for the authenticated user to follow.}
+@returns(204) The users were followed.
+@errors {401: Error code 8000: The user access token is invalid., 403: Error code 3417: The authenticated user can't follow other users., 400: * Error code 2205: The request body is empty, the users array is invalid, or the list of users doesn't contain URIs. * Error code 2900: A user in the list doesn't exist. * Error code 2901: The list contains more than 100 users., 500: Error code 4005: An unexpected error occurred., 429: Error code 9006: The authenticated user is rate-limited from following other users.}
+
+@endpoint DELETE /users/{user_id}/following/{follow_user_id}
+@desc Unfollow a user
+@required {follow_user_id: num # The ID of the user to unfollow., user_id: num # The ID of the user.}
+@returns(204) The user was unfollowed.
+
+@endpoint GET /users/{user_id}/following/{follow_user_id}
+@desc Check if a user is following another user
+@required {follow_user_id: num # The ID of the user to follow., user_id: num # The ID of the user.}
+@returns(204) The authenticated user follows the user in question.
+@errors {404: The authenticated user doesn't follow the user in question.}
+
+@endpoint PUT /users/{user_id}/following/{follow_user_id}
+@desc Follow a specific user
+@required {follow_user_id: num # The ID of the user to follow., user_id: num # The ID of the user.}
+@returns(204) The user was followed.
+@errors {403: The authenticated user can't add followers.}
+
+@endpoint GET /users/{user_id}/groups
+@desc Get all the groups that a user has joined
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date/members/videos) # The way to sort the results.}
+@returns(200) The groups were returned.
+
+@endpoint DELETE /users/{user_id}/groups/{group_id}
+@desc Remove a user from a group
+@required {group_id: num # The ID of the group., user_id: num # The ID of the user.}
+@returns(204) The user left the group.
+@errors {403: The authenticated user owns the group. To remove this user, first apply a new group owner through PATCH.}
+
+@endpoint PUT /users/{user_id}/groups/{group_id}
+@desc Add a user to a group
+@required {group_id: num # The ID of the group., user_id: num # The ID of the user.}
+@returns(204) The user joined the group.
+@errors {403: * The authenticated user can't join groups. * The group prohibits the authenticated user from joining, either because the group is not public or because the group's privacy setting is `members`.}
+
+@endpoint GET /users/{user_id}/groups/{group_id}
+@desc Check if a user has joined a group
+@required {group_id: num # The ID of the group., user_id: num # The ID of the user.}
+@returns(204) The user belongs to the group.
+@errors {404: * No such group exists. * The authenticated user isn't a member of this group.}
+
+@endpoint GET /users/{user_id}/likes
+@desc Get all the videos that a user has liked
+@required {user_id: num # The ID of the user.}
+@optional {filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+
+@endpoint DELETE /users/{user_id}/likes/{video_id}
+@desc Cause a user to unlike a video
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was unliked.
+@errors {403: The authenticated user can't like videos.}
+
+@endpoint GET /users/{user_id}/likes/{video_id}
+@desc Check if a user has liked a video
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The user has liked the video.
+@errors {404: The user hasn't liked the video.}
+
+@endpoint PUT /users/{user_id}/likes/{video_id}
+@desc Cause a user to like a video
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was liked.
+@errors {403: The authenticated user can't like videos., 400: The authenticated user owns the video.}
+
+@endpoint GET /users/{user_id}/ondemand/pages
+@desc Get all the On Demand pages of a user
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(film/series) # The type of On Demand pages to return., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(added/alphabetical/date/modified_time/name/publish.time/rating) # The way to sort the results.}
+@returns(200) The On Demand pages were returned.
+@errors {404: No such user exists.}
+
+@endpoint POST /users/{user_id}/ondemand/pages
+@desc Create an On Demand page
+@required {user_id: num # The ID of the user., content_rating: str(drugs/language/nudity/safe/unrated/violence) # One or more ratings, either as a comma-separated list or as a JSON array depending on the request format., description: str # The description of the On Demand page., name: str # The name of the On Demand page., type: str(film/series) # The type of On Demand page.}
+@optional {accepted_currencies: str(AUD/CAD/CHF/DKK/EUR/GBP/JPY/KRW/NOK/PLN/SEK/USD) # An array of accepted currencies.  Option descriptions:  * `AUD` - Australian Dollar  * `CAD` - Canadian Dollar  * `CHF` - Swiss Franc  * `DKK` - Danish Krone  * `EUR` - Euro  * `GBP` - British Pound  * `JPY` - Japanese Yen  * `KRW` - South Korean Won  * `NOK` - Norwegian Krone  * `PLN` - Polish Zloty  * `SEK` - Swedish Krona  * `USD` - US Dollar, buy: map{active: bool, download: bool, price: map{AUD: num, CAD: num, CHF: num, DKK: num, EUR: num, GBP: num, JPY: num, KRW: num, NOK: num, PLN: num, SEK: num, USD: num}}, domain_link: str # The custom domain of the On Demand page., episodes: map{buy: map{active: bool, download: bool, price: map}, rent: map{active: bool, period: str, price: map}}, link: str # The custom string to use in this On Demand page's Vimeo URL., rent: map{active: bool, period: str, price: map{AUD: num, CAD: num, CHF: num, DKK: num, EUR: num, GBP: num, JPY: num, KRW: num, NOK: num, PLN: num, SEK: num, USD: num}}, subscription: map{monthly: map{active: bool, price: map}}}
+@returns(201) {background: any?, colors: map{primary: str, secondary: str}, content_rating: [str], created_time: str, description: str?, domain_link: str?, episodes: map{buy: map{active: bool, price: num?}, rent: map{active: bool, period: str?, price: num?}}, film: any, genres: [map], link: str, metadata: map{connections: map{metadata: map{connections: map}}, interactions: any}, modified_time: str, name: str, pictures: any?, preorder: map{active: bool, cancel_time: str, publish_time: str, time: str}, published: map{enabled: bool, time: str}, rating: num?, resource_key: str, sku: str?, subscription: map?{active: bool, link: str?, period: str, price: map}, theme: str, thumbnail: any?, trailer: any?, type: str, uri: str, user: any?} # The On Demand page was created.
+
+@endpoint GET /users/{user_id}/ondemand/purchases
+@desc Check if a user has made a purchase or rental from an On Demand page
+@required {user_id: num # The ID of the user.}
+@returns(200) You have purchased the On Demand page.
+@errors {404: No such user or On Demand page exists., 403: The requested user isn't the same as the authenticated user.}
+
+@endpoint GET /users/{user_id}/pictures
+@desc Get all the pictures that belong to a user
+@required {user_id: num # The ID of the user.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The portrait images were returned.
+
+@endpoint POST /users/{user_id}/pictures
+@desc Add a user picture
+@required {user_id: num # The ID of the user.}
+@returns(200) The portrait image was added.
+
+@endpoint DELETE /users/{user_id}/pictures/{portraitset_id}
+@desc Delete a user picture
+@required {portraitset_id: num # The ID of the picture., user_id: num # The ID of the user.}
+@returns(204) The portrait image was removed.
+
+@endpoint GET /users/{user_id}/pictures/{portraitset_id}
+@desc Get a specific user picture
+@required {portraitset_id: num # The ID of the picture., user_id: num # The ID of the user.}
+@returns(200) The portrait image was returned.
+
+@endpoint PATCH /users/{user_id}/pictures/{portraitset_id}
+@desc Edit a user picture
+@required {portraitset_id: num # The ID of the picture., user_id: num # The ID of the user.}
+@returns(200) The portrait image was edited.
+
+@endpoint GET /users/{user_id}/portfolios
+@desc Get all the portfolios that belong to a user
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The portfolios were returned.
+
+@endpoint GET /users/{user_id}/portfolios/{portfolio_id}
+@desc Get a specific portfolio
+@required {portfolio_id: num # The ID of the portfolio., user_id: num # The ID of the user.}
+@returns(200) The portfolio was returned.
+
+@endpoint GET /users/{user_id}/portfolios/{portfolio_id}/videos
+@desc Get all the videos in a portfolio
+@required {portfolio_id: num # The ID of the portfolio., user_id: num # The ID of the user.}
+@optional {containing_uri: str # The page that contains the video URI., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/comments/date/default/likes/manual/plays) # The way to sort the results.  Option descriptions:  * `default` - This will sort to the default sort set on the portfolio.}
+@returns(200) The videos were returned.
+
+@endpoint DELETE /users/{user_id}/portfolios/{portfolio_id}/videos/{video_id}
+@desc Remove a video from a portfolio
+@required {portfolio_id: num # The ID of the portfolio., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+@errors {404: The portfolio wasn't found, or the video wasn't found.}
+
+@endpoint GET /users/{user_id}/portfolios/{portfolio_id}/videos/{video_id}
+@desc Get a specific video in a portfolio
+@required {portfolio_id: num # The ID of the portfolio., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(200) The video was returned.
+
+@endpoint PUT /users/{user_id}/portfolios/{portfolio_id}/videos/{video_id}
+@desc Add a video to a portfolio
+@required {portfolio_id: num # The ID of the portfolio., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: The portfolio wasn't found, or the video wasn't found.}
+
+@endpoint GET /users/{user_id}/presets
+@desc Get all the embed presets that a user has created
+@required {user_id: num # The ID of the user.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The embed presets were returned.
+
+@endpoint GET /users/{user_id}/presets/{preset_id}
+@desc Get a specific embed preset
+@required {preset_id: num # The ID of the preset., user_id: num # The ID of the user.}
+@returns(200) The embed preset was returned.
+
+@endpoint PATCH /users/{user_id}/presets/{preset_id}
+@desc Edit an embed preset
+@required {preset_id: num # The ID of the preset., user_id: num # The ID of the user.}
+@returns(200) The embed preset was edited.
+@errors {404: * The preset doesn't exist. * The authenticated user doesn't own the preset., 400: The outro type is invalid.}
+
+@endpoint GET /users/{user_id}/presets/{preset_id}/videos
+@desc Get all the videos that have been added to an embed preset
+@required {preset_id: num # The ID of the embed preset., user_id: num # The ID of the user.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The videos were returned.
+
+@endpoint GET /users/{user_id}/projects
+@desc Get all the projects that belong to a user
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(date/default/modified_time/name) # The way to sort the results.}
+@returns(200) The projects were returned.
+@errors {401: Error code 8000: The user credentials are invalid.}
+
+@endpoint POST /users/{user_id}/projects
+@desc Create a project
+@required {user_id: num # The ID of the user., name: str # The name of the project.}
+@returns(201) {created_time: str, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}}, modified_time: str, name: str, resource_key: str, uri: str, user: any} # The project was created.
+@errors {401: Error code 8000: The user credentials are invalid., 400: * Error code 2205: The input is empty. * Error code 2204: The input is invalid., 403: Error code 3200: The authenticated user can't create projects.}
+
+@endpoint DELETE /users/{user_id}/projects/{project_id}
+@desc Delete a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user.}
+@optional {should_delete_clips: bool # Whether to delete all the videos in the project along with the project itself.}
+@returns(204) The project was deleted.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid., 403: Error code 3200: The authenticated user can't delete the project.}
+
+@endpoint GET /users/{user_id}/projects/{project_id}
+@desc Get a specific project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user.}
+@returns(200) {created_time: str, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}}, modified_time: str, name: str, resource_key: str, uri: str, user: any} # The project was returned.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid.}
+
+@endpoint PATCH /users/{user_id}/projects/{project_id}
+@desc Edit a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user., name: str # The name of the project.}
+@returns(200) {created_time: str, metadata: map{connections: map{videos: map{options: [str], total: num, uri: str}}}, modified_time: str, name: str, resource_key: str, uri: str, user: any} # The project was edited.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid., 400: * Error code 2204: The input is invalid. * Error code 2205: The input is empty., 403: Error code 3200: The authenticated user can't edit the project.}
+
+@endpoint DELETE /users/{user_id}/projects/{project_id}/videos
+@desc Remove a list of videos from a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user., uris: str # A comma-separated list of the video URIs to remove.}
+@optional {should_delete_clips: bool # Whether to delete the videos when removing them from the project.}
+@returns(204) The videos were removed.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid., 400: Error code 2204: The input is invalid.}
+
+@endpoint GET /users/{user_id}/projects/{project_id}/videos
+@desc Get all the videos in a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date/default/duration/last_user_action_event_date) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {404: Error code 5000: No such project exists., 401: Error code 8000: The user credentials are invalid.}
+
+@endpoint PUT /users/{user_id}/projects/{project_id}/videos
+@desc Add a list of videos to a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user., uris: str # A comma-separated list of video URIs to add.}
+@returns(204) The videos were added.
+@errors {404: Error code 5000: No such project or video exists., 401: Error code 8000: The user credentials are invalid., 400: Error code 2204: The input is invalid.}
+
+@endpoint DELETE /users/{user_id}/projects/{project_id}/videos/{video_id}
+@desc Remove a specific video from a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was removed.
+@errors {404: Error code 5000: No such video exists in the project., 401: Error code 8000: The user credentials are invalid., 400: Error code 2204: The input is invalid.}
+
+@endpoint PUT /users/{user_id}/projects/{project_id}/videos/{video_id}
+@desc Add a specific video to a project
+@required {project_id: num # The ID of the project., user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+@errors {404: Error code 5000: No such user, project, or video exists.}
+
+@endpoint DELETE /users/{user_id}/uploads/{upload_id}
+@desc Complete a user's streaming upload
+@required {upload_id: num # The ID of the upload attempt., user_id: num # The ID of the user., signature: str # The crypto signature of the completed upload., video_file_id: num # The ID of the uploaded file.}
+@returns(201) The streaming upload is complete.
+@errors {404: * Error code 5006: No such video file exists. * Error code 5007: No such signature exists. * Error code 8400: The signature is invalid., 400: Error code 2502: The format of the video file is invalid., 500: Error code 4011: The upload server returned an HTTP status code other than 200.}
+
+@endpoint GET /users/{user_id}/uploads/{upload_id}
+@desc Get a user's upload attempt
+@required {upload_id: num # The ID of the upload attempt., user_id: num # The ID of the user.}
+@returns(200) The upload attempt was returned.
+
+@endpoint GET /users/{user_id}/videos
+@desc Get all the videos that a user has uploaded
+@required {user_id: num # The ID of the user.}
+@optional {containing_uri: str # The page that contains the video URI. Available only when not paired with **query**., direction: str(asc/desc) # The sort direction of the results., filter: str(app_only/embeddable/featured/playable) # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., filter_playable: bool # Whether to filter the results by playable videos (`true`) or non-playable videos (`false`)., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/default/duration/last_user_action_event_date/likes/modified_time/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {304: The authenticated user hasn't created any videos since the given **If-Modified-Since** header.}
+
+@endpoint POST /users/{user_id}/videos
+@desc Upload a video
+@required {user_id: num # The ID of the user.}
+@returns(201) The upload procedure has begun.
+@errors {401: Error code 8002: No user is associated with the access token., 403: * Error code 4102: The authenticated user's allotted quota has been reached. * Error code 4101: The authenticated user's maximum disk space has been reached., 400: * Error code 2205: The body of the request isn't formatted properly. * Error code 2204: The request contains invalid body parameters. * Error code 2230: The upload type is invalid. * Error code 3116: The **type** payload parameter was supplied instead of **upload.approach**. Use **upload.approach** starting from API version 3.4., 500: Error code 4003: There is a problem initiating the upload.}
+
+@endpoint GET /users/{user_id}/videos/{video_id}
+@desc Check if a user owns a video
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(200) The user owns the video.
+@errors {404: The authenticated user doesn't own the video.}
+
+@endpoint GET /users/{user_id}/watchlater
+@desc Get all the videos in a user's Watch Later queue
+@required {user_id: num # The ID of the user.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str # The attribute by which to filter the results., filter_embeddable: bool # Whether to filter the results by embeddable videos (`true`) or non-embeddable videos (`false`). Required only if **filter** is `embeddable`., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/comments/date/duration/likes/plays) # The way to sort the results.}
+@returns(200) The videos were returned.
+@errors {304: The user hasn't added any videos to their Watch Later queue since the given `If-Modified-Since` header.}
+
+@endpoint DELETE /users/{user_id}/watchlater/{video_id}
+@desc Remove a video from a user's Watch Later queue
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+
+@endpoint GET /users/{user_id}/watchlater/{video_id}
+@desc Check if a user has added a specific video to their Watch Later queue
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(200) The video appears in the user's Watch Later queue.
+@errors {404: The video doesn't appear in the user's Watch Later queue.}
+
+@endpoint PUT /users/{user_id}/watchlater/{video_id}
+@desc Add a video to a user's Watch Later queue
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The video was added.
+
+@endgroup
+
+@group videos
+@endpoint GET /videos
+@desc Search for videos
+@required {query: str # The search query.}
+@optional {direction: str(asc/desc) # The sort direction of the results., filter: str(CC/CC-BY/CC-BY-NC/CC-BY-NC-ND/CC-BY-NC-SA/CC-BY-ND/CC-BY-SA/CC0/categories/duration/in-progress/minimum_likes/trending/upload_date) # The attribute by which to filter the results. `CC` and related filters target videos with the corresponding Creative Commons licenses. For more information, see our [Creative Commons](https://vimeo.com/creativecommons) page., links: str # A comma-separated list of video URLs to find., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/comments/date/duration/likes/plays/relevant) # The way to sort the results., uris: str # A comma-separated list of video URIs to find.}
+@returns(200) The search results were returned.
+@errors {400: * Error code 2101: Either the **uris** or **links** parameter has filtering or sorting arguments. * Error code 2204: A problem occurred with the batch request., 503: * Search is disabled. * Error code 7300: An internal search error occurred.}
+
+@endpoint DELETE /videos/{video_id}
+@desc Delete a video
+@required {video_id: num # The ID of the video.}
+@returns(204) The video was deleted.
+@errors {403: The authenticated user doesn't own the video and can't delete it.}
+
+@endpoint GET /videos/{video_id}
+@desc Get a specific video
+@required {video_id: num # The ID of the video.}
+@returns(200) The video was returned.
+@errors {404: No such video exists.}
+
+@endpoint PATCH /videos/{video_id}
+@desc Edit a video
+@required {video_id: num # The ID of the video.}
+@returns(200) The video was edited.
+@errors {403: * The authenticated user doesn't own the video. * The **privacy** field is `disable`, and the authenticated user can't set extra embed options. * The **privacy** field is `contacts`, and the authenticated user can't follow creators. * The authenticated user has an opted-out Pro account, and **privacy.view** is `users`, `password`, `nobody`, or `public`., 400: A parameter is invalid.}
+
+@endpoint GET /videos/{video_id}/available_albums
+@desc Get all the albums to which a user can add or remove a specific video
+@required {video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The albums were returned.
+@errors {403: Error code 3433: The authenticated user can't add this video to collections.}
+
+@endpoint GET /videos/{video_id}/available_channels
+@desc Get all the channels to which a user can add or remove a specific video
+@required {video_id: num # The ID of the video.}
+@returns(200) The channels were returned.
+@errors {403: The authenticated user can't add or remove this video from any channel., 404: The authenticated user can't moderate channels.}
+
+@endpoint GET /videos/{video_id}/categories
+@desc Get all the categories to which a video belongs
+@required {video_id: num # The ID of the video.}
+@returns(200) The categories were returned.
+@errors {404: No such video exists.}
+
+@endpoint PUT /videos/{video_id}/categories
+@desc Suggest categories for a video
+@required {video_id: num # The ID of the video.}
+@returns(201) The categories were suggested.
+@errors {404: No such video exists, or no such category exists., 403: You don't own this video.}
+
+@endpoint GET /videos/{video_id}/comments
+@desc Get all the comments on a video
+@required {video_id: num # The ID of the video.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The comments were returned.
+
+@endpoint POST /videos/{video_id}/comments
+@desc Add a comment to a video
+@required {video_id: num # The ID of the video.}
+@returns(201) The comment was added.
+@errors {400: Error code 2207: The comment text is missing., 401: Error code 8003: The user credentials are invalid., 403: * Error code 3301: The comment was flagged as spam. * Error code 3411: The authenticated user is unverified. * Error code 3412: The authenticated user can't comment. * Error code 3413: Comments are disabled for this video.}
+
+@endpoint DELETE /videos/{video_id}/comments/{comment_id}
+@desc Delete a video comment
+@required {comment_id: num # The ID of the comment., video_id: num # The ID of the video.}
+@returns(204) The comment was deleted.
+@errors {404: * No such video or comment exists. * Error code 5000: The comment wasn't deleted and still exists., 403: Error code 3415: The authenticated user didn't write this comment and can't delete it.}
+
+@endpoint GET /videos/{video_id}/comments/{comment_id}
+@desc Get a specific video comment
+@required {comment_id: num # The ID of the comment., video_id: num # The ID of the video.}
+@returns(200) The comment was returned.
+@errors {404: No such video or comment exists.}
+
+@endpoint PATCH /videos/{video_id}/comments/{comment_id}
+@desc Edit a video comment
+@required {comment_id: num # The ID of the comment., video_id: num # The ID of the video.}
+@returns(200) The comment was edited.
+@errors {400: Error code 2207: The comment text is missing., 403: * Error code 3301: The comment was flagged as spam. * Error code 3411: The authenticated user is unverified. * Error code 3412: The authenticated user can't post comments. * Error code 3414: The authenticated user didn't write the comment and can't edit it.}
+
+@endpoint GET /videos/{video_id}/comments/{comment_id}/replies
+@desc Get all the replies to a video comment
+@required {comment_id: num # The ID of the comment., video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The replies were returned.
+@errors {404: No such video or comment exists.}
+
+@endpoint POST /videos/{video_id}/comments/{comment_id}/replies
+@desc Add a reply to a video comment
+@required {comment_id: num # The ID of the comment., video_id: num # The ID of the video.}
+@returns(201) The reply was added.
+@errors {400: Error code 2207: The comment text is missing., 403: * Error code 3301: The comment was flagged as spam. * Error code 3411: The authenticated user is unverified. * Error code 3412: The authenticated user can't comment. * Error code 3413: Comments are disabled on this video.}
+
+@endpoint GET /videos/{video_id}/credits
+@desc Get all the credited users in a video
+@required {video_id: num # The ID of the video.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., query: str # The search query to use to filter the results., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The credited users were returned.
+
+@endpoint POST /videos/{video_id}/credits
+@desc Credit a user in a video
+@required {video_id: num # The ID of the video.}
+@returns(201) The credit was added.
+@errors {400: * A parameter is invalid. * The authenticated user has an unverified email address. * There is a user block between the video owner and the person receiving credit., 403: The authenticated user doesn't own the video.}
+
+@endpoint DELETE /videos/{video_id}/credits/{credit_id}
+@desc Delete the credit for a user in a video
+@required {credit_id: num # The ID of the credit., video_id: num # The ID of the video.}
+@returns(204) The credit was deleted.
+@errors {400: The authenticated user is neither the creator of the credit nor the credited user.}
+
+@endpoint GET /videos/{video_id}/credits/{credit_id}
+@desc Get a specific credited user in a video
+@required {credit_id: num # The ID of the credit., video_id: num # The ID of the video.}
+@returns(200) The credit was returned.
+@errors {404: No such video or credit exists.}
+
+@endpoint PATCH /videos/{video_id}/credits/{credit_id}
+@desc Edit the credit for a user in a video
+@required {credit_id: num # The ID of the credit., video_id: num # The ID of the video.}
+@returns(200) The credit was edited.
+@errors {400: A parameter is invalid., 404: No such video or credit exists.}
+
+@endpoint GET /videos/{video_id}/likes
+@desc Get all the users who have liked a video
+@required {video_id: num # The ID of the video.}
+@optional {direction: str(asc/desc) # The sort direction of the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100., sort: str(alphabetical/date) # The way to sort the results.}
+@returns(200) The users were returned.
+
+@endpoint GET /videos/{video_id}/pictures
+@desc Get all the thumbnails of a video
+@required {video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The thumbnails were returned.
+
+@endpoint POST /videos/{video_id}/pictures
+@desc Add a video thumbnail
+@required {video_id: num # The ID of the video.}
+@returns(201) The thumbnail was created.
+
+@endpoint DELETE /videos/{video_id}/pictures/{picture_id}
+@desc Delete a video thumbnail
+@required {picture_id: num # The ID of the thumbnail., video_id: num # The ID of the video.}
+@returns(204) The thumbnail was deleted.
+
+@endpoint GET /videos/{video_id}/pictures/{picture_id}
+@desc Get a specific video thumbnail
+@required {picture_id: num # The ID of the thumbnail., video_id: num # The ID of the video.}
+@returns(200) The thumbnail was returned.
+
+@endpoint PATCH /videos/{video_id}/pictures/{picture_id}
+@desc Edit a video thumbnail
+@required {picture_id: num # The ID of the thumbnail., video_id: num # The ID of the video.}
+@returns(200) The thumbnail was edited.
+
+@endpoint DELETE /videos/{video_id}/presets/{preset_id}
+@desc Remove an embed preset from a video
+@required {preset_id: num # The ID of the preset., video_id: num # The ID of the video.}
+@returns(204) The embed preset was removed.
+@errors {404: No such video or embed preset exists.}
+
+@endpoint GET /videos/{video_id}/presets/{preset_id}
+@desc Check if an embed preset has been added to a video
+@required {preset_id: num # The ID of the preset., video_id: num # The ID of the video.}
+@returns(204) The embed preset has been added to the video.
+@errors {404: No such video or embed preset exists.}
+
+@endpoint PUT /videos/{video_id}/presets/{preset_id}
+@desc Add an embed preset to a video
+@required {preset_id: num # The ID of the preset., video_id: num # The ID of the video.}
+@returns(204) The embed preset was assigned.
+
+@endpoint GET /videos/{video_id}/privacy/domains
+@desc Get all the domains on a video's whitelist
+@required {video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The domains were returned.
+@errors {403: There are no domains on which the video can be embedded.}
+
+@endpoint DELETE /videos/{video_id}/privacy/domains/{domain}
+@desc Remove a domain from a video's whitelist
+@required {domain: str # The domain name., video_id: num # The ID of the video.}
+@returns(204) The domain was removed.
+@errors {403: The video's embed privacy setting isn't `whitelist`., 404: No such domain exists.}
+
+@endpoint PUT /videos/{video_id}/privacy/domains/{domain}
+@desc Add a domain to a video's whitelist
+@required {domain: str # The domain name., video_id: num # The ID of the video.}
+@returns(204) The video is now embeddable on the domain.
+@errors {403: The video doesn't have a user-defined access list.}
+
+@endpoint GET /videos/{video_id}/privacy/users
+@desc Get all the users who can view a private video
+@required {video_id: num # The ID of the video.}
+@optional {page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The users were returned.
+@errors {400: No users can view this private video by default.}
+
+@endpoint PUT /videos/{video_id}/privacy/users
+@desc Permit a list of users to view a private video
+@required {video_id: num # The ID of the video.}
+@returns(200) The users can now view the private video.
+
+@endpoint DELETE /videos/{video_id}/privacy/users/{user_id}
+@desc Restrict a user from viewing a private video
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The user was disallowed from viewing the private video.
+@errors {403: The video isn't set to a user-defined access list., 404: No such user exists.}
+
+@endpoint PUT /videos/{video_id}/privacy/users/{user_id}
+@desc Permit a specific user to view a private video
+@required {user_id: num # The ID of the user., video_id: num # The ID of the video.}
+@returns(204) The user can already view this private video.
+@returns(200) The user can now view the private video.
+@errors {403: The video doesn't have a user-defined access list.}
+
+@endpoint GET /videos/{video_id}/tags
+@desc Get all the tags of a video
+@required {video_id: num # The ID of the video.}
+@returns(200) The tags were returned.
+
+@endpoint PUT /videos/{video_id}/tags
+@desc Add a list of tags to a video
+@required {video_id: num # The ID of the video.}
+@returns(200) The tags were added.
+@errors {400: * The request body wasn't supplied. * A parameter is invalid. * The request body doesn't contain a JSON-encoded list of tags.., 403: * The authenticated user can't add tags to a video. * The total number of tags can't exceed 20.}
+
+@endpoint DELETE /videos/{video_id}/tags/{word}
+@desc Remove a tag from a video
+@required {video_id: num # The ID of the video., word: str # The tag word.}
+@returns(204) The tag was deleted.
+@errors {400: * A parameter is invalid. * The tag is invalid.}
+
+@endpoint GET /videos/{video_id}/tags/{word}
+@desc Check if a tag has been added to a video
+@required {video_id: num # The ID of the video., word: str # The tag word.}
+@returns(200) The tag has been added to the video.
+@errors {400: * A parameter is invalid. * The tag is invalid., 404: No such tag exists within the video.}
+
+@endpoint PUT /videos/{video_id}/tags/{word}
+@desc Add a specific tag to a video
+@required {video_id: num # The ID of the video., word: str # The tag word.}
+@returns(200) The tag was added.
+@errors {400: * The tag is invalid. * An unsupported parameter was supplied., 403: The total number of tags can't exceed 20.}
+
+@endpoint GET /videos/{video_id}/texttracks
+@desc Get all the text tracks of a video
+@required {video_id: num # The ID of the video.}
+@returns(200) The text tracks were returned.
+@errors {404: No such video exists.}
+
+@endpoint POST /videos/{video_id}/texttracks
+@desc Add a text track to a video
+@required {video_id: num # The ID of the video.}
+@returns(201) The text track was added.
+@errors {403: * The authenticated user can't add the text track. * Error code 2204: The request contains errors.}
+
+@endpoint DELETE /videos/{video_id}/texttracks/{texttrack_id}
+@desc Delete a text track
+@required {texttrack_id: num # The ID of the text track., video_id: num # The ID of the video.}
+@returns(204) The text track was deleted.
+@errors {404: * No such video or text track exists. * The authenticated user can't delete the text track. * Error code 5014: The specified text track doesn't exist. * Error code 5015: The specified text track belongs to a different video., 403: * Error code 3430: The authenticated user doesn't have permission to access the text track. * Error code 3431: This text track is disabled.}
+
+@endpoint GET /videos/{video_id}/texttracks/{texttrack_id}
+@desc Get a specific text track
+@required {texttrack_id: num # The ID of the text track., video_id: num # The ID of the video.}
+@returns(200) The text track was returned.
+@errors {404: * No such video or text track exists. * Error code 5014: The specified text track doesn't exist. * Error code 5015: The specified text track belongs to a different video., 403: * Error code 3430: The authenticated user doesn't have permission to access the text track. * Error code 3431: This text track is disabled.}
+
+@endpoint PATCH /videos/{video_id}/texttracks/{texttrack_id}
+@desc Edit a text track
+@required {texttrack_id: num # The ID of the text track., video_id: num # The ID of the video.}
+@returns(200) The text track was edited.
+@errors {404: * No such video or text track exists. * Error code 5014: The specified text track doesn't exist. * Error code 5015: The specified text track belongs to a different video., 403: * The authenticated user can't edit the text track. * Error code 2204: There are errors in the request. * Error code 3430: The authenticated user doesn't have permission to access the text track. * Error code 3431: This text track is disabled.}
+
+@endpoint POST /videos/{video_id}/timelinethumbnails
+@desc Add a new timeline event thumbnail to a video
+@required {video_id: num # The ID of the video.}
+@returns(201) The timeline event thumbnail was created.
+@errors {404: No such video exists., 403: The authenticated user can't upload pictures to another user's video.}
+
+@endpoint GET /videos/{video_id}/timelinethumbnails/{thumbnail_id}
+@desc Get a timeline event thumbnail
+@required {thumbnail_id: num # The ID of the timeline event thumbnail., video_id: num # The ID of the video.}
+@returns(200) The timeline event thumbnail was returned.
+@errors {403: The authenticated user can't view this timeline event thumbnail.}
+
+@endpoint POST /videos/{video_id}/versions
+@desc Add a version to a video
+@required {video_id: num # The ID of the video.}
+@returns(201) The version was added.
+@errors {400: Error code 2204: The request input contains invalid versions data., 404: * Error code 5011: An upload isn't associated with this version. * Error code 5012: A video isn't associated with this upload. * Error code 5013: The endpoint isn't available, because the specified version of the API is less than 3.4 and **upload.approach** isn't `tus`., 403: Error code 3427: The authenticated user can't edit the video.}
+
+@endpoint GET /videos/{video_id}/videos
+@desc Get all the related videos of a video
+@required {video_id: num # The ID of the video.}
+@optional {filter: str # The attribute by which to filter the results., page: num # The page number of the results to show., per_page: num # The number of items to show on each page of results, up to a maximum of 100.}
+@returns(200) The related videos were returned.
+@errors {400: The value of **filter** isn't `related`.}
+
+@endgroup
+
+@end

@@ -1,0 +1,301 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon AppConfig
+@version 2019-10-09
+@auth AWS SigV4
+@endpoints 45
+@hint download_for_search
+@toc applications(25), deploymentstrategies(4), extensions(5), extensionassociations(5), deployementstrategies(1), settings(2), tags(3)
+
+@group applications
+@endpoint POST /applications
+@required {Name: str}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {Id: str?, Name: str?, Description: str?}
+
+@endpoint POST /applications/{ApplicationId}/configurationprofiles
+@required {ApplicationId: str, Name: str, LocationUri: str}
+@optional {Description: str, RetrievalRoleArn: str, Validators: [Validator], Tags: map<str,str>, Type: str, KmsKeyIdentifier: str}
+@returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, LocationUri: str?, RetrievalRoleArn: str?, Validators: [Validator]?, Type: str?, KmsKeyArn: str?, KmsKeyIdentifier: str?}
+
+@endgroup
+
+@group deploymentstrategies
+@endpoint POST /deploymentstrategies
+@required {Name: str, DeploymentDurationInMinutes: int, GrowthFactor: num(f32)}
+@optional {Description: str, FinalBakeTimeInMinutes: int, GrowthType: str, ReplicateTo: str, Tags: map<str,str>}
+@returns(200) {Id: str?, Name: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, ReplicateTo: str?}
+
+@endgroup
+
+@group applications
+@endpoint POST /applications/{ApplicationId}/environments
+@required {ApplicationId: str, Name: str}
+@optional {Description: str, Monitors: [Monitor], Tags: map<str,str>}
+@returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, State: str?, Monitors: [Monitor]?}
+
+@endgroup
+
+@group extensions
+@endpoint POST /extensions
+@required {Name: str, Actions: map<str,[Action]>}
+@optional {Latest-Version-Number: int, Description: str, Parameters: map<str,Parameter>, Tags: map<str,str>}
+@returns(200) {Id: str?, Name: str?, VersionNumber: int?, Arn: str?, Description: str?, Actions: map<str,[Action]>?, Parameters: map<str,Parameter>?}
+
+@endgroup
+
+@group extensionassociations
+@endpoint POST /extensionassociations
+@required {ExtensionIdentifier: str, ResourceIdentifier: str}
+@optional {ExtensionVersionNumber: int, Parameters: map<str,str>, Tags: map<str,str>}
+@returns(200) {Id: str?, ExtensionArn: str?, ResourceArn: str?, Arn: str?, Parameters: map<str,str>?, ExtensionVersionNumber: int?}
+
+@endgroup
+
+@group applications
+@endpoint POST /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions
+@required {ApplicationId: str, ConfigurationProfileId: str, Content-Type: str, Content: bytes}
+@optional {Description: str, Latest-Version-Number: int, VersionLabel: str}
+@returns(200) {ApplicationId: str?, ConfigurationProfileId: str?, VersionNumber: int?, Description: str?, Content: bytes?, ContentType: str?, VersionLabel: str?, KmsKeyArn: str?}
+
+@endpoint DELETE /applications/{ApplicationId}
+@required {ApplicationId: str}
+
+@endpoint DELETE /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}
+@required {ApplicationId: str, ConfigurationProfileId: str}
+@optional {x-amzn-deletion-protection-check: str}
+
+@endgroup
+
+@group deployementstrategies
+@endpoint DELETE /deployementstrategies/{DeploymentStrategyId}
+@required {DeploymentStrategyId: str}
+
+@endgroup
+
+@group applications
+@endpoint DELETE /applications/{ApplicationId}/environments/{EnvironmentId}
+@required {EnvironmentId: str, ApplicationId: str}
+@optional {x-amzn-deletion-protection-check: str}
+
+@endgroup
+
+@group extensions
+@endpoint DELETE /extensions/{ExtensionIdentifier}
+@required {ExtensionIdentifier: str}
+@optional {version: int}
+
+@endgroup
+
+@group extensionassociations
+@endpoint DELETE /extensionassociations/{ExtensionAssociationId}
+@required {ExtensionAssociationId: str}
+
+@endgroup
+
+@group applications
+@endpoint DELETE /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions/{VersionNumber}
+@required {ApplicationId: str, ConfigurationProfileId: str, VersionNumber: int}
+
+@endgroup
+
+@group settings
+@endpoint GET /settings
+@returns(200) {DeletionProtection: DeletionProtectionSettings?{Enabled: bool?, ProtectionPeriodInMinutes: int?}}
+
+@endgroup
+
+@group applications
+@endpoint GET /applications/{ApplicationId}
+@required {ApplicationId: str}
+@returns(200) {Id: str?, Name: str?, Description: str?}
+
+@endpoint GET /applications/{Application}/environments/{Environment}/configurations/{Configuration}
+@required {Application: str, Environment: str, Configuration: str, client_id: str}
+@optional {client_configuration_version: str}
+@returns(200) {Content: bytes?, ConfigurationVersion: str?, ContentType: str?}
+
+@endpoint GET /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}
+@required {ApplicationId: str, ConfigurationProfileId: str}
+@returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, LocationUri: str?, RetrievalRoleArn: str?, Validators: [Validator]?, Type: str?, KmsKeyArn: str?, KmsKeyIdentifier: str?}
+
+@endpoint GET /applications/{ApplicationId}/environments/{EnvironmentId}/deployments/{DeploymentNumber}
+@required {ApplicationId: str, EnvironmentId: str, DeploymentNumber: int}
+@returns(200) {ApplicationId: str?, EnvironmentId: str?, DeploymentStrategyId: str?, ConfigurationProfileId: str?, DeploymentNumber: int?, ConfigurationName: str?, ConfigurationLocationUri: str?, ConfigurationVersion: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, State: str?, EventLog: [DeploymentEvent]?, PercentageComplete: num(f32)?, StartedAt: str(timestamp)?, CompletedAt: str(timestamp)?, AppliedExtensions: [AppliedExtension]?, KmsKeyArn: str?, KmsKeyIdentifier: str?, VersionLabel: str?}
+
+@endgroup
+
+@group deploymentstrategies
+@endpoint GET /deploymentstrategies/{DeploymentStrategyId}
+@required {DeploymentStrategyId: str}
+@returns(200) {Id: str?, Name: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, ReplicateTo: str?}
+
+@endgroup
+
+@group applications
+@endpoint GET /applications/{ApplicationId}/environments/{EnvironmentId}
+@required {ApplicationId: str, EnvironmentId: str}
+@returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, State: str?, Monitors: [Monitor]?}
+
+@endgroup
+
+@group extensions
+@endpoint GET /extensions/{ExtensionIdentifier}
+@required {ExtensionIdentifier: str}
+@optional {version_number: int}
+@returns(200) {Id: str?, Name: str?, VersionNumber: int?, Arn: str?, Description: str?, Actions: map<str,[Action]>?, Parameters: map<str,Parameter>?}
+
+@endgroup
+
+@group extensionassociations
+@endpoint GET /extensionassociations/{ExtensionAssociationId}
+@required {ExtensionAssociationId: str}
+@returns(200) {Id: str?, ExtensionArn: str?, ResourceArn: str?, Arn: str?, Parameters: map<str,str>?, ExtensionVersionNumber: int?}
+
+@endgroup
+
+@group applications
+@endpoint GET /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions/{VersionNumber}
+@required {ApplicationId: str, ConfigurationProfileId: str, VersionNumber: int}
+@returns(200) {ApplicationId: str?, ConfigurationProfileId: str?, VersionNumber: int?, Description: str?, Content: bytes?, ContentType: str?, VersionLabel: str?, KmsKeyArn: str?}
+
+@endpoint GET /applications
+@optional {max_results: int, next_token: str}
+@returns(200) {Items: [Application]?, NextToken: str?}
+
+@endpoint GET /applications/{ApplicationId}/configurationprofiles
+@required {ApplicationId: str}
+@optional {max_results: int, next_token: str, type: str}
+@returns(200) {Items: [ConfigurationProfileSummary]?, NextToken: str?}
+
+@endgroup
+
+@group deploymentstrategies
+@endpoint GET /deploymentstrategies
+@optional {max_results: int, next_token: str}
+@returns(200) {Items: [DeploymentStrategy]?, NextToken: str?}
+
+@endgroup
+
+@group applications
+@endpoint GET /applications/{ApplicationId}/environments/{EnvironmentId}/deployments
+@required {ApplicationId: str, EnvironmentId: str}
+@optional {max_results: int, next_token: str}
+@returns(200) {Items: [DeploymentSummary]?, NextToken: str?}
+
+@endpoint GET /applications/{ApplicationId}/environments
+@required {ApplicationId: str}
+@optional {max_results: int, next_token: str}
+@returns(200) {Items: [Environment]?, NextToken: str?}
+
+@endgroup
+
+@group extensionassociations
+@endpoint GET /extensionassociations
+@optional {resource_identifier: str, extension_identifier: str, extension_version_number: int, max_results: int, next_token: str}
+@returns(200) {Items: [ExtensionAssociationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group extensions
+@endpoint GET /extensions
+@optional {max_results: int, next_token: str, name: str}
+@returns(200) {Items: [ExtensionSummary]?, NextToken: str?}
+
+@endgroup
+
+@group applications
+@endpoint GET /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions
+@required {ApplicationId: str, ConfigurationProfileId: str}
+@optional {max_results: int, next_token: str, version_label: str}
+@returns(200) {Items: [HostedConfigurationVersionSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group applications
+@endpoint POST /applications/{ApplicationId}/environments/{EnvironmentId}/deployments
+@required {ApplicationId: str, EnvironmentId: str, DeploymentStrategyId: str, ConfigurationProfileId: str, ConfigurationVersion: str}
+@optional {Description: str, Tags: map<str,str>, KmsKeyIdentifier: str, DynamicExtensionParameters: map<str,str>}
+@returns(200) {ApplicationId: str?, EnvironmentId: str?, DeploymentStrategyId: str?, ConfigurationProfileId: str?, DeploymentNumber: int?, ConfigurationName: str?, ConfigurationLocationUri: str?, ConfigurationVersion: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, State: str?, EventLog: [DeploymentEvent]?, PercentageComplete: num(f32)?, StartedAt: str(timestamp)?, CompletedAt: str(timestamp)?, AppliedExtensions: [AppliedExtension]?, KmsKeyArn: str?, KmsKeyIdentifier: str?, VersionLabel: str?}
+
+@endpoint DELETE /applications/{ApplicationId}/environments/{EnvironmentId}/deployments/{DeploymentNumber}
+@required {ApplicationId: str, EnvironmentId: str, DeploymentNumber: int}
+@returns(200) {ApplicationId: str?, EnvironmentId: str?, DeploymentStrategyId: str?, ConfigurationProfileId: str?, DeploymentNumber: int?, ConfigurationName: str?, ConfigurationLocationUri: str?, ConfigurationVersion: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, State: str?, EventLog: [DeploymentEvent]?, PercentageComplete: num(f32)?, StartedAt: str(timestamp)?, CompletedAt: str(timestamp)?, AppliedExtensions: [AppliedExtension]?, KmsKeyArn: str?, KmsKeyIdentifier: str?, VersionLabel: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group settings
+@endpoint PATCH /settings
+@optional {DeletionProtection: DeletionProtectionSettings}
+@returns(200) {DeletionProtection: DeletionProtectionSettings?{Enabled: bool?, ProtectionPeriodInMinutes: int?}}
+
+@endgroup
+
+@group applications
+@endpoint PATCH /applications/{ApplicationId}
+@required {ApplicationId: str}
+@optional {Name: str, Description: str}
+@returns(200) {Id: str?, Name: str?, Description: str?}
+
+@endpoint PATCH /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}
+@required {ApplicationId: str, ConfigurationProfileId: str}
+@optional {Name: str, Description: str, RetrievalRoleArn: str, Validators: [Validator], KmsKeyIdentifier: str}
+@returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, LocationUri: str?, RetrievalRoleArn: str?, Validators: [Validator]?, Type: str?, KmsKeyArn: str?, KmsKeyIdentifier: str?}
+
+@endgroup
+
+@group deploymentstrategies
+@endpoint PATCH /deploymentstrategies/{DeploymentStrategyId}
+@required {DeploymentStrategyId: str}
+@optional {Description: str, DeploymentDurationInMinutes: int, FinalBakeTimeInMinutes: int, GrowthFactor: num(f32), GrowthType: str}
+@returns(200) {Id: str?, Name: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, ReplicateTo: str?}
+
+@endgroup
+
+@group applications
+@endpoint PATCH /applications/{ApplicationId}/environments/{EnvironmentId}
+@required {ApplicationId: str, EnvironmentId: str}
+@optional {Name: str, Description: str, Monitors: [Monitor]}
+@returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, State: str?, Monitors: [Monitor]?}
+
+@endgroup
+
+@group extensions
+@endpoint PATCH /extensions/{ExtensionIdentifier}
+@required {ExtensionIdentifier: str}
+@optional {Description: str, Actions: map<str,[Action]>, Parameters: map<str,Parameter>, VersionNumber: int}
+@returns(200) {Id: str?, Name: str?, VersionNumber: int?, Arn: str?, Description: str?, Actions: map<str,[Action]>?, Parameters: map<str,Parameter>?}
+
+@endgroup
+
+@group extensionassociations
+@endpoint PATCH /extensionassociations/{ExtensionAssociationId}
+@required {ExtensionAssociationId: str}
+@optional {Parameters: map<str,str>}
+@returns(200) {Id: str?, ExtensionArn: str?, ResourceArn: str?, Arn: str?, Parameters: map<str,str>?, ExtensionVersionNumber: int?}
+
+@endgroup
+
+@group applications
+@endpoint POST /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/validators
+@required {ApplicationId: str, ConfigurationProfileId: str, configuration_version: str}
+
+@endgroup
+
+@end

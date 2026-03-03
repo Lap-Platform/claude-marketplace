@@ -1,0 +1,159 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon EMR Containers
+@version 2020-10-01
+@auth AWS SigV4
+@endpoints 23
+@hint download_for_search
+@toc virtualclusters(13), jobtemplates(4), securityconfigurations(3), tags(3)
+
+@group virtualclusters
+@endpoint DELETE /virtualclusters/{virtualClusterId}/jobruns/{jobRunId}
+@required {id: str, virtualClusterId: str}
+@returns(200) {id: str?, virtualClusterId: str?}
+
+@endgroup
+
+@group jobtemplates
+@endpoint POST /jobtemplates
+@required {name: str, clientToken: str, jobTemplateData: JobTemplateData}
+@optional {tags: map<str,str>, kmsKeyArn: str}
+@returns(200) {id: str?, name: str?, arn: str?, createdAt: str(timestamp)?}
+
+@endgroup
+
+@group virtualclusters
+@endpoint POST /virtualclusters/{virtualClusterId}/endpoints
+@required {virtualClusterId: str, name: str, type: str, releaseLabel: str, executionRoleArn: str, clientToken: str}
+@optional {certificateArn: str, configurationOverrides: ConfigurationOverrides, tags: map<str,str>}
+@returns(200) {id: str?, name: str?, arn: str?, virtualClusterId: str?}
+
+@endgroup
+
+@group securityconfigurations
+@endpoint POST /securityconfigurations
+@required {clientToken: str, name: str, securityConfigurationData: SecurityConfigurationData}
+@optional {tags: map<str,str>}
+@returns(200) {id: str?, name: str?, arn: str?}
+
+@endgroup
+
+@group virtualclusters
+@endpoint POST /virtualclusters
+@required {name: str, containerProvider: ContainerProvider, clientToken: str}
+@optional {tags: map<str,str>, securityConfigurationId: str}
+@returns(200) {id: str?, name: str?, arn: str?}
+
+@endgroup
+
+@group jobtemplates
+@endpoint DELETE /jobtemplates/{templateId}
+@required {id: str}
+@returns(200) {id: str?}
+
+@endgroup
+
+@group virtualclusters
+@endpoint DELETE /virtualclusters/{virtualClusterId}/endpoints/{endpointId}
+@required {id: str, virtualClusterId: str}
+@returns(200) {id: str?, virtualClusterId: str?}
+
+@endpoint DELETE /virtualclusters/{virtualClusterId}
+@required {id: str}
+@returns(200) {id: str?}
+
+@endpoint GET /virtualclusters/{virtualClusterId}/jobruns/{jobRunId}
+@required {id: str, virtualClusterId: str}
+@returns(200) {jobRun: JobRun?{id: str?, name: str?, virtualClusterId: str?, arn: str?, state: str?, clientToken: str?, executionRoleArn: str?, releaseLabel: str?, configurationOverrides: ConfigurationOverrides?{applicationConfiguration: [Configuration]?, monitoringConfiguration: MonitoringConfiguration?{persistentAppUI: str?, cloudWatchMonitoringConfiguration: CloudWatchMonitoringConfiguration?, s3MonitoringConfiguration: S3MonitoringConfiguration?, containerLogRotationConfiguration: ContainerLogRotationConfiguration?}}, jobDriver: JobDriver?{sparkSubmitJobDriver: SparkSubmitJobDriver?{entryPoint: str, entryPointArguments: [str]?, sparkSubmitParameters: str?}, sparkSqlJobDriver: SparkSqlJobDriver?{entryPoint: str?, sparkSqlParameters: str?}}, createdAt: str(timestamp)?, createdBy: str?, finishedAt: str(timestamp)?, stateDetails: str?, failureReason: str?, tags: map<str,str>?, retryPolicyConfiguration: RetryPolicyConfiguration?{maxAttempts: int}, retryPolicyExecution: RetryPolicyExecution?{currentAttemptCount: int}}}
+
+@endgroup
+
+@group jobtemplates
+@endpoint GET /jobtemplates/{templateId}
+@required {id: str}
+@returns(200) {jobTemplate: JobTemplate?{name: str?, id: str?, arn: str?, createdAt: str(timestamp)?, createdBy: str?, tags: map<str,str>?, jobTemplateData: JobTemplateData{executionRoleArn: str, releaseLabel: str, configurationOverrides: ParametricConfigurationOverrides?{applicationConfiguration: [Configuration]?, monitoringConfiguration: ParametricMonitoringConfiguration?}, jobDriver: JobDriver{sparkSubmitJobDriver: SparkSubmitJobDriver?, sparkSqlJobDriver: SparkSqlJobDriver?}, parameterConfiguration: map<str,TemplateParameterConfiguration>?, jobTags: map<str,str>?}, kmsKeyArn: str?, decryptionError: str?}}
+
+@endgroup
+
+@group virtualclusters
+@endpoint GET /virtualclusters/{virtualClusterId}/endpoints/{endpointId}
+@required {id: str, virtualClusterId: str}
+@returns(200) {endpoint: Endpoint?{id: str?, name: str?, arn: str?, virtualClusterId: str?, type: str?, state: str?, releaseLabel: str?, executionRoleArn: str?, certificateArn: str?, certificateAuthority: Certificate?{certificateArn: str?, certificateData: str?}, configurationOverrides: ConfigurationOverrides?{applicationConfiguration: [Configuration]?, monitoringConfiguration: MonitoringConfiguration?{persistentAppUI: str?, cloudWatchMonitoringConfiguration: CloudWatchMonitoringConfiguration?, s3MonitoringConfiguration: S3MonitoringConfiguration?, containerLogRotationConfiguration: ContainerLogRotationConfiguration?}}, serverUrl: str?, createdAt: str(timestamp)?, securityGroup: str?, subnetIds: [str]?, stateDetails: str?, failureReason: str?, tags: map<str,str>?}}
+
+@endgroup
+
+@group securityconfigurations
+@endpoint GET /securityconfigurations/{securityConfigurationId}
+@required {id: str}
+@returns(200) {securityConfiguration: SecurityConfiguration?{id: str?, name: str?, arn: str?, createdAt: str(timestamp)?, createdBy: str?, securityConfigurationData: SecurityConfigurationData?{authorizationConfiguration: AuthorizationConfiguration?{lakeFormationConfiguration: LakeFormationConfiguration?, encryptionConfiguration: EncryptionConfiguration?}}, tags: map<str,str>?}}
+
+@endgroup
+
+@group virtualclusters
+@endpoint GET /virtualclusters/{virtualClusterId}
+@required {id: str}
+@returns(200) {virtualCluster: VirtualCluster?{id: str?, name: str?, arn: str?, state: str?, containerProvider: ContainerProvider?{type: str, id: str, info: ContainerInfo?{eksInfo: EksInfo?}}, createdAt: str(timestamp)?, tags: map<str,str>?, securityConfigurationId: str?}}
+
+@endpoint POST /virtualclusters/{virtualClusterId}/endpoints/{endpointId}/credentials
+@required {endpointIdentifier: str, virtualClusterIdentifier: str, executionRoleArn: str, credentialType: str}
+@optional {durationInSeconds: int, logContext: str, clientToken: str}
+@returns(200) {id: str?, credentials: Credentials?{token: str?}, expiresAt: str(timestamp)?}
+
+@endpoint GET /virtualclusters/{virtualClusterId}/jobruns
+@required {virtualClusterId: str}
+@optional {createdBefore: str(timestamp), createdAfter: str(timestamp), name: str, states: [str], maxResults: int, nextToken: str}
+@returns(200) {jobRuns: [JobRun]?, nextToken: str?}
+
+@endgroup
+
+@group jobtemplates
+@endpoint GET /jobtemplates
+@optional {createdAfter: str(timestamp), createdBefore: str(timestamp), maxResults: int, nextToken: str}
+@returns(200) {templates: [JobTemplate]?, nextToken: str?}
+
+@endgroup
+
+@group virtualclusters
+@endpoint GET /virtualclusters/{virtualClusterId}/endpoints
+@required {virtualClusterId: str}
+@optional {createdBefore: str(timestamp), createdAfter: str(timestamp), types: [str], states: [str], maxResults: int, nextToken: str}
+@returns(200) {endpoints: [Endpoint]?, nextToken: str?}
+
+@endgroup
+
+@group securityconfigurations
+@endpoint GET /securityconfigurations
+@optional {createdAfter: str(timestamp), createdBefore: str(timestamp), maxResults: int, nextToken: str}
+@returns(200) {securityConfigurations: [SecurityConfiguration]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group virtualclusters
+@endpoint GET /virtualclusters
+@optional {containerProviderId: str, containerProviderType: str, createdAfter: str(timestamp), createdBefore: str(timestamp), states: [str], maxResults: int, nextToken: str, eksAccessEntryIntegrated: bool}
+@returns(200) {virtualClusters: [VirtualCluster]?, nextToken: str?}
+
+@endpoint POST /virtualclusters/{virtualClusterId}/jobruns
+@required {virtualClusterId: str, clientToken: str}
+@optional {name: str, executionRoleArn: str, releaseLabel: str, jobDriver: JobDriver, configurationOverrides: ConfigurationOverrides, tags: map<str,str>, jobTemplateId: str, jobTemplateParameters: map<str,str>, retryPolicyConfiguration: RetryPolicyConfiguration}
+@returns(200) {id: str?, name: str?, arn: str?, virtualClusterId: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@end

@@ -1,0 +1,1160 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Chime
+@version 2018-05-01
+@auth AWS SigV4
+@endpoints 191
+@hint download_for_search
+@toc accounts(45), voice-connectors(33), voice-connector-groups(7), meetings(18), channels(27), phone-numbers?operation=batch-delete(1), phone-numbers?operation=batch-update(1), app-instances(14), app-instance-users(5), media-capture-pipelines(4), meetings?operation=create-attendees(1), phone-number-orders(3), sip-media-applications(9), sip-rules(5), phone-numbers(5), settings(4), endpoints(1), channels?scope=app-instance-user-memberships(1), channels?scope=app-instance-user-moderated-channels(1), phone-number-countries(1), tags(1), search?type=phone-numbers(1), tags?operation=tag-resource(1), tags?operation=untag-resource(1), emergency-calling(1)
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users/{userId}?operation=associate-phone-number
+@required {AccountId: str, UserId: str, E164PhoneNumber: str}
+
+@endgroup
+
+@group voice-connectors
+@endpoint POST /voice-connectors/{voiceConnectorId}?operation=associate-phone-numbers
+@required {VoiceConnectorId: str, E164PhoneNumbers: [str]}
+@optional {ForceAssociate: bool}
+@returns(200) {PhoneNumberErrors: [PhoneNumberError]?}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint POST /voice-connector-groups/{voiceConnectorGroupId}?operation=associate-phone-numbers
+@required {VoiceConnectorGroupId: str, E164PhoneNumbers: [str]}
+@optional {ForceAssociate: bool}
+@returns(200) {PhoneNumberErrors: [PhoneNumberError]?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}?operation=associate-signin-delegate-groups
+@required {AccountId: str, SigninDelegateGroups: [SigninDelegateGroup]}
+
+@endgroup
+
+@group meetings
+@endpoint POST /meetings/{meetingId}/attendees?operation=batch-create
+@required {MeetingId: str, Attendees: [CreateAttendeeRequestItem]}
+@returns(200) {Attendees: [Attendee]?, Errors: [CreateAttendeeError]?}
+
+@endgroup
+
+@group channels
+@endpoint POST /channels/{channelArn}/memberships?operation=batch-create
+@required {ChannelArn: str, MemberArns: [str]}
+@optional {x-amz-chime-bearer: str, Type: str}
+@returns(200) {BatchChannelMemberships: BatchChannelMemberships?{InvitedBy: Identity?{Arn: str?, Name: str?}, Type: str?, Members: [Identity]?, ChannelArn: str?}, Errors: [BatchCreateChannelMembershipError]?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/rooms/{roomId}/memberships?operation=batch-create
+@required {AccountId: str, RoomId: str, MembershipItemList: [MembershipItem]}
+@returns(200) {Errors: [MemberError]?}
+
+@endgroup
+
+@group phone-numbers?operation=batch-delete
+@endpoint POST /phone-numbers?operation=batch-delete
+@required {PhoneNumberIds: [str]}
+@returns(200) {PhoneNumberErrors: [PhoneNumberError]?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users?operation=suspend
+@required {AccountId: str, UserIdList: [str]}
+@returns(200) {UserErrors: [UserError]?}
+
+@endpoint POST /accounts/{accountId}/users?operation=unsuspend
+@required {AccountId: str, UserIdList: [str]}
+@returns(200) {UserErrors: [UserError]?}
+
+@endgroup
+
+@group phone-numbers?operation=batch-update
+@endpoint POST /phone-numbers?operation=batch-update
+@required {UpdatePhoneNumberRequestItems: [UpdatePhoneNumberRequestItem]}
+@returns(200) {PhoneNumberErrors: [PhoneNumberError]?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users
+@required {AccountId: str, UpdateUserRequestItems: [UpdateUserRequestItem]}
+@returns(200) {UserErrors: [UserError]?}
+
+@endpoint POST /accounts
+@required {Name: str}
+@returns(200) {Account: Account?{AwsAccountId: str, AccountId: str, Name: str, AccountType: str?, CreatedTimestamp: str(timestamp)?, DefaultLicense: str?, SupportedLicenses: [str]?, AccountStatus: str?, SigninDelegateGroups: [SigninDelegateGroup]?}}
+
+@endgroup
+
+@group app-instances
+@endpoint POST /app-instances
+@required {Name: str, ClientRequestToken: str}
+@optional {Metadata: str, Tags: [Tag]}
+@returns(200) {AppInstanceArn: str?}
+
+@endpoint POST /app-instances/{appInstanceArn}/admins
+@required {AppInstanceArn: str, AppInstanceAdminArn: str}
+@returns(200) {AppInstanceAdmin: Identity?{Arn: str?, Name: str?}, AppInstanceArn: str?}
+
+@endgroup
+
+@group app-instance-users
+@endpoint POST /app-instance-users
+@required {AppInstanceArn: str, AppInstanceUserId: str, Name: str, ClientRequestToken: str}
+@optional {Metadata: str, Tags: [Tag]}
+@returns(200) {AppInstanceUserArn: str?}
+
+@endgroup
+
+@group meetings
+@endpoint POST /meetings/{meetingId}/attendees
+@required {MeetingId: str, ExternalUserId: str}
+@optional {Tags: [Tag]}
+@returns(200) {Attendee: Attendee?{ExternalUserId: str?, AttendeeId: str?, JoinToken: str?}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/bots
+@required {AccountId: str, DisplayName: str}
+@optional {Domain: str}
+@returns(200) {Bot: Bot?{BotId: str?, UserId: str?, DisplayName: str?, BotType: str?, Disabled: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, BotEmail: str?, SecurityToken: str?}}
+
+@endgroup
+
+@group channels
+@endpoint POST /channels
+@required {AppInstanceArn: str, Name: str, ClientRequestToken: str}
+@optional {x-amz-chime-bearer: str, Mode: str, Privacy: str, Metadata: str, Tags: [Tag]}
+@returns(200) {ChannelArn: str?}
+
+@endpoint POST /channels/{channelArn}/bans
+@required {ChannelArn: str, MemberArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, Member: Identity?{Arn: str?, Name: str?}}
+
+@endpoint POST /channels/{channelArn}/memberships
+@required {ChannelArn: str, MemberArn: str, Type: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, Member: Identity?{Arn: str?, Name: str?}}
+
+@endpoint POST /channels/{channelArn}/moderators
+@required {ChannelArn: str, ChannelModeratorArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, ChannelModerator: Identity?{Arn: str?, Name: str?}}
+
+@endgroup
+
+@group media-capture-pipelines
+@endpoint POST /media-capture-pipelines
+@required {SourceType: str, SourceArn: str, SinkType: str, SinkArn: str}
+@optional {ClientRequestToken: str, ChimeSdkMeetingConfiguration: ChimeSdkMeetingConfiguration}
+@returns(200) {MediaCapturePipeline: MediaCapturePipeline?{MediaPipelineId: str?, SourceType: str?, SourceArn: str?, Status: str?, SinkType: str?, SinkArn: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, ChimeSdkMeetingConfiguration: ChimeSdkMeetingConfiguration?{SourceConfiguration: SourceConfiguration?{SelectedVideoStreams: SelectedVideoStreams?}, ArtifactsConfiguration: ArtifactsConfiguration?{Audio: AudioArtifactsConfiguration, Video: VideoArtifactsConfiguration, Content: ContentArtifactsConfiguration}}}}
+
+@endgroup
+
+@group meetings
+@endpoint POST /meetings
+@required {ClientRequestToken: str}
+@optional {ExternalMeetingId: str, MeetingHostId: str, MediaRegion: str, Tags: [Tag], NotificationsConfiguration: MeetingNotificationConfiguration}
+@returns(200) {Meeting: Meeting?{MeetingId: str?, ExternalMeetingId: str?, MediaPlacement: MediaPlacement?{AudioHostUrl: str?, AudioFallbackUrl: str?, ScreenDataUrl: str?, ScreenSharingUrl: str?, ScreenViewingUrl: str?, SignalingUrl: str?, TurnControlUrl: str?, EventIngestionUrl: str?}, MediaRegion: str?}}
+
+@endpoint POST /meetings/{meetingId}/dial-outs
+@required {MeetingId: str, FromPhoneNumber: str, ToPhoneNumber: str, JoinToken: str}
+@returns(200) {TransactionId: str?}
+
+@endgroup
+
+@group meetings?operation=create-attendees
+@endpoint POST /meetings?operation=create-attendees
+@required {ClientRequestToken: str}
+@optional {ExternalMeetingId: str, MeetingHostId: str, MediaRegion: str, Tags: [Tag], NotificationsConfiguration: MeetingNotificationConfiguration, Attendees: [CreateAttendeeRequestItem]}
+@returns(200) {Meeting: Meeting?{MeetingId: str?, ExternalMeetingId: str?, MediaPlacement: MediaPlacement?{AudioHostUrl: str?, AudioFallbackUrl: str?, ScreenDataUrl: str?, ScreenSharingUrl: str?, ScreenViewingUrl: str?, SignalingUrl: str?, TurnControlUrl: str?, EventIngestionUrl: str?}, MediaRegion: str?}, Attendees: [Attendee]?, Errors: [CreateAttendeeError]?}
+
+@endgroup
+
+@group phone-number-orders
+@endpoint POST /phone-number-orders
+@required {ProductType: str, E164PhoneNumbers: [str]}
+@returns(200) {PhoneNumberOrder: PhoneNumberOrder?{PhoneNumberOrderId: str?, ProductType: str?, Status: str?, OrderedPhoneNumbers: [OrderedPhoneNumber]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group voice-connectors
+@endpoint POST /voice-connectors/{voiceConnectorId}/proxy-sessions
+@required {VoiceConnectorId: str, ParticipantPhoneNumbers: [str], Capabilities: [str]}
+@optional {Name: str, ExpiryMinutes: int, NumberSelectionBehavior: str, GeoMatchLevel: str, GeoMatchParams: GeoMatchParams}
+@returns(200) {ProxySession: ProxySession?{VoiceConnectorId: str?, ProxySessionId: str?, Name: str?, Status: str?, ExpiryMinutes: int?, Capabilities: [str]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, EndedTimestamp: str(timestamp)?, Participants: [Participant]?, NumberSelectionBehavior: str?, GeoMatchLevel: str?, GeoMatchParams: GeoMatchParams?{Country: str, AreaCode: str}}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/rooms
+@required {AccountId: str, Name: str}
+@optional {ClientRequestToken: str}
+@returns(200) {Room: Room?{RoomId: str?, Name: str?, AccountId: str?, CreatedBy: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endpoint POST /accounts/{accountId}/rooms/{roomId}/memberships
+@required {AccountId: str, RoomId: str, MemberId: str}
+@optional {Role: str}
+@returns(200) {RoomMembership: RoomMembership?{RoomId: str?, Member: Member?{MemberId: str?, MemberType: str?, Email: str?, FullName: str?, AccountId: str?}, Role: str?, InvitedBy: str?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group sip-media-applications
+@endpoint POST /sip-media-applications
+@required {AwsRegion: str, Name: str, Endpoints: [SipMediaApplicationEndpoint]}
+@returns(200) {SipMediaApplication: SipMediaApplication?{SipMediaApplicationId: str?, AwsRegion: str?, Name: str?, Endpoints: [SipMediaApplicationEndpoint]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endpoint POST /sip-media-applications/{sipMediaApplicationId}/calls
+@required {SipMediaApplicationId: str, FromPhoneNumber: str, ToPhoneNumber: str}
+@optional {SipHeaders: map<str,str>}
+@returns(200) {SipMediaApplicationCall: SipMediaApplicationCall?{TransactionId: str?}}
+
+@endgroup
+
+@group sip-rules
+@endpoint POST /sip-rules
+@required {Name: str, TriggerType: str, TriggerValue: str, TargetApplications: [SipRuleTargetApplication]}
+@optional {Disabled: bool}
+@returns(200) {SipRule: SipRule?{SipRuleId: str?, Name: str?, Disabled: bool?, TriggerType: str?, TriggerValue: str?, TargetApplications: [SipRuleTargetApplication]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users?operation=create
+@required {AccountId: str}
+@optional {Username: str, Email: str, UserType: str}
+@returns(200) {User: User?{UserId: str, AccountId: str?, PrimaryEmail: str?, PrimaryProvisionedNumber: str?, DisplayName: str?, LicenseType: str?, UserType: str?, UserRegistrationStatus: str?, UserInvitationStatus: str?, RegisteredOn: str(timestamp)?, InvitedOn: str(timestamp)?, AlexaForBusinessMetadata: AlexaForBusinessMetadata?{IsAlexaForBusinessEnabled: bool?, AlexaForBusinessRoomArn: str?}, PersonalPIN: str?}}
+
+@endgroup
+
+@group voice-connectors
+@endpoint POST /voice-connectors
+@required {Name: str, RequireEncryption: bool}
+@optional {AwsRegion: str}
+@returns(200) {VoiceConnector: VoiceConnector?{VoiceConnectorId: str?, AwsRegion: str?, Name: str?, OutboundHostName: str?, RequireEncryption: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, VoiceConnectorArn: str?}}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint POST /voice-connector-groups
+@required {Name: str}
+@optional {VoiceConnectorItems: [VoiceConnectorItem]}
+@returns(200) {VoiceConnectorGroup: VoiceConnectorGroup?{VoiceConnectorGroupId: str?, Name: str?, VoiceConnectorItems: [VoiceConnectorItem]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, VoiceConnectorGroupArn: str?}}
+
+@endgroup
+
+@group accounts
+@endpoint DELETE /accounts/{accountId}
+@required {AccountId: str}
+
+@endgroup
+
+@group app-instances
+@endpoint DELETE /app-instances/{appInstanceArn}
+@required {AppInstanceArn: str}
+
+@endpoint DELETE /app-instances/{appInstanceArn}/admins/{appInstanceAdminArn}
+@required {AppInstanceAdminArn: str, AppInstanceArn: str}
+
+@endpoint DELETE /app-instances/{appInstanceArn}/streaming-configurations
+@required {AppInstanceArn: str}
+
+@endgroup
+
+@group app-instance-users
+@endpoint DELETE /app-instance-users/{appInstanceUserArn}
+@required {AppInstanceUserArn: str}
+
+@endgroup
+
+@group meetings
+@endpoint DELETE /meetings/{meetingId}/attendees/{attendeeId}
+@required {MeetingId: str, AttendeeId: str}
+
+@endgroup
+
+@group channels
+@endpoint DELETE /channels/{channelArn}
+@required {ChannelArn: str}
+@optional {x-amz-chime-bearer: str}
+
+@endpoint DELETE /channels/{channelArn}/bans/{memberArn}
+@required {ChannelArn: str, MemberArn: str}
+@optional {x-amz-chime-bearer: str}
+
+@endpoint DELETE /channels/{channelArn}/memberships/{memberArn}
+@required {ChannelArn: str, MemberArn: str}
+@optional {x-amz-chime-bearer: str}
+
+@endpoint DELETE /channels/{channelArn}/messages/{messageId}
+@required {ChannelArn: str, MessageId: str}
+@optional {x-amz-chime-bearer: str}
+
+@endpoint DELETE /channels/{channelArn}/moderators/{channelModeratorArn}
+@required {ChannelArn: str, ChannelModeratorArn: str}
+@optional {x-amz-chime-bearer: str}
+
+@endgroup
+
+@group accounts
+@endpoint DELETE /accounts/{accountId}/bots/{botId}/events-configuration
+@required {AccountId: str, BotId: str}
+
+@endgroup
+
+@group media-capture-pipelines
+@endpoint DELETE /media-capture-pipelines/{mediaPipelineId}
+@required {MediaPipelineId: str}
+
+@endgroup
+
+@group meetings
+@endpoint DELETE /meetings/{meetingId}
+@required {MeetingId: str}
+
+@endgroup
+
+@group phone-numbers
+@endpoint DELETE /phone-numbers/{phoneNumberId}
+@required {PhoneNumberId: str}
+
+@endgroup
+
+@group voice-connectors
+@endpoint DELETE /voice-connectors/{voiceConnectorId}/proxy-sessions/{proxySessionId}
+@required {VoiceConnectorId: str, ProxySessionId: str}
+
+@endgroup
+
+@group accounts
+@endpoint DELETE /accounts/{accountId}/rooms/{roomId}
+@required {AccountId: str, RoomId: str}
+
+@endpoint DELETE /accounts/{accountId}/rooms/{roomId}/memberships/{memberId}
+@required {AccountId: str, RoomId: str, MemberId: str}
+
+@endgroup
+
+@group sip-media-applications
+@endpoint DELETE /sip-media-applications/{sipMediaApplicationId}
+@required {SipMediaApplicationId: str}
+
+@endgroup
+
+@group sip-rules
+@endpoint DELETE /sip-rules/{sipRuleId}
+@required {SipRuleId: str}
+
+@endgroup
+
+@group voice-connectors
+@endpoint DELETE /voice-connectors/{voiceConnectorId}
+@required {VoiceConnectorId: str}
+
+@endpoint DELETE /voice-connectors/{voiceConnectorId}/emergency-calling-configuration
+@required {VoiceConnectorId: str}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint DELETE /voice-connector-groups/{voiceConnectorGroupId}
+@required {VoiceConnectorGroupId: str}
+
+@endgroup
+
+@group voice-connectors
+@endpoint DELETE /voice-connectors/{voiceConnectorId}/origination
+@required {VoiceConnectorId: str}
+
+@endpoint DELETE /voice-connectors/{voiceConnectorId}/programmable-numbers/proxy
+@required {VoiceConnectorId: str}
+
+@endpoint DELETE /voice-connectors/{voiceConnectorId}/streaming-configuration
+@required {VoiceConnectorId: str}
+
+@endpoint DELETE /voice-connectors/{voiceConnectorId}/termination
+@required {VoiceConnectorId: str}
+
+@endpoint POST /voice-connectors/{voiceConnectorId}/termination/credentials?operation=delete
+@required {VoiceConnectorId: str, Usernames: [str]}
+
+@endgroup
+
+@group app-instances
+@endpoint GET /app-instances/{appInstanceArn}
+@required {AppInstanceArn: str}
+@returns(200) {AppInstance: AppInstance?{AppInstanceArn: str?, Name: str?, Metadata: str?, CreatedTimestamp: str(timestamp)?, LastUpdatedTimestamp: str(timestamp)?}}
+
+@endpoint GET /app-instances/{appInstanceArn}/admins/{appInstanceAdminArn}
+@required {AppInstanceAdminArn: str, AppInstanceArn: str}
+@returns(200) {AppInstanceAdmin: AppInstanceAdmin?{Admin: Identity?{Arn: str?, Name: str?}, AppInstanceArn: str?, CreatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group app-instance-users
+@endpoint GET /app-instance-users/{appInstanceUserArn}
+@required {AppInstanceUserArn: str}
+@returns(200) {AppInstanceUser: AppInstanceUser?{AppInstanceUserArn: str?, Name: str?, CreatedTimestamp: str(timestamp)?, Metadata: str?, LastUpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/{channelArn}
+@required {ChannelArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {Channel: Channel?{Name: str?, ChannelArn: str?, Mode: str?, Privacy: str?, Metadata: str?, CreatedBy: Identity?{Arn: str?, Name: str?}, CreatedTimestamp: str(timestamp)?, LastMessageTimestamp: str(timestamp)?, LastUpdatedTimestamp: str(timestamp)?}}
+
+@endpoint GET /channels/{channelArn}/bans/{memberArn}
+@required {ChannelArn: str, MemberArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelBan: ChannelBan?{Member: Identity?{Arn: str?, Name: str?}, ChannelArn: str?, CreatedTimestamp: str(timestamp)?, CreatedBy: Identity?{Arn: str?, Name: str?}}}
+
+@endpoint GET /channels/{channelArn}/memberships/{memberArn}
+@required {ChannelArn: str, MemberArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelMembership: ChannelMembership?{InvitedBy: Identity?{Arn: str?, Name: str?}, Type: str?, Member: Identity?{Arn: str?, Name: str?}, ChannelArn: str?, CreatedTimestamp: str(timestamp)?, LastUpdatedTimestamp: str(timestamp)?}}
+
+@endpoint GET /channels/{channelArn}?scope=app-instance-user-membership
+@required {ChannelArn: str, app-instance-user-arn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelMembership: ChannelMembershipForAppInstanceUserSummary?{ChannelSummary: ChannelSummary?{Name: str?, ChannelArn: str?, Mode: str?, Privacy: str?, Metadata: str?, LastMessageTimestamp: str(timestamp)?}, AppInstanceUserMembershipSummary: AppInstanceUserMembershipSummary?{Type: str?, ReadMarkerTimestamp: str(timestamp)?}}}
+
+@endpoint GET /channels/{channelArn}?scope=app-instance-user-moderated-channel
+@required {ChannelArn: str, app-instance-user-arn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {Channel: ChannelModeratedByAppInstanceUserSummary?{ChannelSummary: ChannelSummary?{Name: str?, ChannelArn: str?, Mode: str?, Privacy: str?, Metadata: str?, LastMessageTimestamp: str(timestamp)?}}}
+
+@endpoint GET /channels/{channelArn}/moderators/{channelModeratorArn}
+@required {ChannelArn: str, ChannelModeratorArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelModerator: ChannelModerator?{Moderator: Identity?{Arn: str?, Name: str?}, ChannelArn: str?, CreatedTimestamp: str(timestamp)?, CreatedBy: Identity?{Arn: str?, Name: str?}}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users/{userId}?operation=disassociate-phone-number
+@required {AccountId: str, UserId: str}
+
+@endgroup
+
+@group voice-connectors
+@endpoint POST /voice-connectors/{voiceConnectorId}?operation=disassociate-phone-numbers
+@required {VoiceConnectorId: str, E164PhoneNumbers: [str]}
+@returns(200) {PhoneNumberErrors: [PhoneNumberError]?}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint POST /voice-connector-groups/{voiceConnectorGroupId}?operation=disassociate-phone-numbers
+@required {VoiceConnectorGroupId: str, E164PhoneNumbers: [str]}
+@returns(200) {PhoneNumberErrors: [PhoneNumberError]?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}?operation=disassociate-signin-delegate-groups
+@required {AccountId: str, GroupNames: [str]}
+
+@endpoint GET /accounts/{accountId}
+@required {AccountId: str}
+@returns(200) {Account: Account?{AwsAccountId: str, AccountId: str, Name: str, AccountType: str?, CreatedTimestamp: str(timestamp)?, DefaultLicense: str?, SupportedLicenses: [str]?, AccountStatus: str?, SigninDelegateGroups: [SigninDelegateGroup]?}}
+
+@endpoint GET /accounts/{accountId}/settings
+@required {AccountId: str}
+@returns(200) {AccountSettings: AccountSettings?{DisableRemoteControl: bool?, EnableDialOut: bool?}}
+
+@endgroup
+
+@group app-instances
+@endpoint GET /app-instances/{appInstanceArn}/retention-settings
+@required {AppInstanceArn: str}
+@returns(200) {AppInstanceRetentionSettings: AppInstanceRetentionSettings?{ChannelRetentionSettings: ChannelRetentionSettings?{RetentionDays: int?}}, InitiateDeletionTimestamp: str(timestamp)?}
+
+@endpoint GET /app-instances/{appInstanceArn}/streaming-configurations
+@required {AppInstanceArn: str}
+@returns(200) {AppInstanceStreamingConfigurations: [AppInstanceStreamingConfiguration]?}
+
+@endgroup
+
+@group meetings
+@endpoint GET /meetings/{meetingId}/attendees/{attendeeId}
+@required {MeetingId: str, AttendeeId: str}
+@returns(200) {Attendee: Attendee?{ExternalUserId: str?, AttendeeId: str?, JoinToken: str?}}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/bots/{botId}
+@required {AccountId: str, BotId: str}
+@returns(200) {Bot: Bot?{BotId: str?, UserId: str?, DisplayName: str?, BotType: str?, Disabled: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, BotEmail: str?, SecurityToken: str?}}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/{channelArn}/messages/{messageId}
+@required {ChannelArn: str, MessageId: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelMessage: ChannelMessage?{ChannelArn: str?, MessageId: str?, Content: str?, Metadata: str?, Type: str?, CreatedTimestamp: str(timestamp)?, LastEditedTimestamp: str(timestamp)?, LastUpdatedTimestamp: str(timestamp)?, Sender: Identity?{Arn: str?, Name: str?}, Redacted: bool?, Persistence: str?}}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/bots/{botId}/events-configuration
+@required {AccountId: str, BotId: str}
+@returns(200) {EventsConfiguration: EventsConfiguration?{BotId: str?, OutboundEventsHTTPSEndpoint: str?, LambdaFunctionArn: str?}}
+
+@endgroup
+
+@group settings
+@endpoint GET /settings
+@returns(200) {BusinessCalling: BusinessCallingSettings?{CdrBucket: str?}, VoiceConnector: VoiceConnectorSettings?{CdrBucket: str?}}
+
+@endgroup
+
+@group media-capture-pipelines
+@endpoint GET /media-capture-pipelines/{mediaPipelineId}
+@required {MediaPipelineId: str}
+@returns(200) {MediaCapturePipeline: MediaCapturePipeline?{MediaPipelineId: str?, SourceType: str?, SourceArn: str?, Status: str?, SinkType: str?, SinkArn: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, ChimeSdkMeetingConfiguration: ChimeSdkMeetingConfiguration?{SourceConfiguration: SourceConfiguration?{SelectedVideoStreams: SelectedVideoStreams?}, ArtifactsConfiguration: ArtifactsConfiguration?{Audio: AudioArtifactsConfiguration, Video: VideoArtifactsConfiguration, Content: ContentArtifactsConfiguration}}}}
+
+@endgroup
+
+@group meetings
+@endpoint GET /meetings/{meetingId}
+@required {MeetingId: str}
+@returns(200) {Meeting: Meeting?{MeetingId: str?, ExternalMeetingId: str?, MediaPlacement: MediaPlacement?{AudioHostUrl: str?, AudioFallbackUrl: str?, ScreenDataUrl: str?, ScreenSharingUrl: str?, ScreenViewingUrl: str?, SignalingUrl: str?, TurnControlUrl: str?, EventIngestionUrl: str?}, MediaRegion: str?}}
+
+@endgroup
+
+@group endpoints
+@endpoint GET /endpoints/messaging-session
+@returns(200) {Endpoint: MessagingSessionEndpoint?{Url: str?}}
+
+@endgroup
+
+@group phone-numbers
+@endpoint GET /phone-numbers/{phoneNumberId}
+@required {PhoneNumberId: str}
+@returns(200) {PhoneNumber: PhoneNumber?{PhoneNumberId: str?, E164PhoneNumber: str?, Country: str?, Type: str?, ProductType: str?, Status: str?, Capabilities: PhoneNumberCapabilities?{InboundCall: bool?, OutboundCall: bool?, InboundSMS: bool?, OutboundSMS: bool?, InboundMMS: bool?, OutboundMMS: bool?}, Associations: [PhoneNumberAssociation]?, CallingName: str?, CallingNameStatus: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, DeletionTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group phone-number-orders
+@endpoint GET /phone-number-orders/{phoneNumberOrderId}
+@required {PhoneNumberOrderId: str}
+@returns(200) {PhoneNumberOrder: PhoneNumberOrder?{PhoneNumberOrderId: str?, ProductType: str?, Status: str?, OrderedPhoneNumbers: [OrderedPhoneNumber]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group settings
+@endpoint GET /settings/phone-number
+@returns(200) {CallingName: str?, CallingNameUpdatedTimestamp: str(timestamp)?}
+
+@endgroup
+
+@group voice-connectors
+@endpoint GET /voice-connectors/{voiceConnectorId}/proxy-sessions/{proxySessionId}
+@required {VoiceConnectorId: str, ProxySessionId: str}
+@returns(200) {ProxySession: ProxySession?{VoiceConnectorId: str?, ProxySessionId: str?, Name: str?, Status: str?, ExpiryMinutes: int?, Capabilities: [str]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, EndedTimestamp: str(timestamp)?, Participants: [Participant]?, NumberSelectionBehavior: str?, GeoMatchLevel: str?, GeoMatchParams: GeoMatchParams?{Country: str, AreaCode: str}}}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/retention-settings
+@required {AccountId: str}
+@returns(200) {RetentionSettings: RetentionSettings?{RoomRetentionSettings: RoomRetentionSettings?{RetentionDays: int?}, ConversationRetentionSettings: ConversationRetentionSettings?{RetentionDays: int?}}, InitiateDeletionTimestamp: str(timestamp)?}
+
+@endpoint GET /accounts/{accountId}/rooms/{roomId}
+@required {AccountId: str, RoomId: str}
+@returns(200) {Room: Room?{RoomId: str?, Name: str?, AccountId: str?, CreatedBy: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group sip-media-applications
+@endpoint GET /sip-media-applications/{sipMediaApplicationId}
+@required {SipMediaApplicationId: str}
+@returns(200) {SipMediaApplication: SipMediaApplication?{SipMediaApplicationId: str?, AwsRegion: str?, Name: str?, Endpoints: [SipMediaApplicationEndpoint]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endpoint GET /sip-media-applications/{sipMediaApplicationId}/logging-configuration
+@required {SipMediaApplicationId: str}
+@returns(200) {SipMediaApplicationLoggingConfiguration: SipMediaApplicationLoggingConfiguration?{EnableSipMediaApplicationMessageLogs: bool?}}
+
+@endgroup
+
+@group sip-rules
+@endpoint GET /sip-rules/{sipRuleId}
+@required {SipRuleId: str}
+@returns(200) {SipRule: SipRule?{SipRuleId: str?, Name: str?, Disabled: bool?, TriggerType: str?, TriggerValue: str?, TargetApplications: [SipRuleTargetApplication]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/users/{userId}
+@required {AccountId: str, UserId: str}
+@returns(200) {User: User?{UserId: str, AccountId: str?, PrimaryEmail: str?, PrimaryProvisionedNumber: str?, DisplayName: str?, LicenseType: str?, UserType: str?, UserRegistrationStatus: str?, UserInvitationStatus: str?, RegisteredOn: str(timestamp)?, InvitedOn: str(timestamp)?, AlexaForBusinessMetadata: AlexaForBusinessMetadata?{IsAlexaForBusinessEnabled: bool?, AlexaForBusinessRoomArn: str?}, PersonalPIN: str?}}
+
+@endpoint GET /accounts/{accountId}/users/{userId}/settings
+@required {AccountId: str, UserId: str}
+@returns(200) {UserSettings: UserSettings?{Telephony: TelephonySettings{InboundCalling: bool, OutboundCalling: bool, SMS: bool}}}
+
+@endgroup
+
+@group voice-connectors
+@endpoint GET /voice-connectors/{voiceConnectorId}
+@required {VoiceConnectorId: str}
+@returns(200) {VoiceConnector: VoiceConnector?{VoiceConnectorId: str?, AwsRegion: str?, Name: str?, OutboundHostName: str?, RequireEncryption: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, VoiceConnectorArn: str?}}
+
+@endpoint GET /voice-connectors/{voiceConnectorId}/emergency-calling-configuration
+@required {VoiceConnectorId: str}
+@returns(200) {EmergencyCallingConfiguration: EmergencyCallingConfiguration?{DNIS: [DNISEmergencyCallingConfiguration]?}}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint GET /voice-connector-groups/{voiceConnectorGroupId}
+@required {VoiceConnectorGroupId: str}
+@returns(200) {VoiceConnectorGroup: VoiceConnectorGroup?{VoiceConnectorGroupId: str?, Name: str?, VoiceConnectorItems: [VoiceConnectorItem]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, VoiceConnectorGroupArn: str?}}
+
+@endgroup
+
+@group voice-connectors
+@endpoint GET /voice-connectors/{voiceConnectorId}/logging-configuration
+@required {VoiceConnectorId: str}
+@returns(200) {LoggingConfiguration: LoggingConfiguration?{EnableSIPLogs: bool?, EnableMediaMetricLogs: bool?}}
+
+@endpoint GET /voice-connectors/{voiceConnectorId}/origination
+@required {VoiceConnectorId: str}
+@returns(200) {Origination: Origination?{Routes: [OriginationRoute]?, Disabled: bool?}}
+
+@endpoint GET /voice-connectors/{voiceConnectorId}/programmable-numbers/proxy
+@required {VoiceConnectorId: str}
+@returns(200) {Proxy: Proxy?{DefaultSessionExpiryMinutes: int?, Disabled: bool?, FallBackPhoneNumber: str?, PhoneNumberCountries: [str]?}}
+
+@endpoint GET /voice-connectors/{voiceConnectorId}/streaming-configuration
+@required {VoiceConnectorId: str}
+@returns(200) {StreamingConfiguration: StreamingConfiguration?{DataRetentionInHours: int, Disabled: bool?, StreamingNotificationTargets: [StreamingNotificationTarget]?}}
+
+@endpoint GET /voice-connectors/{voiceConnectorId}/termination
+@required {VoiceConnectorId: str}
+@returns(200) {Termination: Termination?{CpsLimit: int?, DefaultPhoneNumber: str?, CallingRegions: [str]?, CidrAllowedList: [str]?, Disabled: bool?}}
+
+@endpoint GET /voice-connectors/{voiceConnectorId}/termination/health
+@required {VoiceConnectorId: str}
+@returns(200) {TerminationHealth: TerminationHealth?{Timestamp: str(timestamp)?, Source: str?}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users?operation=add
+@required {AccountId: str, UserEmailList: [str]}
+@optional {UserType: str}
+@returns(200) {Invites: [Invite]?}
+
+@endpoint GET /accounts
+@optional {name: str, user-email: str, next-token: str, max-results: int}
+@returns(200) {Accounts: [Account]?, NextToken: str?}
+
+@endgroup
+
+@group app-instances
+@endpoint GET /app-instances/{appInstanceArn}/admins
+@required {AppInstanceArn: str}
+@optional {max-results: int, next-token: str}
+@returns(200) {AppInstanceArn: str?, AppInstanceAdmins: [AppInstanceAdminSummary]?, NextToken: str?}
+
+@endgroup
+
+@group app-instance-users
+@endpoint GET /app-instance-users
+@required {app-instance-arn: str}
+@optional {max-results: int, next-token: str}
+@returns(200) {AppInstanceArn: str?, AppInstanceUsers: [AppInstanceUserSummary]?, NextToken: str?}
+
+@endgroup
+
+@group app-instances
+@endpoint GET /app-instances
+@optional {max-results: int, next-token: str}
+@returns(200) {AppInstances: [AppInstanceSummary]?, NextToken: str?}
+
+@endgroup
+
+@group meetings
+@endpoint GET /meetings/{meetingId}/attendees/{attendeeId}/tags
+@required {MeetingId: str, AttendeeId: str}
+@returns(200) {Tags: [Tag]?}
+
+@endpoint GET /meetings/{meetingId}/attendees
+@required {MeetingId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Attendees: [Attendee]?, NextToken: str?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/bots
+@required {AccountId: str}
+@optional {max-results: int, next-token: str}
+@returns(200) {Bots: [Bot]?, NextToken: str?}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/{channelArn}/bans
+@required {ChannelArn: str}
+@optional {max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, NextToken: str?, ChannelBans: [ChannelBanSummary]?}
+
+@endpoint GET /channels/{channelArn}/memberships
+@required {ChannelArn: str}
+@optional {type: str, max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, ChannelMemberships: [ChannelMembershipSummary]?, NextToken: str?}
+
+@endgroup
+
+@group channels?scope=app-instance-user-memberships
+@endpoint GET /channels?scope=app-instance-user-memberships
+@optional {app-instance-user-arn: str, max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {ChannelMemberships: [ChannelMembershipForAppInstanceUserSummary]?, NextToken: str?}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/{channelArn}/messages
+@required {ChannelArn: str}
+@optional {sort-order: str, not-before: str(timestamp), not-after: str(timestamp), max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, NextToken: str?, ChannelMessages: [ChannelMessageSummary]?}
+
+@endpoint GET /channels/{channelArn}/moderators
+@required {ChannelArn: str}
+@optional {max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, NextToken: str?, ChannelModerators: [ChannelModeratorSummary]?}
+
+@endpoint GET /channels
+@required {app-instance-arn: str}
+@optional {privacy: str, max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {Channels: [ChannelSummary]?, NextToken: str?}
+
+@endgroup
+
+@group channels?scope=app-instance-user-moderated-channels
+@endpoint GET /channels?scope=app-instance-user-moderated-channels
+@optional {app-instance-user-arn: str, max-results: int, next-token: str, x-amz-chime-bearer: str}
+@returns(200) {Channels: [ChannelModeratedByAppInstanceUserSummary]?, NextToken: str?}
+
+@endgroup
+
+@group media-capture-pipelines
+@endpoint GET /media-capture-pipelines
+@optional {next-token: str, max-results: int}
+@returns(200) {MediaCapturePipelines: [MediaCapturePipeline]?, NextToken: str?}
+
+@endgroup
+
+@group meetings
+@endpoint GET /meetings/{meetingId}/tags
+@required {MeetingId: str}
+@returns(200) {Tags: [Tag]?}
+
+@endpoint GET /meetings
+@optional {next-token: str, max-results: int}
+@returns(200) {Meetings: [Meeting]?, NextToken: str?}
+
+@endgroup
+
+@group phone-number-orders
+@endpoint GET /phone-number-orders
+@optional {next-token: str, max-results: int}
+@returns(200) {PhoneNumberOrders: [PhoneNumberOrder]?, NextToken: str?}
+
+@endgroup
+
+@group phone-numbers
+@endpoint GET /phone-numbers
+@optional {status: str, product-type: str, filter-name: str, filter-value: str, max-results: int, next-token: str}
+@returns(200) {PhoneNumbers: [PhoneNumber]?, NextToken: str?}
+
+@endgroup
+
+@group voice-connectors
+@endpoint GET /voice-connectors/{voiceConnectorId}/proxy-sessions
+@required {VoiceConnectorId: str}
+@optional {status: str, next-token: str, max-results: int}
+@returns(200) {ProxySessions: [ProxySession]?, NextToken: str?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/rooms/{roomId}/memberships
+@required {AccountId: str, RoomId: str}
+@optional {max-results: int, next-token: str}
+@returns(200) {RoomMemberships: [RoomMembership]?, NextToken: str?}
+
+@endpoint GET /accounts/{accountId}/rooms
+@required {AccountId: str}
+@optional {member-id: str, max-results: int, next-token: str}
+@returns(200) {Rooms: [Room]?, NextToken: str?}
+
+@endgroup
+
+@group sip-media-applications
+@endpoint GET /sip-media-applications
+@optional {max-results: int, next-token: str}
+@returns(200) {SipMediaApplications: [SipMediaApplication]?, NextToken: str?}
+
+@endgroup
+
+@group sip-rules
+@endpoint GET /sip-rules
+@optional {sip-media-application: str, max-results: int, next-token: str}
+@returns(200) {SipRules: [SipRule]?, NextToken: str?}
+
+@endgroup
+
+@group phone-number-countries
+@endpoint GET /phone-number-countries
+@required {product-type: str}
+@returns(200) {PhoneNumberCountries: [PhoneNumberCountry]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags
+@required {arn: str}
+@returns(200) {Tags: [Tag]?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{accountId}/users
+@required {AccountId: str}
+@optional {user-email: str, user-type: str, max-results: int, next-token: str}
+@returns(200) {Users: [User]?, NextToken: str?}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint GET /voice-connector-groups
+@optional {next-token: str, max-results: int}
+@returns(200) {VoiceConnectorGroups: [VoiceConnectorGroup]?, NextToken: str?}
+
+@endgroup
+
+@group voice-connectors
+@endpoint GET /voice-connectors/{voiceConnectorId}/termination/credentials
+@required {VoiceConnectorId: str}
+@returns(200) {Usernames: [str]?}
+
+@endpoint GET /voice-connectors
+@optional {next-token: str, max-results: int}
+@returns(200) {VoiceConnectors: [VoiceConnector]?, NextToken: str?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users/{userId}?operation=logout
+@required {AccountId: str, UserId: str}
+
+@endgroup
+
+@group app-instances
+@endpoint PUT /app-instances/{appInstanceArn}/retention-settings
+@required {AppInstanceArn: str, AppInstanceRetentionSettings: AppInstanceRetentionSettings}
+@returns(200) {AppInstanceRetentionSettings: AppInstanceRetentionSettings?{ChannelRetentionSettings: ChannelRetentionSettings?{RetentionDays: int?}}, InitiateDeletionTimestamp: str(timestamp)?}
+
+@endpoint PUT /app-instances/{appInstanceArn}/streaming-configurations
+@required {AppInstanceArn: str, AppInstanceStreamingConfigurations: [AppInstanceStreamingConfiguration]}
+@returns(200) {AppInstanceStreamingConfigurations: [AppInstanceStreamingConfiguration]?}
+
+@endgroup
+
+@group accounts
+@endpoint PUT /accounts/{accountId}/bots/{botId}/events-configuration
+@required {AccountId: str, BotId: str}
+@optional {OutboundEventsHTTPSEndpoint: str, LambdaFunctionArn: str}
+@returns(200) {EventsConfiguration: EventsConfiguration?{BotId: str?, OutboundEventsHTTPSEndpoint: str?, LambdaFunctionArn: str?}}
+
+@endpoint PUT /accounts/{accountId}/retention-settings
+@required {AccountId: str, RetentionSettings: RetentionSettings}
+@returns(200) {RetentionSettings: RetentionSettings?{RoomRetentionSettings: RoomRetentionSettings?{RetentionDays: int?}, ConversationRetentionSettings: ConversationRetentionSettings?{RetentionDays: int?}}, InitiateDeletionTimestamp: str(timestamp)?}
+
+@endgroup
+
+@group sip-media-applications
+@endpoint PUT /sip-media-applications/{sipMediaApplicationId}/logging-configuration
+@required {SipMediaApplicationId: str}
+@optional {SipMediaApplicationLoggingConfiguration: SipMediaApplicationLoggingConfiguration}
+@returns(200) {SipMediaApplicationLoggingConfiguration: SipMediaApplicationLoggingConfiguration?{EnableSipMediaApplicationMessageLogs: bool?}}
+
+@endgroup
+
+@group voice-connectors
+@endpoint PUT /voice-connectors/{voiceConnectorId}/emergency-calling-configuration
+@required {VoiceConnectorId: str, EmergencyCallingConfiguration: EmergencyCallingConfiguration}
+@returns(200) {EmergencyCallingConfiguration: EmergencyCallingConfiguration?{DNIS: [DNISEmergencyCallingConfiguration]?}}
+
+@endpoint PUT /voice-connectors/{voiceConnectorId}/logging-configuration
+@required {VoiceConnectorId: str, LoggingConfiguration: LoggingConfiguration}
+@returns(200) {LoggingConfiguration: LoggingConfiguration?{EnableSIPLogs: bool?, EnableMediaMetricLogs: bool?}}
+
+@endpoint PUT /voice-connectors/{voiceConnectorId}/origination
+@required {VoiceConnectorId: str, Origination: Origination}
+@returns(200) {Origination: Origination?{Routes: [OriginationRoute]?, Disabled: bool?}}
+
+@endpoint PUT /voice-connectors/{voiceConnectorId}/programmable-numbers/proxy
+@required {VoiceConnectorId: str, DefaultSessionExpiryMinutes: int, PhoneNumberPoolCountries: [str]}
+@optional {FallBackPhoneNumber: str, Disabled: bool}
+@returns(200) {Proxy: Proxy?{DefaultSessionExpiryMinutes: int?, Disabled: bool?, FallBackPhoneNumber: str?, PhoneNumberCountries: [str]?}}
+
+@endpoint PUT /voice-connectors/{voiceConnectorId}/streaming-configuration
+@required {VoiceConnectorId: str, StreamingConfiguration: StreamingConfiguration}
+@returns(200) {StreamingConfiguration: StreamingConfiguration?{DataRetentionInHours: int, Disabled: bool?, StreamingNotificationTargets: [StreamingNotificationTarget]?}}
+
+@endpoint PUT /voice-connectors/{voiceConnectorId}/termination
+@required {VoiceConnectorId: str, Termination: Termination}
+@returns(200) {Termination: Termination?{CpsLimit: int?, DefaultPhoneNumber: str?, CallingRegions: [str]?, CidrAllowedList: [str]?, Disabled: bool?}}
+
+@endpoint POST /voice-connectors/{voiceConnectorId}/termination/credentials?operation=put
+@required {VoiceConnectorId: str}
+@optional {Credentials: [Credential]}
+
+@endgroup
+
+@group channels
+@endpoint POST /channels/{channelArn}/messages/{messageId}?operation=redact
+@required {ChannelArn: str, MessageId: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?, MessageId: str?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/conversations/{conversationId}/messages/{messageId}?operation=redact
+@required {AccountId: str, ConversationId: str, MessageId: str}
+
+@endpoint POST /accounts/{accountId}/rooms/{roomId}/messages/{messageId}?operation=redact
+@required {AccountId: str, RoomId: str, MessageId: str}
+
+@endpoint POST /accounts/{accountId}/bots/{botId}?operation=regenerate-security-token
+@required {AccountId: str, BotId: str}
+@returns(200) {Bot: Bot?{BotId: str?, UserId: str?, DisplayName: str?, BotType: str?, Disabled: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, BotEmail: str?, SecurityToken: str?}}
+
+@endpoint POST /accounts/{accountId}/users/{userId}?operation=reset-personal-pin
+@required {AccountId: str, UserId: str}
+@returns(200) {User: User?{UserId: str, AccountId: str?, PrimaryEmail: str?, PrimaryProvisionedNumber: str?, DisplayName: str?, LicenseType: str?, UserType: str?, UserRegistrationStatus: str?, UserInvitationStatus: str?, RegisteredOn: str(timestamp)?, InvitedOn: str(timestamp)?, AlexaForBusinessMetadata: AlexaForBusinessMetadata?{IsAlexaForBusinessEnabled: bool?, AlexaForBusinessRoomArn: str?}, PersonalPIN: str?}}
+
+@endgroup
+
+@group phone-numbers
+@endpoint POST /phone-numbers/{phoneNumberId}?operation=restore
+@required {PhoneNumberId: str}
+@returns(200) {PhoneNumber: PhoneNumber?{PhoneNumberId: str?, E164PhoneNumber: str?, Country: str?, Type: str?, ProductType: str?, Status: str?, Capabilities: PhoneNumberCapabilities?{InboundCall: bool?, OutboundCall: bool?, InboundSMS: bool?, OutboundSMS: bool?, InboundMMS: bool?, OutboundMMS: bool?}, Associations: [PhoneNumberAssociation]?, CallingName: str?, CallingNameStatus: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, DeletionTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group search?type=phone-numbers
+@endpoint GET /search?type=phone-numbers
+@optional {area-code: str, city: str, country: str, state: str, toll-free-prefix: str, phone-number-type: str, max-results: int, next-token: str}
+@returns(200) {E164PhoneNumbers: [str]?, NextToken: str?}
+
+@endgroup
+
+@group channels
+@endpoint POST /channels/{channelArn}/messages
+@required {ChannelArn: str, Content: str, Type: str, Persistence: str, ClientRequestToken: str}
+@optional {x-amz-chime-bearer: str, Metadata: str}
+@returns(200) {ChannelArn: str?, MessageId: str?}
+
+@endgroup
+
+@group meetings
+@endpoint POST /meetings/{meetingId}/transcription?operation=start
+@required {MeetingId: str, TranscriptionConfiguration: TranscriptionConfiguration}
+
+@endpoint POST /meetings/{meetingId}/transcription?operation=stop
+@required {MeetingId: str}
+
+@endpoint POST /meetings/{meetingId}/attendees/{attendeeId}/tags?operation=add
+@required {MeetingId: str, AttendeeId: str, Tags: [Tag]}
+
+@endpoint POST /meetings/{meetingId}/tags?operation=add
+@required {MeetingId: str, Tags: [Tag]}
+
+@endgroup
+
+@group tags?operation=tag-resource
+@endpoint POST /tags?operation=tag-resource
+@required {ResourceARN: str, Tags: [Tag]}
+
+@endgroup
+
+@group meetings
+@endpoint POST /meetings/{meetingId}/attendees/{attendeeId}/tags?operation=delete
+@required {MeetingId: str, AttendeeId: str, TagKeys: [str]}
+
+@endpoint POST /meetings/{meetingId}/tags?operation=delete
+@required {MeetingId: str, TagKeys: [str]}
+
+@endgroup
+
+@group tags?operation=untag-resource
+@endpoint POST /tags?operation=untag-resource
+@required {ResourceARN: str, TagKeys: [str]}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}
+@required {AccountId: str}
+@optional {Name: str, DefaultLicense: str}
+@returns(200) {Account: Account?{AwsAccountId: str, AccountId: str, Name: str, AccountType: str?, CreatedTimestamp: str(timestamp)?, DefaultLicense: str?, SupportedLicenses: [str]?, AccountStatus: str?, SigninDelegateGroups: [SigninDelegateGroup]?}}
+
+@endpoint PUT /accounts/{accountId}/settings
+@required {AccountId: str, AccountSettings: AccountSettings}
+
+@endgroup
+
+@group app-instances
+@endpoint PUT /app-instances/{appInstanceArn}
+@required {AppInstanceArn: str, Name: str}
+@optional {Metadata: str}
+@returns(200) {AppInstanceArn: str?}
+
+@endgroup
+
+@group app-instance-users
+@endpoint PUT /app-instance-users/{appInstanceUserArn}
+@required {AppInstanceUserArn: str, Name: str}
+@optional {Metadata: str}
+@returns(200) {AppInstanceUserArn: str?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/bots/{botId}
+@required {AccountId: str, BotId: str}
+@optional {Disabled: bool}
+@returns(200) {Bot: Bot?{BotId: str?, UserId: str?, DisplayName: str?, BotType: str?, Disabled: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, BotEmail: str?, SecurityToken: str?}}
+
+@endgroup
+
+@group channels
+@endpoint PUT /channels/{channelArn}
+@required {ChannelArn: str, Name: str, Mode: str}
+@optional {x-amz-chime-bearer: str, Metadata: str}
+@returns(200) {ChannelArn: str?}
+
+@endpoint PUT /channels/{channelArn}/messages/{messageId}
+@required {ChannelArn: str, MessageId: str}
+@optional {x-amz-chime-bearer: str, Content: str, Metadata: str}
+@returns(200) {ChannelArn: str?, MessageId: str?}
+
+@endpoint PUT /channels/{channelArn}/readMarker
+@required {ChannelArn: str}
+@optional {x-amz-chime-bearer: str}
+@returns(200) {ChannelArn: str?}
+
+@endgroup
+
+@group settings
+@endpoint PUT /settings
+@optional {BusinessCalling: BusinessCallingSettings, VoiceConnector: VoiceConnectorSettings}
+
+@endgroup
+
+@group phone-numbers
+@endpoint POST /phone-numbers/{phoneNumberId}
+@required {PhoneNumberId: str}
+@optional {ProductType: str, CallingName: str}
+@returns(200) {PhoneNumber: PhoneNumber?{PhoneNumberId: str?, E164PhoneNumber: str?, Country: str?, Type: str?, ProductType: str?, Status: str?, Capabilities: PhoneNumberCapabilities?{InboundCall: bool?, OutboundCall: bool?, InboundSMS: bool?, OutboundSMS: bool?, InboundMMS: bool?, OutboundMMS: bool?}, Associations: [PhoneNumberAssociation]?, CallingName: str?, CallingNameStatus: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, DeletionTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group settings
+@endpoint PUT /settings/phone-number
+@required {CallingName: str}
+
+@endgroup
+
+@group voice-connectors
+@endpoint POST /voice-connectors/{voiceConnectorId}/proxy-sessions/{proxySessionId}
+@required {VoiceConnectorId: str, ProxySessionId: str, Capabilities: [str]}
+@optional {ExpiryMinutes: int}
+@returns(200) {ProxySession: ProxySession?{VoiceConnectorId: str?, ProxySessionId: str?, Name: str?, Status: str?, ExpiryMinutes: int?, Capabilities: [str]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, EndedTimestamp: str(timestamp)?, Participants: [Participant]?, NumberSelectionBehavior: str?, GeoMatchLevel: str?, GeoMatchParams: GeoMatchParams?{Country: str, AreaCode: str}}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/rooms/{roomId}
+@required {AccountId: str, RoomId: str}
+@optional {Name: str}
+@returns(200) {Room: Room?{RoomId: str?, Name: str?, AccountId: str?, CreatedBy: str?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endpoint POST /accounts/{accountId}/rooms/{roomId}/memberships/{memberId}
+@required {AccountId: str, RoomId: str, MemberId: str}
+@optional {Role: str}
+@returns(200) {RoomMembership: RoomMembership?{RoomId: str?, Member: Member?{MemberId: str?, MemberType: str?, Email: str?, FullName: str?, AccountId: str?}, Role: str?, InvitedBy: str?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group sip-media-applications
+@endpoint PUT /sip-media-applications/{sipMediaApplicationId}
+@required {SipMediaApplicationId: str}
+@optional {Name: str, Endpoints: [SipMediaApplicationEndpoint]}
+@returns(200) {SipMediaApplication: SipMediaApplication?{SipMediaApplicationId: str?, AwsRegion: str?, Name: str?, Endpoints: [SipMediaApplicationEndpoint]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endpoint POST /sip-media-applications/{sipMediaApplicationId}/calls/{transactionId}
+@required {SipMediaApplicationId: str, TransactionId: str, Arguments: map<str,str>}
+@returns(200) {SipMediaApplicationCall: SipMediaApplicationCall?{TransactionId: str?}}
+
+@endgroup
+
+@group sip-rules
+@endpoint PUT /sip-rules/{sipRuleId}
+@required {SipRuleId: str, Name: str}
+@optional {Disabled: bool, TargetApplications: [SipRuleTargetApplication]}
+@returns(200) {SipRule: SipRule?{SipRuleId: str?, Name: str?, Disabled: bool?, TriggerType: str?, TriggerValue: str?, TargetApplications: [SipRuleTargetApplication]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?}}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{accountId}/users/{userId}
+@required {AccountId: str, UserId: str}
+@optional {LicenseType: str, UserType: str, AlexaForBusinessMetadata: AlexaForBusinessMetadata}
+@returns(200) {User: User?{UserId: str, AccountId: str?, PrimaryEmail: str?, PrimaryProvisionedNumber: str?, DisplayName: str?, LicenseType: str?, UserType: str?, UserRegistrationStatus: str?, UserInvitationStatus: str?, RegisteredOn: str(timestamp)?, InvitedOn: str(timestamp)?, AlexaForBusinessMetadata: AlexaForBusinessMetadata?{IsAlexaForBusinessEnabled: bool?, AlexaForBusinessRoomArn: str?}, PersonalPIN: str?}}
+
+@endpoint PUT /accounts/{accountId}/users/{userId}/settings
+@required {AccountId: str, UserId: str, UserSettings: UserSettings}
+
+@endgroup
+
+@group voice-connectors
+@endpoint PUT /voice-connectors/{voiceConnectorId}
+@required {VoiceConnectorId: str, Name: str, RequireEncryption: bool}
+@returns(200) {VoiceConnector: VoiceConnector?{VoiceConnectorId: str?, AwsRegion: str?, Name: str?, OutboundHostName: str?, RequireEncryption: bool?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, VoiceConnectorArn: str?}}
+
+@endgroup
+
+@group voice-connector-groups
+@endpoint PUT /voice-connector-groups/{voiceConnectorGroupId}
+@required {VoiceConnectorGroupId: str, Name: str, VoiceConnectorItems: [VoiceConnectorItem]}
+@returns(200) {VoiceConnectorGroup: VoiceConnectorGroup?{VoiceConnectorGroupId: str?, Name: str?, VoiceConnectorItems: [VoiceConnectorItem]?, CreatedTimestamp: str(timestamp)?, UpdatedTimestamp: str(timestamp)?, VoiceConnectorGroupArn: str?}}
+
+@endgroup
+
+@group emergency-calling
+@endpoint POST /emergency-calling/address
+@required {AwsAccountId: str, StreetNumber: str, StreetInfo: str, City: str, State: str, Country: str, PostalCode: str}
+@returns(200) {ValidationResult: int?, AddressExternalId: str?, Address: Address?{streetName: str?, streetSuffix: str?, postDirectional: str?, preDirectional: str?, streetNumber: str?, city: str?, state: str?, postalCode: str?, postalCodePlus4: str?, country: str?}, CandidateAddressList: [CandidateAddress]?}
+
+@endgroup
+
+@end

@@ -1,0 +1,459 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Paddle API
+@base https://sandbox-api.paddle.com
+@version 1.0
+@auth Bearer Bearer
+@endpoints 87
+@hint download_for_search
+@toc customers(18), adjustments(3), client-tokens(4), discount-groups(4), discounts(4), event-types(1), events(1), ips(1), notification-settings(5), notifications(4), prices(4), pricing-preview(1), products(4), reports(4), simulation-types(1), simulations(10), subscriptions(11), transactions(7)
+
+@group customers
+@endpoint GET /customers/{customer_id}/addresses
+@required {customer_id: str}
+@optional {id: [str], after: str, per_page: int=50, order_by: str=id[DESC], status: [str]=['active'], search: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /customers/{customer_id}/addresses
+@required {customer_id: str, country_code: any}
+@optional {id: any, description: any, first_line: any, second_line: any, city: any, postal_code: any, region: any, custom_data: any, import_meta: any}
+@returns(201) {data: map{id: any, customer_id: any, description: any, first_line: any, second_line: any, city: any, postal_code: any, region: any, country_code: any, custom_data: any, status: any, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /customers/{customer_id}/addresses/{address_id}
+@required {address_id: str, customer_id: str}
+@returns(200) {data: map{id: any, customer_id: any, description: any, first_line: any, second_line: any, city: any, postal_code: any, region: any, country_code: any, custom_data: any, status: any, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /customers/{customer_id}/addresses/{address_id}
+@required {address_id: str, customer_id: str}
+@optional {description: any, first_line: any, second_line: any, city: any, postal_code: any, region: any, country_code: any, custom_data: any, status: str(active/archived)}
+@returns(200) {data: map{id: any, customer_id: any, description: any, first_line: any, second_line: any, city: any, postal_code: any, region: any, country_code: any, custom_data: any, status: any, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group adjustments
+@endpoint GET /adjustments
+@optional {id: [str], after: str, action: str, customer_id: [str], order_by: str=id[DESC], per_page: int=10, status: [str], subscription_id: [str], transaction_id: [str]}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /adjustments
+@required {action: str(credit/refund/chargeback/chargeback_reverse/chargeback_warning/chargeback_warning_reverse/credit_reverse), transaction_id: any, reason: str}
+@optional {type: any=partial, tax_mode: any=internal, items: any}
+@returns(201) {data: map{id: any, action: str, type: any, transaction_id: any, subscription_id: any, customer_id: any, reason: str, credit_applied_to_balance: any, currency_code: any, status: any, items: [map], totals: any, payout_totals: any, tax_rates_used: [map], created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint GET /adjustments/{adjustment_id}/credit-note
+@required {adjustment_id: str}
+@optional {disposition: str=attachment}
+@returns(200) {data: map{url: str}, meta: map{request_id: str}}
+
+@endgroup
+
+@group customers
+@endpoint GET /customers/{customer_id}/businesses
+@required {customer_id: str}
+@optional {id: [str], after: str, per_page: int=50, order_by: str=id[DESC], status: [str]=['active'], search: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /customers/{customer_id}/businesses
+@required {customer_id: str, name: any}
+@optional {id: any, company_number: any, tax_identifier: any, contacts: any, custom_data: any, import_meta: any}
+@returns(201) {data: map{id: any, customer_id: any, name: any, company_number: any, tax_identifier: any, status: any, contacts: [map], created_at: any, updated_at: any, custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /customers/{customer_id}/businesses/{business_id}
+@required {business_id: str, customer_id: str}
+@returns(200) {data: map{id: any, customer_id: any, name: any, company_number: any, tax_identifier: any, status: any, contacts: [map], created_at: any, updated_at: any, custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /customers/{customer_id}/businesses/{business_id}
+@required {business_id: str, customer_id: str}
+@optional {name: any, company_number: any, tax_identifier: any, status: str(active/archived), contacts: any, custom_data: any}
+@returns(200) {data: map{id: any, customer_id: any, name: any, company_number: any, tax_identifier: any, status: any, contacts: [map], created_at: any, updated_at: any, custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group client-tokens
+@endpoint GET /client-tokens
+@optional {after: str, per_page: int=50, order_by: str=id[DESC], status: [str]=['active']}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /client-tokens
+@required {name: str}
+@optional {description: any}
+@returns(201) {data: map{id: any, token: any, name: str, description: any, status: any, revoked_at: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint GET /client-tokens/{client_token_id}
+@required {client_token_id: str}
+@returns(200) {data: map{id: any, token: any, name: str, description: any, status: any, revoked_at: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /client-tokens/{client_token_id}
+@required {client_token_id: str, status: any=active}
+@returns(200) {data: map{id: any, token: any, name: str, description: any, status: any, revoked_at: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group customers
+@endpoint GET /customers
+@optional {id: [str], after: str, per_page: int=50, email: [str], order_by: str=id[DESC], status: [str]=['active'], search: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /customers
+@required {email: any}
+@optional {id: any, name: any, marketing_consent: bool=False, custom_data: any, locale: str=en, import_meta: any}
+@returns(201) {data: map{id: any, name: any, email: any, marketing_consent: bool, status: any, custom_data: any, locale: str, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /customers/{customer_id}
+@required {customer_id: str}
+@returns(200) {data: map{id: any, name: any, email: any, marketing_consent: bool, status: any, custom_data: any, locale: str, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /customers/{customer_id}
+@required {customer_id: str}
+@optional {name: any, email: any, marketing_consent: bool=False, status: str(active/archived), custom_data: any, locale: str=en, import_meta: any}
+@returns(200) {data: map{id: any, name: any, email: any, marketing_consent: bool, status: any, custom_data: any, locale: str, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /customers/{customer_id}/credit-balances
+@required {customer_id: str}
+@optional {currency_code: [str]}
+@returns(200) {data: [map], meta: map{request_id: str}}
+
+@endpoint POST /customers/{customer_id}/auth-token
+@required {customer_id: str}
+@returns(200) {data: map{customer_auth_token: str, expires_at: any}, meta: map{request_id: str}}
+
+@endpoint POST /customers/{customer_id}/portal-sessions
+@required {customer_id: str}
+@optional {subscription_ids: [str]}
+@returns(201) {data: map{id: any, customer_id: any, urls: any, created_at: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group discount-groups
+@endpoint GET /discount-groups
+@optional {id: [str], after: str, per_page: int=50, order_by: str=id[DESC]}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /discount-groups
+@required {name: str}
+@returns(201) {data: map{id: any, name: str, status: str, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /discount-groups/{discount_group_id}
+@required {discount_group_id: str}
+@returns(200) {data: map{id: any, name: str, status: str, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /discount-groups/{discount_group_id}
+@required {discount_group_id: str}
+@optional {status: str(active/archived), name: str}
+@returns(200) {data: map{id: any, name: str, status: str, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group discounts
+@endpoint GET /discounts
+@optional {id: [str], after: str, per_page: int=50, include: [str], code: [str], order_by: str=id[DESC], status: [str]=['active'], mode: str, discount_group_id: [str]}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /discounts
+@required {description: str, type: any, amount: str}
+@optional {id: any, status: any=active, enabled_for_checkout: bool=True, code: any, mode: any=standard, currency_code: any, recur: bool=False, maximum_recurring_intervals: any, usage_limit: any, restrict_to: any, expires_at: any, custom_data: any, times_used: int, created_at: any, updated_at: any, discount_group_id: any, import_meta: any}
+@returns(201) {data: map{id: any, status: any, description: str, enabled_for_checkout: bool, code: any, type: str, mode: any, amount: str, currency_code: any, recur: bool, maximum_recurring_intervals: any, usage_limit: any, restrict_to: any, expires_at: any, custom_data: any, times_used: int, discount_group_id: any, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /discounts/{discount_id}
+@required {discount_id: str}
+@optional {include: [str]}
+@returns(200) {data: map{id: any, status: any, description: str, enabled_for_checkout: bool, code: any, type: str, mode: any, amount: str, currency_code: any, recur: bool, maximum_recurring_intervals: any, usage_limit: any, restrict_to: any, expires_at: any, custom_data: any, times_used: int, discount_group_id: any, created_at: any, updated_at: any, import_meta: any, discount_group: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /discounts/{discount_id}
+@required {discount_id: str}
+@optional {id: any, status: str(active/archived), description: str, enabled_for_checkout: bool=True, code: any, type: any, mode: any=standard, amount: str, currency_code: any, recur: bool=False, maximum_recurring_intervals: any, usage_limit: any, restrict_to: any, expires_at: any, custom_data: any, times_used: int, created_at: any, updated_at: any, discount_group_id: any, import_meta: any}
+@returns(200) {data: map{id: any, status: any, description: str, enabled_for_checkout: bool, code: any, type: str, mode: any, amount: str, currency_code: any, recur: bool, maximum_recurring_intervals: any, usage_limit: any, restrict_to: any, expires_at: any, custom_data: any, times_used: int, discount_group_id: any, created_at: any, updated_at: any, import_meta: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group event-types
+@endpoint GET /event-types
+@returns(200) {data: [map], meta: map{request_id: str}}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@optional {after: str, per_page: int=50, order_by: str=id[DESC], event_type: [str]}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endgroup
+
+@group ips
+@endpoint GET /ips
+@returns(200) {data: map{ipv4_cidrs: [str]}, meta: map{request_id: str}}
+
+@endgroup
+
+@group notification-settings
+@endpoint GET /notification-settings
+@optional {after: str, per_page: int=200, order_by: str=id[DESC], active: bool, traffic_source: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /notification-settings
+@required {description: str, type: any, destination: str, subscribed_events: [str]}
+@optional {id: any, active: bool=True, api_version: int, include_sensitive_fields: bool=False, endpoint_secret_key: str, traffic_source: any=platform}
+@returns(201) {data: map{id: any, description: str, type: any, destination: str, active: bool, api_version: int, include_sensitive_fields: bool, subscribed_events: [map], endpoint_secret_key: str, traffic_source: any}, meta: map{request_id: str}}
+
+@endpoint GET /notification-settings/{notification_setting_id}
+@required {notification_setting_id: str}
+@returns(200) {data: map{id: any, description: str, type: any, destination: str, active: bool, api_version: int, include_sensitive_fields: bool, subscribed_events: [map], endpoint_secret_key: str, traffic_source: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /notification-settings/{notification_setting_id}
+@required {notification_setting_id: str}
+@optional {description: str, destination: str, active: bool=True, api_version: int, include_sensitive_fields: bool=False, subscribed_events: [str], traffic_source: any}
+@returns(200) {data: map{id: any, description: str, type: any, destination: str, active: bool, api_version: int, include_sensitive_fields: bool, subscribed_events: [map], endpoint_secret_key: str, traffic_source: any}, meta: map{request_id: str}}
+
+@endpoint DELETE /notification-settings/{notification_setting_id}
+@required {notification_setting_id: str}
+@returns(204)
+
+@endgroup
+
+@group notifications
+@endpoint GET /notifications
+@optional {after: str, per_page: int=50, notification_setting_id: [str], order_by: str=id[DESC], search: str, status: [str], filter: str, to: str, from: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint GET /notifications/{notification_id}
+@required {notification_id: str}
+@returns(200) {data: map{id: any, type: any, status: any, payload: any, occurred_at: any, delivered_at: any, replayed_at: any, origin: any, last_attempt_at: any, retry_at: any, times_attempted: int, notification_setting_id: any}, meta: map{request_id: str}}
+
+@endpoint GET /notifications/{notification_id}/logs
+@required {notification_id: str}
+@optional {after: str, per_page: int=50}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /notifications/{notification_id}/replay
+@required {notification_id: str}
+@returns(202) {data: map{notification_id: str}, meta: map{request_id: str}}
+
+@endgroup
+
+@group customers
+@endpoint GET /customers/{customer_id}/payment-methods
+@required {customer_id: str}
+@optional {after: str, per_page: int=50, address_id: [str], order_by: str=id[DESC], supports_checkout: bool}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint GET /customers/{customer_id}/payment-methods/{payment_method_id}
+@required {customer_id: str, payment_method_id: str}
+@returns(200) {data: map{id: any, customer_id: any, address_id: any, type: any, card: any, paypal: any, underlying_details: any, south_korea_local_card: any, origin: any, saved_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint DELETE /customers/{customer_id}/payment-methods/{payment_method_id}
+@required {customer_id: str, payment_method_id: str}
+@returns(204)
+
+@endgroup
+
+@group prices
+@endpoint GET /prices
+@optional {id: [str], after: str, per_page: int=50, include: [str], order_by: str=id[DESC], product_id: [str], status: [str]=['active'], recurring: bool, type: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /prices
+@required {description: str, product_id: any, unit_price: any}
+@optional {id: any, type: any=standard, name: any, billing_cycle: any, trial_period: any, tax_mode: any=account_setting, unit_price_overrides: [map{country_codes!: [any], unit_price!: any}], quantity: any, custom_data: any, import_meta: any}
+@returns(201) {data: map{id: any, product_id: any, description: str, type: any, name: any, billing_cycle: any, trial_period: any, tax_mode: any, unit_price: any, unit_price_overrides: [map], quantity: any, status: any, custom_data: any, import_meta: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint GET /prices/{price_id}
+@required {price_id: str}
+@optional {include: [str]}
+@returns(200) {data: map{id: any, product_id: any, description: str, type: any, name: any, billing_cycle: any, trial_period: any, tax_mode: any, unit_price: any, unit_price_overrides: [map], quantity: any, status: any, custom_data: any, import_meta: any, created_at: any, updated_at: any, product: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /prices/{price_id}
+@required {price_id: str}
+@optional {description: str, type: any=standard, name: any, billing_cycle: any, trial_period: any, tax_mode: any=account_setting, unit_price: any, unit_price_overrides: [map{country_codes!: [any], unit_price!: any}], quantity: any, status: str(active/archived), custom_data: any}
+@returns(200) {data: map{id: any, product_id: any, description: str, type: any, name: any, billing_cycle: any, trial_period: any, tax_mode: any, unit_price: any, unit_price_overrides: [map], quantity: any, status: any, custom_data: any, import_meta: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group pricing-preview
+@endpoint POST /pricing-preview
+@required {items: [map{price_id: any, quantity!: int}]}
+@optional {customer_id: any, address_id: any, business_id: any, currency_code: any, discount_id: any, address: any, customer_ip_address: any}
+@returns(200) {data: map{customer_id: any, address_id: any, business_id: any, currency_code: any, discount_id: any, address: any, customer_ip_address: any, details: any, available_payment_methods: [str]}, meta: map{request_id: str}}
+
+@endgroup
+
+@group products
+@endpoint GET /products
+@optional {id: [str], after: str, per_page: int=50, include: [str], order_by: str=id[DESC], status: [str]=['active'], tax_category: [str], type: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /products
+@required {name: str, tax_category: str(digital-goods/ebooks/implementation-services/professional-services/saas/software-programming-services/standard/training-services/website-hosting)}
+@optional {id: any, description: any, type: any=standard, image_url: any, custom_data: any, import_meta: any}
+@returns(201) {data: map{id: any, name: str, description: any, type: any, tax_category: str, image_url: any, custom_data: any, status: any, import_meta: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint GET /products/{product_id}
+@required {product_id: str}
+@optional {include: [str]}
+@returns(200) {data: map{id: any, name: str, description: any, type: any, tax_category: str, image_url: any, custom_data: any, status: any, import_meta: any, created_at: any, updated_at: any, prices: [map]}, meta: map{request_id: str}}
+
+@endpoint PATCH /products/{product_id}
+@required {product_id: str}
+@optional {name: str, description: any, type: any=standard, tax_category: str(digital-goods/ebooks/implementation-services/professional-services/saas/software-programming-services/standard/training-services/website-hosting), image_url: any, custom_data: any, status: str(active/archived)}
+@returns(200) {data: map{id: any, name: str, description: any, type: any, tax_category: str, image_url: any, custom_data: any, status: any, import_meta: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group reports
+@endpoint GET /reports
+@optional {after: str, per_page: int=50, order_by: str=id[DESC], status: [str]}
+@returns(200) {data: [any], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /reports
+@returns(201) {data: any, meta: map{request_id: str}}
+
+@endpoint GET /reports/{report_id}
+@required {report_id: str}
+@returns(200) {data: any, meta: map{request_id: str}}
+
+@endpoint GET /reports/{report_id}/download-url
+@required {report_id: str}
+@returns(200) {meta: map{request_id: str}, data: map{url: str}}
+
+@endgroup
+
+@group simulation-types
+@endpoint GET /simulation-types
+@returns(200) {data: [map], meta: map{request_id: str}}
+
+@endgroup
+
+@group simulations
+@endpoint GET /simulations
+@optional {id: [str], after: str, per_page: int=50, notification_setting_id: [str], order_by: str=id[DESC], status: [str]=['active']}
+@returns(200) {data: [any], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /simulations
+@returns(201) {data: any, meta: map{request_id: str}}
+
+@endpoint GET /simulations/{simulation_id}
+@required {simulation_id: str}
+@returns(200) {data: any, meta: map{request_id: str}}
+
+@endpoint PATCH /simulations/{simulation_id}
+@required {simulation_id: str}
+@returns(200) {data: any, meta: map{request_id: str}}
+
+@endpoint GET /simulations/{simulation_id}/runs
+@required {simulation_id: str}
+@optional {id: [str], after: str, per_page: int=50, include: [str], order_by: str=id[DESC]}
+@returns(200) {data: [any], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /simulations/{simulation_id}/runs
+@required {simulation_id: str}
+@returns(201) {data: any, meta: map{request_id: str}}
+
+@endpoint GET /simulations/{simulation_id}/runs/{simulation_run_id}
+@required {simulation_id: str, simulation_run_id: str}
+@optional {include: [str]}
+@returns(200) {data: any, meta: map{request_id: str}}
+
+@endpoint GET /simulations/{simulation_id}/runs/{simulation_run_id}/events
+@required {simulation_id: str, simulation_run_id: str}
+@optional {id: [str], after: str, per_page: int=50, order_by: str=id[DESC]}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint GET /simulations/{simulation_id}/runs/{simulation_run_id}/events/{simulation_event_id}
+@required {simulation_id: str, simulation_run_id: str, simulation_event_id: str}
+@returns(200) {data: map{id: any, status: any, event_type: any, payload: any, request: any, response: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endpoint POST /simulations/{simulation_id}/runs/{simulation_run_id}/events/{simulation_event_id}/replay
+@required {simulation_id: str, simulation_run_id: str, simulation_event_id: str}
+@returns(202) {data: map{id: any, status: any, event_type: any, payload: any, request: any, response: any, created_at: any, updated_at: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group subscriptions
+@endpoint GET /subscriptions
+@optional {id: [str], after: str, per_page: int=50, address_id: [str], collection_mode: str, customer_id: [str], order_by: str=id[DESC], price_id: [str], scheduled_change_action: [str], status: [str]}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint GET /subscriptions/{subscription_id}
+@required {subscription_id: str}
+@optional {include: [str]}
+@returns(200) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any, next_transaction: any, recurring_transaction_details: any}, meta: map{request_id: str}}
+
+@endpoint PATCH /subscriptions/{subscription_id}
+@required {subscription_id: str}
+@optional {customer_id: any, address_id: any, business_id: any, currency_code: any, next_billed_at: any, discount: any, collection_mode: any, billing_details: any, scheduled_change: null, items: [any], custom_data: any, proration_billing_mode: str(prorated_immediately/prorated_next_billing_period/full_immediately/full_next_billing_period/do_not_bill), on_payment_failure: any=prevent_change}
+@returns(200) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint POST /subscriptions/{subscription_id}/cancel
+@required {subscription_id: str}
+@optional {effective_from: any=next_billing_period}
+@returns(200) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint POST /subscriptions/{subscription_id}/pause
+@required {subscription_id: str}
+@optional {effective_from: any=next_billing_period, resume_at: any, on_resume: any=start_new_billing_period}
+@returns(200) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint POST /subscriptions/{subscription_id}/resume
+@required {subscription_id: str}
+@returns(200) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint POST /subscriptions/{subscription_id}/activate
+@required {subscription_id: str}
+@returns(200) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint GET /subscriptions/{subscription_id}/update-payment-method-transaction
+@required {subscription_id: str}
+@returns(200) {data: map{id: any, status: str, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any, discount_id: any, billing_details: any, billing_period: any, items: [map], details: any, payments: [map], checkout: any, created_at: any, updated_at: any, billed_at: any, revised_at: any, customer: any, address: any, business: any, discount: any, adjustments: [map], adjustments_totals: any, available_payment_methods: [str]}, meta: map{request_id: str}}
+
+@endpoint PATCH /subscriptions/{subscription_id}/preview
+@required {subscription_id: str}
+@optional {customer_id: any, address_id: any, business_id: any, currency_code: any, next_billed_at: any, discount: any, collection_mode: any, billing_details: any, scheduled_change: null, items: [any], custom_data: any, proration_billing_mode: str(prorated_immediately/prorated_next_billing_period/full_immediately/full_next_billing_period/do_not_bill), on_payment_failure: any=prevent_change}
+@returns(200) {data: map{status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, immediate_transaction: any, next_transaction: any, recurring_transaction_details: any, update_summary: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint POST /subscriptions/{subscription_id}/charge
+@required {subscription_id: str, effective_from: any, items: [any]}
+@optional {on_payment_failure: any=prevent_change}
+@returns(201) {data: map{id: any, status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, import_meta: any}, meta: map{request_id: str}}
+
+@endpoint POST /subscriptions/{subscription_id}/charge/preview
+@required {subscription_id: str, effective_from: any, items: [any]}
+@optional {on_payment_failure: any=prevent_change}
+@returns(200) {data: map{status: any, customer_id: any, address_id: any, business_id: any, currency_code: any, created_at: any, updated_at: any, started_at: any, first_billed_at: any, next_billed_at: any, paused_at: any, canceled_at: any, discount: any, collection_mode: any, billing_details: any, current_billing_period: any, billing_cycle: any, scheduled_change: any, management_urls: any, items: [map], custom_data: any, immediate_transaction: any, next_transaction: any, recurring_transaction_details: any, update_summary: any, import_meta: any}, meta: map{request_id: str}}
+
+@endgroup
+
+@group transactions
+@endpoint GET /transactions
+@optional {include: [str], id: [str], after: str, billed_at: str, collection_mode: str, created_at: str, customer_id: [str], invoice_number: [str], origin: [str], order_by: str=id[DESC], status: [str], subscription_id: any, per_page: int=30, updated_at: str}
+@returns(200) {data: [map], meta: map{request_id: str, pagination: map{per_page: int, next: str(uri), has_more: bool, estimated_total: int}}}
+
+@endpoint POST /transactions
+@required {items: [any]}
+@optional {include: [str], id: any, status: any, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any=automatic, discount_id: any, billing_details: any, billing_period: any, details: any, payments: [map{payment_attempt_id!: str, stored_payment_method_id!: str, payment_method_id!: any, amount!: str, status!: str, error_code!: any, method_details!: map{type!: str, underlying_details!: any, south_korea_local_card!: any, card!: any}, created_at!: str(date-time), captured_at!: any}], checkout: any, created_at: any, updated_at: any, billed_at: any}
+@returns(201) {data: map{id: any, status: str, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any, discount_id: any, billing_details: any, billing_period: any, items: [map], details: any, payments: [map], checkout: any, created_at: any, updated_at: any, billed_at: any, revised_at: any, address: any, adjustments: [map], adjustments_totals: any, business: any, customer: any, discount: any, available_payment_methods: [str]}, meta: map{request_id: str}}
+
+@endpoint GET /transactions/{transaction_id}
+@required {transaction_id: str}
+@optional {include: [str]}
+@returns(200) {data: map{id: any, status: str, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any, discount_id: any, billing_details: any, billing_period: any, items: [map], details: any, payments: [map], checkout: any, created_at: any, updated_at: any, billed_at: any, revised_at: any, address: any, adjustments: [map], adjustments_totals: any, business: any, customer: any, discount: any, available_payment_methods: [str]}, meta: map{request_id: str}}
+
+@endpoint PATCH /transactions/{transaction_id}
+@required {transaction_id: str}
+@optional {include: [str], id: any, status: any, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any, discount_id: any, billing_details: any, billing_period: any, items: [any], details: any, payments: [map{payment_attempt_id!: str, stored_payment_method_id!: str, payment_method_id!: any, amount!: str, status!: str, error_code!: any, method_details!: map{type!: str, underlying_details!: any, south_korea_local_card!: any, card!: any}, created_at!: str(date-time), captured_at!: any}], checkout: any, created_at: any, updated_at: any, billed_at: any}
+@returns(200) {data: map{id: any, status: str, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any, discount_id: any, billing_details: any, billing_period: any, items: [map], details: any, payments: [map], checkout: any, created_at: any, updated_at: any, billed_at: any, revised_at: any, address: any, adjustments: [map], adjustments_totals: any, business: any, customer: any, discount: any, available_payment_methods: [str]}, meta: map{request_id: str}}
+
+@endpoint POST /transactions/preview
+@returns(200) {data: map{customer_id: any, address_id: any, business_id: any, currency_code: any, discount_id: any, customer_ip_address: any, address: any, ignore_trials: bool, items: [map], details: any, available_payment_methods: [str]}, meta: map{request_id: str}}
+
+@endpoint POST /transactions/{transaction_id}/revise
+@required {transaction_id: str}
+@optional {customer: any, business: any, address: any}
+@returns(200) {data: map{id: any, status: str, customer_id: any, address_id: any, business_id: any, custom_data: any, currency_code: any, origin: any, subscription_id: any, invoice_id: any, invoice_number: any, collection_mode: any, discount_id: any, billing_details: any, billing_period: any, items: [map], details: any, payments: [map], checkout: any, created_at: any, updated_at: any, billed_at: any, revised_at: any}, meta: map{request_id: str}}
+
+@endpoint GET /transactions/{transaction_id}/invoice
+@required {transaction_id: str}
+@optional {disposition: str=attachment}
+@returns(200) {meta: map{request_id: str}, data: map{url: str}}
+
+@endgroup
+
+@end

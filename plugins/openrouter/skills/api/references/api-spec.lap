@@ -1,0 +1,273 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api OpenRouter API
+@base https://openrouter.ai/api/v1
+@version 1.0.0
+@auth Bearer bearer | Bearer bearer
+@endpoints 36
+@hint download_for_search
+@toc responses(1), messages(1), activity(1), chat(1), credits(2), embeddings(2), generation(1), models(4), endpoints(1), providers(1), keys(5), guardrails(13), key(1), auth(2)
+
+@group responses
+@endpoint POST /responses
+@desc Create a response
+@optional {input: any # Input for a response request - can be a string or array of items, instructions: str, metadata: map # Metadata key-value pairs for the request. Keys must be ≤64 characters and cannot contain brackets. Values must be ≤512 characters. Maximum 16 pairs allowed., tools: [any], tool_choice: any, parallel_tool_calls: bool, model: str, models: [str], text: any # Text output configuration including format and verbosity, reasoning: any # Configuration for reasoning mode in the response, max_output_tokens: num, temperature: num, top_p: num, top_logprobs: int, max_tool_calls: int, presence_penalty: num, frequency_penalty: num, top_k: num, image_config: map # Provider-specific image configuration options. Keys and values vary by model/provider. See https://openrouter.ai/docs/features/multimodal/image-generation for more details., modalities: [str] # Output modalities for the response. Supported values are "text" and "image"., prompt_cache_key: str, previous_response_id: str, prompt: map{id!: str, variables: map}, include: [str], background: bool, safety_identifier: str, store: bool=False, service_tier: str=auto, truncation: any, stream: bool=False, provider: map{allow_fallbacks: bool, require_parameters: bool, data_collection: str, zdr: bool, enforce_distillable_text: bool, order: [any], only: [any], ignore: [any], quantizations: [str], sort: any, max_price: map{prompt: str, completion: any, image: any, audio: any, request: any}, preferred_min_throughput: any, preferred_max_latency: any} # When multiple model providers are available, optionally indicate your routing preference., plugins: [any] # Plugins you want to enable for this request, including their settings., route: str(fallback/sort) # **DEPRECATED** Use providers.sort.partition instead. Backwards-compatible alias for providers.sort.partition. Accepts legacy values: "fallback" (maps to "model"), "sort" (maps to "none")., user: str # A unique identifier representing your end-user, which helps distinguish between different users of your app. This allows your app to identify specific users in case of abuse reports, preventing your entire app from being affected by the actions of individual users. Maximum of 128 characters., session_id: str # A unique identifier for grouping related requests (e.g., a conversation or agent workflow) for observability. If provided in both the request body and the x-session-id header, the body value takes precedence. Maximum of 128 characters., trace: map{trace_id: str, trace_name: str, span_name: str, generation_name: str, parent_span_id: str} # Metadata for observability and tracing. Known keys (trace_id, trace_name, span_name, generation_name, parent_span_id) have special handling. Additional keys are passed through as custom metadata to configured broadcast destinations.}
+@returns(200) Successful response
+@errors {400: Bad Request - Invalid request parameters or malformed input, 401: Unauthorized - Authentication required or invalid credentials, 402: Payment Required - Insufficient credits or quota to complete request, 404: Not Found - Resource does not exist, 408: Request Timeout - Operation exceeded time limit, 413: Payload Too Large - Request payload exceeds size limits, 422: Unprocessable Entity - Semantic validation failure, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error - Unexpected server error, 502: Bad Gateway - Provider/upstream API failure, 503: Service Unavailable - Service temporarily unavailable, 524: Infrastructure Timeout - Request timed out at our edge network, 529: Provider Overloaded - Provider is temporarily overloaded}
+
+@endgroup
+
+@group messages
+@endpoint POST /messages
+@desc Create a message
+@required {model: str, max_tokens: num, messages: [map{role!: str, content!: any}]}
+@optional {system: any, metadata: map{user_id: str}, stop_sequences: [str], stream: bool, temperature: num, top_p: num, top_k: num, tools: [any], tool_choice: any, thinking: any, service_tier: str(auto/standard_only), provider: map{allow_fallbacks: bool, require_parameters: bool, data_collection: str, zdr: bool, enforce_distillable_text: bool, order: [any], only: [any], ignore: [any], quantizations: [str], sort: any, max_price: map{prompt: str, completion: any, image: any, audio: any, request: any}, preferred_min_throughput: any, preferred_max_latency: any} # When multiple model providers are available, optionally indicate your routing preference., plugins: [any] # Plugins you want to enable for this request, including their settings., route: str(fallback/sort) # **DEPRECATED** Use providers.sort.partition instead. Backwards-compatible alias for providers.sort.partition. Accepts legacy values: "fallback" (maps to "model"), "sort" (maps to "none")., user: str # A unique identifier representing your end-user, which helps distinguish between different users of your app. This allows your app to identify specific users in case of abuse reports, preventing your entire app from being affected by the actions of individual users. Maximum of 128 characters., session_id: str # A unique identifier for grouping related requests (e.g., a conversation or agent workflow) for observability. If provided in both the request body and the x-session-id header, the body value takes precedence. Maximum of 128 characters., trace: map{trace_id: str, trace_name: str, span_name: str, generation_name: str, parent_span_id: str} # Metadata for observability and tracing. Known keys (trace_id, trace_name, span_name, generation_name, parent_span_id) have special handling. Additional keys are passed through as custom metadata to configured broadcast destinations., models: [str], output_config: map{effort: str} # Configuration for controlling output behavior. Currently supports the effort parameter for Claude Opus 4.5.}
+@returns(200) Successful response
+@errors {400: Invalid request error, 401: Authentication error, 403: Permission denied error, 404: Not found error, 429: Rate limit error, 500: API error, 503: Overloaded error, 529: Overloaded error}
+
+@endgroup
+
+@group activity
+@endpoint GET /activity
+@desc Get user activity grouped by endpoint
+@optional {date: str # Filter by a single UTC date in the last 30 days (YYYY-MM-DD format).}
+@returns(200) {data: [map]} # Returns user activity data grouped by endpoint
+@errors {400: Bad Request - Invalid date format or date range, 401: Unauthorized - Authentication required or invalid credentials, 403: Forbidden - Only management keys can fetch activity, 500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@group chat
+@endpoint POST /chat/completions
+@desc Create a chat completion
+@required {messages: [any] # List of messages for the conversation}
+@optional {provider: map{allow_fallbacks: bool, require_parameters: bool, data_collection: str, zdr: bool, enforce_distillable_text: bool, order: [any], only: [any], ignore: [any], quantizations: [str], sort: any, max_price: map{prompt: str, completion: any, image: any, audio: any, request: any}, preferred_min_throughput: any, preferred_max_latency: any} # When multiple model providers are available, optionally indicate your routing preference., plugins: [any] # Plugins you want to enable for this request, including their settings., route: str(fallback/sort) # **DEPRECATED** Use providers.sort.partition instead. Backwards-compatible alias for providers.sort.partition. Accepts legacy values: "fallback" (maps to "model"), "sort" (maps to "none")., user: str # Unique user identifier, session_id: str # A unique identifier for grouping related requests (e.g., a conversation or agent workflow) for observability. If provided in both the request body and the x-session-id header, the body value takes precedence. Maximum of 128 characters., trace: map{trace_id: str, trace_name: str, span_name: str, generation_name: str, parent_span_id: str} # Metadata for observability and tracing. Known keys (trace_id, trace_name, span_name, generation_name, parent_span_id) have special handling. Additional keys are passed through as custom metadata to configured broadcast destinations., model: str # Model to use for completion, models: [any] # Models to use for completion, frequency_penalty: num # Frequency penalty (-2.0 to 2.0), logit_bias: map # Token logit bias adjustments, logprobs: bool # Return log probabilities, top_logprobs: num # Number of top log probabilities to return (0-20), max_completion_tokens: num # Maximum tokens in completion, max_tokens: num # Maximum tokens (deprecated, use max_completion_tokens), metadata: map # Key-value pairs for additional object information (max 16 pairs, 64 char keys, 512 char values), presence_penalty: num # Presence penalty (-2.0 to 2.0), reasoning: map{effort: str, summary: any} # Configuration options for reasoning models, response_format: any # Response format configuration, seed: int # Random seed for deterministic outputs, stop: any # Stop sequences (up to 4), stream: bool=False # Enable streaming response, stream_options: map{include_usage: bool} # Streaming configuration options, temperature: num=1 # Sampling temperature (0-2), parallel_tool_calls: bool, tool_choice: any # Tool choice configuration, tools: [map{type!: str, function!: map{name!: str, description: str, parameters: map, strict: bool}, cache_control: map{type!: str, ttl: str}}] # Available tools for function calling, top_p: num=1 # Nucleus sampling parameter (0-1), debug: map{echo_upstream_body: bool} # Debug options for inspecting request transformations (streaming only), image_config: map # Provider-specific image configuration options. Keys and values vary by model/provider. See https://openrouter.ai/docs/guides/overview/multimodal/image-generation for more details., modalities: [str] # Output modalities for the response. Supported values are "text" and "image".}
+@returns(200) {id: str, choices: [map], created: num, model: str, object: str, system_fingerprint: str?, usage: map{completion_tokens: num, prompt_tokens: num, total_tokens: num, completion_tokens_details: map?{reasoning_tokens: num?, audio_tokens: num?, accepted_prediction_tokens: num?, rejected_prediction_tokens: num?}, prompt_tokens_details: map?{cached_tokens: num, cache_write_tokens: num, audio_tokens: num, video_tokens: num}}} # Successful chat completion response
+@errors {400: Bad Request - Invalid request parameters or malformed input, 401: Unauthorized - Authentication required or invalid credentials, 402: Payment Required - Insufficient credits or quota to complete request, 404: Not Found - Resource does not exist, 408: Request Timeout - Operation exceeded time limit, 413: Payload Too Large - Request payload exceeds size limits, 422: Unprocessable Entity - Semantic validation failure, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error - Unexpected server error, 502: Bad Gateway - Provider/upstream API failure, 503: Service Unavailable - Service temporarily unavailable, 524: Infrastructure Timeout - Request timed out at our edge network, 529: Provider Overloaded - Provider is temporarily overloaded}
+
+@endgroup
+
+@group credits
+@endpoint GET /credits
+@desc Get remaining credits
+@returns(200) {data: map{total_credits: num, total_usage: num}} # Returns the total credits purchased and used
+@errors {401: Unauthorized - Authentication required or invalid credentials, 403: Forbidden - Only management keys can fetch credits, 500: Internal Server Error - Unexpected server error}
+
+@endpoint POST /credits/coinbase
+@desc Create a Coinbase charge for crypto payment
+@required {amount: num, sender: str, chain_id: int(1/137/8453)}
+@returns(200) {data: map{id: str, created_at: str, expires_at: str, web3_data: map{transfer_intent: map{call_data: map, metadata: map}}}} # Returns the calldata to fulfill the transaction
+@errors {400: Bad Request - Invalid credit amount or request body, 401: Unauthorized - Authentication required or invalid credentials, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@group embeddings
+@endpoint POST /embeddings
+@desc Submit an embedding request
+@required {input: any, model: str}
+@optional {encoding_format: str(float/base64), dimensions: int, user: str, provider: map{allow_fallbacks: bool, require_parameters: bool, data_collection: str, zdr: bool, enforce_distillable_text: bool, order: [any], only: [any], ignore: [any], quantizations: [str], sort: any, max_price: map{prompt: str, completion: any, image: any, audio: any, request: any}, preferred_min_throughput: any, preferred_max_latency: any} # Provider routing preferences for the request., input_type: str}
+@returns(200) {id: str, object: str, data: [map], model: str, usage: map{prompt_tokens: num, total_tokens: num, cost: num}} # Embedding response
+@errors {400: Bad Request - Invalid request parameters or malformed input, 401: Unauthorized - Authentication required or invalid credentials, 402: Payment Required - Insufficient credits or quota to complete request, 404: Not Found - Resource does not exist, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error - Unexpected server error, 502: Bad Gateway - Provider/upstream API failure, 503: Service Unavailable - Service temporarily unavailable, 524: Cloudflare Timeout - Provider request timed out at CDN edge, 529: Provider Overloaded - Provider is temporarily overloaded}
+
+@endpoint GET /embeddings/models
+@desc List all embeddings models
+@returns(200) {data: [map]} # Returns a list of embeddings models
+@errors {400: Bad Request - Invalid request parameters, 500: Internal Server Error}
+
+@endgroup
+
+@group generation
+@endpoint GET /generation
+@desc Get request & usage metadata for a generation
+@required {id: str}
+@returns(200) {data: map{id: str, upstream_id: str?, total_cost: num, cache_discount: num?, upstream_inference_cost: num?, created_at: str, model: str, app_id: num?, streamed: bool?, cancelled: bool?, provider_name: str?, latency: num?, moderation_latency: num?, generation_time: num?, finish_reason: str?, tokens_prompt: num?, tokens_completion: num?, native_tokens_prompt: num?, native_tokens_completion: num?, native_tokens_completion_images: num?, native_tokens_reasoning: num?, native_tokens_cached: num?, num_media_prompt: num?, num_input_audio_prompt: num?, num_media_completion: num?, num_search_results: num?, origin: str, usage: num, is_byok: bool, native_finish_reason: str?, external_user: str?, api_type: str?, router: str?, provider_responses: [map]?}} # Returns the request metadata for this generation
+@errors {401: Unauthorized - Authentication required or invalid credentials, 402: Payment Required - Insufficient credits or quota to complete request, 404: Not Found - Generation not found, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error - Unexpected server error, 502: Bad Gateway - Provider/upstream API failure, 524: Infrastructure Timeout - Request timed out at our edge network, 529: Provider Overloaded - Provider is temporarily overloaded}
+
+@endgroup
+
+@group models
+@endpoint GET /models/count
+@desc Get total count of available models
+@returns(200) {data: map{count: num}} # Returns the total count of available models
+@errors {500: Internal Server Error}
+
+@endpoint GET /models
+@desc List all models and their properties
+@optional {category: str(programming/roleplay/marketing/marketing/seo/technology/science/translation/legal/finance/health/trivia/academia) # Filter models by use case category, supported_parameters: str}
+@returns(200) {data: [map]} # Returns a list of models or RSS feed
+@errors {400: Bad Request - Invalid request parameters, 500: Internal Server Error}
+
+@endpoint GET /models/user
+@desc List models filtered by user provider preferences, privacy settings, and guardrails
+@returns(200) {data: [map]} # Returns a list of models filtered by user provider preferences
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Not Found - No eligible endpoints found, 500: Internal Server Error}
+
+@endpoint GET /models/{author}/{slug}/endpoints
+@desc List all endpoints for a model
+@required {author: str, slug: str}
+@returns(200) {data: map{id: str, name: str, created: num, description: str, architecture: any, endpoints: [map]}} # Returns a list of endpoints
+@errors {404: Not Found - Model does not exist, 500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@group endpoints
+@endpoint GET /endpoints/zdr
+@desc Preview the impact of ZDR on the available endpoints
+@returns(200) {data: [map]} # Returns a list of endpoints
+@errors {500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@group providers
+@endpoint GET /providers
+@desc List all providers
+@returns(200) {data: [map]} # Returns a list of providers
+@errors {500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@group keys
+@endpoint GET /keys
+@desc List API keys
+@optional {include_disabled: str # Whether to include disabled API keys in the response, offset: str # Number of API keys to skip for pagination}
+@returns(200) {data: [map]} # List of API keys
+@errors {401: Unauthorized - Missing or invalid authentication, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error}
+
+@endpoint POST /keys
+@desc Create a new API key
+@required {name: str # Name for the new API key}
+@optional {limit: num # Optional spending limit for the API key in USD, limit_reset: str(daily/weekly/monthly) # Type of limit reset for the API key (daily, weekly, monthly, or null for no reset). Resets happen automatically at midnight UTC, and weeks are Monday through Sunday., include_byok_in_limit: bool # Whether to include BYOK usage in the limit, expires_at: str(date-time) # Optional ISO 8601 UTC timestamp when the API key should expire. Must be UTC, other timezones will be rejected}
+@returns(201) {data: map{hash: str, name: str, label: str, disabled: bool, limit: num?, limit_remaining: num?, limit_reset: str?, include_byok_in_limit: bool, usage: num, usage_daily: num, usage_weekly: num, usage_monthly: num, byok_usage: num, byok_usage_daily: num, byok_usage_weekly: num, byok_usage_monthly: num, created_at: str, updated_at: str?, expires_at: str(date-time)?}, key: str} # API key created successfully
+@errors {400: Bad Request - Invalid request parameters, 401: Unauthorized - Missing or invalid authentication, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error}
+
+@endpoint PATCH /keys/{hash}
+@desc Update an API key
+@required {hash: str # The hash identifier of the API key to update}
+@optional {name: str # New name for the API key, disabled: bool # Whether to disable the API key, limit: num # New spending limit for the API key in USD, limit_reset: str(daily/weekly/monthly) # New limit reset type for the API key (daily, weekly, monthly, or null for no reset). Resets happen automatically at midnight UTC, and weeks are Monday through Sunday., include_byok_in_limit: bool # Whether to include BYOK usage in the limit}
+@returns(200) {data: map{hash: str, name: str, label: str, disabled: bool, limit: num?, limit_remaining: num?, limit_reset: str?, include_byok_in_limit: bool, usage: num, usage_daily: num, usage_weekly: num, usage_monthly: num, byok_usage: num, byok_usage_daily: num, byok_usage_weekly: num, byok_usage_monthly: num, created_at: str, updated_at: str?, expires_at: str(date-time)?}} # API key updated successfully
+@errors {400: Bad Request - Invalid request parameters, 401: Unauthorized - Missing or invalid authentication, 404: Not Found - API key does not exist, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error}
+
+@endpoint DELETE /keys/{hash}
+@desc Delete an API key
+@required {hash: str # The hash identifier of the API key to delete}
+@returns(200) {deleted: bool} # API key deleted successfully
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Not Found - API key does not exist, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error}
+
+@endpoint GET /keys/{hash}
+@desc Get a single API key
+@required {hash: str # The hash identifier of the API key to retrieve}
+@returns(200) {data: map{hash: str, name: str, label: str, disabled: bool, limit: num?, limit_remaining: num?, limit_reset: str?, include_byok_in_limit: bool, usage: num, usage_daily: num, usage_weekly: num, usage_monthly: num, byok_usage: num, byok_usage_daily: num, byok_usage_weekly: num, byok_usage_monthly: num, created_at: str, updated_at: str?, expires_at: str(date-time)?}} # API key details
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Not Found - API key does not exist, 429: Too Many Requests - Rate limit exceeded, 500: Internal Server Error}
+
+@endgroup
+
+@group guardrails
+@endpoint GET /guardrails
+@desc List guardrails
+@optional {offset: str # Number of records to skip for pagination, limit: str # Maximum number of records to return (max 100)}
+@returns(200) {data: [map], total_count: num} # List of guardrails
+@errors {401: Unauthorized - Missing or invalid authentication, 500: Internal Server Error}
+
+@endpoint POST /guardrails
+@desc Create a guardrail
+@required {name: str # Name for the new guardrail}
+@optional {description: str # Description of the guardrail, limit_usd: num # Spending limit in USD, reset_interval: str(daily/weekly/monthly) # Interval at which the limit resets (daily, weekly, monthly), allowed_providers: [str] # List of allowed provider IDs, allowed_models: [str] # Array of model identifiers (slug or canonical_slug accepted), enforce_zdr: bool # Whether to enforce zero data retention}
+@returns(201) {data: map{id: str(uuid), name: str, description: str?, limit_usd: num?, reset_interval: str?, allowed_providers: [str]?, allowed_models: [str]?, enforce_zdr: bool?, created_at: str, updated_at: str?}} # Guardrail created successfully
+@errors {400: Bad Request - Invalid request parameters, 401: Unauthorized - Missing or invalid authentication, 500: Internal Server Error}
+
+@endpoint GET /guardrails/{id}
+@desc Get a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail to retrieve}
+@returns(200) {data: map{id: str(uuid), name: str, description: str?, limit_usd: num?, reset_interval: str?, allowed_providers: [str]?, allowed_models: [str]?, enforce_zdr: bool?, created_at: str, updated_at: str?}} # Guardrail details
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Not Found - Guardrail does not exist, 500: Internal Server Error}
+
+@endpoint PATCH /guardrails/{id}
+@desc Update a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail to update}
+@optional {name: str # New name for the guardrail, description: str # New description for the guardrail, limit_usd: num # New spending limit in USD, reset_interval: str(daily/weekly/monthly) # Interval at which the limit resets (daily, weekly, monthly), allowed_providers: [str] # New list of allowed provider IDs, allowed_models: [str] # Array of model identifiers (slug or canonical_slug accepted), enforce_zdr: bool # Whether to enforce zero data retention}
+@returns(200) {data: map{id: str(uuid), name: str, description: str?, limit_usd: num?, reset_interval: str?, allowed_providers: [str]?, allowed_models: [str]?, enforce_zdr: bool?, created_at: str, updated_at: str?}} # Guardrail updated successfully
+@errors {400: Bad Request - Invalid request parameters, 401: Unauthorized - Missing or invalid authentication, 404: Not Found - Guardrail does not exist, 500: Internal Server Error}
+
+@endpoint DELETE /guardrails/{id}
+@desc Delete a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail to delete}
+@returns(200) {deleted: bool} # Guardrail deleted successfully
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Not Found - Guardrail does not exist, 500: Internal Server Error}
+
+@endpoint GET /guardrails/assignments/keys
+@desc List all key assignments
+@optional {offset: str # Number of records to skip for pagination, limit: str # Maximum number of records to return (max 100)}
+@returns(200) {data: [map], total_count: num} # List of key assignments
+@errors {401: Unauthorized - Missing or invalid authentication, 500: Internal Server Error}
+
+@endpoint GET /guardrails/assignments/members
+@desc List all member assignments
+@optional {offset: str # Number of records to skip for pagination, limit: str # Maximum number of records to return (max 100)}
+@returns(200) {data: [map], total_count: num} # List of member assignments
+@errors {401: Unauthorized - Missing or invalid authentication, 500: Internal Server Error}
+
+@endpoint GET /guardrails/{id}/assignments/keys
+@desc List key assignments for a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail}
+@optional {offset: str # Number of records to skip for pagination, limit: str # Maximum number of records to return (max 100)}
+@returns(200) {data: [map], total_count: num} # List of key assignments
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Guardrail not found, 500: Internal Server Error}
+
+@endpoint POST /guardrails/{id}/assignments/keys
+@desc Bulk assign keys to a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail, key_hashes: [str] # Array of API key hashes to assign to the guardrail}
+@returns(200) {assigned_count: num} # Assignment result
+@errors {400: Bad Request - Invalid input, 401: Unauthorized - Missing or invalid authentication, 404: Guardrail not found, 500: Internal Server Error}
+
+@endpoint GET /guardrails/{id}/assignments/members
+@desc List member assignments for a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail}
+@optional {offset: str # Number of records to skip for pagination, limit: str # Maximum number of records to return (max 100)}
+@returns(200) {data: [map], total_count: num} # List of member assignments
+@errors {401: Unauthorized - Missing or invalid authentication, 404: Guardrail not found, 500: Internal Server Error}
+
+@endpoint POST /guardrails/{id}/assignments/members
+@desc Bulk assign members to a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail, member_user_ids: [str] # Array of member user IDs to assign to the guardrail}
+@returns(200) {assigned_count: num} # Assignment result
+@errors {400: Bad Request - Invalid input, 401: Unauthorized - Missing or invalid authentication, 404: Guardrail not found, 500: Internal Server Error}
+
+@endpoint POST /guardrails/{id}/assignments/keys/remove
+@desc Bulk unassign keys from a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail, key_hashes: [str] # Array of API key hashes to unassign from the guardrail}
+@returns(200) {unassigned_count: num} # Unassignment result
+@errors {400: Bad Request - Invalid input, 401: Unauthorized - Missing or invalid authentication, 404: Guardrail not found, 500: Internal Server Error}
+
+@endpoint POST /guardrails/{id}/assignments/members/remove
+@desc Bulk unassign members from a guardrail
+@required {id: str(uuid) # The unique identifier of the guardrail, member_user_ids: [str] # Array of member user IDs to unassign from the guardrail}
+@returns(200) {unassigned_count: num} # Unassignment result
+@errors {400: Bad Request - Invalid input, 401: Unauthorized - Missing or invalid authentication, 404: Guardrail not found, 500: Internal Server Error}
+
+@endgroup
+
+@group key
+@endpoint GET /key
+@desc Get current API key
+@returns(200) {data: map{label: str, limit: num?, usage: num, usage_daily: num, usage_weekly: num, usage_monthly: num, byok_usage: num, byok_usage_daily: num, byok_usage_weekly: num, byok_usage_monthly: num, is_free_tier: bool, is_management_key: bool, is_provisioning_key: bool, limit_remaining: num?, limit_reset: str?, include_byok_in_limit: bool, expires_at: str(date-time)?, rate_limit: map{requests: num, interval: str, note: str}}} # API key details
+@errors {401: Unauthorized - Authentication required or invalid credentials, 500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@group auth
+@endpoint POST /auth/keys
+@desc Exchange authorization code for API key
+@required {code: str # The authorization code received from the OAuth redirect}
+@optional {code_verifier: str # The code verifier if code_challenge was used in the authorization request, code_challenge_method: str(S256/plain) # The method used to generate the code challenge}
+@returns(200) {key: str, user_id: str?} # Successfully exchanged code for an API key
+@errors {400: Bad Request - Invalid request parameters or malformed input, 403: Forbidden - Authentication successful but insufficient permissions, 500: Internal Server Error - Unexpected server error}
+
+@endpoint POST /auth/keys/code
+@desc Create authorization code
+@required {callback_url: str(uri) # The callback URL to redirect to after authorization. Note, only https URLs on ports 443 and 3000 are allowed.}
+@optional {code_challenge: str # PKCE code challenge for enhanced security, code_challenge_method: str(S256/plain) # The method used to generate the code challenge, limit: num # Credit limit for the API key to be created, expires_at: str(date-time) # Optional expiration time for the API key to be created, key_label: str # Optional custom label for the API key. Defaults to the app name if not provided., usage_limit_type: str(daily/weekly/monthly) # Optional credit limit reset interval. When set, the credit limit resets on this interval., spawn_agent: str # Agent identifier for spawn telemetry, spawn_cloud: str # Cloud identifier for spawn telemetry}
+@returns(200) {data: map{id: str, app_id: num, created_at: str}} # Successfully created authorization code
+@errors {400: Bad Request - Invalid request parameters or malformed input, 401: Unauthorized - Authentication required or invalid credentials, 500: Internal Server Error - Unexpected server error}
+
+@endgroup
+
+@end

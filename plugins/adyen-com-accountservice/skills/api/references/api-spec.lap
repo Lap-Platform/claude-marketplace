@@ -1,0 +1,192 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Account API
+@base https://cal-test.adyen.com/cal/services/Account/v6
+@version 6
+@auth ApiKey X-API-Key in header | Bearer basic
+@endpoints 20
+@toc checkAccountHolder(1), closeAccount(1), closeAccountHolder(1), closeStores(1), createAccount(1), createAccountHolder(1), deleteBankAccounts(1), deleteLegalArrangements(1), deletePayoutMethods(1), deleteShareholders(1), deleteSignatories(1), getAccountHolder(1), getTaxForm(1), getUploadedDocuments(1), suspendAccountHolder(1), unSuspendAccountHolder(1), updateAccount(1), updateAccountHolder(1), updateAccountHolderState(1), uploadDocument(1)
+
+@group checkAccountHolder
+@endpoint POST /checkAccountHolder
+@required {accountHolderCode: str, accountStateType: str(LimitedPayout/LimitedProcessing/LimitlessPayout/LimitlessProcessing/Payout/Processing), tier: int(int32)}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group closeAccount
+@endpoint POST /closeAccount
+@required {accountCode: str}
+@returns(200) {accountCode: str, invalidFields: [map], pspReference: str, resultCode: str, status: str}
+@returns(202) {accountCode: str, invalidFields: [map], pspReference: str, resultCode: str, status: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group closeAccountHolder
+@endpoint POST /closeAccountHolder
+@required {accountHolderCode: str}
+@returns(200) {accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group closeStores
+@endpoint POST /closeStores
+@required {accountHolderCode: str, stores: [str]}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group createAccount
+@endpoint POST /createAccount
+@required {accountHolderCode: str}
+@optional {bankAccountUUID: str, description: str, metadata: map, payoutMethodCode: str, payoutSchedule: str(BIWEEKLY_ON_1ST_AND_15TH_AT_MIDNIGHT/DAILY/DAILY_AU/DAILY_EU/DAILY_SG/DAILY_US/HOLD/MONTHLY/WEEKLY/WEEKLY_MON_TO_FRI_AU/WEEKLY_MON_TO_FRI_EU/WEEKLY_MON_TO_FRI_US/WEEKLY_ON_TUE_FRI_MIDNIGHT/WEEKLY_SUN_TO_THU_AU/WEEKLY_SUN_TO_THU_US), payoutScheduleReason: str, payoutSpeed: str(INSTANT/SAME_DAY/STANDARD)=STANDARD}
+@returns(200) {accountCode: str, accountHolderCode: str, bankAccountUUID: str, description: str, invalidFields: [map], metadata: map, payoutMethodCode: str, payoutSchedule: map{nextScheduledPayout: str(date-time), schedule: str}, payoutSpeed: str, pspReference: str, resultCode: str, status: str}
+@returns(202) {accountCode: str, accountHolderCode: str, bankAccountUUID: str, description: str, invalidFields: [map], metadata: map, payoutMethodCode: str, payoutSchedule: map{nextScheduledPayout: str(date-time), schedule: str}, payoutSpeed: str, pspReference: str, resultCode: str, status: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group createAccountHolder
+@endpoint POST /createAccountHolder
+@required {accountHolderCode: str, accountHolderDetails: map{address!: map, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map, email: str, fullPhoneNumber: str, individualDetails: map, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map, principalBusinessAddress: map, storeDetails: [map], webAddress: str}, legalEntity: str(Business/Individual/NonProfit/Partnership/PublicCompany)}
+@optional {createDefaultAccount: bool, description: str, primaryCurrency: str, processingTier: int(int32), verificationProfile: str}
+@returns(200) {accountCode: str, accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, description: str, invalidFields: [map], legalEntity: str, primaryCurrency: str, pspReference: str, resultCode: str, verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group deleteBankAccounts
+@endpoint POST /deleteBankAccounts
+@required {accountHolderCode: str, bankAccountUUIDs: [str]}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group deleteLegalArrangements
+@endpoint POST /deleteLegalArrangements
+@required {accountHolderCode: str, legalArrangements: [map{legalArrangementCode!: str, legalArrangementEntityCodes: [str]}]}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group deletePayoutMethods
+@endpoint POST /deletePayoutMethods
+@required {accountHolderCode: str, payoutMethodCodes: [str]}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group deleteShareholders
+@endpoint POST /deleteShareholders
+@required {accountHolderCode: str, shareholderCodes: [str]}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group deleteSignatories
+@endpoint POST /deleteSignatories
+@required {accountHolderCode: str, signatoryCodes: [str]}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group getAccountHolder
+@endpoint POST /getAccountHolder
+@optional {accountCode: str, accountHolderCode: str, showDetails: bool}
+@returns(200) {accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, accounts: [map], description: str, invalidFields: [map], legalEntity: str, migrationData: map{accountHolderId: str, balancePlatform: str, migrated: bool, migratedAccounts: [map], migratedShareholders: [map], migratedStores: [map], migrationDate: str(date-time)}, primaryCurrency: str, pspReference: str, resultCode: str, systemUpToDateTime: str(date-time), verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@returns(202) {accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, accounts: [map], description: str, invalidFields: [map], legalEntity: str, migrationData: map{accountHolderId: str, balancePlatform: str, migrated: bool, migratedAccounts: [map], migratedShareholders: [map], migratedStores: [map], migrationDate: str(date-time)}, primaryCurrency: str, pspReference: str, resultCode: str, systemUpToDateTime: str(date-time), verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group getTaxForm
+@endpoint POST /getTaxForm
+@required {accountHolderCode: str, formType: str, year: int(int32)}
+@returns(200) {content: str(byte), contentType: str, invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group getUploadedDocuments
+@endpoint POST /getUploadedDocuments
+@required {accountHolderCode: str}
+@optional {bankAccountUUID: str, shareholderCode: str}
+@returns(200) {documentDetails: [map], invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group suspendAccountHolder
+@endpoint POST /suspendAccountHolder
+@required {accountHolderCode: str}
+@returns(200) {accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group unSuspendAccountHolder
+@endpoint POST /unSuspendAccountHolder
+@required {accountHolderCode: str}
+@returns(200) {accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group updateAccount
+@endpoint POST /updateAccount
+@required {accountCode: str}
+@optional {bankAccountUUID: str, description: str, metadata: map, payoutMethodCode: str, payoutSchedule: map{action: str, reason: str, schedule!: str}, payoutSpeed: str(INSTANT/SAME_DAY/STANDARD)}
+@returns(200) {accountCode: str, bankAccountUUID: str, description: str, invalidFields: [map], metadata: map, payoutMethodCode: str, payoutSchedule: map{nextScheduledPayout: str(date-time), schedule: str}, payoutSpeed: str, pspReference: str, resultCode: str}
+@returns(202) {accountCode: str, bankAccountUUID: str, description: str, invalidFields: [map], metadata: map, payoutMethodCode: str, payoutSchedule: map{nextScheduledPayout: str(date-time), schedule: str}, payoutSpeed: str, pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group updateAccountHolder
+@endpoint POST /updateAccountHolder
+@required {accountHolderCode: str}
+@optional {accountHolderDetails: map{address!: map, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map, email: str, fullPhoneNumber: str, individualDetails: map, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map, principalBusinessAddress: map, storeDetails: [map], webAddress: str}, description: str, legalEntity: str(Business/Individual/NonProfit/Partnership/PublicCompany), primaryCurrency: str, processingTier: int(int32), verificationProfile: str}
+@returns(200) {accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, description: str, invalidFields: [map], legalEntity: str, primaryCurrency: str, pspReference: str, resultCode: str, verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@returns(202) {accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, description: str, invalidFields: [map], legalEntity: str, primaryCurrency: str, pspReference: str, resultCode: str, verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group updateAccountHolderState
+@endpoint POST /updateAccountHolderState
+@required {accountHolderCode: str, disable: bool, stateType: str(LimitedPayout/LimitedProcessing/LimitlessPayout/LimitlessProcessing/Payout/Processing)}
+@optional {reason: str}
+@returns(200) {accountHolderCode: str, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {accountHolderCode: str, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group uploadDocument
+@endpoint POST /uploadDocument
+@required {documentContent: str(byte), documentDetail: map{accountHolderCode: str, bankAccountUUID: str, description: str, documentType!: str, filename: str, legalArrangementCode: str, legalArrangementEntityCode: str, shareholderCode: str, signatoryCode: str}}
+@returns(200) {accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, description: str, invalidFields: [map], legalEntity: str, primaryCurrency: str, pspReference: str, resultCode: str, verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@returns(202) {accountHolderCode: str, accountHolderDetails: map{address: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, bankAccountDetails: [map], bankAggregatorDataReference: str, businessDetails: map{doingBusinessAs: str, legalBusinessName: str, listedUltimateParentCompany: [map], registrationNumber: str, shareholders: [map], signatories: [map], stockExchange: str, stockNumber: str, stockTicker: str, taxId: str}, email: str, fullPhoneNumber: str, individualDetails: map{name: map, personalData: map}, lastReviewDate: str, legalArrangements: [map], merchantCategoryCode: str, metadata: map, payoutMethods: [map], phoneNumber: map{phoneCountryCode: str, phoneNumber: str, phoneType: str}, principalBusinessAddress: map{city: str, country: str, houseNumberOrName: str, postalCode: str, stateOrProvince: str, street: str}, storeDetails: [map], webAddress: str}, accountHolderStatus: map{events: [map], payoutState: map{allowPayout: bool, disableReason: str, disabled: bool, notAllowedReason: str, payoutLimit: map, tierNumber: int(int32)}, processingState: map{disableReason: str, disabled: bool, processedFrom: map, processedTo: map, tierNumber: int(int32)}, status: str, statusReason: str}, description: str, invalidFields: [map], legalEntity: str, primaryCurrency: str, pspReference: str, resultCode: str, verification: map{accountHolder: map{checks: [map]}, legalArrangements: [map], legalArrangementsEntities: [map], payoutMethods: [map], shareholders: [map], signatories: [map], ultimateParentCompany: [map]}, verificationProfile: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@end

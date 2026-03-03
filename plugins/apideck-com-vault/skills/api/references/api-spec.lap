@@ -1,0 +1,221 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Vault API
+@base https://unify.apideck.com
+@version 10.24.0
+@auth ApiKey Authorization in header | ApiKey x-apideck-app-id in header
+@endpoints 33
+@hint download_for_search
+@toc vault(33)
+
+@endpoint POST /vault/consumers
+@desc Create consumer
+@required {x-apideck-app-id: str # The ID of your Unify application, consumer_id: str # Unique consumer identifier. You can freely choose a consumer ID yourself. Most of the time, this is an ID of your internal data model that represents a user or account in your system (for example account:12345). If the consumer doesn't exist yet, Vault will upsert a consumer based on your ID.}
+@optional {metadata: map{account_name: str, user_name: str, email: str, image: str} # The metadata of the consumer. This is used to display the consumer in the sidebar. This is optional, but recommended.}
+@returns(200) {status_code: int, status: str, data: map{consumer_id: str, application_id: str, metadata: map{account_name: str, user_name: str, email: str, image: str}, connections: [map], services: [str], aggregated_request_count: num, request_counts: map{unify: num, proxy: num, vault: num}, created: str, modified: str, request_count_updated: str}, _raw: map?} # Consumer created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/consumers
+@desc Get all consumers
+@required {x-apideck-app-id: str # The ID of your Unify application}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20}
+@returns(200) {status_code: int, status: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # Consumers
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/consumers/{consumer_id}
+@desc Get consumer
+@required {x-apideck-app-id: str # The ID of your Unify application, consumer_id: str # ID of the consumer to return}
+@returns(200) {status_code: int, status: str, data: map{consumer_id: str, application_id: str, metadata: map{account_name: str, user_name: str, email: str, image: str}, connections: [map], services: [str], aggregated_request_count: num, request_counts: map{unify: num, proxy: num, vault: num}, created: str, modified: str, request_count_updated: str}, _raw: map?} # Consumer
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /vault/consumers/{consumer_id}
+@desc Update consumer
+@required {x-apideck-app-id: str # The ID of your Unify application, consumer_id: str # ID of the consumer to return}
+@optional {metadata: map{account_name: str, user_name: str, email: str, image: str} # The metadata of the consumer. This is used to display the consumer in the sidebar. This is optional, but recommended.}
+@returns(200) {status_code: int, status: str, data: map{consumer_id: str, application_id: str, metadata: map{account_name: str, user_name: str, email: str, image: str}, connections: [map], services: [str], aggregated_request_count: num, request_counts: map{unify: num, proxy: num, vault: num}, created: str, modified: str, request_count_updated: str}, _raw: map?} # Consumer updated
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /vault/consumers/{consumer_id}
+@desc Delete consumer
+@required {x-apideck-app-id: str # The ID of your Unify application, consumer_id: str # ID of the consumer to return}
+@returns(200) {status_code: int, status: str, data: any, _raw: map?} # Consumer deleted
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/consumers/{consumer_id}/stats
+@desc Consumer request counts
+@required {x-apideck-app-id: str # The ID of your Unify application, consumer_id: str # ID of the consumer to return, start_datetime: str # Scopes results to requests that happened after datetime, end_datetime: str # Scopes results to requests that happened before datetime}
+@returns(200) {status_code: int, status: str, data: map{application_id: str, consumer_id: str, start_datetime: str, end_datetime: str, aggregated_request_count: num, request_counts: map{unify: num, proxy: num, vault: num}}, _raw: map?} # Consumers Request Counts within Date Range
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections
+@desc Get all connections
+@required {x-apideck-app-id: str # The ID of your Unify application}
+@optional {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, api: str # Scope results to Unified API, configured: bool # Scopes results to connections that have been configured or not}
+@returns(200) {status_code: int, status: str, data: [map], _raw: map?} # Connections
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}
+@desc Get connection
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/connections/{unified_api}/{service_id}
+@desc Create connection
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@optional {id: str # The unique identifier of the connection., service_id: str # The ID of the service this connection belongs to., name: str # The name of the connection, tag_line: str, unified_api: str # The unified API category where the connection belongs to., state: str(available/callable/added/authorized/invalid) # [Connection state flow](#section/Connection-state), integration_state: str(disabled/needs_configuration/configured) # The current state of the Integration., auth_type: str(oauth2/apiKey/basic/custom/none) # Type of authorization used by the connector, oauth_grant_type: str(authorization_code/client_credentials/password) # OAuth grant type used by the connector. More info: https://oauth.net/2/grant-types, status: str(live/upcoming/requested) # Status of the connection., enabled: bool # Whether the connection is enabled or not. You can enable or disable a connection using the Update Connection API., website: str # The website URL of the connection, icon: str # A visual icon of the connection, that will be shown in the Vault, logo: str # The logo of the connection, that will be shown in the Vault, authorize_url: str # The OAuth redirect URI. Redirect your users to this URI to let them authorize your app in the connector's UI. Before you can use this URI, you must add `redirect_uri` as a query parameter to the `authorize_url`. Be sure to URL encode the `redirect_uri` part. Your users will be redirected to this `redirect_uri` after they granted access to your app in the connector's UI., revoke_url: str # The OAuth revoke URI. Redirect your users to this URI to revoke this connection. Before you can use this URI, you must add `redirect_uri` as a query parameter. Your users will be redirected to this `redirect_uri` after they granted access to your app in the connector's UI., settings: map # Connection settings. Values will persist to `form_fields` with corresponding id, metadata: map # Attach your own consumer specific metadata, form_fields: [map{id: str, label: str, placeholder: str, description: str, type: any, required: bool, custom_field: bool, allow_custom_values: bool, disabled: bool, hidden: bool, deprecated: bool, sensitive: bool, prefix: str, suffix: str, options: [any]}] # The settings that are wanted to create a connection., configuration: [map{resource: str, defaults: [map{target: str, id: str, options: [any], value: any}]}], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str] # List of settings that are required to be configured on integration before authorization can occur, subscriptions: [map{downstream_id: str, unify_event_types: [str], downstream_event_types: [str], execute_url: str, created_at: str}], has_guide: bool # Whether the connector has a guide available in the developer docs or not (https://docs.apideck.com/connectors/{service_id}/docs/consumer+connection)., custom_mappings: [map{id: str, label: str, description: str, value: str, key: str, required: bool, custom_field: bool, consumer_id: str, example: str}] # List of custom mappings configured for this connection, consent_state: str(implicit/pending/granted/denied/revoked/requires_reconsent) # The current consent state of the connection, consents: [map{id!: str, created_at!: str, granted!: bool, resources!: any}] # Immutable array of consent records for compliance and audit purposes, latest_consent: map{id!: str, created_at!: str, granted!: bool, resources!: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str(revoked/missing_settings/needs_consent/needs_auth/pending_refresh/ok) # Operational health status of the connection, credentials_expire_at: num # Unix timestamp in milliseconds when credentials will be deleted if token refresh continues to fail. A value of 0 indicates no active retention window (connection is healthy or not using OAuth token refresh)., last_refresh_failed_at: num # Unix timestamp in milliseconds of the last failed token refresh attempt. A value of 0 indicates no recent failures. This field is used internally to enforce cooldown periods between retry attempts., created_at: num, updated_at: num}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /vault/connections/{unified_api}/{service_id}
+@desc Update connection
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@optional {id: str # The unique identifier of the connection., service_id: str # The ID of the service this connection belongs to., name: str # The name of the connection, tag_line: str, unified_api: str # The unified API category where the connection belongs to., state: str(available/callable/added/authorized/invalid) # [Connection state flow](#section/Connection-state), integration_state: str(disabled/needs_configuration/configured) # The current state of the Integration., auth_type: str(oauth2/apiKey/basic/custom/none) # Type of authorization used by the connector, oauth_grant_type: str(authorization_code/client_credentials/password) # OAuth grant type used by the connector. More info: https://oauth.net/2/grant-types, status: str(live/upcoming/requested) # Status of the connection., enabled: bool # Whether the connection is enabled or not. You can enable or disable a connection using the Update Connection API., website: str # The website URL of the connection, icon: str # A visual icon of the connection, that will be shown in the Vault, logo: str # The logo of the connection, that will be shown in the Vault, authorize_url: str # The OAuth redirect URI. Redirect your users to this URI to let them authorize your app in the connector's UI. Before you can use this URI, you must add `redirect_uri` as a query parameter to the `authorize_url`. Be sure to URL encode the `redirect_uri` part. Your users will be redirected to this `redirect_uri` after they granted access to your app in the connector's UI., revoke_url: str # The OAuth revoke URI. Redirect your users to this URI to revoke this connection. Before you can use this URI, you must add `redirect_uri` as a query parameter. Your users will be redirected to this `redirect_uri` after they granted access to your app in the connector's UI., settings: map # Connection settings. Values will persist to `form_fields` with corresponding id, metadata: map # Attach your own consumer specific metadata, form_fields: [map{id: str, label: str, placeholder: str, description: str, type: any, required: bool, custom_field: bool, allow_custom_values: bool, disabled: bool, hidden: bool, deprecated: bool, sensitive: bool, prefix: str, suffix: str, options: [any]}] # The settings that are wanted to create a connection., configuration: [map{resource: str, defaults: [map{target: str, id: str, options: [any], value: any}]}], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str] # List of settings that are required to be configured on integration before authorization can occur, subscriptions: [map{downstream_id: str, unify_event_types: [str], downstream_event_types: [str], execute_url: str, created_at: str}], has_guide: bool # Whether the connector has a guide available in the developer docs or not (https://docs.apideck.com/connectors/{service_id}/docs/consumer+connection)., custom_mappings: [map{id: str, label: str, description: str, value: str, key: str, required: bool, custom_field: bool, consumer_id: str, example: str}] # List of custom mappings configured for this connection, consent_state: str(implicit/pending/granted/denied/revoked/requires_reconsent) # The current consent state of the connection, consents: [map{id!: str, created_at!: str, granted!: bool, resources!: any}] # Immutable array of consent records for compliance and audit purposes, latest_consent: map{id!: str, created_at!: str, granted!: bool, resources!: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str(revoked/missing_settings/needs_consent/needs_auth/pending_refresh/ok) # Operational health status of the connection, credentials_expire_at: num # Unix timestamp in milliseconds when credentials will be deleted if token refresh continues to fail. A value of 0 indicates no active retention window (connection is healthy or not using OAuth token refresh)., last_refresh_failed_at: num # Unix timestamp in milliseconds of the last failed token refresh attempt. A value of 0 indicates no recent failures. This field is used internally to enforce cooldown periods between retry attempts., created_at: num, updated_at: num}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection updated
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /vault/connections/{unified_api}/{service_id}
+@desc Deletes a connection
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@returns(204) Resource deleted
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/connections/{unified_api}/{service_id}/import
+@desc Import connection
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@optional {credentials: map{refresh_token: str, access_token: str, issued_at: str(date-time), expires_in: int}, settings: map # Connection settings. Values will persist to `form_fields` with corresponding id, metadata: map # Attach your own consumer specific metadata}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/connections/{unified_api}/{service_id}/token
+@desc Authorize Access Token
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/connections/{unified_api}/{service_id}/validate
+@desc Validate Connection State
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@returns(200) {status_code: int, status: str, data: map{id: str, state: str}, _raw: map?} # Connection access token refreshed
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}/consent
+@desc Get consent records
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@returns(200) {status_code: int, status: str, data: [map], _raw: map?} # Consent records
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /vault/connections/{unified_api}/{service_id}/consent
+@desc Update consent state
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API, resources: any, granted: bool # Whether consent is being granted (true) or denied/revoked (false)}
+@returns(200) {status_code: int, status: str, data: map{id: str, created_at: str, granted: bool, resources: any}, _raw: map?} # Consent updated
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/connections/{unified_api}/{service_id}/callback-state
+@desc Create Callback State
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API}
+@optional {redirect_uri: str # The redirect URI to be used after the connection is created.}
+@returns(200) {status_code: int, status: str, data: map{state: str}, _raw: map?} # Callback state created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}/{resource}/config
+@desc Get resource settings
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, resource: str # Name of the resource (plural)}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /vault/connections/{unified_api}/{service_id}/{resource}/config
+@desc Update settings
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, service_id: str # Service ID of the resource to return, unified_api: str # Unified API, resource: str # Name of the resource (plural)}
+@optional {id: str # The unique identifier of the connection., service_id: str # The ID of the service this connection belongs to., name: str # The name of the connection, tag_line: str, unified_api: str # The unified API category where the connection belongs to., state: str(available/callable/added/authorized/invalid) # [Connection state flow](#section/Connection-state), integration_state: str(disabled/needs_configuration/configured) # The current state of the Integration., auth_type: str(oauth2/apiKey/basic/custom/none) # Type of authorization used by the connector, oauth_grant_type: str(authorization_code/client_credentials/password) # OAuth grant type used by the connector. More info: https://oauth.net/2/grant-types, status: str(live/upcoming/requested) # Status of the connection., enabled: bool # Whether the connection is enabled or not. You can enable or disable a connection using the Update Connection API., website: str # The website URL of the connection, icon: str # A visual icon of the connection, that will be shown in the Vault, logo: str # The logo of the connection, that will be shown in the Vault, authorize_url: str # The OAuth redirect URI. Redirect your users to this URI to let them authorize your app in the connector's UI. Before you can use this URI, you must add `redirect_uri` as a query parameter to the `authorize_url`. Be sure to URL encode the `redirect_uri` part. Your users will be redirected to this `redirect_uri` after they granted access to your app in the connector's UI., revoke_url: str # The OAuth revoke URI. Redirect your users to this URI to revoke this connection. Before you can use this URI, you must add `redirect_uri` as a query parameter. Your users will be redirected to this `redirect_uri` after they granted access to your app in the connector's UI., settings: map # Connection settings. Values will persist to `form_fields` with corresponding id, metadata: map # Attach your own consumer specific metadata, form_fields: [map{id: str, label: str, placeholder: str, description: str, type: any, required: bool, custom_field: bool, allow_custom_values: bool, disabled: bool, hidden: bool, deprecated: bool, sensitive: bool, prefix: str, suffix: str, options: [any]}] # The settings that are wanted to create a connection., configuration: [map{resource: str, defaults: [map{target: str, id: str, options: [any], value: any}]}], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str] # List of settings that are required to be configured on integration before authorization can occur, subscriptions: [map{downstream_id: str, unify_event_types: [str], downstream_event_types: [str], execute_url: str, created_at: str}], has_guide: bool # Whether the connector has a guide available in the developer docs or not (https://docs.apideck.com/connectors/{service_id}/docs/consumer+connection)., custom_mappings: [map{id: str, label: str, description: str, value: str, key: str, required: bool, custom_field: bool, consumer_id: str, example: str}] # List of custom mappings configured for this connection, consent_state: str(implicit/pending/granted/denied/revoked/requires_reconsent) # The current consent state of the connection, consents: [map{id!: str, created_at!: str, granted!: bool, resources!: any}] # Immutable array of consent records for compliance and audit purposes, latest_consent: map{id!: str, created_at!: str, granted!: bool, resources!: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str(revoked/missing_settings/needs_consent/needs_auth/pending_refresh/ok) # Operational health status of the connection, credentials_expire_at: num # Unix timestamp in milliseconds when credentials will be deleted if token refresh continues to fail. A value of 0 indicates no active retention window (connection is healthy or not using OAuth token refresh)., last_refresh_failed_at: num # Unix timestamp in milliseconds of the last failed token refresh attempt. A value of 0 indicates no recent failures. This field is used internally to enforce cooldown periods between retry attempts., created_at: num, updated_at: num}
+@returns(200) {status_code: int, status: str, data: map{id: str, service_id: str, name: str, tag_line: str, unified_api: str, state: str, integration_state: str, auth_type: str, oauth_grant_type: str, status: str, enabled: bool, website: str, icon: str, logo: str, authorize_url: str?, revoke_url: str?, settings: map?, metadata: map?, form_fields: [map], configuration: [map], configurable_resources: [str], resource_schema_support: [str], resource_settings_support: [str], validation_support: bool, schema_support: bool, settings_required_for_authorization: [str], subscriptions: [map], has_guide: bool, custom_mappings: [map], consent_state: str, consents: [map], latest_consent: map{id: str, created_at: str, granted: bool, resources: any}, application_data_scopes: map{enabled: bool, updated_at: str, resources: any}, health: str, credentials_expire_at: num, last_refresh_failed_at: num, created_at: num, updated_at: num?}, _raw: map?} # Connection updated
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}/{resource}/schema
+@desc Get resource schema
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, resource: str # Name of the resource (plural)}
+@returns(200) {status_code: int, status: str, data: map, _raw: map?} # Resource Schema
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}/{resource}/example
+@desc Get resource example
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, resource: str # Name of the resource (plural)}
+@returns(200) {status_code: int, status: str, data: map{unified_api: str, service_id: str, resource: map{id: str, name: str, status: str, downstream_id: str, downstream_name: str}, example_response: map}, _raw: map?} # Resource Schema
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}/{resource}/custom-fields
+@desc Get resource custom fields
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, resource: str # Name of the resource (plural)}
+@optional {resource_id: str # This is the id of the resource you want to fetch when listing custom fields. For example, if you want to fetch custom fields for a specific contact, you would use the contact id.}
+@returns(200) {status_code: int, status: str, data: [map], _raw: map?} # Custom mapping
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/connections/{unified_api}/{service_id}/{resource}/custom-mappings
+@desc List connection custom mappings
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, resource: str # Name of the resource (plural)}
+@optional {resource_id: str # This is the id of the resource you want to fetch when listing custom fields. For example, if you want to fetch custom fields for a specific contact, you would use the contact id.}
+@returns(200) {status_code: int, status: str, data: [map], _raw: map?} # Custom mapping
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/authorize/{service_id}/{application_id}
+@desc Authorize
+@required {service_id: str # Service ID of the resource to return, application_id: str # Application ID of the resource to return, state: str # An opaque value the applications adds to the initial request that the authorization server includes when redirecting the back to the application. This value must be used by the application to prevent CSRF attacks., redirect_uri: str # URL to redirect back to after authorization. When left empty the default configured redirect uri will be used.}
+@optional {scope: [str] # One or more OAuth scopes to request from the connector. OAuth scopes control the set of resources and operations that are allowed after authorization. Refer to the connector's documentation for the available scopes.}
+@errors {301: redirect, 400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/revoke/{service_id}/{application_id}
+@desc Revoke connection
+@required {service_id: str # Service ID of the resource to return, application_id: str # Application ID of the resource to return, state: str # An opaque value the applications adds to the initial request that the authorization server includes when redirecting the back to the application. This value must be used by the application to prevent CSRF attacks., redirect_uri: str # The redirect uri to redirect to after the revoke flow is completed.}
+@errors {301: redirect, 400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/custom-mappings/{unified_api}/{service_id}/{target_field_id}
+@desc Get custom mapping
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, target_field_id: str # ID of the target field to return as a custom mapping.}
+@returns(200) {status_code: int, status: str, data: map{id: str, label: str, description: str?, value: str, key: str, required: bool, custom_field: bool, consumer_id: str?, example: str?}, _raw: map?} # Custom mapping
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/custom-mappings/{unified_api}/{service_id}/{target_field_id}
+@desc Create custom mapping
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, target_field_id: str # ID of the target field to return as a custom mapping., value: str # Target Field Mapping value}
+@returns(200) {status_code: int, status: str, data: map{id: str, label: str, description: str?, value: str, key: str, required: bool, custom_field: bool, consumer_id: str?, example: str?}, _raw: map?} # Custom mapping created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /vault/custom-mappings/{unified_api}/{service_id}/{target_field_id}
+@desc Update custom mapping
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, target_field_id: str # ID of the target field to return as a custom mapping., value: str # Target Field Mapping value}
+@returns(200) {status_code: int, status: str, data: map{id: str, label: str, description: str?, value: str, key: str, required: bool, custom_field: bool, consumer_id: str?, example: str?}, _raw: map?} # Custom mapping updated
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /vault/custom-mappings/{unified_api}/{service_id}/{target_field_id}
+@desc Deletes a custom mapping
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return, target_field_id: str # ID of the target field to return as a custom mapping.}
+@returns(204) Resource deleted
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/custom-mappings/{unified_api}/{service_id}
+@desc List custom mappings
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application, unified_api: str # Unified API, service_id: str # Service ID of the resource to return}
+@returns(200) {status_code: int, status: str, data: [map], _raw: map?} # Custom mapping
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/callback
+@desc Callback
+@required {state: str # An opaque value the applications adds to the initial request that the authorization server includes when redirecting the back to the application. This value must be used by the application to prevent CSRF attacks., code: str # An authorization code from the connector which Apideck Vault will later exchange for an access token.}
+@optional {error: str # Error code returned by the OAuth provider when authorization fails, error_description: str # Human-readable description of the error from the OAuth provider}
+@errors {301: callback, 400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /vault/sessions
+@desc Create Session
+@required {x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from, x-apideck-app-id: str # The ID of your Unify application}
+@optional {consumer_metadata: map{account_name: str, user_name: str, email: str, image: str} # The metadata of the consumer. This is used to display the consumer in the sidebar. This is optional, but recommended., redirect_uri: str # The URL to redirect the user to after the session has been configured., settings: map{unified_apis: [str], hide_resource_settings: bool, sandbox_mode: bool, isolation_mode: bool, session_length: str, show_logs: bool, show_suggestions: bool, show_sidebar: bool, auto_redirect: bool, hide_guides: bool, allow_actions: [str]} # Settings to change the way the Vault is displayed., theme: map{favicon: str, logo: str, primary_color: str, sidepanel_background_color: str, sidepanel_text_color: str, vault_name: str, privacy_url: str, terms_url: str} # Theming options to change the look and feel of Vault., custom_consumer_settings: map # Custom consumer settings that are passed as part of the session.}
+@returns(200) {status_code: int, status: str, data: map{session_uri: str, session_token: str}, _raw: map?} # Session created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /vault/logs
+@desc Get all consumer request logs
+@required {x-apideck-app-id: str # The ID of your Unify application, x-apideck-consumer-id: str # ID of the consumer which you want to get or push data from}
+@optional {filter: map # Filter results, cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20}
+@returns(200) {status_code: int, status: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # Logs
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@end

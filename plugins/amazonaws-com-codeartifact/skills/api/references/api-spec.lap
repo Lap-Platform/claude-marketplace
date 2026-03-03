@@ -1,0 +1,366 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api CodeArtifact
+@version 2018-09-22
+@auth AWS SigV4
+@endpoints 48
+@hint download_for_search
+@toc repository(10), package(14), domain(7), package-group(4), get-associated-package-group(1), authorization-token(1), package-group-allowed-repositories(1), list-associated-packages(1), domains(1), package-groups(2), packages(1), repositories(1), tags(1), tag(1), untag(1), package-group-origin-configuration(1)
+
+@group repository
+@endpoint POST /v1/repository/external-connection
+@required {domain: str, repository: str, external-connection: str}
+@optional {domain-owner: str}
+@returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package/versions/copy
+@required {domain: str, source-repository: str, destination-repository: str, format: str, package: str}
+@optional {domain-owner: str, namespace: str, versions: [str], versionRevisions: map<str,str>, allowOverwrite: bool, includeFromUpstream: bool}
+@returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
+
+@endgroup
+
+@group domain
+@endpoint POST /v1/domain
+@required {domain: str}
+@optional {encryptionKey: str, tags: [Tag]}
+@returns(200) {domain: DomainDescription?{name: str?, owner: str?, arn: str?, status: str?, createdTime: str(timestamp)?, encryptionKey: str?, repositoryCount: int?, assetSizeBytes: int(i64)?, s3BucketArn: str?}}
+
+@endgroup
+
+@group package-group
+@endpoint POST /v1/package-group
+@required {domain: str, packageGroup: str}
+@optional {domain-owner: str, contactInfo: str, description: str, tags: [Tag]}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+
+@endgroup
+
+@group repository
+@endpoint POST /v1/repository
+@required {domain: str, repository: str}
+@optional {domain-owner: str, description: str, upstreams: [UpstreamRepository], tags: [Tag]}
+@returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
+
+@endgroup
+
+@group domain
+@endpoint DELETE /v1/domain
+@required {domain: str}
+@optional {domain-owner: str}
+@returns(200) {domain: DomainDescription?{name: str?, owner: str?, arn: str?, status: str?, createdTime: str(timestamp)?, encryptionKey: str?, repositoryCount: int?, assetSizeBytes: int(i64)?, s3BucketArn: str?}}
+
+@endpoint DELETE /v1/domain/permissions/policy
+@required {domain: str}
+@optional {domain-owner: str, policy-revision: str}
+@returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
+
+@endgroup
+
+@group package
+@endpoint DELETE /v1/package
+@required {domain: str, repository: str, format: str, package: str}
+@optional {domain-owner: str, namespace: str}
+@returns(200) {deletedPackage: PackageSummary?{format: str?, namespace: str?, package: str?, originConfiguration: PackageOriginConfiguration?{restrictions: PackageOriginRestrictions?{publish: str, upstream: str}}}}
+
+@endgroup
+
+@group package-group
+@endpoint DELETE /v1/package-group
+@required {domain: str, package-group: str}
+@optional {domain-owner: str}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package/versions/delete
+@required {domain: str, repository: str, format: str, package: str, versions: [str]}
+@optional {domain-owner: str, namespace: str, expectedStatus: str}
+@returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
+
+@endgroup
+
+@group repository
+@endpoint DELETE /v1/repository
+@required {domain: str, repository: str}
+@optional {domain-owner: str}
+@returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
+
+@endpoint DELETE /v1/repository/permissions/policies
+@required {domain: str, repository: str}
+@optional {domain-owner: str, policy-revision: str}
+@returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
+
+@endgroup
+
+@group domain
+@endpoint GET /v1/domain
+@required {domain: str}
+@optional {domain-owner: str}
+@returns(200) {domain: DomainDescription?{name: str?, owner: str?, arn: str?, status: str?, createdTime: str(timestamp)?, encryptionKey: str?, repositoryCount: int?, assetSizeBytes: int(i64)?, s3BucketArn: str?}}
+
+@endgroup
+
+@group package
+@endpoint GET /v1/package
+@required {domain: str, repository: str, format: str, package: str}
+@optional {domain-owner: str, namespace: str}
+@returns(200) {package: PackageDescription{format: str?, namespace: str?, name: str?, originConfiguration: PackageOriginConfiguration?{restrictions: PackageOriginRestrictions?{publish: str, upstream: str}}}}
+
+@endgroup
+
+@group package-group
+@endpoint GET /v1/package-group
+@required {domain: str, package-group: str}
+@optional {domain-owner: str}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+
+@endgroup
+
+@group package
+@endpoint GET /v1/package/version
+@required {domain: str, repository: str, format: str, package: str, version: str}
+@optional {domain-owner: str, namespace: str}
+@returns(200) {packageVersion: PackageVersionDescription{format: str?, namespace: str?, packageName: str?, displayName: str?, version: str?, summary: str?, homePage: str?, sourceCodeRepository: str?, publishedTime: str(timestamp)?, licenses: [LicenseInfo]?, revision: str?, status: str?, origin: PackageVersionOrigin?{domainEntryPoint: DomainEntryPoint?{repositoryName: str?, externalConnectionName: str?}, originType: str?}}}
+
+@endgroup
+
+@group repository
+@endpoint GET /v1/repository
+@required {domain: str, repository: str}
+@optional {domain-owner: str}
+@returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
+
+@endpoint DELETE /v1/repository/external-connection
+@required {domain: str, repository: str, external-connection: str}
+@optional {domain-owner: str}
+@returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package/versions/dispose
+@required {domain: str, repository: str, format: str, package: str, versions: [str]}
+@optional {domain-owner: str, namespace: str, versionRevisions: map<str,str>, expectedStatus: str}
+@returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
+
+@endgroup
+
+@group get-associated-package-group
+@endpoint GET /v1/get-associated-package-group
+@required {domain: str, format: str, package: str}
+@optional {domain-owner: str, namespace: str}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}, associationType: str?}
+
+@endgroup
+
+@group authorization-token
+@endpoint POST /v1/authorization-token
+@required {domain: str}
+@optional {domain-owner: str, duration: int(i64)}
+@returns(200) {authorizationToken: str?, expiration: str(timestamp)?}
+
+@endgroup
+
+@group domain
+@endpoint GET /v1/domain/permissions/policy
+@required {domain: str}
+@optional {domain-owner: str}
+@returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
+
+@endgroup
+
+@group package
+@endpoint GET /v1/package/version/asset
+@required {domain: str, repository: str, format: str, package: str, version: str, asset: str}
+@optional {domain-owner: str, namespace: str, revision: str}
+@returns(200) {asset: bytes?, assetName: str?, packageVersion: str?, packageVersionRevision: str?}
+
+@endpoint GET /v1/package/version/readme
+@required {domain: str, repository: str, format: str, package: str, version: str}
+@optional {domain-owner: str, namespace: str}
+@returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, readme: str?}
+
+@endgroup
+
+@group repository
+@endpoint GET /v1/repository/endpoint
+@required {domain: str, repository: str, format: str}
+@optional {domain-owner: str}
+@returns(200) {repositoryEndpoint: str?}
+
+@endpoint GET /v1/repository/permissions/policy
+@required {domain: str, repository: str}
+@optional {domain-owner: str}
+@returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
+
+@endgroup
+
+@group package-group-allowed-repositories
+@endpoint GET /v1/package-group-allowed-repositories
+@required {domain: str, package-group: str, originRestrictionType: str}
+@optional {domain-owner: str, max-results: int, next-token: str}
+@returns(200) {allowedRepositories: [str]?, nextToken: str?}
+
+@endgroup
+
+@group list-associated-packages
+@endpoint GET /v1/list-associated-packages
+@required {domain: str, package-group: str}
+@optional {domain-owner: str, max-results: int, next-token: str, preview: bool}
+@returns(200) {packages: [AssociatedPackage]?, nextToken: str?}
+
+@endgroup
+
+@group domains
+@endpoint POST /v1/domains
+@optional {maxResults: int, nextToken: str}
+@returns(200) {domains: [DomainSummary]?, nextToken: str?}
+
+@endgroup
+
+@group package-groups
+@endpoint POST /v1/package-groups
+@required {domain: str}
+@optional {domain-owner: str, max-results: int, next-token: str, prefix: str}
+@returns(200) {packageGroups: [PackageGroupSummary]?, nextToken: str?}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package/version/assets
+@required {domain: str, repository: str, format: str, package: str, version: str}
+@optional {domain-owner: str, namespace: str, max-results: int, next-token: str}
+@returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, nextToken: str?, assets: [AssetSummary]?}
+
+@endpoint POST /v1/package/version/dependencies
+@required {domain: str, repository: str, format: str, package: str, version: str}
+@optional {domain-owner: str, namespace: str, next-token: str}
+@returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, nextToken: str?, dependencies: [PackageDependency]?}
+
+@endpoint POST /v1/package/versions
+@required {domain: str, repository: str, format: str, package: str}
+@optional {domain-owner: str, namespace: str, status: str, sortBy: str, max-results: int, next-token: str, originType: str}
+@returns(200) {defaultDisplayVersion: str?, format: str?, namespace: str?, package: str?, versions: [PackageVersionSummary]?, nextToken: str?}
+
+@endgroup
+
+@group packages
+@endpoint POST /v1/packages
+@required {domain: str, repository: str}
+@optional {domain-owner: str, format: str, namespace: str, package-prefix: str, max-results: int, next-token: str, publish: str, upstream: str}
+@returns(200) {packages: [PackageSummary]?, nextToken: str?}
+
+@endgroup
+
+@group repositories
+@endpoint POST /v1/repositories
+@optional {repository-prefix: str, max-results: int, next-token: str}
+@returns(200) {repositories: [RepositorySummary]?, nextToken: str?}
+
+@endgroup
+
+@group domain
+@endpoint POST /v1/domain/repositories
+@required {domain: str}
+@optional {domain-owner: str, administrator-account: str, repository-prefix: str, max-results: int, next-token: str}
+@returns(200) {repositories: [RepositorySummary]?, nextToken: str?}
+
+@endgroup
+
+@group package-groups
+@endpoint POST /v1/package-groups/sub-groups
+@required {domain: str, package-group: str}
+@optional {domain-owner: str, max-results: int, next-token: str}
+@returns(200) {packageGroups: [PackageGroupSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /v1/tags
+@required {resourceArn: str}
+@returns(200) {tags: [Tag]?}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package/version/publish
+@required {domain: str, repository: str, format: str, package: str, version: str, asset: str, x-amz-content-sha256: str, assetContent: bytes}
+@optional {domain-owner: str, namespace: str, unfinished: bool}
+@returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, status: str?, asset: AssetSummary?{name: str, size: int(i64)?, hashes: map<str,str>?}}
+
+@endgroup
+
+@group domain
+@endpoint PUT /v1/domain/permissions/policy
+@required {domain: str, policyDocument: str}
+@optional {domainOwner: str, policyRevision: str}
+@returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package
+@required {domain: str, repository: str, format: str, package: str, restrictions: PackageOriginRestrictions}
+@optional {domain-owner: str, namespace: str}
+@returns(200) {originConfiguration: PackageOriginConfiguration?{restrictions: PackageOriginRestrictions?{publish: str, upstream: str}}}
+
+@endgroup
+
+@group repository
+@endpoint PUT /v1/repository/permissions/policy
+@required {domain: str, repository: str, policyDocument: str}
+@optional {domain-owner: str, policyRevision: str}
+@returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
+
+@endgroup
+
+@group tag
+@endpoint POST /v1/tag
+@required {resourceArn: str, tags: [Tag]}
+
+@endgroup
+
+@group untag
+@endpoint POST /v1/untag
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group package-group
+@endpoint PUT /v1/package-group
+@required {domain: str, packageGroup: str}
+@optional {domain-owner: str, contactInfo: str, description: str}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+
+@endgroup
+
+@group package-group-origin-configuration
+@endpoint PUT /v1/package-group-origin-configuration
+@required {domain: str, package-group: str}
+@optional {domain-owner: str, restrictions: map<str,str>, addAllowedRepositories: [PackageGroupAllowedRepository], removeAllowedRepositories: [PackageGroupAllowedRepository]}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}, allowedRepositoryUpdates: map<str,map<str,[str]>>?}
+
+@endgroup
+
+@group package
+@endpoint POST /v1/package/versions/update_status
+@required {domain: str, repository: str, format: str, package: str, versions: [str], targetStatus: str}
+@optional {domain-owner: str, namespace: str, versionRevisions: map<str,str>, expectedStatus: str}
+@returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
+
+@endgroup
+
+@group repository
+@endpoint PUT /v1/repository
+@required {domain: str, repository: str}
+@optional {domain-owner: str, description: str, upstreams: [UpstreamRepository]}
+@returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
+
+@endgroup
+
+@end

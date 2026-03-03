@@ -1,0 +1,326 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Elastic Kubernetes Service
+@version 2017-11-01
+@auth AWS SigV4
+@endpoints 56
+@hint download_for_search
+@toc clusters(43), eks-anywhere-subscriptions(5), cluster-registrations(2), addons(2), access-policies(1), tags(3)
+
+@group clusters
+@endpoint POST /clusters/{name}/access-entries/{principalArn}/access-policies
+@required {clusterName: str, principalArn: str, policyArn: str, accessScope: AccessScope}
+@returns(200) {clusterName: str?, principalArn: str?, associatedAccessPolicy: AssociatedAccessPolicy?{policyArn: str?, accessScope: AccessScope?{type: str?, namespaces: [str]?}, associatedAt: str(timestamp)?, modifiedAt: str(timestamp)?}}
+
+@endpoint POST /clusters/{name}/encryption-config/associate
+@required {clusterName: str, encryptionConfig: [EncryptionConfig]}
+@optional {clientRequestToken: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint POST /clusters/{name}/identity-provider-configs/associate
+@required {clusterName: str, oidc: OidcIdentityProviderConfigRequest}
+@optional {tags: map<str,str>, clientRequestToken: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}, tags: map<str,str>?}
+
+@endpoint POST /clusters/{name}/access-entries
+@required {clusterName: str, principalArn: str}
+@optional {kubernetesGroups: [str], tags: map<str,str>, clientRequestToken: str, username: str, type: str}
+@returns(200) {accessEntry: AccessEntry?{clusterName: str?, principalArn: str?, kubernetesGroups: [str]?, accessEntryArn: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, tags: map<str,str>?, username: str?, type: str?}}
+
+@endpoint POST /clusters/{name}/addons
+@required {clusterName: str, addonName: str}
+@optional {addonVersion: str, serviceAccountRoleArn: str, resolveConflicts: str, clientRequestToken: str, tags: map<str,str>, configurationValues: str, podIdentityAssociations: [AddonPodIdentityAssociations]}
+@returns(200) {addon: Addon?{addonName: str?, clusterName: str?, status: str?, addonVersion: str?, health: AddonHealth?{issues: [AddonIssue]?}, addonArn: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, serviceAccountRoleArn: str?, tags: map<str,str>?, publisher: str?, owner: str?, marketplaceInformation: MarketplaceInformation?{productId: str?, productUrl: str?}, configurationValues: str?, podIdentityAssociations: [str]?}}
+
+@endpoint POST /clusters
+@required {name: str, roleArn: str, resourcesVpcConfig: VpcConfigRequest}
+@optional {version: str, kubernetesNetworkConfig: KubernetesNetworkConfigRequest, logging: Logging, clientRequestToken: str, tags: map<str,str>, encryptionConfig: [EncryptionConfig], outpostConfig: OutpostConfigRequest, accessConfig: CreateAccessConfigRequest, bootstrapSelfManagedAddons: bool, upgradePolicy: UpgradePolicyRequest}
+@returns(200) {cluster: Cluster?{name: str?, arn: str?, createdAt: str(timestamp)?, version: str?, endpoint: str?, roleArn: str?, resourcesVpcConfig: VpcConfigResponse?{subnetIds: [str]?, securityGroupIds: [str]?, clusterSecurityGroupId: str?, vpcId: str?, endpointPublicAccess: bool?, endpointPrivateAccess: bool?, publicAccessCidrs: [str]?}, kubernetesNetworkConfig: KubernetesNetworkConfigResponse?{serviceIpv4Cidr: str?, serviceIpv6Cidr: str?, ipFamily: str?}, logging: Logging?{clusterLogging: [LogSetup]?}, identity: Identity?{oidc: OIDC?{issuer: str?}}, status: str?, certificateAuthority: Certificate?{data: str?}, clientRequestToken: str?, platformVersion: str?, tags: map<str,str>?, encryptionConfig: [EncryptionConfig]?, connectorConfig: ConnectorConfigResponse?{activationId: str?, activationCode: str?, activationExpiry: str(timestamp)?, provider: str?, roleArn: str?}, id: str?, health: ClusterHealth?{issues: [ClusterIssue]?}, outpostConfig: OutpostConfigResponse?{outpostArns: [str], controlPlaneInstanceType: str, controlPlanePlacement: ControlPlanePlacementResponse?{groupName: str?}}, accessConfig: AccessConfigResponse?{bootstrapClusterCreatorAdminPermissions: bool?, authenticationMode: str?}, upgradePolicy: UpgradePolicyResponse?{supportType: str?}}}
+
+@endgroup
+
+@group eks-anywhere-subscriptions
+@endpoint POST /eks-anywhere-subscriptions
+@required {name: str, term: EksAnywhereSubscriptionTerm}
+@optional {licenseQuantity: int, licenseType: str, autoRenew: bool, clientRequestToken: str, tags: map<str,str>}
+@returns(200) {subscription: EksAnywhereSubscription?{id: str?, arn: str?, createdAt: str(timestamp)?, effectiveDate: str(timestamp)?, expirationDate: str(timestamp)?, licenseQuantity: int?, licenseType: str?, term: EksAnywhereSubscriptionTerm?{duration: int?, unit: str?}, status: str?, autoRenew: bool?, licenseArns: [str]?, tags: map<str,str>?}}
+
+@endgroup
+
+@group clusters
+@endpoint POST /clusters/{name}/fargate-profiles
+@required {clusterName: str, fargateProfileName: str, podExecutionRoleArn: str}
+@optional {subnets: [str], selectors: [FargateProfileSelector], clientRequestToken: str, tags: map<str,str>}
+@returns(200) {fargateProfile: FargateProfile?{fargateProfileName: str?, fargateProfileArn: str?, clusterName: str?, createdAt: str(timestamp)?, podExecutionRoleArn: str?, subnets: [str]?, selectors: [FargateProfileSelector]?, status: str?, tags: map<str,str>?, health: FargateProfileHealth?{issues: [FargateProfileIssue]?}}}
+
+@endpoint POST /clusters/{name}/node-groups
+@required {clusterName: str, nodegroupName: str, subnets: [str], nodeRole: str}
+@optional {scalingConfig: NodegroupScalingConfig, diskSize: int, instanceTypes: [str], amiType: str, remoteAccess: RemoteAccessConfig, labels: map<str,str>, taints: [Taint], tags: map<str,str>, clientRequestToken: str, launchTemplate: LaunchTemplateSpecification, updateConfig: NodegroupUpdateConfig, capacityType: str, version: str, releaseVersion: str}
+@returns(200) {nodegroup: Nodegroup?{nodegroupName: str?, nodegroupArn: str?, clusterName: str?, version: str?, releaseVersion: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, status: str?, capacityType: str?, scalingConfig: NodegroupScalingConfig?{minSize: int?, maxSize: int?, desiredSize: int?}, instanceTypes: [str]?, subnets: [str]?, remoteAccess: RemoteAccessConfig?{ec2SshKey: str?, sourceSecurityGroups: [str]?}, amiType: str?, nodeRole: str?, labels: map<str,str>?, taints: [Taint]?, resources: NodegroupResources?{autoScalingGroups: [AutoScalingGroup]?, remoteAccessSecurityGroup: str?}, diskSize: int?, health: NodegroupHealth?{issues: [Issue]?}, updateConfig: NodegroupUpdateConfig?{maxUnavailable: int?, maxUnavailablePercentage: int?}, launchTemplate: LaunchTemplateSpecification?{name: str?, version: str?, id: str?}, tags: map<str,str>?}}
+
+@endpoint POST /clusters/{name}/pod-identity-associations
+@required {clusterName: str, namespace: str, serviceAccount: str, roleArn: str}
+@optional {clientRequestToken: str, tags: map<str,str>}
+@returns(200) {association: PodIdentityAssociation?{clusterName: str?, namespace: str?, serviceAccount: str?, roleArn: str?, associationArn: str?, associationId: str?, tags: map<str,str>?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, ownerArn: str?}}
+
+@endpoint DELETE /clusters/{name}/access-entries/{principalArn}
+@required {clusterName: str, principalArn: str}
+
+@endpoint DELETE /clusters/{name}/addons/{addonName}
+@required {clusterName: str, addonName: str}
+@optional {preserve: bool}
+@returns(200) {addon: Addon?{addonName: str?, clusterName: str?, status: str?, addonVersion: str?, health: AddonHealth?{issues: [AddonIssue]?}, addonArn: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, serviceAccountRoleArn: str?, tags: map<str,str>?, publisher: str?, owner: str?, marketplaceInformation: MarketplaceInformation?{productId: str?, productUrl: str?}, configurationValues: str?, podIdentityAssociations: [str]?}}
+
+@endpoint DELETE /clusters/{name}
+@required {name: str}
+@returns(200) {cluster: Cluster?{name: str?, arn: str?, createdAt: str(timestamp)?, version: str?, endpoint: str?, roleArn: str?, resourcesVpcConfig: VpcConfigResponse?{subnetIds: [str]?, securityGroupIds: [str]?, clusterSecurityGroupId: str?, vpcId: str?, endpointPublicAccess: bool?, endpointPrivateAccess: bool?, publicAccessCidrs: [str]?}, kubernetesNetworkConfig: KubernetesNetworkConfigResponse?{serviceIpv4Cidr: str?, serviceIpv6Cidr: str?, ipFamily: str?}, logging: Logging?{clusterLogging: [LogSetup]?}, identity: Identity?{oidc: OIDC?{issuer: str?}}, status: str?, certificateAuthority: Certificate?{data: str?}, clientRequestToken: str?, platformVersion: str?, tags: map<str,str>?, encryptionConfig: [EncryptionConfig]?, connectorConfig: ConnectorConfigResponse?{activationId: str?, activationCode: str?, activationExpiry: str(timestamp)?, provider: str?, roleArn: str?}, id: str?, health: ClusterHealth?{issues: [ClusterIssue]?}, outpostConfig: OutpostConfigResponse?{outpostArns: [str], controlPlaneInstanceType: str, controlPlanePlacement: ControlPlanePlacementResponse?{groupName: str?}}, accessConfig: AccessConfigResponse?{bootstrapClusterCreatorAdminPermissions: bool?, authenticationMode: str?}, upgradePolicy: UpgradePolicyResponse?{supportType: str?}}}
+
+@endgroup
+
+@group eks-anywhere-subscriptions
+@endpoint DELETE /eks-anywhere-subscriptions/{id}
+@required {id: str}
+@returns(200) {subscription: EksAnywhereSubscription?{id: str?, arn: str?, createdAt: str(timestamp)?, effectiveDate: str(timestamp)?, expirationDate: str(timestamp)?, licenseQuantity: int?, licenseType: str?, term: EksAnywhereSubscriptionTerm?{duration: int?, unit: str?}, status: str?, autoRenew: bool?, licenseArns: [str]?, tags: map<str,str>?}}
+
+@endgroup
+
+@group clusters
+@endpoint DELETE /clusters/{name}/fargate-profiles/{fargateProfileName}
+@required {clusterName: str, fargateProfileName: str}
+@returns(200) {fargateProfile: FargateProfile?{fargateProfileName: str?, fargateProfileArn: str?, clusterName: str?, createdAt: str(timestamp)?, podExecutionRoleArn: str?, subnets: [str]?, selectors: [FargateProfileSelector]?, status: str?, tags: map<str,str>?, health: FargateProfileHealth?{issues: [FargateProfileIssue]?}}}
+
+@endpoint DELETE /clusters/{name}/node-groups/{nodegroupName}
+@required {clusterName: str, nodegroupName: str}
+@returns(200) {nodegroup: Nodegroup?{nodegroupName: str?, nodegroupArn: str?, clusterName: str?, version: str?, releaseVersion: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, status: str?, capacityType: str?, scalingConfig: NodegroupScalingConfig?{minSize: int?, maxSize: int?, desiredSize: int?}, instanceTypes: [str]?, subnets: [str]?, remoteAccess: RemoteAccessConfig?{ec2SshKey: str?, sourceSecurityGroups: [str]?}, amiType: str?, nodeRole: str?, labels: map<str,str>?, taints: [Taint]?, resources: NodegroupResources?{autoScalingGroups: [AutoScalingGroup]?, remoteAccessSecurityGroup: str?}, diskSize: int?, health: NodegroupHealth?{issues: [Issue]?}, updateConfig: NodegroupUpdateConfig?{maxUnavailable: int?, maxUnavailablePercentage: int?}, launchTemplate: LaunchTemplateSpecification?{name: str?, version: str?, id: str?}, tags: map<str,str>?}}
+
+@endpoint DELETE /clusters/{name}/pod-identity-associations/{associationId}
+@required {clusterName: str, associationId: str}
+@returns(200) {association: PodIdentityAssociation?{clusterName: str?, namespace: str?, serviceAccount: str?, roleArn: str?, associationArn: str?, associationId: str?, tags: map<str,str>?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, ownerArn: str?}}
+
+@endgroup
+
+@group cluster-registrations
+@endpoint DELETE /cluster-registrations/{name}
+@required {name: str}
+@returns(200) {cluster: Cluster?{name: str?, arn: str?, createdAt: str(timestamp)?, version: str?, endpoint: str?, roleArn: str?, resourcesVpcConfig: VpcConfigResponse?{subnetIds: [str]?, securityGroupIds: [str]?, clusterSecurityGroupId: str?, vpcId: str?, endpointPublicAccess: bool?, endpointPrivateAccess: bool?, publicAccessCidrs: [str]?}, kubernetesNetworkConfig: KubernetesNetworkConfigResponse?{serviceIpv4Cidr: str?, serviceIpv6Cidr: str?, ipFamily: str?}, logging: Logging?{clusterLogging: [LogSetup]?}, identity: Identity?{oidc: OIDC?{issuer: str?}}, status: str?, certificateAuthority: Certificate?{data: str?}, clientRequestToken: str?, platformVersion: str?, tags: map<str,str>?, encryptionConfig: [EncryptionConfig]?, connectorConfig: ConnectorConfigResponse?{activationId: str?, activationCode: str?, activationExpiry: str(timestamp)?, provider: str?, roleArn: str?}, id: str?, health: ClusterHealth?{issues: [ClusterIssue]?}, outpostConfig: OutpostConfigResponse?{outpostArns: [str], controlPlaneInstanceType: str, controlPlanePlacement: ControlPlanePlacementResponse?{groupName: str?}}, accessConfig: AccessConfigResponse?{bootstrapClusterCreatorAdminPermissions: bool?, authenticationMode: str?}, upgradePolicy: UpgradePolicyResponse?{supportType: str?}}}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/{name}/access-entries/{principalArn}
+@required {clusterName: str, principalArn: str}
+@returns(200) {accessEntry: AccessEntry?{clusterName: str?, principalArn: str?, kubernetesGroups: [str]?, accessEntryArn: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, tags: map<str,str>?, username: str?, type: str?}}
+
+@endpoint GET /clusters/{name}/addons/{addonName}
+@required {clusterName: str, addonName: str}
+@returns(200) {addon: Addon?{addonName: str?, clusterName: str?, status: str?, addonVersion: str?, health: AddonHealth?{issues: [AddonIssue]?}, addonArn: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, serviceAccountRoleArn: str?, tags: map<str,str>?, publisher: str?, owner: str?, marketplaceInformation: MarketplaceInformation?{productId: str?, productUrl: str?}, configurationValues: str?, podIdentityAssociations: [str]?}}
+
+@endgroup
+
+@group addons
+@endpoint GET /addons/configuration-schemas
+@required {addonName: str, addonVersion: str}
+@returns(200) {addonName: str?, addonVersion: str?, configurationSchema: str?, podIdentityConfiguration: [AddonPodIdentityConfiguration]?}
+
+@endpoint GET /addons/supported-versions
+@optional {kubernetesVersion: str, maxResults: int, nextToken: str, addonName: str, types: [str], publishers: [str], owners: [str]}
+@returns(200) {addons: [AddonInfo]?, nextToken: str?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/{name}
+@required {name: str}
+@returns(200) {cluster: Cluster?{name: str?, arn: str?, createdAt: str(timestamp)?, version: str?, endpoint: str?, roleArn: str?, resourcesVpcConfig: VpcConfigResponse?{subnetIds: [str]?, securityGroupIds: [str]?, clusterSecurityGroupId: str?, vpcId: str?, endpointPublicAccess: bool?, endpointPrivateAccess: bool?, publicAccessCidrs: [str]?}, kubernetesNetworkConfig: KubernetesNetworkConfigResponse?{serviceIpv4Cidr: str?, serviceIpv6Cidr: str?, ipFamily: str?}, logging: Logging?{clusterLogging: [LogSetup]?}, identity: Identity?{oidc: OIDC?{issuer: str?}}, status: str?, certificateAuthority: Certificate?{data: str?}, clientRequestToken: str?, platformVersion: str?, tags: map<str,str>?, encryptionConfig: [EncryptionConfig]?, connectorConfig: ConnectorConfigResponse?{activationId: str?, activationCode: str?, activationExpiry: str(timestamp)?, provider: str?, roleArn: str?}, id: str?, health: ClusterHealth?{issues: [ClusterIssue]?}, outpostConfig: OutpostConfigResponse?{outpostArns: [str], controlPlaneInstanceType: str, controlPlanePlacement: ControlPlanePlacementResponse?{groupName: str?}}, accessConfig: AccessConfigResponse?{bootstrapClusterCreatorAdminPermissions: bool?, authenticationMode: str?}, upgradePolicy: UpgradePolicyResponse?{supportType: str?}}}
+
+@endgroup
+
+@group eks-anywhere-subscriptions
+@endpoint GET /eks-anywhere-subscriptions/{id}
+@required {id: str}
+@returns(200) {subscription: EksAnywhereSubscription?{id: str?, arn: str?, createdAt: str(timestamp)?, effectiveDate: str(timestamp)?, expirationDate: str(timestamp)?, licenseQuantity: int?, licenseType: str?, term: EksAnywhereSubscriptionTerm?{duration: int?, unit: str?}, status: str?, autoRenew: bool?, licenseArns: [str]?, tags: map<str,str>?}}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/{name}/fargate-profiles/{fargateProfileName}
+@required {clusterName: str, fargateProfileName: str}
+@returns(200) {fargateProfile: FargateProfile?{fargateProfileName: str?, fargateProfileArn: str?, clusterName: str?, createdAt: str(timestamp)?, podExecutionRoleArn: str?, subnets: [str]?, selectors: [FargateProfileSelector]?, status: str?, tags: map<str,str>?, health: FargateProfileHealth?{issues: [FargateProfileIssue]?}}}
+
+@endpoint POST /clusters/{name}/identity-provider-configs/describe
+@required {clusterName: str, identityProviderConfig: IdentityProviderConfig}
+@returns(200) {identityProviderConfig: IdentityProviderConfigResponse?{oidc: OidcIdentityProviderConfig?{identityProviderConfigName: str?, identityProviderConfigArn: str?, clusterName: str?, issuerUrl: str?, clientId: str?, usernameClaim: str?, usernamePrefix: str?, groupsClaim: str?, groupsPrefix: str?, requiredClaims: map<str,str>?, tags: map<str,str>?, status: str?}}}
+
+@endpoint GET /clusters/{name}/insights/{id}
+@required {clusterName: str, id: str}
+@returns(200) {insight: Insight?{id: str?, name: str?, category: str?, kubernetesVersion: str?, lastRefreshTime: str(timestamp)?, lastTransitionTime: str(timestamp)?, description: str?, insightStatus: InsightStatus?{status: str?, reason: str?}, recommendation: str?, additionalInfo: map<str,str>?, resources: [InsightResourceDetail]?, categorySpecificSummary: InsightCategorySpecificSummary?{deprecationDetails: [DeprecationDetail]?}}}
+
+@endpoint GET /clusters/{name}/node-groups/{nodegroupName}
+@required {clusterName: str, nodegroupName: str}
+@returns(200) {nodegroup: Nodegroup?{nodegroupName: str?, nodegroupArn: str?, clusterName: str?, version: str?, releaseVersion: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, status: str?, capacityType: str?, scalingConfig: NodegroupScalingConfig?{minSize: int?, maxSize: int?, desiredSize: int?}, instanceTypes: [str]?, subnets: [str]?, remoteAccess: RemoteAccessConfig?{ec2SshKey: str?, sourceSecurityGroups: [str]?}, amiType: str?, nodeRole: str?, labels: map<str,str>?, taints: [Taint]?, resources: NodegroupResources?{autoScalingGroups: [AutoScalingGroup]?, remoteAccessSecurityGroup: str?}, diskSize: int?, health: NodegroupHealth?{issues: [Issue]?}, updateConfig: NodegroupUpdateConfig?{maxUnavailable: int?, maxUnavailablePercentage: int?}, launchTemplate: LaunchTemplateSpecification?{name: str?, version: str?, id: str?}, tags: map<str,str>?}}
+
+@endpoint GET /clusters/{name}/pod-identity-associations/{associationId}
+@required {clusterName: str, associationId: str}
+@returns(200) {association: PodIdentityAssociation?{clusterName: str?, namespace: str?, serviceAccount: str?, roleArn: str?, associationArn: str?, associationId: str?, tags: map<str,str>?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, ownerArn: str?}}
+
+@endpoint GET /clusters/{name}/updates/{updateId}
+@required {name: str, updateId: str}
+@optional {nodegroupName: str, addonName: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint DELETE /clusters/{name}/access-entries/{principalArn}/access-policies/{policyArn}
+@required {clusterName: str, principalArn: str, policyArn: str}
+
+@endpoint POST /clusters/{name}/identity-provider-configs/disassociate
+@required {clusterName: str, identityProviderConfig: IdentityProviderConfig}
+@optional {clientRequestToken: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint GET /clusters/{name}/access-entries
+@required {clusterName: str}
+@optional {associatedPolicyArn: str, maxResults: int, nextToken: str}
+@returns(200) {accessEntries: [str]?, nextToken: str?}
+
+@endgroup
+
+@group access-policies
+@endpoint GET /access-policies
+@optional {maxResults: int, nextToken: str}
+@returns(200) {accessPolicies: [AccessPolicy]?, nextToken: str?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/{name}/addons
+@required {clusterName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {addons: [str]?, nextToken: str?}
+
+@endpoint GET /clusters/{name}/access-entries/{principalArn}/access-policies
+@required {clusterName: str, principalArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {clusterName: str?, principalArn: str?, nextToken: str?, associatedAccessPolicies: [AssociatedAccessPolicy]?}
+
+@endpoint GET /clusters
+@optional {maxResults: int, nextToken: str, include: [str]}
+@returns(200) {clusters: [str]?, nextToken: str?}
+
+@endgroup
+
+@group eks-anywhere-subscriptions
+@endpoint GET /eks-anywhere-subscriptions
+@optional {maxResults: int, nextToken: str, includeStatus: [str]}
+@returns(200) {subscriptions: [EksAnywhereSubscription]?, nextToken: str?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/{name}/fargate-profiles
+@required {clusterName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {fargateProfileNames: [str]?, nextToken: str?}
+
+@endpoint GET /clusters/{name}/identity-provider-configs
+@required {clusterName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {identityProviderConfigs: [IdentityProviderConfig]?, nextToken: str?}
+
+@endpoint POST /clusters/{name}/insights
+@required {clusterName: str}
+@optional {filter: InsightsFilter, maxResults: int, nextToken: str}
+@returns(200) {insights: [InsightSummary]?, nextToken: str?}
+
+@endpoint GET /clusters/{name}/node-groups
+@required {clusterName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {nodegroups: [str]?, nextToken: str?}
+
+@endpoint GET /clusters/{name}/pod-identity-associations
+@required {clusterName: str}
+@optional {namespace: str, serviceAccount: str, maxResults: int, nextToken: str}
+@returns(200) {associations: [PodIdentityAssociationSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/{name}/updates
+@required {name: str}
+@optional {nodegroupName: str, addonName: str, nextToken: str, maxResults: int}
+@returns(200) {updateIds: [str]?, nextToken: str?}
+
+@endgroup
+
+@group cluster-registrations
+@endpoint POST /cluster-registrations
+@required {name: str, connectorConfig: ConnectorConfigRequest}
+@optional {clientRequestToken: str, tags: map<str,str>}
+@returns(200) {cluster: Cluster?{name: str?, arn: str?, createdAt: str(timestamp)?, version: str?, endpoint: str?, roleArn: str?, resourcesVpcConfig: VpcConfigResponse?{subnetIds: [str]?, securityGroupIds: [str]?, clusterSecurityGroupId: str?, vpcId: str?, endpointPublicAccess: bool?, endpointPrivateAccess: bool?, publicAccessCidrs: [str]?}, kubernetesNetworkConfig: KubernetesNetworkConfigResponse?{serviceIpv4Cidr: str?, serviceIpv6Cidr: str?, ipFamily: str?}, logging: Logging?{clusterLogging: [LogSetup]?}, identity: Identity?{oidc: OIDC?{issuer: str?}}, status: str?, certificateAuthority: Certificate?{data: str?}, clientRequestToken: str?, platformVersion: str?, tags: map<str,str>?, encryptionConfig: [EncryptionConfig]?, connectorConfig: ConnectorConfigResponse?{activationId: str?, activationCode: str?, activationExpiry: str(timestamp)?, provider: str?, roleArn: str?}, id: str?, health: ClusterHealth?{issues: [ClusterIssue]?}, outpostConfig: OutpostConfigResponse?{outpostArns: [str], controlPlaneInstanceType: str, controlPlanePlacement: ControlPlanePlacementResponse?{groupName: str?}}, accessConfig: AccessConfigResponse?{bootstrapClusterCreatorAdminPermissions: bool?, authenticationMode: str?}, upgradePolicy: UpgradePolicyResponse?{supportType: str?}}}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group clusters
+@endpoint POST /clusters/{name}/access-entries/{principalArn}
+@required {clusterName: str, principalArn: str}
+@optional {kubernetesGroups: [str], clientRequestToken: str, username: str}
+@returns(200) {accessEntry: AccessEntry?{clusterName: str?, principalArn: str?, kubernetesGroups: [str]?, accessEntryArn: str?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, tags: map<str,str>?, username: str?, type: str?}}
+
+@endpoint POST /clusters/{name}/addons/{addonName}/update
+@required {clusterName: str, addonName: str}
+@optional {addonVersion: str, serviceAccountRoleArn: str, resolveConflicts: str, clientRequestToken: str, configurationValues: str, podIdentityAssociations: [AddonPodIdentityAssociations]}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint POST /clusters/{name}/update-config
+@required {name: str}
+@optional {resourcesVpcConfig: VpcConfigRequest, logging: Logging, clientRequestToken: str, accessConfig: UpdateAccessConfigRequest, upgradePolicy: UpgradePolicyRequest}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint POST /clusters/{name}/updates
+@required {name: str, version: str}
+@optional {clientRequestToken: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endgroup
+
+@group eks-anywhere-subscriptions
+@endpoint POST /eks-anywhere-subscriptions/{id}
+@required {id: str, autoRenew: bool}
+@optional {clientRequestToken: str}
+@returns(200) {subscription: EksAnywhereSubscription?{id: str?, arn: str?, createdAt: str(timestamp)?, effectiveDate: str(timestamp)?, expirationDate: str(timestamp)?, licenseQuantity: int?, licenseType: str?, term: EksAnywhereSubscriptionTerm?{duration: int?, unit: str?}, status: str?, autoRenew: bool?, licenseArns: [str]?, tags: map<str,str>?}}
+
+@endgroup
+
+@group clusters
+@endpoint POST /clusters/{name}/node-groups/{nodegroupName}/update-config
+@required {clusterName: str, nodegroupName: str}
+@optional {labels: UpdateLabelsPayload, taints: UpdateTaintsPayload, scalingConfig: NodegroupScalingConfig, updateConfig: NodegroupUpdateConfig, clientRequestToken: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint POST /clusters/{name}/node-groups/{nodegroupName}/update-version
+@required {clusterName: str, nodegroupName: str}
+@optional {version: str, releaseVersion: str, launchTemplate: LaunchTemplateSpecification, force: bool, clientRequestToken: str}
+@returns(200) {update: Update?{id: str?, status: str?, type: str?, params: [UpdateParam]?, createdAt: str(timestamp)?, errors: [ErrorDetail]?}}
+
+@endpoint POST /clusters/{name}/pod-identity-associations/{associationId}
+@required {clusterName: str, associationId: str}
+@optional {roleArn: str, clientRequestToken: str}
+@returns(200) {association: PodIdentityAssociation?{clusterName: str?, namespace: str?, serviceAccount: str?, roleArn: str?, associationArn: str?, associationId: str?, tags: map<str,str>?, createdAt: str(timestamp)?, modifiedAt: str(timestamp)?, ownerArn: str?}}
+
+@endgroup
+
+@end

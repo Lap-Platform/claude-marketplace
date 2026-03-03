@@ -1,0 +1,511 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Together APIs
+@base https://api.together.xyz/v1
+@version 2.0.0
+@auth Bearer bearer
+@endpoints 91
+@hint download_for_search
+@toc deployments(17), voices(1), videos(2), chat(1), completions(1), embeddings(1), models(2), jobs(2), images(1), files(5), fine-tunes(8), finetune(1), rerank(1), audio(4), compute(11), clusters(1), endpoints(5), hardware(1), tci(2), batches(4), evaluation(5), realtime(1), queue(4), rl(10)
+
+@group deployments
+@endpoint GET /deployments
+@returns(200) {data: [map], object: any}
+@errors {500}
+
+@endpoint POST /deployments
+@required {gpu_type: str(h100-80gb/a100-80gb), image: str, name: str}
+@optional {args: [str], autoscaling: map, command: [str], cpu: num, description: str, environment_variables: [map{name!: str, value: str, value_from_secret: str}], gpu_count: int, health_check_path: str, max_replicas: int, memory: num, min_replicas: int, port: int, storage: int, termination_grace_period_seconds: int, volumes: [map{mount_path!: str, name!: str, version: int}]}
+@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]}
+@errors {400, 500}
+
+@endpoint DELETE /deployments/{id}
+@required {id: str}
+@returns(200)
+@errors {404, 500}
+
+@endpoint GET /deployments/{id}
+@required {id: str}
+@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]}
+@errors {404, 500}
+
+@endpoint PATCH /deployments/{id}
+@required {id: str}
+@optional {args: [str], autoscaling: map, command: [str], cpu: num, description: str, environment_variables: [map{name!: str, value: str, value_from_secret: str}], gpu_count: int, gpu_type: str(h100-80gb/ a100-80gb), health_check_path: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, port: int, storage: int, termination_grace_period_seconds: int, volumes: [map{mount_path!: str, name!: str, version: int}]}
+@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /deployments/{id}/logs
+@required {id: str}
+@optional {replica_id: str}
+@returns(200) {lines: [str]}
+@errors {404, 500}
+
+@endpoint GET /deployments/secrets
+@returns(200) {data: [map], object: any}
+@errors {500}
+
+@endpoint POST /deployments/secrets
+@required {name: str, value: str}
+@optional {description: str, project_id: str}
+@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str}
+@errors {400, 500}
+
+@endpoint DELETE /deployments/secrets/{id}
+@required {id: str}
+@returns(200)
+@errors {404, 500}
+
+@endpoint GET /deployments/secrets/{id}
+@required {id: str}
+@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str}
+@errors {404, 500}
+
+@endpoint PATCH /deployments/secrets/{id}
+@required {id: str}
+@optional {description: str, name: str, project_id: str, value: str}
+@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str}
+@errors {400, 404, 500}
+
+@endpoint GET /deployments/storage/{filename}
+@required {filename: str}
+@errors {307, 400, 404, 500}
+
+@endpoint GET /deployments/storage/volumes
+@returns(200) {data: [map], object: any}
+@errors {500}
+
+@endpoint POST /deployments/storage/volumes
+@required {content: any, name: str, type: any}
+@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map}
+@errors {400, 500}
+
+@endpoint DELETE /deployments/storage/volumes/{id}
+@required {id: str}
+@returns(200)
+@errors {404, 500}
+
+@endpoint GET /deployments/storage/volumes/{id}
+@required {id: str}
+@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map}
+@errors {404, 500}
+
+@endpoint PATCH /deployments/storage/volumes/{id}
+@required {id: str}
+@optional {content: any, name: str, type: any}
+@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group voices
+@endpoint GET /voices
+@returns(200) {data: [map]}
+
+@endgroup
+
+@group videos
+@endpoint GET /videos/{id}
+@required {id: str}
+@returns(200) {id: str, object: any, model: str, status: str, created_at: num, completed_at: num, size: str, seconds: str, error: map{code: str, message: str}, outputs: map{cost: int, video_url: str}}
+@errors {400, 404}
+
+@endpoint POST /videos
+@required {model: str}
+@optional {prompt: str, height: int, width: int, seconds: str, fps: int, steps: int, seed: int, guidance_scale: int, output_format: str(MP4/WEBM), output_quality: int, negative_prompt: str, frame_images: [map{input_image!: str, frame: any}], reference_images: [str]}
+@returns(200) {id: str, object: any, model: str, status: str, created_at: num, completed_at: num, size: str, seconds: str, error: map{code: str, message: str}, outputs: map{cost: int, video_url: str}}
+
+@endgroup
+
+@group chat
+@endpoint POST /chat/completions
+@required {messages: [any], model: any}
+@optional {max_tokens: int, stop: [str], temperature: num(float), top_p: num(float), top_k: int(int32), context_length_exceeded_behavior: str(truncate/error)=error, repetition_penalty: num, stream: bool, logprobs: int, echo: bool, n: int, min_p: num(float), presence_penalty: num(float), frequency_penalty: num(float), logit_bias: map, seed: int, function_call: any, response_format: any, tools: [map{type: str, function: map{description: str, name: str, parameters: map}}], tool_choice: any, compliance: any, chat_template_kwargs: map, safety_model: str, reasoning_effort: str(low/medium/high), reasoning: map{enabled: bool}}
+@returns(200) {id: str, choices: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}, created: int, model: str, object: any, warnings: [map]}
+@errors {400, 401, 404, 429, 503, 504}
+
+@endgroup
+
+@group completions
+@endpoint POST /completions
+@required {prompt: str, model: str}
+@optional {max_tokens: int, stop: [str], temperature: num(float), top_p: num(float), top_k: int(int32), repetition_penalty: num(float), stream: bool, logprobs: int, echo: bool, n: int, safety_model: str, min_p: num(float), presence_penalty: num(float), frequency_penalty: num(float), logit_bias: map, seed: int}
+@returns(200) {id: str, choices: [map], prompt: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}, created: int, model: str, object: any}
+@errors {400, 401, 404, 429, 503, 504}
+
+@endgroup
+
+@group embeddings
+@endpoint POST /embeddings
+@required {model: str, input: any}
+@returns(200) {object: any, model: str, data: [map]}
+@errors {400, 401, 404, 429, 503, 504}
+
+@endgroup
+
+@group models
+@endpoint GET /models
+@optional {dedicated: bool}
+@returns(200)
+@errors {400, 401, 404, 429, 504}
+
+@endpoint POST /models
+@required {model_name: str, model_source: str}
+@optional {model_type: str(model/adapter)=model, hf_token: str, description: str, base_model: str, lora_model: str}
+@returns(200) {data: map{job_id: str, model_name: str, model_id: str, model_source: str}, message: str}
+
+@endgroup
+
+@group jobs
+@endpoint GET /jobs/{jobId}
+@required {jobId: str}
+@returns(200) {type: str, job_id: str, status: str, status_updates: [map], args: map{description: str, modelName: str, modelSource: str}, created_at: str(date-time), updated_at: str(date-time)}
+
+@endpoint GET /jobs
+@returns(200) {data: [map]}
+
+@endgroup
+
+@group images
+@endpoint POST /images/generations
+@required {prompt: str, model: str}
+@optional {steps: int=20, image_url: str, seed: int, n: int=1, height: int=1024, width: int=1024, negative_prompt: str, response_format: str(base64/url), guidance_scale: num=3.5, output_format: str(jpeg/png)=jpeg, image_loras: [map{path!: str, scale!: num}], reference_images: [str], disable_safety_checker: bool}
+@returns(200) {id: str, model: str, object: any, data: [any]}
+
+@endgroup
+
+@group files
+@endpoint GET /files
+@returns(200) {data: [map]}
+
+@endpoint GET /files/{id}
+@required {id: str}
+@returns(200) {id: str, object: any, created_at: int, filename: str, bytes: int, purpose: str, Processed: bool, FileType: str}
+
+@endpoint DELETE /files/{id}
+@required {id: str}
+@returns(200) {id: str, deleted: bool}
+
+@endpoint GET /files/{id}/content
+@required {id: str}
+@returns(200)
+@errors {500}
+
+@endpoint POST /files/upload
+@returns(200) {id: str, object: any, created_at: int, filename: str, bytes: int, purpose: str, Processed: bool, FileType: str}
+@errors {500, 400, 401}
+
+@endgroup
+
+@group fine-tunes
+@endpoint POST /fine-tunes
+@required {training_file: str, model: str}
+@optional {validation_file: str, n_epochs: int=1, n_checkpoints: int=1, n_evals: int=0, batch_size: any=max, learning_rate: num(float)=1e-05, lr_scheduler: map{lr_scheduler_type!: str, lr_scheduler_args: any}, warmup_ratio: num(float)=0.0, max_grad_norm: num(float)=1.0, weight_decay: num(float)=0.0, suffix: str, wandb_api_key: str, wandb_base_url: str, wandb_project_name: str, wandb_name: str, train_on_inputs: bool=auto, training_method: map, training_type: map, multimodal_params: map{train_vision: bool}, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, hf_api_token: str, hf_output_repo_name: str}
+@returns(200) {id: str, status: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), user_id: str, owner_address: str, total_price: int, token_count: int, events: [map], training_file: str, validation_file: str, model: str, model_output_name: str, suffix: str, n_epochs: int, n_evals: int, n_checkpoints: int, batch_size: int, training_type: any, training_method: any, learning_rate: num(float), lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num(float), max_grad_norm: num(float), weight_decay: num(float), wandb_project_name: str, wandb_name: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}}
+
+@endpoint GET /fine-tunes
+@returns(200) {data: [map]}
+
+@endpoint POST /fine-tunes/estimate-price
+@required {training_file: str}
+@optional {validation_file: str, model: str, n_epochs: int=1, n_evals: int=0, training_method: map, training_type: map, from_checkpoint: str}
+@returns(200) {estimated_total_price: num, allowed_to_proceed: bool, user_limit: num, estimated_train_token_count: num, estimated_eval_token_count: num}
+@errors {500}
+
+@endpoint GET /fine-tunes/{id}
+@required {id: str}
+@returns(200) {id: str(uuid), training_file: str, validation_file: str, model: str, model_output_name: str, model_output_path: str, trainingfile_numlines: int, trainingfile_size: int, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), n_epochs: int, n_checkpoints: int, n_evals: int, batch_size: any, learning_rate: num, lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num, max_grad_norm: num(float), weight_decay: num(float), eval_steps: int, train_on_inputs: any, training_method: map, training_type: map, multimodal_params: map{train_vision: bool}, status: str, job_id: str, events: [map], token_count: int, param_count: int, total_price: int, epochs_completed: int, queue_depth: int, wandb_project_name: str, wandb_url: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}}
+
+@endpoint DELETE /fine-tunes/{id}
+@required {id: str}
+@optional {force: bool=False}
+@returns(200) {message: str}
+@errors {404, 500}
+
+@endpoint GET /fine-tunes/{id}/events
+@required {id: str}
+@returns(200) {data: [map]}
+
+@endpoint GET /fine-tunes/{id}/checkpoints
+@required {id: str}
+@returns(200) {data: [map]}
+
+@endgroup
+
+@group finetune
+@endpoint GET /finetune/download
+@required {ft_id: str}
+@optional {checkpoint_step: int, checkpoint: str(merged/adapter/model_output_path)}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group fine-tunes
+@endpoint POST /fine-tunes/{id}/cancel
+@required {id: str}
+@returns(200) {id: str, status: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), user_id: str, owner_address: str, total_price: int, token_count: int, events: [map], training_file: str, validation_file: str, model: str, model_output_name: str, suffix: str, n_epochs: int, n_evals: int, n_checkpoints: int, batch_size: int, training_type: any, training_method: any, learning_rate: num(float), lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num(float), max_grad_norm: num(float), weight_decay: num(float), wandb_project_name: str, wandb_name: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}}
+@errors {400, 404}
+
+@endgroup
+
+@group rerank
+@endpoint POST /rerank
+@required {model: str, query: str, documents: any}
+@optional {top_n: int, return_documents: bool, rank_fields: [str]}
+@returns(200) {object: any, id: str, model: str, results: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}}
+@errors {400, 401, 404, 429, 503, 504}
+
+@endgroup
+
+@group audio
+@endpoint POST /audio/speech
+@required {model: any, input: str, voice: str}
+@optional {response_format: str(mp3/wav/raw)=wav, language: str(en/de/fr/es/hi/it/ja/ko/nl/pl/pt/ru/sv/tr/zh)=en, response_encoding: str(pcm_f32le/pcm_s16le/pcm_mulaw/pcm_alaw)=pcm_f32le, sample_rate: int=44100, stream: bool=False}
+@returns(200)
+@errors {400, 429}
+
+@endpoint GET /audio/speech/websocket
+@optional {model: str(hexgrad/Kokoro-82M/cartesia/sonic-english)=hexgrad/Kokoro-82M, voice: str, max_partial_length: int=250}
+@errors {101}
+
+@endpoint POST /audio/transcriptions
+@returns(200)
+@errors {400, 401, 429}
+
+@endpoint POST /audio/translations
+@returns(200)
+@errors {400, 401, 429}
+
+@endgroup
+
+@group compute
+@endpoint GET /compute/clusters
+@returns(200) {clusters: [map]}
+
+@endpoint POST /compute/clusters
+@required {region: str, gpu_type: str(H100_SXM/H200_SXM/RTX_6000_PCI/L40_PCIE/B200_SXM/H100_SXM_INF), num_gpus: int, cluster_name: str, driver_version: str(CUDA_12_5_555/CUDA_12_6_560/CUDA_12_6_565/CUDA_12_8_570), billing_type: str(RESERVED/ON_DEMAND)}
+@optional {cluster_type: str(KUBERNETES/SLURM), duration_days: int, shared_volume: map{volume_name!: str, size_tib!: int, region!: str}, volume_id: str}
+@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int}
+
+@endpoint GET /compute/clusters/{cluster_id}
+@required {cluster_id: str}
+@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int}
+
+@endpoint PUT /compute/clusters/{cluster_id}
+@required {cluster_id: str}
+@optional {cluster_type: any(KUBERNETES/SLURM), num_gpus: int}
+@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int}
+
+@endpoint DELETE /compute/clusters/{cluster_id}
+@required {cluster_id: str}
+@returns(200) {cluster_id: str}
+
+@endpoint GET /compute/regions
+@returns(200) {regions: [map]}
+
+@endpoint GET /compute/clusters/storage/volumes
+@returns(200) {volumes: [map]}
+
+@endpoint PUT /compute/clusters/storage/volumes
+@optional {volume_id: str, size_tib: int}
+@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str}
+
+@endpoint POST /compute/clusters/storage/volumes
+@required {volume_name: str, size_tib: int, region: str}
+@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str}
+
+@endpoint GET /compute/clusters/storage/volumes/{volume_id}
+@required {volume_id: str}
+@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str}
+
+@endpoint DELETE /compute/clusters/storage/volumes/{volume_id}
+@required {volume_id: str}
+@returns(200) {success: bool}
+
+@endgroup
+
+@group clusters
+@endpoint GET /clusters/availability-zones
+@returns(200) {avzones: [str]}
+
+@endgroup
+
+@group endpoints
+@endpoint GET /endpoints
+@optional {type: str(dedicated/serverless), usage_type: str(on-demand/reserved), mine: bool}
+@returns(200) {object: any, data: [map]}
+@errors {403, 500}
+
+@endpoint POST /endpoints
+@required {model: str, hardware: str, autoscaling: map{min_replicas!: int(int32), max_replicas!: int(int32)}}
+@optional {display_name: str, disable_prompt_cache: bool=False, disable_speculative_decoding: bool=False, state: str(STARTED/STOPPED)=STARTED, inactive_timeout: int, availability_zone: str}
+@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)}
+@errors {403, 500}
+
+@endpoint GET /endpoints/{endpointId}
+@required {endpointId: str}
+@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)}
+@errors {403, 404, 500}
+
+@endpoint PATCH /endpoints/{endpointId}
+@required {endpointId: str}
+@optional {display_name: str, state: str(STARTED/STOPPED), autoscaling: map{min_replicas!: int(int32), max_replicas!: int(int32)}, inactive_timeout: int}
+@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)}
+@errors {403, 404, 500}
+
+@endpoint DELETE /endpoints/{endpointId}
+@required {endpointId: str}
+@returns(204)
+@errors {403, 404, 500}
+
+@endgroup
+
+@group hardware
+@endpoint GET /hardware
+@optional {model: str}
+@returns(200) {object: any, data: [map]}
+@errors {403, 500}
+
+@endgroup
+
+@group tci
+@endpoint POST /tci/execute
+@required {code: str, language: any=python}
+@optional {files: [map{content!: str, encoding!: str, name!: str}], session_id: str}
+@returns(200)
+
+@endpoint GET /tci/sessions
+@returns(200)
+
+@endgroup
+
+@group batches
+@endpoint GET /batches
+@returns(200)
+@errors {401, 500}
+
+@endpoint POST /batches
+@required {endpoint: str, input_file_id: str}
+@optional {completion_window: str, priority: int, model_id: str}
+@returns(201) {job: map{id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}, warning: str}
+@errors {400, 401, 429, 500}
+
+@endpoint GET /batches/{id}
+@required {id: str}
+@returns(200) {id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint POST /batches/{id}/cancel
+@required {id: str}
+@returns(200) {id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}
+@errors {400, 401, 403, 404, 500}
+
+@endgroup
+
+@group evaluation
+@endpoint POST /evaluation
+@required {type: str(classify/score/compare), parameters: any}
+@returns(200) {workflow_id: str, status: str}
+@errors {400, 500}
+
+@endpoint GET /evaluation
+@optional {status: str, limit: int=10}
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /evaluation/model-list
+@optional {model_source: str=all}
+@returns(200) {model_list: [str]}
+@errors {400, 500}
+
+@endpoint GET /evaluation/{id}
+@required {id: str}
+@returns(200) {workflow_id: str, type: str, owner_id: str, status: str, status_updates: [map], parameters: map, created_at: str(date-time), updated_at: str(date-time), results: any?}
+@errors {404, 500}
+
+@endpoint GET /evaluation/{id}/status
+@required {id: str}
+@returns(200) {status: str, results: any}
+@errors {404, 500}
+
+@endgroup
+
+@group realtime
+@endpoint GET /realtime
+@required {model: str, input_audio_format: str=pcm_s16le_16000}
+@errors {101}
+
+@endgroup
+
+@group queue
+@endpoint POST /queue/cancel
+@required {model: str, request_id: str}
+@returns(200) {status: str}
+@errors {400, 404, 409, 500}
+
+@endpoint GET /queue/metrics
+@required {model: str}
+@returns(200) {messages_running: int, messages_waiting: int, total_jobs: int}
+@errors {400, 401, 500}
+
+@endpoint GET /queue/status
+@required {request_id: str, model: str}
+@returns(200) {claimed_at: str(date-time), created_at: str(date-time), done_at: str(date-time), info: map, inputs: map, model: str, outputs: map, priority: int, request_id: str, retries: int, status: str, warnings: [str]}
+@errors {400, 401, 404, 500}
+
+@endpoint POST /queue/submit
+@required {model: str, payload: map}
+@optional {info: map, priority: int=0}
+@returns(200) {error: map{code: str, message: str, param: str, type: str}, requestId: str}
+@errors {400, 401, 500}
+
+@endgroup
+
+@group rl
+@endpoint GET /rl/training-sessions
+@optional {status: str, limit: int(int32)=20, offset: int(int32)=0}
+@returns(200) {data: [map], meta: map{total: str(int64), limit: int(int32), offset: int(int32)}}
+
+@endpoint POST /rl/training-sessions
+@required {base_model: str}
+@optional {checkpoint_id: str, lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+
+@endpoint GET /rl/training-sessions/{session_id}
+@required {session_id: str}
+@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+
+@endpoint GET /rl/training-sessions/{session_id}/operations/forward-backward/{operation_id}
+@required {session_id: str, operation_id: str}
+@returns(200) {id: str, status: str, output: map{loss: num, metrics: map}, error: map{code: str, message: str}}
+
+@endpoint GET /rl/training-sessions/{session_id}/operations/optim-step/{operation_id}
+@required {session_id: str, operation_id: str}
+@returns(200) {id: str, status: str, output: map{step: str(uint64)}, error: map{code: str, message: str}}
+
+@endpoint GET /rl/training-sessions/{session_id}/operations/sample/{operation_id}
+@required {session_id: str, operation_id: str}
+@returns(200) {id: str, status: str, output: map{sequences: [map]}, error: map{code: str, message: str}}
+
+@endpoint POST /rl/training-sessions/{session_id}/operations/forward-backward
+@required {session_id: str, samples: [map{model_input!: map{chunks!: [map]}, loss_inputs!: map{target_tokens: map, loss_mask: map, grpo_inputs: map}}], loss: map{type!: str, cross_entropy_params: map, grpo_params: map{clip_low: num(float), clip_high: num(float), beta: num(float), agg_type: str}}}
+@returns(200) {id: str, status: str, output: map{loss: num, metrics: map}, error: map{code: str, message: str}}
+
+@endpoint POST /rl/training-sessions/{session_id}/operations/optim-step
+@required {session_id: str}
+@optional {learning_rate: num(float)=0.0001, adamw_params: map{beta1: num(float), beta2: num(float), eps: num(float), weight_decay: num(float)}}
+@returns(200) {id: str, status: str, output: map{step: str(uint64)}, error: map{code: str, message: str}}
+
+@endpoint POST /rl/training-sessions/{session_id}/operations/sample
+@required {session_id: str, prompt: map{chunks!: [map{encoded_text: map}]}}
+@optional {sampling_params: map{max_tokens: int(int32), temperature: num(float), top_p: num(float), top_k: int(int32), stop: [str], seed: str(int64)}, num_samples: int(int64)=1}
+@returns(200) {id: str, status: str, output: map{sequences: [map]}, error: map{code: str, message: str}}
+
+@endpoint POST /rl/training-sessions/{session_id}/stop
+@required {session_id: str}
+@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+
+@endgroup
+
+@end

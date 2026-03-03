@@ -1,0 +1,193 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Cost Explorer Service
+@version 2017-10-25
+@auth AWS SigV4
+@endpoints 41
+@hint download_for_search
+@toc root(41)
+
+@endpoint POST /
+@required {AnomalyMonitor: AnomalyMonitor}
+@optional {ResourceTags: [ResourceTag]}
+@returns(200) {MonitorArn: str}
+
+@endpoint POST /
+@required {AnomalySubscription: AnomalySubscription}
+@optional {ResourceTags: [ResourceTag]}
+@returns(200) {SubscriptionArn: str}
+
+@endpoint POST /
+@required {Name: str, RuleVersion: str, Rules: [CostCategoryRule]}
+@optional {EffectiveStart: str, DefaultValue: str, SplitChargeRules: [CostCategorySplitChargeRule], ResourceTags: [ResourceTag]}
+@returns(200) {CostCategoryArn: str?, EffectiveStart: str?}
+
+@endpoint POST /
+@required {MonitorArn: str}
+
+@endpoint POST /
+@required {SubscriptionArn: str}
+
+@endpoint POST /
+@required {CostCategoryArn: str}
+@returns(200) {CostCategoryArn: str?, EffectiveEnd: str?}
+
+@endpoint POST /
+@required {CostCategoryArn: str}
+@optional {EffectiveOn: str}
+@returns(200) {CostCategory: CostCategory?{CostCategoryArn: str, EffectiveStart: str, EffectiveEnd: str?, Name: str, RuleVersion: str, Rules: [CostCategoryRule], SplitChargeRules: [CostCategorySplitChargeRule]?, ProcessingStatus: [CostCategoryProcessingStatus]?, DefaultValue: str?}}
+
+@endpoint POST /
+@required {DateInterval: AnomalyDateInterval}
+@optional {MonitorArn: str, Feedback: str, TotalImpact: TotalImpactFilter, NextPageToken: str, MaxResults: int}
+@returns(200) {Anomalies: [Anomaly], NextPageToken: str?}
+
+@endpoint POST /
+@optional {MonitorArnList: [str], NextPageToken: str, MaxResults: int}
+@returns(200) {AnomalyMonitors: [AnomalyMonitor], NextPageToken: str?}
+
+@endpoint POST /
+@optional {SubscriptionArnList: [str], MonitorArn: str, NextPageToken: str, MaxResults: int}
+@returns(200) {AnomalySubscriptions: [AnomalySubscription], NextPageToken: str?}
+
+@endpoint POST /
+@required {Granularity: str, ApproximationDimension: str}
+@optional {Services: [str]}
+@returns(200) {Services: map<str,int(i64)>?, TotalRecords: int(i64)?, LookbackPeriod: DateInterval?{Start: str, End: str}}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval, Granularity: str, Metrics: [str]}
+@optional {Filter: Expression, GroupBy: [GroupDefinition], NextPageToken: str}
+@returns(200) {NextPageToken: str?, GroupDefinitions: [GroupDefinition]?, ResultsByTime: [ResultByTime]?, DimensionValueAttributes: [DimensionValuesWithAttributes]?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval, Granularity: str, Filter: Expression}
+@optional {Metrics: [str], GroupBy: [GroupDefinition], NextPageToken: str}
+@returns(200) {NextPageToken: str?, GroupDefinitions: [GroupDefinition]?, ResultsByTime: [ResultByTime]?, DimensionValueAttributes: [DimensionValuesWithAttributes]?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {SearchString: str, CostCategoryName: str, Filter: Expression, SortBy: [SortDefinition], MaxResults: int, NextPageToken: str}
+@returns(200) {NextPageToken: str?, CostCategoryNames: [str]?, CostCategoryValues: [str]?, ReturnSize: int, TotalSize: int}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval, Metric: str, Granularity: str}
+@optional {Filter: Expression, PredictionIntervalLevel: int}
+@returns(200) {Total: MetricValue?{Amount: str?, Unit: str?}, ForecastResultsByTime: [ForecastResult]?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval, Dimension: str}
+@optional {SearchString: str, Context: str, Filter: Expression, SortBy: [SortDefinition], MaxResults: int, NextPageToken: str}
+@returns(200) {DimensionValues: [DimensionValuesWithAttributes], ReturnSize: int, TotalSize: int, NextPageToken: str?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {GroupBy: [GroupDefinition], Granularity: str, Filter: Expression, Metrics: [str], NextPageToken: str, SortBy: SortDefinition, MaxResults: int}
+@returns(200) {CoveragesByTime: [CoverageByTime], Total: Coverage?{CoverageHours: CoverageHours?{OnDemandHours: str?, ReservedHours: str?, TotalRunningHours: str?, CoverageHoursPercentage: str?}, CoverageNormalizedUnits: CoverageNormalizedUnits?{OnDemandNormalizedUnits: str?, ReservedNormalizedUnits: str?, TotalRunningNormalizedUnits: str?, CoverageNormalizedUnitsPercentage: str?}, CoverageCost: CoverageCost?{OnDemandCost: str?}}, NextPageToken: str?}
+
+@endpoint POST /
+@required {Service: str}
+@optional {AccountId: str, Filter: Expression, AccountScope: str, LookbackPeriodInDays: str, TermInYears: str, PaymentOption: str, ServiceSpecification: ServiceSpecification, PageSize: int, NextPageToken: str}
+@returns(200) {Metadata: ReservationPurchaseRecommendationMetadata?{RecommendationId: str?, GenerationTimestamp: str?, AdditionalMetadata: str?}, Recommendations: [ReservationPurchaseRecommendation]?, NextPageToken: str?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {GroupBy: [GroupDefinition], Granularity: str, Filter: Expression, SortBy: SortDefinition, NextPageToken: str, MaxResults: int}
+@returns(200) {UtilizationsByTime: [UtilizationByTime], Total: ReservationAggregates?{UtilizationPercentage: str?, UtilizationPercentageInUnits: str?, PurchasedHours: str?, PurchasedUnits: str?, TotalActualHours: str?, TotalActualUnits: str?, UnusedHours: str?, UnusedUnits: str?, OnDemandCostOfRIHoursUsed: str?, NetRISavings: str?, TotalPotentialRISavings: str?, AmortizedUpfrontFee: str?, AmortizedRecurringFee: str?, TotalAmortizedFee: str?, RICostForUnusedHours: str?, RealizedSavings: str?, UnrealizedSavings: str?}, NextPageToken: str?}
+
+@endpoint POST /
+@required {Service: str}
+@optional {Filter: Expression, Configuration: RightsizingRecommendationConfiguration, PageSize: int, NextPageToken: str}
+@returns(200) {Metadata: RightsizingRecommendationMetadata?{RecommendationId: str?, GenerationTimestamp: str?, LookbackPeriodInDays: str?, AdditionalMetadata: str?}, Summary: RightsizingRecommendationSummary?{TotalRecommendationCount: str?, EstimatedTotalMonthlySavingsAmount: str?, SavingsCurrencyCode: str?, SavingsPercentage: str?}, RightsizingRecommendations: [RightsizingRecommendation]?, NextPageToken: str?, Configuration: RightsizingRecommendationConfiguration?{RecommendationTarget: str, BenefitsConsidered: bool}}
+
+@endpoint POST /
+@required {RecommendationDetailId: str}
+@returns(200) {RecommendationDetailId: str?, RecommendationDetailData: RecommendationDetailData?{AccountScope: str?, LookbackPeriodInDays: str?, SavingsPlansType: str?, TermInYears: str?, PaymentOption: str?, AccountId: str?, CurrencyCode: str?, InstanceFamily: str?, Region: str?, OfferingId: str?, GenerationTimestamp: str?, LatestUsageTimestamp: str?, CurrentAverageHourlyOnDemandSpend: str?, CurrentMaximumHourlyOnDemandSpend: str?, CurrentMinimumHourlyOnDemandSpend: str?, EstimatedAverageUtilization: str?, EstimatedMonthlySavingsAmount: str?, EstimatedOnDemandCost: str?, EstimatedOnDemandCostWithCurrentCommitment: str?, EstimatedROI: str?, EstimatedSPCost: str?, EstimatedSavingsAmount: str?, EstimatedSavingsPercentage: str?, ExistingHourlyCommitment: str?, HourlyCommitmentToPurchase: str?, UpfrontCost: str?, CurrentAverageCoverage: str?, EstimatedAverageCoverage: str?, MetricsOverLookbackPeriod: [RecommendationDetailHourlyMetrics]?}}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {GroupBy: [GroupDefinition], Granularity: str, Filter: Expression, Metrics: [str], NextToken: str, MaxResults: int, SortBy: SortDefinition}
+@returns(200) {SavingsPlansCoverages: [SavingsPlansCoverage], NextToken: str?}
+
+@endpoint POST /
+@required {SavingsPlansType: str, TermInYears: str, PaymentOption: str, LookbackPeriodInDays: str}
+@optional {AccountScope: str, NextPageToken: str, PageSize: int, Filter: Expression}
+@returns(200) {Metadata: SavingsPlansPurchaseRecommendationMetadata?{RecommendationId: str?, GenerationTimestamp: str?, AdditionalMetadata: str?}, SavingsPlansPurchaseRecommendation: SavingsPlansPurchaseRecommendation?{AccountScope: str?, SavingsPlansType: str?, TermInYears: str?, PaymentOption: str?, LookbackPeriodInDays: str?, SavingsPlansPurchaseRecommendationDetails: [SavingsPlansPurchaseRecommendationDetail]?, SavingsPlansPurchaseRecommendationSummary: SavingsPlansPurchaseRecommendationSummary?{EstimatedROI: str?, CurrencyCode: str?, EstimatedTotalCost: str?, CurrentOnDemandSpend: str?, EstimatedSavingsAmount: str?, TotalRecommendationCount: str?, DailyCommitmentToPurchase: str?, HourlyCommitmentToPurchase: str?, EstimatedSavingsPercentage: str?, EstimatedMonthlySavingsAmount: str?, EstimatedOnDemandCostWithCurrentCommitment: str?}}, NextPageToken: str?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {Granularity: str, Filter: Expression, SortBy: SortDefinition}
+@returns(200) {SavingsPlansUtilizationsByTime: [SavingsPlansUtilizationByTime]?, Total: SavingsPlansUtilizationAggregates{Utilization: SavingsPlansUtilization{TotalCommitment: str?, UsedCommitment: str?, UnusedCommitment: str?, UtilizationPercentage: str?}, Savings: SavingsPlansSavings?{NetSavings: str?, OnDemandCostEquivalent: str?}, AmortizedCommitment: SavingsPlansAmortizedCommitment?{AmortizedRecurringCommitment: str?, AmortizedUpfrontCommitment: str?, TotalAmortizedCommitment: str?}}}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {Filter: Expression, DataType: [str], NextToken: str, MaxResults: int, SortBy: SortDefinition}
+@returns(200) {SavingsPlansUtilizationDetails: [SavingsPlansUtilizationDetail], Total: SavingsPlansUtilizationAggregates?{Utilization: SavingsPlansUtilization{TotalCommitment: str?, UsedCommitment: str?, UnusedCommitment: str?, UtilizationPercentage: str?}, Savings: SavingsPlansSavings?{NetSavings: str?, OnDemandCostEquivalent: str?}, AmortizedCommitment: SavingsPlansAmortizedCommitment?{AmortizedRecurringCommitment: str?, AmortizedUpfrontCommitment: str?, TotalAmortizedCommitment: str?}}, TimePeriod: DateInterval{Start: str, End: str}, NextToken: str?}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval}
+@optional {SearchString: str, TagKey: str, Filter: Expression, SortBy: [SortDefinition], MaxResults: int, NextPageToken: str}
+@returns(200) {NextPageToken: str?, Tags: [str], ReturnSize: int, TotalSize: int}
+
+@endpoint POST /
+@required {TimePeriod: DateInterval, Metric: str, Granularity: str}
+@optional {Filter: Expression, PredictionIntervalLevel: int}
+@returns(200) {Total: MetricValue?{Amount: str?, Unit: str?}, ForecastResultsByTime: [ForecastResult]?}
+
+@endpoint POST /
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {BackfillRequests: [CostAllocationTagBackfillRequest]?, NextToken: str?}
+
+@endpoint POST /
+@optional {Status: str, TagKeys: [str], Type: str, NextToken: str, MaxResults: int}
+@returns(200) {CostAllocationTags: [CostAllocationTag]?, NextToken: str?}
+
+@endpoint POST /
+@optional {EffectiveOn: str, NextToken: str, MaxResults: int}
+@returns(200) {CostCategoryReferences: [CostCategoryReference]?, NextToken: str?}
+
+@endpoint POST /
+@optional {GenerationStatus: str, RecommendationIds: [str], PageSize: int, NextPageToken: str}
+@returns(200) {GenerationSummaryList: [GenerationSummary]?, NextPageToken: str?}
+
+@endpoint POST /
+@required {ResourceArn: str}
+@returns(200) {ResourceTags: [ResourceTag]?}
+
+@endpoint POST /
+@required {AnomalyId: str, Feedback: str}
+@returns(200) {AnomalyId: str}
+
+@endpoint POST /
+@required {BackfillFrom: str}
+@returns(200) {BackfillRequest: CostAllocationTagBackfillRequest?{BackfillFrom: str?, RequestedAt: str?, CompletedAt: str?, BackfillStatus: str?, LastUpdatedAt: str?}}
+
+@endpoint POST /
+@returns(200) {RecommendationId: str?, GenerationStartedTime: str?, EstimatedCompletionTime: str?}
+
+@endpoint POST /
+@required {ResourceArn: str, ResourceTags: [ResourceTag]}
+
+@endpoint POST /
+@required {ResourceArn: str, ResourceTagKeys: [str]}
+
+@endpoint POST /
+@required {MonitorArn: str}
+@optional {MonitorName: str}
+@returns(200) {MonitorArn: str}
+
+@endpoint POST /
+@required {SubscriptionArn: str}
+@optional {Threshold: num(f64), Frequency: str, MonitorArnList: [str], Subscribers: [Subscriber], SubscriptionName: str, ThresholdExpression: Expression}
+@returns(200) {SubscriptionArn: str}
+
+@endpoint POST /
+@required {CostAllocationTagsStatus: [CostAllocationTagStatusEntry]}
+@returns(200) {Errors: [UpdateCostAllocationTagsStatusError]?}
+
+@endpoint POST /
+@required {CostCategoryArn: str, RuleVersion: str, Rules: [CostCategoryRule]}
+@optional {EffectiveStart: str, DefaultValue: str, SplitChargeRules: [CostCategorySplitChargeRule]}
+@returns(200) {CostCategoryArn: str?, EffectiveStart: str?}
+
+@end

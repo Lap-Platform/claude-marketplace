@@ -1,0 +1,66 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Inventory Management
+@base https://marketplace.walmartapis.com
+@auth ApiKey WM_SEC.ACCESS_TOKEN in header
+@common_fields {WM_SEC.ACCESS_TOKEN: str # The access token retrieved in the Token API call, WM_QOS.CORRELATION_ID: str # A unique ID which identifies each API call and used to track and debug issues; use a random generated GUID for this ID, WM_SVC.NAME: str # Walmart Service Name, WM_CONSUMER.CHANNEL.TYPE: str # A unique ID to track the consumer request by channel. Use the Consumer Channel Type received during onboarding}
+@endpoints 7
+@toc inventory(2), inventories(3), feeds(1), fulfillment(1)
+
+@group inventory
+@endpoint GET /v3/inventory
+@desc Inventory
+@required {sku: str # An arbitrary alphanumeric unique ID, specified by the seller, which identifies each item. This will be used by the seller in the XSD file to refer to each item. Special characters in the sku needing encoding are: ':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=', ‘ ’, '{', '}' as well as '%' itself if it's a part of sku. Make sure to encode space with %20. Other characters don't need to be encoded.}
+@optional {shipNode: str # The shipNode for which the inventory is requested}
+@returns(200) {sku: str, quantity: map{unit: str, amount: num}} # Successful Operation
+
+@endpoint PUT /v3/inventory
+@desc Update inventory
+@required {sku: str # An arbitrary alphanumeric unique ID, specified by the seller, which identifies each item. This will be used by the seller in the XSD file to refer to each item. Special characters in the sku needing encoding are: ':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=', ‘ ’, '{', '}' as well as '%' itself if it's a part of sku. Make sure to encode space with %20. Other characters don't need to be encoded., sku: str # A seller-provided Product ID. Response will have decoded value., quantity: map{unit!: str, amount!: num} # Quantity that has been ordered by the customers but not yet shipped}
+@optional {shipNode: str # The shipNode for which the inventory is to be updated.}
+@returns(200) {sku: str, quantity: map{unit: str, amount: num}} # Successful Operation
+@example_request {"sku":"97964_KFTest","quantity":{"unit":"EACH","amount":10}}
+
+@endgroup
+
+@group inventories
+@endpoint GET /v3/inventories/{sku}
+@desc Single Item Inventory by Ship Node
+@required {sku: str # An arbitrary alphanumeric unique ID, specified by the seller, which identifies each item. This will be used by the seller in the XSD file to refer to each item. Special characters in the sku needing encoding are: ':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=', ‘ ’ as well as '%' itself if it's a part of sku. Make sure to encode space with %20. Other characters don't need to be encoded.}
+@optional {shipNode: str # ShipNode Id of the ship node for which the inventory is requested}
+@returns(200) {sku: str, nodes: [map]} # Successful Operation
+
+@endpoint PUT /v3/inventories/{sku}
+@desc Update Item Inventory per Ship Node
+@required {sku: str # An arbitrary alphanumeric unique ID, specified by the seller, which identifies each item. This will be used by the seller in the XSD file to refer to each item. Special characters in the sku needing encoding are: ':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=', ‘ ’ as well as '%' itself if it's a part of sku. Make sure to encode space with %20. Other characters don't need to be encoded., inventories: map{nodes!: [map{shipNode!: str, inputQty!: map}]}}
+@returns(200) {sku: str, nodes: [map]} # Successful Operation
+@example_request {"inventories":{"nodes":[{"shipNode":"1000005050","inputQty":{"unit":"EACH","amount":88}},{"shipNode":"79897837271126017","inputQty":{"unit":"EACH","amount":55}}]}}
+
+@endgroup
+
+@group feeds
+@endpoint POST /v3/feeds
+@desc Bulk Item Inventory Update
+@required {feedType: str(inventory/MP_INVENTORY) # The feed Type}
+@optional {shipNode: str # The shipNode for which the inventory is to be updated. Not required in case of Multi Node Inventory Update Feed (feedType=MP_INVENTORY)}
+@returns(200) {feedId: str, additionalAttributes: map?, errors: map?} # Successful Operation
+
+@endgroup
+
+@group inventories
+@endpoint GET /v3/inventories
+@desc Multiple Item Inventory for All Ship Nodes
+@optional {limit: str=10 # The number of items returned. Cannot be more than 50., nextCursor: str # String returned from initial API call to indicate pagination. Specify nextCursor value to retrieve the next 50 items.}
+@returns(200) {meta: map{totalCount: num, nextCursor: str}, elements: map{inventories: [map]}} # Successful Operation
+
+@endgroup
+
+@group fulfillment
+@endpoint GET /v3/fulfillment/inventory
+@desc WFS Inventory
+@optional {sku: str # An arbitrary alphanumeric unique ID, specified by the seller, which identifies each item. This will be used by the seller in the XSD file to refer to each item. Special characters in the sku needing encoding are: ':', '/', '?', '#', '[', ']', '@', '!', '$', '&', "'", '(', ')', '*', '+', ',', ';', '=', ‘ ’ as well as '%' itself if it's a part of sku. Make sure to encode space with %20. Other characters don't need to be encoded., fromModifiedDate: str # last inventory modified date - starting range., toModifiedDate: str # last inventory modified date - starting range., limit: str=10 # Number of Sku to be returned. Cannot be larger than 300., offset: str=0 # Offset is the number of records you wish to skip before selecting records., shipNodeType: str # Currently supported: multichannel. This param is enabled only for multi channel sellers. sku becomes mandatory and other params are ineffective while using this param. sku can either contain one item or list of sku's separated by comma (example: sku1,sku2)}
+@returns(200) {headers: map{totalCount: int(int32), limit: int(int32), offset: int(int32)}, payload: map{inventory: [map]}} # Successful Operation
+
+@endgroup
+
+@end

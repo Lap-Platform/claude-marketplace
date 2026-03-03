@@ -1,0 +1,327 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Glue DataBrew
+@version 2017-07-25
+@auth AWS SigV4
+@endpoints 44
+@hint download_for_search
+@toc recipes(7), datasets(5), profileJobs(2), projects(7), recipeJobs(2), rulesets(5), schedules(5), jobs(7), recipeVersions(1), tags(3)
+
+@group recipes
+@endpoint POST /recipes/{name}/batchDeleteRecipeVersion
+@required {Name: str, RecipeVersions: [str]}
+@returns(200) {Name: str, Errors: [RecipeVersionErrorDetail]?}
+
+@endgroup
+
+@group datasets
+@endpoint POST /datasets
+@required {Name: str, Input: Input}
+@optional {Format: str, FormatOptions: FormatOptions, PathOptions: PathOptions, Tags: map<str,str>}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group profileJobs
+@endpoint POST /profileJobs
+@required {DatasetName: str, Name: str, OutputLocation: S3Location, RoleArn: str}
+@optional {EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, Configuration: ProfileConfiguration, ValidationConfigurations: [ValidationConfiguration], Tags: map<str,str>, Timeout: int, JobSample: JobSample}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group projects
+@endpoint POST /projects
+@required {DatasetName: str, Name: str, RecipeName: str, RoleArn: str}
+@optional {Sample: Sample, Tags: map<str,str>}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group recipes
+@endpoint POST /recipes
+@required {Name: str, Steps: [RecipeStep]}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group recipeJobs
+@endpoint POST /recipeJobs
+@required {Name: str, RoleArn: str}
+@optional {DatasetName: str, EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, Outputs: [Output], DataCatalogOutputs: [DataCatalogOutput], DatabaseOutputs: [DatabaseOutput], ProjectName: str, RecipeReference: RecipeReference, Tags: map<str,str>, Timeout: int}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group rulesets
+@endpoint POST /rulesets
+@required {Name: str, TargetArn: str, Rules: [Rule]}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group schedules
+@endpoint POST /schedules
+@required {CronExpression: str, Name: str}
+@optional {JobNames: [str], Tags: map<str,str>}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group datasets
+@endpoint DELETE /datasets/{name}
+@required {Name: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group jobs
+@endpoint DELETE /jobs/{name}
+@required {Name: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group projects
+@endpoint DELETE /projects/{name}
+@required {Name: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group recipes
+@endpoint DELETE /recipes/{name}/recipeVersion/{recipeVersion}
+@required {Name: str, RecipeVersion: str}
+@returns(200) {Name: str, RecipeVersion: str}
+
+@endgroup
+
+@group rulesets
+@endpoint DELETE /rulesets/{name}
+@required {Name: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group schedules
+@endpoint DELETE /schedules/{name}
+@required {Name: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets/{name}
+@required {Name: str}
+@returns(200) {CreatedBy: str?, CreateDate: str(timestamp)?, Name: str, Format: str?, FormatOptions: FormatOptions?{Json: JsonOptions?{MultiLine: bool?}, Excel: ExcelOptions?{SheetNames: [str]?, SheetIndexes: [int]?, HeaderRow: bool?}, Csv: CsvOptions?{Delimiter: str?, HeaderRow: bool?}}, Input: Input{S3InputDefinition: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}, DataCatalogInputDefinition: DataCatalogInputDefinition?{CatalogId: str?, DatabaseName: str, TableName: str, TempDirectory: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}}, DatabaseInputDefinition: DatabaseInputDefinition?{GlueConnectionName: str, DatabaseTableName: str?, TempDirectory: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}, QueryString: str?}, Metadata: Metadata?{SourceArn: str?}}, LastModifiedDate: str(timestamp)?, LastModifiedBy: str?, Source: str?, PathOptions: PathOptions?{LastModifiedDateCondition: FilterExpression?{Expression: str, ValuesMap: map<str,str>}, FilesLimit: FilesLimit?{MaxFiles: int, OrderedBy: str?, Order: str?}, Parameters: map<str,DatasetParameter>?}, Tags: map<str,str>?, ResourceArn: str?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /jobs/{name}
+@required {Name: str}
+@returns(200) {CreateDate: str(timestamp)?, CreatedBy: str?, DatasetName: str?, EncryptionKeyArn: str?, EncryptionMode: str?, Name: str, Type: str?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, LogSubscription: str?, MaxCapacity: int?, MaxRetries: int?, Outputs: [Output]?, DataCatalogOutputs: [DataCatalogOutput]?, DatabaseOutputs: [DatabaseOutput]?, ProjectName: str?, ProfileConfiguration: ProfileConfiguration?{DatasetStatisticsConfiguration: StatisticsConfiguration?{IncludedStatistics: [str]?, Overrides: [StatisticOverride]?}, ProfileColumns: [ColumnSelector]?, ColumnStatisticsConfigurations: [ColumnStatisticsConfiguration]?, EntityDetectorConfiguration: EntityDetectorConfiguration?{EntityTypes: [str], AllowedStatistics: [AllowedStatistics]?}}, ValidationConfigurations: [ValidationConfiguration]?, RecipeReference: RecipeReference?{Name: str, RecipeVersion: str?}, ResourceArn: str?, RoleArn: str?, Tags: map<str,str>?, Timeout: int?, JobSample: JobSample?{Mode: str?, Size: int(i64)?}}
+
+@endpoint GET /jobs/{name}/jobRun/{runId}
+@required {Name: str, RunId: str}
+@returns(200) {Attempt: int?, CompletedOn: str(timestamp)?, DatasetName: str?, ErrorMessage: str?, ExecutionTime: int?, JobName: str, ProfileConfiguration: ProfileConfiguration?{DatasetStatisticsConfiguration: StatisticsConfiguration?{IncludedStatistics: [str]?, Overrides: [StatisticOverride]?}, ProfileColumns: [ColumnSelector]?, ColumnStatisticsConfigurations: [ColumnStatisticsConfiguration]?, EntityDetectorConfiguration: EntityDetectorConfiguration?{EntityTypes: [str], AllowedStatistics: [AllowedStatistics]?}}, ValidationConfigurations: [ValidationConfiguration]?, RunId: str?, State: str?, LogSubscription: str?, LogGroupName: str?, Outputs: [Output]?, DataCatalogOutputs: [DataCatalogOutput]?, DatabaseOutputs: [DatabaseOutput]?, RecipeReference: RecipeReference?{Name: str, RecipeVersion: str?}, StartedBy: str?, StartedOn: str(timestamp)?, JobSample: JobSample?{Mode: str?, Size: int(i64)?}}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects/{name}
+@required {Name: str}
+@returns(200) {CreateDate: str(timestamp)?, CreatedBy: str?, DatasetName: str?, LastModifiedDate: str(timestamp)?, LastModifiedBy: str?, Name: str, RecipeName: str?, ResourceArn: str?, Sample: Sample?{Size: int?, Type: str}, RoleArn: str?, Tags: map<str,str>?, SessionStatus: str?, OpenedBy: str?, OpenDate: str(timestamp)?}
+
+@endgroup
+
+@group recipes
+@endpoint GET /recipes/{name}
+@required {Name: str}
+@optional {recipeVersion: str}
+@returns(200) {CreatedBy: str?, CreateDate: str(timestamp)?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, ProjectName: str?, PublishedBy: str?, PublishedDate: str(timestamp)?, Description: str?, Name: str, Steps: [RecipeStep]?, Tags: map<str,str>?, ResourceArn: str?, RecipeVersion: str?}
+
+@endgroup
+
+@group rulesets
+@endpoint GET /rulesets/{name}
+@required {Name: str}
+@returns(200) {Name: str, Description: str?, TargetArn: str?, Rules: [Rule]?, CreateDate: str(timestamp)?, CreatedBy: str?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, ResourceArn: str?, Tags: map<str,str>?}
+
+@endgroup
+
+@group schedules
+@endpoint GET /schedules/{name}
+@required {Name: str}
+@returns(200) {CreateDate: str(timestamp)?, CreatedBy: str?, JobNames: [str]?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, ResourceArn: str?, CronExpression: str?, Tags: map<str,str>?, Name: str}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Datasets: [Dataset], NextToken: str?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /jobs/{name}/jobRuns
+@required {Name: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {JobRuns: [JobRun], NextToken: str?}
+
+@endpoint GET /jobs
+@optional {datasetName: str, maxResults: int, nextToken: str, projectName: str}
+@returns(200) {Jobs: [Job], NextToken: str?}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects
+@optional {nextToken: str, maxResults: int}
+@returns(200) {Projects: [Project], NextToken: str?}
+
+@endgroup
+
+@group recipeVersions
+@endpoint GET /recipeVersions
+@required {name: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, Recipes: [Recipe]}
+
+@endgroup
+
+@group recipes
+@endpoint GET /recipes
+@optional {maxResults: int, nextToken: str, recipeVersion: str}
+@returns(200) {Recipes: [Recipe], NextToken: str?}
+
+@endgroup
+
+@group rulesets
+@endpoint GET /rulesets
+@optional {targetArn: str, maxResults: int, nextToken: str}
+@returns(200) {Rulesets: [RulesetItem], NextToken: str?}
+
+@endgroup
+
+@group schedules
+@endpoint GET /schedules
+@optional {jobName: str, maxResults: int, nextToken: str}
+@returns(200) {Schedules: [Schedule], NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group recipes
+@endpoint POST /recipes/{name}/publishRecipe
+@required {Name: str}
+@optional {Description: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group projects
+@endpoint PUT /projects/{name}/sendProjectSessionAction
+@required {Name: str}
+@optional {Preview: bool, RecipeStep: RecipeStep, StepIndex: int, ClientSessionId: str, ViewFrame: ViewFrame}
+@returns(200) {Result: str?, Name: str, ActionId: int?}
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs/{name}/startJobRun
+@required {Name: str}
+@returns(200) {RunId: str}
+
+@endgroup
+
+@group projects
+@endpoint PUT /projects/{name}/startProjectSession
+@required {Name: str}
+@optional {AssumeControl: bool}
+@returns(200) {Name: str, ClientSessionId: str?}
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs/{name}/jobRun/{runId}/stopJobRun
+@required {Name: str, RunId: str}
+@returns(200) {RunId: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group datasets
+@endpoint PUT /datasets/{name}
+@required {Name: str, Input: Input}
+@optional {Format: str, FormatOptions: FormatOptions, PathOptions: PathOptions}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group profileJobs
+@endpoint PUT /profileJobs/{name}
+@required {Name: str, OutputLocation: S3Location, RoleArn: str}
+@optional {Configuration: ProfileConfiguration, EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, ValidationConfigurations: [ValidationConfiguration], Timeout: int, JobSample: JobSample}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group projects
+@endpoint PUT /projects/{name}
+@required {Name: str, RoleArn: str}
+@optional {Sample: Sample}
+@returns(200) {LastModifiedDate: str(timestamp)?, Name: str}
+
+@endgroup
+
+@group recipes
+@endpoint PUT /recipes/{name}
+@required {Name: str}
+@optional {Description: str, Steps: [RecipeStep]}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group recipeJobs
+@endpoint PUT /recipeJobs/{name}
+@required {Name: str, RoleArn: str}
+@optional {EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, Outputs: [Output], DataCatalogOutputs: [DataCatalogOutput], DatabaseOutputs: [DatabaseOutput], Timeout: int}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group rulesets
+@endpoint PUT /rulesets/{name}
+@required {Name: str, Rules: [Rule]}
+@optional {Description: str}
+@returns(200) {Name: str}
+
+@endgroup
+
+@group schedules
+@endpoint PUT /schedules/{name}
+@required {Name: str, CronExpression: str}
+@optional {JobNames: [str]}
+@returns(200) {Name: str}
+
+@endgroup
+
+@end

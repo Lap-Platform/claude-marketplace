@@ -1,0 +1,32 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Payouts
+@base https://api-m.sandbox.paypal.com
+@version 1.9
+@auth OAuth2
+@endpoints 4
+@toc payments(4)
+
+@endpoint POST /v1/payments/payouts
+@required {sender_batch_header: map{sender_batch_id: str, recipient_type: str, email_subject: str, email_message: str, note: str}, items: [map{recipient_type: str, amount!: map{currency!: str, value!: str}, note: str, receiver!: str, sender_item_id: str, recipient_wallet: str, alternate_notification_method: map{phone: map}, notification_language: str(ppaas_common_language_v3), application_context: map{social_feed_privacy: str, holler_url: str(uri), logo_url: str(uri)}, purpose: str}]}
+@optional {PayPal-Request-Id: str}
+@returns(201) {batch_header: map{payout_batch_id: str, batch_status: str, time_created: str(date-time), sender_batch_header: map{sender_batch_id: str, recipient_type: str, email_subject: str, email_message: str}}, links: [map]}
+@errors {400, 403, 500}
+
+@endpoint GET /v1/payments/payouts/{id}
+@required {id: str}
+@optional {fields: str, page: int=1, page_size: int, total_required: bool=False}
+@returns(200) {total_items: int, total_pages: int, batch_header: map{payout_batch_id: str, batch_status: str, time_created: str(date-time), time_completed: str(date-time), time_closed: str(date-time), sender_batch_header: map{sender_batch_id: str, recipient_type: str, email_subject: str, email_message: str}, funding_source: str, amount: map{currency: str, value: str}, fees: map{currency: str, value: str}}, items: [map], links: [map]}
+@errors {404, 500}
+
+@endpoint GET /v1/payments/payouts-item/{payout_item_id}
+@required {payout_item_id: str}
+@returns(200) {payout_item_id: str, transaction_id: str, activity_id: str, transaction_status: str, payout_item_fee: map{currency: str, value: str}, payout_batch_id: str, sender_batch_id: str, payout_item: map{recipient_type: str, amount: map{currency: str, value: str}, note: str, receiver: str, sender_item_id: str, recipient_name: map{prefix: str, given_name: str, surname: str, middle_name: str, suffix: str, alternate_full_name: str, full_name: str}, recipient_wallet: str, purpose: str}, currency_conversion: map{from_amount: map{currency: str, value: str}, to_amount: map{currency: str, value: str}, exchange_rate: str}, time_processed: str(date-time), errors: map{name: str, message: str, debug_id: str, information_link: str, details: [map], links: [map]}, links: [map]}
+@errors {404, 500}
+
+@endpoint POST /v1/payments/payouts-item/{payout_item_id}/cancel
+@required {payout_item_id: str}
+@returns(200) {payout_item_id: str, transaction_id: str, activity_id: str, transaction_status: str, payout_item_fee: map{currency: str, value: str}, payout_batch_id: str, sender_batch_id: str, payout_item: map{recipient_type: str, amount: map{currency: str, value: str}, note: str, receiver: str, sender_item_id: str, recipient_name: map{prefix: str, given_name: str, surname: str, middle_name: str, suffix: str, alternate_full_name: str, full_name: str}, recipient_wallet: str, purpose: str}, currency_conversion: map{from_amount: map{currency: str, value: str}, to_amount: map{currency: str, value: str}, exchange_rate: str}, time_processed: str(date-time), errors: map{name: str, message: str, debug_id: str, information_link: str, details: [map], links: [map]}, links: [map]}
+@errors {400, 404, 500}
+
+@end

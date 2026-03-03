@@ -1,0 +1,716 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api OpenAI API
+@base https://api.openai.com/v1
+@version 2.3.0
+@auth Bearer bearer
+@endpoints 148
+@hint download_for_search
+@toc assistants(5), audio(3), batches(4), chat(6), completions(1), embeddings(1), evals(12), files(5), fine_tuning(9), images(3), models(3), moderations(1), organization(51), realtime(2), responses(4), threads(18), uploads(4), vector_stores(16)
+
+@group assistants
+@endpoint GET /assistants
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /assistants
+@required {model: any}
+@optional {name: str, description: str, instructions: str, reasoning_effort: str(low/medium/high)=medium, tools: [any]=[], tool_resources: map{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str], vector_stores: [map]}}, metadata: map, temperature: num=1, top_p: num=1, response_format: any}
+@returns(200) {id: str, object: str, created_at: int, name: str?, description: str?, model: str, instructions: str?, tools: [any], tool_resources: map?{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map?, temperature: num?, top_p: num?, response_format: any}
+
+@endpoint GET /assistants/{assistant_id}
+@required {assistant_id: str}
+@returns(200) {id: str, object: str, created_at: int, name: str?, description: str?, model: str, instructions: str?, tools: [any], tool_resources: map?{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map?, temperature: num?, top_p: num?, response_format: any}
+
+@endpoint POST /assistants/{assistant_id}
+@required {assistant_id: str}
+@optional {model: any, reasoning_effort: str(low/medium/high)=medium, name: str, description: str, instructions: str, tools: [any]=[], tool_resources: map{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map, temperature: num=1, top_p: num=1, response_format: any}
+@returns(200) {id: str, object: str, created_at: int, name: str?, description: str?, model: str, instructions: str?, tools: [any], tool_resources: map?{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map?, temperature: num?, top_p: num?, response_format: any}
+
+@endpoint DELETE /assistants/{assistant_id}
+@required {assistant_id: str}
+@returns(200) {id: str, deleted: bool, object: str}
+
+@endgroup
+
+@group audio
+@endpoint POST /audio/speech
+@required {model: any, input: str, voice: any}
+@optional {instructions: str, response_format: str(mp3/opus/aac/flac/wav/pcm)=mp3, speed: num=1}
+@returns(200)
+
+@endpoint POST /audio/transcriptions
+@returns(200)
+
+@endpoint POST /audio/translations
+@returns(200)
+
+@endgroup
+
+@group batches
+@endpoint POST /batches
+@required {input_file_id: str, endpoint: str(/v1/responses//v1/chat/completions//v1/embeddings//v1/completions), completion_window: str}
+@optional {metadata: map}
+@returns(200) {id: str, object: str, endpoint: str, errors: map{object: str, data: [map]}, input_file_id: str, completion_window: str, status: str, output_file_id: str, error_file_id: str, created_at: int, in_progress_at: int, expires_at: int, finalizing_at: int, completed_at: int, failed_at: int, expired_at: int, cancelling_at: int, cancelled_at: int, request_counts: map{total: int, completed: int, failed: int}, metadata: map?}
+
+@endpoint GET /batches
+@optional {after: str, limit: int=20}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint GET /batches/{batch_id}
+@required {batch_id: str}
+@returns(200) {id: str, object: str, endpoint: str, errors: map{object: str, data: [map]}, input_file_id: str, completion_window: str, status: str, output_file_id: str, error_file_id: str, created_at: int, in_progress_at: int, expires_at: int, finalizing_at: int, completed_at: int, failed_at: int, expired_at: int, cancelling_at: int, cancelled_at: int, request_counts: map{total: int, completed: int, failed: int}, metadata: map?}
+
+@endpoint POST /batches/{batch_id}/cancel
+@required {batch_id: str}
+@returns(200) {id: str, object: str, endpoint: str, errors: map{object: str, data: [map]}, input_file_id: str, completion_window: str, status: str, output_file_id: str, error_file_id: str, created_at: int, in_progress_at: int, expires_at: int, finalizing_at: int, completed_at: int, failed_at: int, expired_at: int, cancelling_at: int, cancelled_at: int, request_counts: map{total: int, completed: int, failed: int}, metadata: map?}
+
+@endgroup
+
+@group chat
+@endpoint GET /chat/completions
+@optional {model: str, metadata: map, after: str, limit: int=20, order: str(asc/desc)=asc}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /chat/completions
+@returns(200) {id: str, choices: [map], created: int, model: str, service_tier: str?, system_fingerprint: str, object: str, usage: map{completion_tokens: int, prompt_tokens: int, total_tokens: int, completion_tokens_details: map{accepted_prediction_tokens: int, audio_tokens: int, reasoning_tokens: int, rejected_prediction_tokens: int}, prompt_tokens_details: map{audio_tokens: int, cached_tokens: int}}}
+
+@endpoint GET /chat/completions/{completion_id}
+@required {completion_id: str}
+@returns(200) {id: str, choices: [map], created: int, model: str, service_tier: str?, system_fingerprint: str, object: str, usage: map{completion_tokens: int, prompt_tokens: int, total_tokens: int, completion_tokens_details: map{accepted_prediction_tokens: int, audio_tokens: int, reasoning_tokens: int, rejected_prediction_tokens: int}, prompt_tokens_details: map{audio_tokens: int, cached_tokens: int}}}
+
+@endpoint POST /chat/completions/{completion_id}
+@required {completion_id: str, metadata: map}
+@returns(200) {id: str, choices: [map], created: int, model: str, service_tier: str?, system_fingerprint: str, object: str, usage: map{completion_tokens: int, prompt_tokens: int, total_tokens: int, completion_tokens_details: map{accepted_prediction_tokens: int, audio_tokens: int, reasoning_tokens: int, rejected_prediction_tokens: int}, prompt_tokens_details: map{audio_tokens: int, cached_tokens: int}}}
+
+@endpoint DELETE /chat/completions/{completion_id}
+@required {completion_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+
+@endpoint GET /chat/completions/{completion_id}/messages
+@required {completion_id: str}
+@optional {after: str, limit: int=20, order: str(asc/desc)=asc}
+@returns(200) {object: str, data: [any], first_id: str, last_id: str, has_more: bool}
+
+@endgroup
+
+@group completions
+@endpoint POST /completions
+@required {model: any, prompt: any=<|endoftext|>}
+@optional {best_of: int=1, echo: bool=False, frequency_penalty: num=0, logit_bias: map=None, logprobs: int=None, max_tokens: int=16, n: int=1, presence_penalty: num=0, seed: int(int64), stop: any=None, stream: bool=False, stream_options: map{include_usage: bool}=None, suffix: str=None, temperature: num=1, top_p: num=1, user: str}
+@returns(200) {id: str, choices: [map], created: int, model: str, system_fingerprint: str, object: str, usage: map{completion_tokens: int, prompt_tokens: int, total_tokens: int, completion_tokens_details: map{accepted_prediction_tokens: int, audio_tokens: int, reasoning_tokens: int, rejected_prediction_tokens: int}, prompt_tokens_details: map{audio_tokens: int, cached_tokens: int}}}
+
+@endgroup
+
+@group embeddings
+@endpoint POST /embeddings
+@required {input: any, model: any}
+@optional {encoding_format: str(float/base64)=float, dimensions: int, user: str}
+@returns(200) {data: [map], model: str, object: str, usage: map{prompt_tokens: int, total_tokens: int}}
+
+@endgroup
+
+@group evals
+@endpoint GET /evals
+@optional {after: str, limit: int=20, order: str(asc/desc)=asc, order_by: str(created_at/updated_at)=created_at}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /evals
+@required {data_source_config: map, testing_criteria: [any]}
+@optional {name: str, metadata: map}
+@returns(201) {object: str, id: str, name: str, data_source_config: map, testing_criteria: [any], created_at: int, metadata: map?}
+
+@endpoint GET /evals/{eval_id}
+@required {eval_id: str}
+@returns(200) {object: str, id: str, name: str, data_source_config: map, testing_criteria: [any], created_at: int, metadata: map?}
+
+@endpoint POST /evals/{eval_id}
+@required {eval_id: str}
+@optional {name: str, metadata: map}
+@returns(200) {object: str, id: str, name: str, data_source_config: map, testing_criteria: [any], created_at: int, metadata: map?}
+
+@endpoint DELETE /evals/{eval_id}
+@required {eval_id: str}
+@returns(200) {object: str, deleted: bool, eval_id: str}
+@errors {404}
+
+@endpoint GET /evals/{eval_id}/runs
+@required {eval_id: str}
+@optional {after: str, limit: int=20, order: str(asc/desc)=asc, status: str(queued/in_progress/completed/canceled/failed)}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /evals/{eval_id}/runs
+@required {eval_id: str, data_source: map}
+@optional {name: str, metadata: map}
+@returns(201) {object: str, id: str, eval_id: str, status: str, model: str, name: str, created_at: int, report_url: str, result_counts: map{total: int, errored: int, failed: int, passed: int}, per_model_usage: [map], per_testing_criteria_results: [map], data_source: map, metadata: map?, error: map{code: str, message: str}}
+@errors {400}
+
+@endpoint GET /evals/{eval_id}/runs/{run_id}
+@required {eval_id: str, run_id: str}
+@returns(200) {object: str, id: str, eval_id: str, status: str, model: str, name: str, created_at: int, report_url: str, result_counts: map{total: int, errored: int, failed: int, passed: int}, per_model_usage: [map], per_testing_criteria_results: [map], data_source: map, metadata: map?, error: map{code: str, message: str}}
+
+@endpoint POST /evals/{eval_id}/runs/{run_id}
+@required {eval_id: str, run_id: str}
+@returns(200) {object: str, id: str, eval_id: str, status: str, model: str, name: str, created_at: int, report_url: str, result_counts: map{total: int, errored: int, failed: int, passed: int}, per_model_usage: [map], per_testing_criteria_results: [map], data_source: map, metadata: map?, error: map{code: str, message: str}}
+
+@endpoint DELETE /evals/{eval_id}/runs/{run_id}
+@required {eval_id: str, run_id: str}
+@returns(200) {object: str, deleted: bool, run_id: str}
+@errors {404}
+
+@endpoint GET /evals/{eval_id}/runs/{run_id}/output_items
+@required {eval_id: str, run_id: str}
+@optional {after: str, limit: int=20, status: str(fail/pass), order: str(asc/desc)=asc}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint GET /evals/{eval_id}/runs/{run_id}/output_items/{output_item_id}
+@required {eval_id: str, run_id: str, output_item_id: str}
+@returns(200) {object: str, id: str, run_id: str, eval_id: str, created_at: int, status: str, datasource_item_id: int, datasource_item: map, results: [map], sample: map{input: [map], output: [map], finish_reason: str, model: str, usage: map{total_tokens: int, completion_tokens: int, prompt_tokens: int, cached_tokens: int}, error: map{code: str, message: str}, temperature: num, max_completion_tokens: int, top_p: num, seed: int}}
+
+@endgroup
+
+@group files
+@endpoint GET /files
+@optional {purpose: str, limit: int=10000, order: str(asc/desc)=desc, after: str}
+@returns(200) {object: str, data: [any], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /files
+@returns(200) {id: str, bytes: int, created_at: int, expires_at: int, filename: str, object: str, purpose: str, status: str, status_details: str}
+
+@endpoint DELETE /files/{file_id}
+@required {file_id: str}
+@returns(200) {id: str, object: str, deleted: bool}
+
+@endpoint GET /files/{file_id}
+@required {file_id: str}
+@returns(200) {id: str, bytes: int, created_at: int, expires_at: int, filename: str, object: str, purpose: str, status: str, status_details: str}
+
+@endpoint GET /files/{file_id}/content
+@required {file_id: str}
+@returns(200)
+
+@endgroup
+
+@group fine_tuning
+@endpoint GET /fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
+@required {fine_tuned_model_checkpoint: str}
+@optional {project_id: str, after: str, limit: int=10, order: str(ascending/descending)=descending}
+@returns(200) {data: [map], object: str, first_id: str?, last_id: str?, has_more: bool}
+
+@endpoint POST /fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
+@required {fine_tuned_model_checkpoint: str, project_ids: [str]}
+@returns(200) {data: [map], object: str, first_id: str?, last_id: str?, has_more: bool}
+
+@endpoint DELETE /fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions/{permission_id}
+@required {fine_tuned_model_checkpoint: str, permission_id: str}
+@returns(200) {id: str, object: str, deleted: bool}
+
+@endpoint POST /fine_tuning/jobs
+@required {model: any, training_file: str}
+@optional {hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}, suffix: str=None, validation_file: str, integrations: [map{type!: any, wandb!: map{project!: str, name: str, entity: str, tags: [str]}}], seed: int, method: map{type: str, supervised: map{hyperparameters: map}, dpo: map{hyperparameters: map}}, metadata: map}
+@returns(200) {id: str, created_at: int, error: map?{code: str, message: str, param: str?}, fine_tuned_model: str?, finished_at: int?, hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}, model: str, object: str, organization_id: str, result_files: [str], status: str, trained_tokens: int?, training_file: str, validation_file: str?, integrations: [any]?, seed: int, estimated_finish: int?, method: map{type: str, supervised: map{hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}}, dpo: map{hyperparameters: map{beta: any, batch_size: any, learning_rate_multiplier: any, n_epochs: any}}}, metadata: map?}
+
+@endpoint GET /fine_tuning/jobs
+@optional {after: str, limit: int=20, metadata: map}
+@returns(200) {data: [map], has_more: bool, object: str}
+
+@endpoint GET /fine_tuning/jobs/{fine_tuning_job_id}
+@required {fine_tuning_job_id: str}
+@returns(200) {id: str, created_at: int, error: map?{code: str, message: str, param: str?}, fine_tuned_model: str?, finished_at: int?, hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}, model: str, object: str, organization_id: str, result_files: [str], status: str, trained_tokens: int?, training_file: str, validation_file: str?, integrations: [any]?, seed: int, estimated_finish: int?, method: map{type: str, supervised: map{hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}}, dpo: map{hyperparameters: map{beta: any, batch_size: any, learning_rate_multiplier: any, n_epochs: any}}}, metadata: map?}
+
+@endpoint POST /fine_tuning/jobs/{fine_tuning_job_id}/cancel
+@required {fine_tuning_job_id: str}
+@returns(200) {id: str, created_at: int, error: map?{code: str, message: str, param: str?}, fine_tuned_model: str?, finished_at: int?, hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}, model: str, object: str, organization_id: str, result_files: [str], status: str, trained_tokens: int?, training_file: str, validation_file: str?, integrations: [any]?, seed: int, estimated_finish: int?, method: map{type: str, supervised: map{hyperparameters: map{batch_size: any, learning_rate_multiplier: any, n_epochs: any}}, dpo: map{hyperparameters: map{beta: any, batch_size: any, learning_rate_multiplier: any, n_epochs: any}}}, metadata: map?}
+
+@endpoint GET /fine_tuning/jobs/{fine_tuning_job_id}/checkpoints
+@required {fine_tuning_job_id: str}
+@optional {after: str, limit: int=10}
+@returns(200) {data: [map], object: str, first_id: str?, last_id: str?, has_more: bool}
+
+@endpoint GET /fine_tuning/jobs/{fine_tuning_job_id}/events
+@required {fine_tuning_job_id: str}
+@optional {after: str, limit: int=20}
+@returns(200) {data: [map], object: str, has_more: bool}
+
+@endgroup
+
+@group images
+@endpoint POST /images/edits
+@returns(200) {created: int, data: [map], usage: map{total_tokens: int, input_tokens: int, output_tokens: int, input_tokens_details: map{text_tokens: int, image_tokens: int}}}
+
+@endpoint POST /images/generations
+@required {prompt: str}
+@optional {model: any=dall-e-2, n: int=1, quality: str(standard/hd/low/medium/high/auto)=auto, response_format: str(url/b64_json)=url, output_format: str(png/jpeg/webp)=png, output_compression: int=100, size: str(auto/1024x1024/1536x1024/1024x1536/256x256/512x512/1792x1024/1024x1792)=auto, moderation: str(low/auto)=auto, background: str(transparent/opaque/auto)=auto, style: str(vivid/natural)=vivid, user: str}
+@returns(200) {created: int, data: [map], usage: map{total_tokens: int, input_tokens: int, output_tokens: int, input_tokens_details: map{text_tokens: int, image_tokens: int}}}
+
+@endpoint POST /images/variations
+@returns(200) {created: int, data: [map], usage: map{total_tokens: int, input_tokens: int, output_tokens: int, input_tokens_details: map{text_tokens: int, image_tokens: int}}}
+
+@endgroup
+
+@group models
+@endpoint GET /models
+@returns(200) {object: str, data: [any]}
+
+@endpoint GET /models/{model}
+@required {model: str}
+@returns(200) {id: str, created: int, object: str, owned_by: str}
+
+@endpoint DELETE /models/{model}
+@required {model: str}
+@returns(200) {id: str, deleted: bool, object: str}
+
+@endgroup
+
+@group moderations
+@endpoint POST /moderations
+@required {input: any}
+@optional {model: any=omni-moderation-latest}
+@returns(200) {id: str, model: str, results: [map]}
+
+@endgroup
+
+@group organization
+@endpoint GET /organization/admin_api_keys
+@optional {after: str, order: str(asc/desc)=asc, limit: int=20}
+@returns(200) {object: str, data: [map], has_more: bool, first_id: str, last_id: str}
+
+@endpoint POST /organization/admin_api_keys
+@required {name: str}
+@returns(200) {object: str, id: str, name: str, redacted_value: str, value: str, created_at: int(int64), last_used_at: int(int64)?, owner: map{type: str, object: str, id: str, name: str, created_at: int(int64), role: str}}
+
+@endpoint GET /organization/admin_api_keys/{key_id}
+@required {key_id: str}
+@returns(200) {object: str, id: str, name: str, redacted_value: str, value: str, created_at: int(int64), last_used_at: int(int64)?, owner: map{type: str, object: str, id: str, name: str, created_at: int(int64), role: str}}
+
+@endpoint DELETE /organization/admin_api_keys/{key_id}
+@required {key_id: str}
+@returns(200) {id: str, object: str, deleted: bool}
+
+@endpoint GET /organization/audit_logs
+@optional {effective_at: map, project_ids[]: [str], event_types[]: [str], actor_ids[]: [str], actor_emails[]: [str], resource_ids[]: [str], limit: int=20, after: str, before: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint GET /organization/certificates
+@optional {limit: int=20, after: str, order: str(asc/desc)=desc}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint POST /organization/certificates
+@required {content: str}
+@optional {name: str}
+@returns(200) {object: str, id: str, name: str, created_at: int, certificate_details: map{valid_at: int, expires_at: int, content: str}, active: bool}
+
+@endpoint POST /organization/certificates/activate
+@required {certificate_ids: [str]}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint POST /organization/certificates/deactivate
+@required {certificate_ids: [str]}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint GET /organization/certificates/{certificate_id}
+@required {cert_id: str}
+@optional {include: [str]}
+@returns(200) {object: str, id: str, name: str, created_at: int, certificate_details: map{valid_at: int, expires_at: int, content: str}, active: bool}
+
+@endpoint POST /organization/certificates/{certificate_id}
+@required {name: str}
+@returns(200) {object: str, id: str, name: str, created_at: int, certificate_details: map{valid_at: int, expires_at: int, content: str}, active: bool}
+
+@endpoint DELETE /organization/certificates/{certificate_id}
+@returns(200) {object: str, id: str}
+
+@endpoint GET /organization/costs
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str=1d, project_ids: [str], group_by: [str], limit: int=7, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/invites
+@optional {limit: int=20, after: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /organization/invites
+@required {email: str, role: str(reader/owner)}
+@optional {projects: [map{id!: str, role!: str}]}
+@returns(200) {object: str, id: str, email: str, role: str, status: str, invited_at: int, expires_at: int, accepted_at: int, projects: [map]}
+
+@endpoint GET /organization/invites/{invite_id}
+@required {invite_id: str}
+@returns(200) {object: str, id: str, email: str, role: str, status: str, invited_at: int, expires_at: int, accepted_at: int, projects: [map]}
+
+@endpoint DELETE /organization/invites/{invite_id}
+@required {invite_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+
+@endpoint GET /organization/projects
+@optional {limit: int=20, after: str, include_archived: bool=False}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /organization/projects
+@required {name: str}
+@returns(200) {id: str, object: str, name: str, created_at: int, archived_at: int?, status: str}
+
+@endpoint GET /organization/projects/{project_id}
+@required {project_id: str}
+@returns(200) {id: str, object: str, name: str, created_at: int, archived_at: int?, status: str}
+
+@endpoint POST /organization/projects/{project_id}
+@required {project_id: str, name: str}
+@returns(200) {id: str, object: str, name: str, created_at: int, archived_at: int?, status: str}
+@errors {400}
+
+@endpoint GET /organization/projects/{project_id}/api_keys
+@required {project_id: str}
+@optional {limit: int=20, after: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint GET /organization/projects/{project_id}/api_keys/{key_id}
+@required {project_id: str, key_id: str}
+@returns(200) {object: str, redacted_value: str, name: str, created_at: int, last_used_at: int, id: str, owner: map{type: str, user: map{object: str, id: str, name: str, email: str, role: str, added_at: int}, service_account: map{object: str, id: str, name: str, role: str, created_at: int}}}
+
+@endpoint DELETE /organization/projects/{project_id}/api_keys/{key_id}
+@required {project_id: str, key_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+@errors {400}
+
+@endpoint POST /organization/projects/{project_id}/archive
+@required {project_id: str}
+@returns(200) {id: str, object: str, name: str, created_at: int, archived_at: int?, status: str}
+
+@endpoint GET /organization/projects/{project_id}/certificates
+@optional {limit: int=20, after: str, order: str(asc/desc)=desc}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint POST /organization/projects/{project_id}/certificates/activate
+@required {certificate_ids: [str]}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint POST /organization/projects/{project_id}/certificates/deactivate
+@required {certificate_ids: [str]}
+@returns(200) {data: [map], first_id: str, last_id: str, has_more: bool, object: str}
+
+@endpoint GET /organization/projects/{project_id}/rate_limits
+@required {project_id: str}
+@optional {limit: int=100, after: str, before: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /organization/projects/{project_id}/rate_limits/{rate_limit_id}
+@required {project_id: str, rate_limit_id: str}
+@optional {max_requests_per_1_minute: int, max_tokens_per_1_minute: int, max_images_per_1_minute: int, max_audio_megabytes_per_1_minute: int, max_requests_per_1_day: int, batch_1_day_max_input_tokens: int}
+@returns(200) {object: str, id: str, model: str, max_requests_per_1_minute: int, max_tokens_per_1_minute: int, max_images_per_1_minute: int, max_audio_megabytes_per_1_minute: int, max_requests_per_1_day: int, batch_1_day_max_input_tokens: int}
+@errors {400}
+
+@endpoint GET /organization/projects/{project_id}/service_accounts
+@required {project_id: str}
+@optional {limit: int=20, after: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+@errors {400}
+
+@endpoint POST /organization/projects/{project_id}/service_accounts
+@required {project_id: str, name: str}
+@returns(200) {object: str, id: str, name: str, role: str, created_at: int, api_key: map{object: str, value: str, name: str, created_at: int, id: str}}
+@errors {400}
+
+@endpoint GET /organization/projects/{project_id}/service_accounts/{service_account_id}
+@required {project_id: str, service_account_id: str}
+@returns(200) {object: str, id: str, name: str, role: str, created_at: int}
+
+@endpoint DELETE /organization/projects/{project_id}/service_accounts/{service_account_id}
+@required {project_id: str, service_account_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+
+@endpoint GET /organization/projects/{project_id}/users
+@required {project_id: str}
+@optional {limit: int=20, after: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+@errors {400}
+
+@endpoint POST /organization/projects/{project_id}/users
+@required {project_id: str, user_id: str, role: str(owner/member)}
+@returns(200) {object: str, id: str, name: str, email: str, role: str, added_at: int}
+@errors {400}
+
+@endpoint GET /organization/projects/{project_id}/users/{user_id}
+@required {project_id: str, user_id: str}
+@returns(200) {object: str, id: str, name: str, email: str, role: str, added_at: int}
+
+@endpoint POST /organization/projects/{project_id}/users/{user_id}
+@required {project_id: str, user_id: str, role: str(owner/member)}
+@returns(200) {object: str, id: str, name: str, email: str, role: str, added_at: int}
+@errors {400}
+
+@endpoint DELETE /organization/projects/{project_id}/users/{user_id}
+@required {project_id: str, user_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+@errors {400}
+
+@endpoint GET /organization/usage/audio_speeches
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], user_ids: [str], api_key_ids: [str], models: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/audio_transcriptions
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], user_ids: [str], api_key_ids: [str], models: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/code_interpreter_sessions
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/completions
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], user_ids: [str], api_key_ids: [str], models: [str], batch: bool, group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/embeddings
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], user_ids: [str], api_key_ids: [str], models: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/images
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, sources: [str], sizes: [str], project_ids: [str], user_ids: [str], api_key_ids: [str], models: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/moderations
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], user_ids: [str], api_key_ids: [str], models: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/usage/vector_stores
+@required {start_time: int}
+@optional {end_time: int, bucket_width: str(1m/1h/1d)=1d, project_ids: [str], group_by: [str], limit: int, page: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str}
+
+@endpoint GET /organization/users
+@optional {limit: int=20, after: str, emails: [str]}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint GET /organization/users/{user_id}
+@required {user_id: str}
+@returns(200) {object: str, id: str, name: str, email: str, role: str, added_at: int}
+
+@endpoint POST /organization/users/{user_id}
+@required {user_id: str, role: str(owner/reader)}
+@returns(200) {object: str, id: str, name: str, email: str, role: str, added_at: int}
+
+@endpoint DELETE /organization/users/{user_id}
+@required {user_id: str}
+@returns(200) {object: str, id: str, deleted: bool}
+
+@endgroup
+
+@group realtime
+@endpoint POST /realtime/sessions
+@optional {modalities: any, model: str(gpt-4o-realtime-preview/gpt-4o-realtime-preview-2024-10-01/gpt-4o-realtime-preview-2024-12-17/gpt-4o-mini-realtime-preview/gpt-4o-mini-realtime-preview-2024-12-17), instructions: str, voice: any, input_audio_format: str(pcm16/g711_ulaw/g711_alaw)=pcm16, output_audio_format: str(pcm16/g711_ulaw/g711_alaw)=pcm16, input_audio_transcription: map{model: str, language: str, prompt: str}, turn_detection: map{type: str, eagerness: str, threshold: num, prefix_padding_ms: int, silence_duration_ms: int, create_response: bool, interrupt_response: bool}, input_audio_noise_reduction: map{type: str}=None, tools: [map{type: str, name: str, description: str, parameters: map}], tool_choice: str=auto, temperature: num=0.8, max_response_output_tokens: any}
+@returns(200) {client_secret: map{value: str, expires_at: int}, modalities: any, instructions: str, voice: any, input_audio_format: str, output_audio_format: str, input_audio_transcription: map{model: str}, turn_detection: map{type: str, threshold: num, prefix_padding_ms: int, silence_duration_ms: int}, tools: [map], tool_choice: str, temperature: num, max_response_output_tokens: any}
+
+@endpoint POST /realtime/transcription_sessions
+@optional {modalities: any, input_audio_format: str(pcm16/g711_ulaw/g711_alaw)=pcm16, input_audio_transcription: map{model: str, language: str, prompt: str}, turn_detection: map{type: str, eagerness: str, threshold: num, prefix_padding_ms: int, silence_duration_ms: int, create_response: bool, interrupt_response: bool}, input_audio_noise_reduction: map{type: str}=None, include: [str]}
+@returns(200) {client_secret: map{value: str, expires_at: int}, modalities: any, input_audio_format: str, input_audio_transcription: map{model: str, language: str, prompt: str}, turn_detection: map{type: str, threshold: num, prefix_padding_ms: int, silence_duration_ms: int}}
+
+@endgroup
+
+@group responses
+@endpoint POST /responses
+@returns(200)
+
+@endpoint GET /responses/{response_id}
+@required {response_id: str}
+@optional {include: [str]}
+@returns(200)
+
+@endpoint DELETE /responses/{response_id}
+@required {response_id: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /responses/{response_id}/input_items
+@required {response_id: str}
+@optional {limit: int=20, order: str(asc/desc), after: str, before: str, include: [str]}
+@returns(200) {object: str, data: [any], has_more: bool, first_id: str, last_id: str}
+
+@endgroup
+
+@group threads
+@endpoint POST /threads
+@optional {messages: [map{role!: str, content!: any, attachments: [map{file_id: str, tools: [any]}], metadata: map}], tool_resources: map{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str], vector_stores: [map]}}, metadata: map}
+@returns(200) {id: str, object: str, created_at: int, tool_resources: map?{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map?}
+
+@endpoint POST /threads/runs
+@required {assistant_id: str}
+@optional {thread: map{messages: [map{role!: str, content!: any, attachments: [map], metadata: map}], tool_resources: map{code_interpreter: map, file_search: map}, metadata: map}, model: any, instructions: str, tools: [any], tool_resources: map{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map, temperature: num=1, top_p: num=1, stream: bool, max_prompt_tokens: int, max_completion_tokens: int, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool=True, response_format: any}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, assistant_id: str, status: str, required_action: map?{type: str, submit_tool_outputs: map{tool_calls: [map]}}, last_error: map?{code: str, message: str}, expires_at: int?, started_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, incomplete_details: map?{reason: str}, model: str, instructions: str, tools: [any], metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}, temperature: num?, top_p: num?, max_prompt_tokens: int?, max_completion_tokens: int?, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool, response_format: any}
+
+@endpoint GET /threads/{thread_id}
+@required {thread_id: str}
+@returns(200) {id: str, object: str, created_at: int, tool_resources: map?{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map?}
+
+@endpoint POST /threads/{thread_id}
+@required {thread_id: str}
+@optional {tool_resources: map{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map}
+@returns(200) {id: str, object: str, created_at: int, tool_resources: map?{code_interpreter: map{file_ids: [str]}, file_search: map{vector_store_ids: [str]}}, metadata: map?}
+
+@endpoint DELETE /threads/{thread_id}
+@required {thread_id: str}
+@returns(200) {id: str, deleted: bool, object: str}
+
+@endpoint GET /threads/{thread_id}/messages
+@required {thread_id: str}
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str, run_id: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /threads/{thread_id}/messages
+@required {thread_id: str, role: str(user/assistant), content: any}
+@optional {attachments: [map{file_id: str, tools: [any]}], metadata: map}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, status: str, incomplete_details: map?{reason: str}, completed_at: int?, incomplete_at: int?, role: str, content: [any], assistant_id: str?, run_id: str?, attachments: [map]?, metadata: map?}
+
+@endpoint GET /threads/{thread_id}/messages/{message_id}
+@required {thread_id: str, message_id: str}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, status: str, incomplete_details: map?{reason: str}, completed_at: int?, incomplete_at: int?, role: str, content: [any], assistant_id: str?, run_id: str?, attachments: [map]?, metadata: map?}
+
+@endpoint POST /threads/{thread_id}/messages/{message_id}
+@required {thread_id: str, message_id: str}
+@optional {metadata: map}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, status: str, incomplete_details: map?{reason: str}, completed_at: int?, incomplete_at: int?, role: str, content: [any], assistant_id: str?, run_id: str?, attachments: [map]?, metadata: map?}
+
+@endpoint DELETE /threads/{thread_id}/messages/{message_id}
+@required {thread_id: str, message_id: str}
+@returns(200) {id: str, deleted: bool, object: str}
+
+@endpoint GET /threads/{thread_id}/runs
+@required {thread_id: str}
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /threads/{thread_id}/runs
+@required {thread_id: str, assistant_id: str}
+@optional {include[]: [str], model: any, reasoning_effort: str(low/medium/high)=medium, instructions: str, additional_instructions: str, additional_messages: [map{role!: str, content!: any, attachments: [map{file_id: str, tools: [any]}], metadata: map}], tools: [any], metadata: map, temperature: num=1, top_p: num=1, stream: bool, max_prompt_tokens: int, max_completion_tokens: int, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool=True, response_format: any}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, assistant_id: str, status: str, required_action: map?{type: str, submit_tool_outputs: map{tool_calls: [map]}}, last_error: map?{code: str, message: str}, expires_at: int?, started_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, incomplete_details: map?{reason: str}, model: str, instructions: str, tools: [any], metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}, temperature: num?, top_p: num?, max_prompt_tokens: int?, max_completion_tokens: int?, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool, response_format: any}
+
+@endpoint GET /threads/{thread_id}/runs/{run_id}
+@required {thread_id: str, run_id: str}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, assistant_id: str, status: str, required_action: map?{type: str, submit_tool_outputs: map{tool_calls: [map]}}, last_error: map?{code: str, message: str}, expires_at: int?, started_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, incomplete_details: map?{reason: str}, model: str, instructions: str, tools: [any], metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}, temperature: num?, top_p: num?, max_prompt_tokens: int?, max_completion_tokens: int?, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool, response_format: any}
+
+@endpoint POST /threads/{thread_id}/runs/{run_id}
+@required {thread_id: str, run_id: str}
+@optional {metadata: map}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, assistant_id: str, status: str, required_action: map?{type: str, submit_tool_outputs: map{tool_calls: [map]}}, last_error: map?{code: str, message: str}, expires_at: int?, started_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, incomplete_details: map?{reason: str}, model: str, instructions: str, tools: [any], metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}, temperature: num?, top_p: num?, max_prompt_tokens: int?, max_completion_tokens: int?, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool, response_format: any}
+
+@endpoint POST /threads/{thread_id}/runs/{run_id}/cancel
+@required {thread_id: str, run_id: str}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, assistant_id: str, status: str, required_action: map?{type: str, submit_tool_outputs: map{tool_calls: [map]}}, last_error: map?{code: str, message: str}, expires_at: int?, started_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, incomplete_details: map?{reason: str}, model: str, instructions: str, tools: [any], metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}, temperature: num?, top_p: num?, max_prompt_tokens: int?, max_completion_tokens: int?, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool, response_format: any}
+
+@endpoint GET /threads/{thread_id}/runs/{run_id}/steps
+@required {thread_id: str, run_id: str}
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str, include[]: [str]}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint GET /threads/{thread_id}/runs/{run_id}/steps/{step_id}
+@required {thread_id: str, run_id: str, step_id: str}
+@optional {include[]: [str]}
+@returns(200) {id: str, object: str, created_at: int, assistant_id: str, thread_id: str, run_id: str, type: str, status: str, step_details: map, last_error: map?{code: str, message: str}, expired_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}}
+
+@endpoint POST /threads/{thread_id}/runs/{run_id}/submit_tool_outputs
+@required {thread_id: str, run_id: str, tool_outputs: [map{tool_call_id: str, output: str}]}
+@optional {stream: bool}
+@returns(200) {id: str, object: str, created_at: int, thread_id: str, assistant_id: str, status: str, required_action: map?{type: str, submit_tool_outputs: map{tool_calls: [map]}}, last_error: map?{code: str, message: str}, expires_at: int?, started_at: int?, cancelled_at: int?, failed_at: int?, completed_at: int?, incomplete_details: map?{reason: str}, model: str, instructions: str, tools: [any], metadata: map?, usage: map?{completion_tokens: int, prompt_tokens: int, total_tokens: int}, temperature: num?, top_p: num?, max_prompt_tokens: int?, max_completion_tokens: int?, truncation_strategy: any, tool_choice: any, parallel_tool_calls: bool, response_format: any}
+
+@endgroup
+
+@group uploads
+@endpoint POST /uploads
+@required {filename: str, purpose: str(assistants/batch/fine-tune/vision), bytes: int, mime_type: str}
+@returns(200) {id: str, created_at: int, filename: str, bytes: int, purpose: str, status: str, expires_at: int, object: str, file: any}
+
+@endpoint POST /uploads/{upload_id}/cancel
+@required {upload_id: str}
+@returns(200) {id: str, created_at: int, filename: str, bytes: int, purpose: str, status: str, expires_at: int, object: str, file: any}
+
+@endpoint POST /uploads/{upload_id}/complete
+@required {upload_id: str, part_ids: [str]}
+@optional {md5: str}
+@returns(200) {id: str, created_at: int, filename: str, bytes: int, purpose: str, status: str, expires_at: int, object: str, file: any}
+
+@endpoint POST /uploads/{upload_id}/parts
+@required {upload_id: str}
+@returns(200) {id: str, created_at: int, upload_id: str, object: str}
+
+@endgroup
+
+@group vector_stores
+@endpoint GET /vector_stores
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /vector_stores
+@optional {file_ids: [str], name: str, expires_after: map{anchor!: str, days!: int}, chunking_strategy: map, metadata: map}
+@returns(200) {id: str, object: str, created_at: int, name: str, usage_bytes: int, file_counts: map{in_progress: int, completed: int, failed: int, cancelled: int, total: int}, status: str, expires_after: map{anchor: str, days: int}, expires_at: int?, last_active_at: int?, metadata: map?}
+
+@endpoint GET /vector_stores/{vector_store_id}
+@required {vector_store_id: str}
+@returns(200) {id: str, object: str, created_at: int, name: str, usage_bytes: int, file_counts: map{in_progress: int, completed: int, failed: int, cancelled: int, total: int}, status: str, expires_after: map{anchor: str, days: int}, expires_at: int?, last_active_at: int?, metadata: map?}
+
+@endpoint POST /vector_stores/{vector_store_id}
+@required {vector_store_id: str}
+@optional {name: str, expires_after: any, metadata: map}
+@returns(200) {id: str, object: str, created_at: int, name: str, usage_bytes: int, file_counts: map{in_progress: int, completed: int, failed: int, cancelled: int, total: int}, status: str, expires_after: map{anchor: str, days: int}, expires_at: int?, last_active_at: int?, metadata: map?}
+
+@endpoint DELETE /vector_stores/{vector_store_id}
+@required {vector_store_id: str}
+@returns(200) {id: str, deleted: bool, object: str}
+
+@endpoint POST /vector_stores/{vector_store_id}/file_batches
+@required {vector_store_id: str, file_ids: [str]}
+@optional {chunking_strategy: map, attributes: map}
+@returns(200) {id: str, object: str, created_at: int, vector_store_id: str, status: str, file_counts: map{in_progress: int, completed: int, failed: int, cancelled: int, total: int}}
+
+@endpoint GET /vector_stores/{vector_store_id}/file_batches/{batch_id}
+@required {vector_store_id: str, batch_id: str}
+@returns(200) {id: str, object: str, created_at: int, vector_store_id: str, status: str, file_counts: map{in_progress: int, completed: int, failed: int, cancelled: int, total: int}}
+
+@endpoint POST /vector_stores/{vector_store_id}/file_batches/{batch_id}/cancel
+@required {vector_store_id: str, batch_id: str}
+@returns(200) {id: str, object: str, created_at: int, vector_store_id: str, status: str, file_counts: map{in_progress: int, completed: int, failed: int, cancelled: int, total: int}}
+
+@endpoint GET /vector_stores/{vector_store_id}/file_batches/{batch_id}/files
+@required {vector_store_id: str, batch_id: str}
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str, filter: str(in_progress/completed/failed/cancelled)}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint GET /vector_stores/{vector_store_id}/files
+@required {vector_store_id: str}
+@optional {limit: int=20, order: str(asc/desc)=desc, after: str, before: str, filter: str(in_progress/completed/failed/cancelled)}
+@returns(200) {object: str, data: [map], first_id: str, last_id: str, has_more: bool}
+
+@endpoint POST /vector_stores/{vector_store_id}/files
+@required {vector_store_id: str, file_id: str}
+@optional {chunking_strategy: map, attributes: map}
+@returns(200) {id: str, object: str, usage_bytes: int, created_at: int, vector_store_id: str, status: str, last_error: map?{code: str, message: str}, chunking_strategy: map, attributes: map?}
+
+@endpoint GET /vector_stores/{vector_store_id}/files/{file_id}
+@required {vector_store_id: str, file_id: str}
+@returns(200) {id: str, object: str, usage_bytes: int, created_at: int, vector_store_id: str, status: str, last_error: map?{code: str, message: str}, chunking_strategy: map, attributes: map?}
+
+@endpoint DELETE /vector_stores/{vector_store_id}/files/{file_id}
+@required {vector_store_id: str, file_id: str}
+@returns(200) {id: str, deleted: bool, object: str}
+
+@endpoint POST /vector_stores/{vector_store_id}/files/{file_id}
+@required {vector_store_id: str, file_id: str, attributes: map}
+@returns(200) {id: str, object: str, usage_bytes: int, created_at: int, vector_store_id: str, status: str, last_error: map?{code: str, message: str}, chunking_strategy: map, attributes: map?}
+
+@endpoint GET /vector_stores/{vector_store_id}/files/{file_id}/content
+@required {vector_store_id: str, file_id: str}
+@returns(200) {object: str, data: [map], has_more: bool, next_page: str?}
+
+@endpoint POST /vector_stores/{vector_store_id}/search
+@required {vector_store_id: str, query: any}
+@optional {rewrite_query: bool=False, max_num_results: int=10, filters: any, ranking_options: map{ranker: str, score_threshold: num}}
+@returns(200) {object: str, search_query: [str], data: [map], has_more: bool, next_page: str?}
+
+@endgroup
+
+@end

@@ -1,0 +1,88 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Fund API
+@base https://cal-test.adyen.com/cal/services/Fund/v6
+@version 6
+@auth ApiKey X-API-Key in header | Bearer basic
+@endpoints 8
+@toc accountHolderBalance(1), accountHolderTransactionList(1), debitAccountHolder(1), payoutAccountHolder(1), refundFundsTransfer(1), refundNotPaidOutTransfers(1), setupBeneficiary(1), transferFunds(1)
+
+@group accountHolderBalance
+@endpoint POST /accountHolderBalance
+@required {accountHolderCode: str}
+@returns(200) {balancePerAccount: [map], invalidFields: [map], pspReference: str, resultCode: str, totalBalance: map{balance: [map], onHoldBalance: [map], pendingBalance: [map]}}
+@returns(202) {balancePerAccount: [map], invalidFields: [map], pspReference: str, resultCode: str, totalBalance: map{balance: [map], onHoldBalance: [map], pendingBalance: [map]}}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group accountHolderTransactionList
+@endpoint POST /accountHolderTransactionList
+@required {accountHolderCode: str}
+@optional {transactionListsPerAccount: [map{accountCode!: str, page!: int(int32)}], transactionStatuses: [str]}
+@returns(200) {accountTransactionLists: [map], invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {accountTransactionLists: [map], invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group debitAccountHolder
+@endpoint POST /debitAccountHolder
+@required {accountHolderCode: str, amount: map{currency!: str, value!: int(int64)}, bankAccountUUID: str, merchantAccount: str, splits: [map{account: str, amount: map, description: str, reference: str, type!: str}]}
+@optional {description: str}
+@returns(200) {accountHolderCode: str, bankAccountUUID: str, invalidFields: [map], merchantReferences: [str], pspReference: str, resultCode: str}
+@returns(202) {accountHolderCode: str, bankAccountUUID: str, invalidFields: [map], merchantReferences: [str], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group payoutAccountHolder
+@endpoint POST /payoutAccountHolder
+@required {accountCode: str, accountHolderCode: str}
+@optional {amount: map{currency!: str, value!: int(int64)}, bankAccountUUID: str, description: str, merchantReference: str, payoutMethodCode: str, payoutSpeed: str(INSTANT/SAME_DAY/STANDARD)=STANDARD}
+@returns(200) {bankAccountUUID: str, invalidFields: [map], merchantReference: str, payoutSpeed: str, pspReference: str, resultCode: str}
+@returns(202) {bankAccountUUID: str, invalidFields: [map], merchantReference: str, payoutSpeed: str, pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group refundFundsTransfer
+@endpoint POST /refundFundsTransfer
+@required {amount: map{currency!: str, value!: int(int64)}, originalReference: str}
+@optional {merchantReference: str}
+@returns(200) {invalidFields: [map], merchantReference: str, message: str, originalReference: str, pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], merchantReference: str, message: str, originalReference: str, pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group refundNotPaidOutTransfers
+@endpoint POST /refundNotPaidOutTransfers
+@required {accountCode: str, accountHolderCode: str}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group setupBeneficiary
+@endpoint POST /setupBeneficiary
+@required {destinationAccountCode: str, sourceAccountCode: str}
+@optional {merchantReference: str}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group transferFunds
+@endpoint POST /transferFunds
+@required {amount: map{currency!: str, value!: int(int64)}, destinationAccountCode: str, sourceAccountCode: str, transferCode: str}
+@optional {merchantReference: str}
+@returns(200) {invalidFields: [map], merchantReference: str, pspReference: str, resultCode: str}
+@returns(202) {invalidFields: [map], merchantReference: str, pspReference: str, resultCode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@end

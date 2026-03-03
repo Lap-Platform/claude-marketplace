@@ -1,0 +1,91 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api eNanoMapper federated search
+@base https://api.ideaconsult.net/enanomapper
+@version 1.0
+@endpoints 13
+@toc select(2), enm(11)
+
+@group select
+@endpoint GET /select
+@optional {q: str, fq: str, fl: str, start: int, rows: int, wt: str(json/xml/csv)=xml}
+@returns(200) {responseHeader: map{zkConnected: bool, status: int, QTime: int, params: map}, response: map{numFound: int, start: int, maxScore: num, docs: [map]}}
+@errors {400, 401, 403, 404, 409, 415, 500, 503, 510}
+
+@endpoint POST /select
+@optional {wt: str(json/xml)=xml, params: map{fl: [str], rows: int}, facet: map}
+@returns(200) {responseHeader: map{zkConnected: bool, status: int, QTime: int, params: map}, response: map{numFound: int, start: int, maxScore: num, docs: [map]}}
+@errors {400, 401, 403, 404, 409, 415, 500, 503, 510}
+
+@endgroup
+
+@group enm
+@endpoint GET /enm/{db}/investigation
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, type: str(byinvestigation/byassay/bysubstance/byprovider/bycitation/bystudytype/bystructure_inchikey/bystructure_smiles/bystructure_name/bysubstance_name/bysubstance_type), search: str}
+@optional {inchikey: str, id: str, page: int, pagesize: int}
+@returns(200) {substanceType: str, name: str, publicname: str, owner_name: str, topcategory: str, endpointcategory: str, guidance: str, endpoint: str, document_uuid: str, reference: str, reference_owner: str, reference_year: str, effectendpoint: str, resulttype: str, textValue: str, loQualifier: str, loValue: num, upQualifier: str, upValue: num, unit: str, errQualifier: str, err: num, s_uuid: str, assay: str, investigation: str, type_s: str, updated: str, studyResultType: str, _childDocuments_: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/substance
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1}
+@optional {search: str, type: str(substancetype/name/like/regexp/uuif/CompTox/DOI/reliability/purposeFlag/studyResultType/isRobustStudy/citation/citationowner/topcategory/endpointcategory/params/owner_name/owner_uuid/related/reference/facet), compound_uri: str, bundleUri: str, addDummySubstance: bool, studysummary: bool, page: int, pagesize: int}
+@returns(200) {substance: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/substance/{uuid}
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, uuid: str}
+@optional {property_uris[]: str, page: int, pagesize: int}
+@returns(200) {substance: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/substance/{uuid}/study
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, uuid: str}
+@optional {top: str(P-CHEM/ECOTOX/ENV FATE/TOX/EXPOSURE), category: str, property_uri: str, property: str, investigation_uuid: str, page: int, pagesize: int}
+@returns(200) {study: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/substance/{uuid}/composition
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, uuid: str}
+@optional {all: bool, page: int, pagesize: int}
+@returns(200) {composition: map, feature: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/substance/{uuid}/structures
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, uuid: str}
+@optional {page: int, pagesize: int}
+@returns(200) {query: map, dataEntry: map, model_uri: str, feature: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/substance/{uuid}/studySummary
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, uuid: str}
+@optional {top: str(P-CHEM/ECOTOX/ENV FATE/TOX/EXPOSURE), category: str, property_uri: str, property: str, result: bool, page: int, pagesize: int}
+@returns(200) {facet: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/query/study
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1}
+@optional {top: str(P-CHEM/ECOTOX/ENV FATE/TOX/EXPOSURE), category: str}
+@returns(200) {facet: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/query/compound/{term}/{representation}
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1, term: str(search/url/inchikey), representation: str(all/smiles/reach/stdinchi/stdinchikey/names/iupac_name/synonym/cas/einecs)}
+@optional {search: str, b64search: str, casesens: bool, bundleUri: str, sameas: str, page: int, pagesize: int}
+@returns(200) {query: map, dataEntry: map, model_uri: str, feature: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/query/smarts
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1}
+@optional {search: str, b64search: str, type: str(smiles/mol/url), dataset_uri: str, filterBySubstance: bool, bundleUri: str, sameas: str, mol: bool, page: int, pagesize: int}
+@returns(200) {query: map, dataEntry: map, model_uri: str, feature: map}
+@errors {404}
+
+@endpoint GET /enm/{db}/query/similarity
+@required {db: str(calibrate/enanomapper/enpra/gracious/marina/nanogenotox/nanoinformatix/nanoreg1/nanoreg2/nanotest/sanowork/sbd4nano/sabydoma)=nanoreg1}
+@optional {search: str, b64search: str, type: str(smiles/mol/url), threshold: num, dataset_uri: str, filterBySubstance: bool, bundleUri: str, sameas: str, mol: bool, page: int, pagesize: int}
+@returns(200) {query: map, dataEntry: map, model_uri: str, feature: map}
+@errors {404}
+
+@endgroup
+
+@end

@@ -1,0 +1,296 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Docker HUB API
+@base https://hub.docker.com
+@version 2-beta
+@auth Bearer bearer | Bearer bearer
+@endpoints 54
+@hint download_for_search
+@toc users(2), auth(1), access-tokens(5), auditlogs(2), orgs(21), namespaces(10), repositories(1), invites(3), scim(9)
+
+@group users
+@endpoint POST /v2/users/login
+@required {username: str, password: str}
+@returns(200) {token: str}
+@errors {401}
+
+@endpoint POST /v2/users/2fa-login
+@required {login_2fa_token: str, code: str}
+@returns(200) {token: str}
+@errors {401}
+
+@endgroup
+
+@group auth
+@endpoint POST /v2/auth/token
+@required {identifier: str, secret: str}
+@returns(200) {access_token: str}
+@errors {401}
+
+@endgroup
+
+@group access-tokens
+@endpoint POST /v2/access-tokens
+@required {token_label: str, scopes: [str]}
+@optional {expires_at: str(date-time)}
+@returns(201) {uuid: str, client_id: str, creator_ip: str, creator_ua: str, created_at: str, last_used: str?, generated_by: str, is_active: bool, token: str, token_label: str, scopes: [str], expires_at: str(date-time)}
+@errors {400, 401}
+
+@endpoint GET /v2/access-tokens
+@optional {page: num=1, page_size: num=10}
+@returns(200) {count: num, next: str, previous: str, active_count: num, results: [any]}
+@errors {400, 401}
+
+@endpoint PATCH /v2/access-tokens/{uuid}
+@optional {token_label: str, is_active: bool}
+@returns(200) {uuid: str, client_id: str, creator_ip: str, creator_ua: str, created_at: str, last_used: str?, generated_by: str, is_active: bool, token: str, token_label: str, scopes: [str], expires_at: str(date-time)}
+@errors {400, 401}
+
+@endpoint GET /v2/access-tokens/{uuid}
+@returns(200)
+@errors {401, 404}
+
+@endpoint DELETE /v2/access-tokens/{uuid}
+@returns(204)
+@errors {401, 404}
+
+@endgroup
+
+@group auditlogs
+@endpoint GET /v2/auditlogs/{account}/actions
+@required {account: str}
+@returns(200) {actions: map}
+@errors {429, 500}
+
+@endpoint GET /v2/auditlogs/{account}
+@required {account: str}
+@optional {action: str, name: str, actor: str, from: str(date-time), to: str(date-time), page: int(int32)=1, page_size: int(int32)=25}
+@returns(200) {logs: [map]}
+@errors {429, 500}
+
+@endgroup
+
+@group orgs
+@endpoint GET /v2/orgs/{name}/settings
+@returns(200) {restricted_images: map{enabled: bool, allow_official_images: bool, allow_verified_publishers: bool}}
+@errors {401, 403, 404}
+
+@endpoint PUT /v2/orgs/{name}/settings
+@required {restricted_images: any}
+@returns(200) {restricted_images: map{enabled: bool, allow_official_images: bool, allow_verified_publishers: bool}}
+@errors {401, 403, 404}
+
+@endpoint POST /v2/orgs/{name}/access-tokens
+@optional {label: str, description: str, resources: [map{type: str, path: str, scopes: [str]}], expires_at: str(date-time)}
+@returns(201)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v2/orgs/{name}/access-tokens
+@optional {page: num=1, page_size: num=10}
+@returns(200) {total: num, next: str, previous: str, results: [map]}
+@errors {401, 403, 404}
+
+@endpoint GET /v2/orgs/{org_name}/access-tokens/{access_token_id}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint PATCH /v2/orgs/{org_name}/access-tokens/{access_token_id}
+@optional {label: str, description: str, resources: [map{type: str, path: str, scopes: [str]}], is_active: bool}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint DELETE /v2/orgs/{org_name}/access-tokens/{access_token_id}
+@returns(204)
+@errors {401, 403, 404}
+
+@endgroup
+
+@group namespaces
+@endpoint GET /v2/namespaces/{namespace}/repositories/{repository}/tags
+@optional {page: int, page_size: int}
+@returns(200)
+@errors {403, 404}
+
+@endpoint HEAD /v2/namespaces/{namespace}/repositories/{repository}/tags
+@returns(200)
+@errors {403, 404}
+
+@endpoint GET /v2/namespaces/{namespace}/repositories/{repository}/tags/{tag}
+@returns(200) {id: int, images: map{architecture: str, features: str, variant: str, digest: str?, layers: [map], os: str, os_features: str, os_version: str, size: int, status: str, last_pulled: str?, last_pushed: str?}, creator: int, last_updated: str?, last_updater: int, last_updater_username: str, name: str, repository: int, full_size: int, v2: str, status: str, tag_last_pulled: str?, tag_last_pushed: str?}
+@errors {403, 404}
+
+@endpoint HEAD /v2/namespaces/{namespace}/repositories/{repository}/tags/{tag}
+@returns(200)
+@errors {403, 404}
+
+@endpoint PATCH /v2/namespaces/{namespace}/repositories/{repository}/immutabletags
+@required {immutable_tags: bool, immutable_tags_rules: [str]}
+@returns(200) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/namespaces/{namespace}/repositories/{repository}/immutabletags/verify
+@required {regex: str}
+@returns(200) {tags: [str]}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group repositories
+@endpoint POST /v2/repositories/{namespace}/{repository}/groups
+@required {group_id: int(int64), permission: str(read/write/admin)}
+@returns(200) {group_name: str, permission: str, group_id: int(int64)}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group namespaces
+@endpoint GET /v2/namespaces/{namespace}/repositories
+@optional {page: int=1, page_size: int=10, name: str, ordering: str(name/-name/last_updated/-last_updated/pull_count/-pull_count)}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/namespaces/{namespace}/repositories
+@required {name: str, namespace: str}
+@optional {description: str, full_description: str, registry: str, is_private: bool=False}
+@returns(201) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /v2/namespaces/{namespace}/repositories/{repository}
+@returns(200) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
+@errors {401, 403, 404, 500}
+
+@endpoint HEAD /v2/namespaces/{namespace}/repositories/{repository}
+@returns(200) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group orgs
+@endpoint GET /v2/orgs/{org_name}/members
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v2/orgs/{org_name}/members/export
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /v2/orgs/{org_name}/members/{username}
+@required {role: str(owner/editor/member)}
+@returns(200) {email: str, role: str, groups: [str], is_guest: bool, primary_email: str, last_logged_in_at: str(date-time), last_seen_at: str(date-time), last_desktop_version: str}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /v2/orgs/{org_name}/members/{username}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v2/orgs/{org_name}/invites
+@returns(200) {data: [map]}
+@errors {401, 403, 404}
+
+@endpoint GET /v2/orgs/{org_name}/groups
+@optional {page: int, page_size: int, username: str, search: str}
+@returns(200) {count: num, next: str, previous: str, results: [map]}
+@errors {401, 403, 404}
+
+@endpoint POST /v2/orgs/{org_name}/groups
+@required {name: str}
+@optional {description: str}
+@returns(201) {id: num, uuid: str, name: str, description: str, member_count: num}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/orgs/{org_name}/groups/{group_name}
+@returns(200) {id: num, uuid: str, name: str, description: str, member_count: num}
+@errors {401, 403, 404}
+
+@endpoint PUT /v2/orgs/{org_name}/groups/{group_name}
+@required {name: str}
+@optional {description: str}
+@returns(200) {id: num, uuid: str, name: str, description: str, member_count: num}
+@errors {401, 403, 404}
+
+@endpoint PATCH /v2/orgs/{org_name}/groups/{group_name}
+@optional {name: str, description: str}
+@returns(200) {id: num, uuid: str, name: str, description: str, member_count: num}
+@errors {401, 403, 404}
+
+@endpoint DELETE /v2/orgs/{org_name}/groups/{group_name}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint GET /v2/orgs/{org_name}/groups/{group_name}/members
+@required {org_name: str, group_name: str}
+@optional {page: int, page_size: int, search: str}
+@returns(200) {count: num, next: str, previous: str, results: [map]}
+@errors {401, 403, 404}
+
+@endpoint POST /v2/orgs/{org_name}/groups/{group_name}/members
+@required {org_name: str, group_name: str, member: str}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /v2/orgs/{org_name}/groups/{group_name}/members/{username}
+@returns(204)
+@errors {401, 403, 404}
+
+@endgroup
+
+@group invites
+@endpoint DELETE /v2/invites/{id}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint PATCH /v2/invites/{id}/resend
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint POST /v2/invites/bulk
+@required {org: str, invitees: [str]}
+@optional {team: str, role: str, dry_run: bool}
+@returns(202) {invitees: map{invitees: [map]}}
+@errors {400, 409}
+
+@endgroup
+
+@group scim
+@endpoint GET /v2/scim/2.0/ServiceProviderConfig
+@returns(200)
+@errors {401, 500}
+
+@endpoint GET /v2/scim/2.0/ResourceTypes
+@returns(200)
+@errors {401, 500}
+
+@endpoint GET /v2/scim/2.0/ResourceTypes/{name}
+@required {name: str}
+@returns(200)
+@errors {401, 404, 500}
+
+@endpoint GET /v2/scim/2.0/Schemas
+@returns(200)
+@errors {401, 500}
+
+@endpoint GET /v2/scim/2.0/Schemas/{id}
+@required {id: str}
+@returns(200)
+@errors {401, 404, 500}
+
+@endpoint GET /v2/scim/2.0/Users
+@optional {startIndex: int, count: int, filter: str, attributes: str, sortOrder: str(ascending/descending), sortBy: str}
+@returns(200)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint POST /v2/scim/2.0/Users
+@returns(201)
+@errors {400, 401, 403, 404, 409, 500}
+
+@endpoint GET /v2/scim/2.0/Users/{id}
+@returns(200)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint PUT /v2/scim/2.0/Users/{id}
+@returns(200)
+@errors {400, 401, 403, 404, 409, 500}
+
+@endgroup
+
+@end

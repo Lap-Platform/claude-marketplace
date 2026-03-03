@@ -1,0 +1,245 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Agent Analytics API
+@base https://api.agentanalytics.sh
+@version 1.0.0
+@auth ApiKey X-API-Key in header | ApiKey token in query
+@endpoints 32
+@hint download_for_search
+@toc track(2), stats(1), events(1), query(1), properties(2), sessions(2), breakdown(1), insights(1), pages(1), heatmap(1), funnel(1), retention(1), stream(1), live(1), projects(5), account(2), experiments(6), health(1), tracker.js(1)
+
+@group track
+@endpoint POST /track
+@required {token: str, event: str}
+@optional {properties: map, user_id: str, session_id: str, timestamp: num}
+@returns(202) {ok: bool, queued: bool}
+@errors {400, 401, 429}
+
+@endpoint POST /track/batch
+@required {events: [map{token!: str, event!: str, properties: map, user_id: str, session_id: str, timestamp: num}]}
+@returns(202) {ok: bool, queued: bool, count: int}
+@errors {400, 401, 429}
+
+@endgroup
+
+@group stats
+@endpoint GET /stats
+@required {project: str}
+@optional {since: str, groupBy: str(hour/day/week/month)=day}
+@returns(200) {project: str, period: map{from: str, to: str, groupBy: str}, totals: map{unique_users: int, total_events: int}, timeSeries: [map], events: [map], sessions: map{total_sessions: int, bounce_rate: num, avg_duration: int, pages_per_session: num, sessions_per_user: num}}
+@errors {400, 401}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@required {project: str}
+@optional {event: str, session_id: str, since: str, limit: int=100}
+@returns(200) {project: str, events: [map]}
+@errors {401}
+
+@endgroup
+
+@group query
+@endpoint POST /query
+@required {project: str}
+@optional {metrics: [str]=event_count, group_by: [str]=, filters: [map{field: str, op: str, value: any}], date_from: str, date_to: str, order_by: str(event_count/unique_users/date/event), order: str(asc/desc)=desc, limit: int=100}
+@returns(200) {project: str, period: map{from: str, to: str}, metrics: [str], group_by: [str], rows: [map], count: int}
+@errors {400, 401}
+
+@endgroup
+
+@group properties
+@endpoint GET /properties
+@required {project: str}
+@optional {since: str}
+@returns(200) {project: str, events: [map], property_keys: [str]}
+@errors {401}
+
+@endpoint GET /properties/received
+@required {project: str}
+@optional {since: str, sample: int=5000}
+@returns(200) {project: str, sample_size: int, since: str, properties: [map]}
+@errors {401}
+
+@endgroup
+
+@group sessions
+@endpoint GET /sessions
+@required {project: str}
+@optional {since: str, limit: int=100, user_id: str, is_bounce: int(0/1)}
+@returns(200) {project: str, sessions: [map]}
+@errors {401}
+
+@endgroup
+
+@group breakdown
+@endpoint GET /breakdown
+@required {project: str, property: str}
+@optional {event: str, since: str, limit: int=20}
+@returns(200) {project: str, property: str, event: str?, values: [map], total_events: int, total_with_property: int}
+@errors {400, 401}
+
+@endgroup
+
+@group insights
+@endpoint GET /insights
+@required {project: str}
+@optional {period: str(1d/7d/14d/30d/90d)=7d}
+@returns(200) {project: str, current_period: map{from: str, to: str}, previous_period: map{from: str, to: str}, metrics: map{total_events: map{current: num, previous: num, change: num, change_pct: int?}, unique_users: map{current: num, previous: num, change: num, change_pct: int?}, total_sessions: map{current: num, previous: num, change: num, change_pct: int?}, bounce_rate: map{current: num, previous: num, change: num, change_pct: int?}, avg_duration: map{current: num, previous: num, change: num, change_pct: int?}}, trend: str}
+@errors {400, 401}
+
+@endgroup
+
+@group pages
+@endpoint GET /pages
+@required {project: str}
+@optional {type: str(entry/exit/both)=entry, since: str, limit: int=20}
+@returns(200) {project: str, entry_pages: [map], exit_pages: [map]}
+@errors {400, 401}
+
+@endgroup
+
+@group sessions
+@endpoint GET /sessions/distribution
+@required {project: str}
+@optional {since: str}
+@returns(200) {project: str, distribution: [map], median_bucket: str?, engaged_pct: num}
+@errors {401}
+
+@endgroup
+
+@group heatmap
+@endpoint GET /heatmap
+@required {project: str}
+@optional {since: str}
+@returns(200) {project: str, heatmap: [map], peak: map?, busiest_day: str?, busiest_hour: int?}
+@errors {401}
+
+@endgroup
+
+@group funnel
+@endpoint POST /funnel
+@required {project: str, steps: [map{event!: str, filters: [map]}]}
+@optional {conversion_window_hours: num=168, since: str=30d, count_by: str(user_id/session_id)=user_id, breakdown: str, breakdown_limit: num=10}
+@returns(200) {steps: [map], overall_conversion_rate: num, breakdowns: [map]}
+@errors {400, 401, 404}
+
+@endgroup
+
+@group retention
+@endpoint GET /retention
+@required {project: str}
+@optional {period: str(day/week/month)=week, cohorts: int=8, event: str, returning_event: str, since: str}
+@returns(200) {period: str, cohorts: [map], average_rates: [num], users_analyzed: int}
+@errors {400, 401, 404}
+
+@endgroup
+
+@group stream
+@endpoint GET /stream
+@optional {project: str, events: str, filter: str}
+@returns(200)
+@errors {401, 404, 429}
+
+@endgroup
+
+@group live
+@endpoint GET /live
+@optional {project: str, window: int=60}
+@returns(200) {project: str, window_seconds: int, timestamp: num, active_visitors: int, active_sessions: int, events_per_minute: int, top_pages: [map], top_events: [map], recent_events: [map]}
+@errors {401, 404}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects
+@returns(200) {projects: [map], has_api_key: bool, project_limit: int, tier: str}
+@errors {401}
+
+@endpoint POST /projects
+@required {name: str}
+@optional {allowed_origins: str=*}
+@returns(200) {id: str, name: str, project_token: str, existing: bool}
+@returns(201) {id: str, name: str, project_token: str, allowed_origins: str, snippet: str, api_example: str}
+@errors {400, 401, 403, 409}
+
+@endpoint GET /projects/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, project_token: str, allowed_origins: str, usage_today: map}
+@errors {401, 403, 404}
+
+@endpoint PATCH /projects/{id}
+@required {id: str}
+@optional {name: str, allowed_origins: str}
+@returns(200) {id: str, name: str, project_token: str, allowed_origins: str}
+@errors {400, 401, 409}
+
+@endpoint DELETE /projects/{id}
+@required {id: str}
+@returns(200) {ok: bool, deleted: str}
+@errors {401, 403, 404}
+
+@endgroup
+
+@group account
+@endpoint GET /account
+@returns(200) {id: str, email: str, github_login: str?, tier: str, created_at: str, projects_count: int, projects_limit: int, tier_limits: map{max_projects: int, max_events_lifetime: int, retention_days: int, rate_limit_rpm: int}, monthly_spend_cap_dollars: num?}
+@errors {401}
+
+@endpoint POST /account/revoke-key
+@returns(200) {ok: bool, api_key: str}
+@errors {401}
+
+@endgroup
+
+@group experiments
+@endpoint GET /experiments/config
+@required {token: str}
+@returns(200) {experiments: [map]}
+@errors {400}
+
+@endpoint POST /experiments
+@required {project: str, name: str, variants: [str], goal_event: str}
+@optional {weights: [int]}
+@returns(201) {id: str, project_id: str, account_id: str, name: str, variants: [map], goal_event: str, status: str, winner: str?, created_at: str, updated_at: str, completed_at: str?}
+@errors {400, 401, 403, 404, 409}
+
+@endpoint GET /experiments
+@required {project: str}
+@returns(200) {experiments: [map]}
+@errors {400, 401, 404}
+
+@endpoint GET /experiments/{id}
+@required {id: str}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint PATCH /experiments/{id}
+@required {id: str, status: str(active/paused/completed)}
+@optional {winner: str}
+@returns(200) {id: str, project_id: str, account_id: str, name: str, variants: [map], goal_event: str, status: str, winner: str?, created_at: str, updated_at: str, completed_at: str?}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /experiments/{id}
+@required {id: str}
+@returns(200) {ok: bool, deleted: str}
+@errors {401, 403, 404}
+
+@endgroup
+
+@group health
+@endpoint GET /health
+@returns(200) {status: str, service: str}
+@errors {404}
+
+@endgroup
+
+@group tracker.js
+@endpoint GET /tracker.js
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@end

@@ -1,0 +1,740 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Netlify's API documentation
+@base https://api.netlify.com/api/v1
+@version 2.50.0
+@auth OAuth2
+@endpoints 165
+@hint download_for_search
+@toc sites(82), accounts(15), api(1), purge(1), deploys(9), builds(3), {account_id}(1), forms(1), hooks(7), oauth(3), deploy_keys(4), {account_slug}(7), billing(1), agent_runners(14), submissions(2), services(3), user(1), dns_zones(9), ai-gateway(1)
+
+@group sites
+@endpoint GET /sites
+@optional {name: any, filter: any, page: any, per_page: any}
+@returns(200)
+
+@endpoint POST /sites
+@required {site: any}
+@optional {configure_dns: any}
+@returns(201)
+
+@endpoint GET /sites/{site_id}
+@optional {feature_flags: any}
+@returns(200)
+
+@endpoint PATCH /sites/{site_id}
+@required {site: any}
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}
+@returns(204)
+
+@endpoint POST /sites/{site_id}/ssl
+@required {site_id: any}
+@optional {certificate: any, key: any, ca_certificates: any}
+@returns(200)
+@errors {422}
+
+@endpoint GET /sites/{site_id}/ssl
+@required {site_id: any}
+@returns(200)
+
+@endpoint GET /sites/{site_id}/ssl/certificates
+@required {site_id: any, domain: any}
+@returns(200)
+@errors {404, 422}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{account_id}/env
+@required {account_id: any}
+@optional {context_name: any, scope: any, site_id: any}
+@returns(200)
+
+@endpoint POST /accounts/{account_id}/env
+@required {account_id: any}
+@optional {env_vars: [map], site_id: any}
+@returns(201)
+
+@endgroup
+
+@group api
+@endpoint GET /api/v1/sites/{site_id}/env
+@required {site_id: any}
+@optional {context_name: any, scope: any}
+@returns(200)
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{account_id}/env/{key}
+@required {account_id: any, key: any}
+@optional {site_id: any}
+@returns(200)
+
+@endpoint PUT /accounts/{account_id}/env/{key}
+@required {account_id: any, key: any}
+@optional {env_var: map, site_id: any}
+@returns(200)
+
+@endpoint PATCH /accounts/{account_id}/env/{key}
+@required {account_id: any, key: any}
+@optional {site_id: any, env_var: map}
+@returns(201)
+
+@endpoint DELETE /accounts/{account_id}/env/{key}
+@required {account_id: any, key: any}
+@optional {site_id: any}
+@returns(204)
+
+@endpoint DELETE /accounts/{account_id}/env/{key}/value/{id}
+@required {account_id: any, id: any, key: any}
+@optional {site_id: any}
+@returns(204)
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{site_id}/functions
+@required {site_id: any}
+@optional {filter: any}
+@returns(200)
+
+@endpoint GET /sites/{site_id}/forms
+@required {site_id: any}
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}/forms/{form_id}
+@required {site_id: any, form_id: any}
+@returns(204)
+
+@endpoint GET /sites/{site_id}/submissions
+@required {site_id: any}
+@optional {page: any, per_page: any}
+@returns(200)
+
+@endpoint GET /sites/{site_id}/files
+@required {site_id: any}
+@returns(200)
+
+@endpoint GET /sites/{site_id}/assets
+@returns(200)
+
+@endpoint POST /sites/{site_id}/assets
+@required {name: any, size: any, content_type: any}
+@optional {visibility: any}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/assets/{asset_id}
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/assets/{asset_id}
+@required {state: any}
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}/assets/{asset_id}
+@returns(204)
+
+@endpoint GET /sites/{site_id}/assets/{asset_id}/public_signature
+@returns(200)
+
+@endpoint GET /sites/{site_id}/files/{file_path}
+@required {site_id: any, file_path: any}
+@returns(200)
+
+@endgroup
+
+@group purge
+@endpoint POST /purge
+@required {payload: map}
+@returns(202)
+@errors {400, 404}
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{site_id}/snippets
+@returns(200)
+
+@endpoint POST /sites/{site_id}/snippets
+@required {snippet: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/snippets/{snippet_id}
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/snippets/{snippet_id}
+@required {snippet: map}
+@returns(204)
+
+@endpoint DELETE /sites/{site_id}/snippets/{snippet_id}
+@returns(204)
+
+@endpoint GET /sites/{site_id}/metadata
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/metadata
+@required {metadata: map}
+@returns(204)
+
+@endpoint GET /sites/{site_id}/build_hooks
+@returns(200)
+
+@endpoint POST /sites/{site_id}/build_hooks
+@required {buildHook: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/build_hooks/{id}
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/build_hooks/{id}
+@required {buildHook: map}
+@returns(204)
+
+@endpoint DELETE /sites/{site_id}/build_hooks/{id}
+@returns(204)
+
+@endpoint GET /sites/{site_id}/deploys
+@optional {page: any, per_page: any}
+@returns(200)
+
+@endpoint POST /sites/{site_id}/deploys
+@required {deploy: map}
+@optional {title: any}
+@returns(200)
+
+@endpoint GET /sites/{site_id}/deploys/{deploy_id}
+@required {site_id: any, deploy_id: any}
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/deploys/{deploy_id}
+@required {site_id: any, deploy_id: any, deploy: map}
+@optional {commit_ref: any}
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}/deploys/{deploy_id}
+@required {deploy_id: any, site_id: any}
+@returns(204)
+
+@endgroup
+
+@group deploys
+@endpoint POST /deploys/{deploy_id}/cancel
+@required {deploy_id: any}
+@returns(201)
+
+@endgroup
+
+@group sites
+@endpoint POST /sites/{site_id}/deploys/{deploy_id}/restore
+@required {site_id: any, deploy_id: any}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/builds
+@optional {page: any, per_page: any}
+@returns(200)
+
+@endpoint POST /sites/{site_id}/builds
+@optional {branch: any, clear_cache: any, image: any, template_id: any, title: any, zip: any}
+@returns(200)
+@errors {400, 404, 422}
+
+@endpoint GET /sites/{site_id}/deployed-branches
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/unlink_repo
+@returns(200)
+@errors {404}
+
+@endpoint PUT /sites/{site_id}/enable
+@returns(204)
+@errors {422}
+
+@endpoint PUT /sites/{site_id}/disable
+@required {reason: any}
+@returns(204)
+
+@endgroup
+
+@group builds
+@endpoint GET /builds/{build_id}
+@returns(200)
+
+@endpoint POST /builds/{build_id}/log
+@returns(204)
+
+@endpoint POST /builds/{build_id}/start
+@returns(204)
+
+@endgroup
+
+@group {account_id}
+@endpoint GET /{account_id}/builds/status
+@returns(200)
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{site_id}/dns
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/dns
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/rollback
+@returns(204)
+
+@endgroup
+
+@group deploys
+@endpoint GET /deploys/{deploy_id}
+@required {deploy_id: any}
+@returns(200)
+
+@endpoint DELETE /deploys/{deploy_id}
+@required {deploy_id: any}
+@returns(204)
+
+@endpoint PATCH /deploys/{deploy_id}/validations_report
+@required {deploy_id: any, report: map}
+@returns(200)
+
+@endpoint POST /deploys/{deploy_id}/lock
+@required {deploy_id: any}
+@returns(200)
+
+@endpoint POST /deploys/{deploy_id}/unlock
+@required {deploy_id: any}
+@returns(200)
+
+@endpoint PUT /deploys/{deploy_id}/files/{path}
+@required {deploy_id: any, path: any, file_body: str(binary)}
+@optional {size: any}
+@returns(200)
+
+@endpoint PUT /deploys/{deploy_id}/functions/{name}
+@required {deploy_id: any, name: any, file_body: str(binary)}
+@optional {runtime: any, invocation_mode: any, timeout: any, size: any, X-Nf-Retry-Count: any}
+@returns(200)
+
+@endgroup
+
+@group sites
+@endpoint PUT /sites/{site_id}/plugins/{package}
+@required {site_id: any, package: any}
+@optional {plugin_params: map}
+@returns(200)
+
+@endpoint GET /sites/{site_id}/plugin_runs/latest
+@required {site_id: any, packages: any}
+@optional {state: any}
+@returns(200)
+
+@endgroup
+
+@group deploys
+@endpoint POST /deploys/{deploy_id}/plugin_runs
+@required {deploy_id: any}
+@optional {plugin_run: map}
+@returns(201)
+
+@endgroup
+
+@group forms
+@endpoint GET /forms/{form_id}/submissions
+@required {form_id: any}
+@optional {page: any, per_page: any}
+@returns(200)
+
+@endgroup
+
+@group hooks
+@endpoint GET /hooks
+@required {site_id: any}
+@returns(200)
+
+@endpoint POST /hooks
+@required {site_id: any, hook: map}
+@returns(201)
+
+@endpoint GET /hooks/{hook_id}
+@returns(200)
+
+@endpoint PUT /hooks/{hook_id}
+@required {hook: map}
+@returns(200)
+
+@endpoint DELETE /hooks/{hook_id}
+@returns(204)
+
+@endpoint POST /hooks/{hook_id}/enable
+@returns(200)
+
+@endpoint GET /hooks/types
+@returns(200)
+
+@endgroup
+
+@group oauth
+@endpoint POST /oauth/tickets
+@required {client_id: any}
+@returns(201)
+
+@endpoint GET /oauth/tickets/{ticket_id}
+@required {ticket_id: any}
+@returns(200)
+
+@endpoint POST /oauth/tickets/{ticket_id}/exchange
+@required {ticket_id: any}
+@returns(201)
+
+@endgroup
+
+@group deploy_keys
+@endpoint GET /deploy_keys
+@returns(200)
+
+@endpoint POST /deploy_keys
+@returns(201)
+
+@endpoint GET /deploy_keys/{key_id}
+@returns(200)
+
+@endpoint DELETE /deploy_keys/{key_id}
+@returns(204)
+
+@endgroup
+
+@group {account_slug}
+@endpoint POST /{account_slug}/sites
+@required {account_slug: any}
+@optional {site: any, configure_dns: any}
+@returns(201)
+
+@endpoint GET /{account_slug}/sites
+@required {account_slug: any}
+@optional {name: any, page: any, per_page: any}
+@returns(200)
+
+@endpoint GET /{account_slug}/members
+@returns(200)
+
+@endpoint POST /{account_slug}/members
+@required {accountAddMemberSetup: map}
+@returns(200)
+
+@endpoint GET /{account_slug}/members/{member_id}
+@returns(200)
+
+@endpoint PUT /{account_slug}/members/{member_id}
+@required {accountUpdateMemberSetup: map}
+@returns(200)
+
+@endpoint DELETE /{account_slug}/members/{member_id}
+@returns(204)
+
+@endgroup
+
+@group billing
+@endpoint GET /billing/payment_methods
+@returns(200)
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/types
+@returns(200)
+
+@endpoint GET /accounts
+@optional {minimal: any}
+@returns(200)
+
+@endpoint POST /accounts
+@required {accountSetup: map}
+@returns(201)
+
+@endpoint GET /accounts/{account_id}
+@returns(200)
+
+@endpoint PUT /accounts/{account_id}
+@optional {accountUpdateSetup: map}
+@returns(200)
+
+@endpoint DELETE /accounts/{account_id}
+@returns(204)
+
+@endpoint GET /accounts/{account_id}/audit
+@optional {query: any, log_type: any, page: any, per_page: any}
+@returns(200)
+
+@endgroup
+
+@group agent_runners
+@endpoint GET /agent_runners
+@required {account_id: any, site_id: any}
+@optional {page: any, per_page: any, state: any, title: any, branch: any, result_branch: any, from: any, to: any}
+@returns(200)
+
+@endpoint POST /agent_runners
+@required {site_id: any}
+@optional {deploy_id: any, branch: any, prompt: any, agent: any, model: any, parent_agent_runner_id: any, dev_server_image: any, file_keys: any}
+@returns(200)
+@errors {404, 422}
+
+@endpoint POST /agent_runners/upload_url
+@required {account_id: any, filename: any, content_type: any}
+@returns(200)
+@errors {400, 422}
+
+@endpoint GET /agent_runners/{agent_runner_id}
+@returns(200)
+
+@endpoint PATCH /agent_runners/{agent_runner_id}
+@returns(200)
+
+@endpoint DELETE /agent_runners/{agent_runner_id}
+@returns(202)
+
+@endpoint POST /agent_runners/{agent_runner_id}/archive
+@returns(202)
+@errors {404, 422}
+
+@endpoint POST /agent_runners/{agent_runner_id}/pull_request
+@returns(200)
+@errors {400, 409, 422}
+
+@endpoint POST /agent_runners/{agent_runner_id}/commit
+@required {target_branch: any}
+@returns(200)
+@errors {400, 409, 422}
+
+@endpoint GET /agent_runners/{agent_runner_id}/sessions
+@optional {page: any, per_page: any, state: any, from: any, to: any, order_by: any}
+@returns(200)
+
+@endpoint POST /agent_runners/{agent_runner_id}/sessions
+@optional {prompt: any, agent: any, model: any, file_keys: any}
+@returns(200)
+@errors {404, 422}
+
+@endpoint GET /agent_runners/{agent_runner_id}/sessions/{agent_runner_session_id}
+@returns(200)
+
+@endpoint PATCH /agent_runners/{agent_runner_id}/sessions/{agent_runner_session_id}
+@optional {is_published: any}
+@returns(200)
+
+@endpoint DELETE /agent_runners/{agent_runner_id}/sessions/{agent_runner_session_id}
+@returns(202)
+
+@endgroup
+
+@group submissions
+@endpoint GET /submissions/{submission_id}
+@optional {query: any, page: any, per_page: any}
+@returns(200)
+
+@endpoint DELETE /submissions/{submission_id}
+@returns(204)
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{site_id}/service-instances
+@returns(200)
+
+@endpoint POST /sites/{site_id}/services/{addon}/instances
+@required {config: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/services/{addon}/instances/{instance_id}
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/services/{addon}/instances/{instance_id}
+@required {config: map}
+@returns(204)
+
+@endpoint DELETE /sites/{site_id}/services/{addon}/instances/{instance_id}
+@returns(204)
+
+@endgroup
+
+@group services
+@endpoint GET /services/
+@returns(200)
+
+@endpoint GET /services/{addonName}
+@returns(200)
+
+@endpoint GET /services/{addonName}/manifest
+@returns(201)
+
+@endgroup
+
+@group user
+@endpoint GET /user
+@returns(200)
+
+@endgroup
+
+@group sites
+@endpoint POST /sites/{site_id}/traffic_splits
+@required {branch_tests: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/traffic_splits
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/traffic_splits/{split_test_id}
+@required {branch_tests: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/traffic_splits/{split_test_id}
+@returns(200)
+
+@endpoint POST /sites/{site_id}/traffic_splits/{split_test_id}/publish
+@returns(204)
+
+@endpoint POST /sites/{site_id}/traffic_splits/{split_test_id}/unpublish
+@returns(204)
+
+@endgroup
+
+@group dns_zones
+@endpoint POST /dns_zones
+@required {DnsZoneParams: map}
+@returns(201)
+
+@endpoint GET /dns_zones
+@optional {account_slug: any}
+@returns(200)
+
+@endpoint GET /dns_zones/{zone_id}
+@returns(200)
+
+@endpoint DELETE /dns_zones/{zone_id}
+@returns(204)
+
+@endpoint PUT /dns_zones/{zone_id}/transfer
+@returns(200)
+
+@endpoint GET /dns_zones/{zone_id}/dns_records
+@returns(200)
+
+@endpoint POST /dns_zones/{zone_id}/dns_records
+@required {dns_record: map}
+@returns(201)
+
+@endpoint GET /dns_zones/{zone_id}/dns_records/{dns_record_id}
+@returns(200)
+
+@endpoint DELETE /dns_zones/{zone_id}/dns_records/{dns_record_id}
+@returns(204)
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{site_id}/dev_servers
+@optional {page: any, per_page: any}
+@returns(200)
+
+@endpoint POST /sites/{site_id}/dev_servers
+@optional {branch: any}
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}/dev_servers
+@optional {branch: any}
+@returns(202)
+
+@endpoint GET /sites/{site_id}/dev_servers/{dev_server_id}
+@returns(200)
+
+@endpoint POST /sites/{site_id}/dev_servers/{dev_server_id}/activity
+@returns(200)
+
+@endpoint POST /sites/{site_id}/dev_servers/{dev_server_id}/state
+@required {body: map}
+@returns(200)
+@errors {409}
+
+@endpoint GET /sites/{site_id}/dev_server_hooks
+@returns(200)
+
+@endpoint POST /sites/{site_id}/dev_server_hooks
+@required {devServerHook: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/dev_server_hooks/{id}
+@returns(200)
+
+@endpoint PUT /sites/{site_id}/dev_server_hooks/{id}
+@required {devServerHook: map}
+@returns(204)
+
+@endpoint DELETE /sites/{site_id}/dev_server_hooks/{id}
+@returns(204)
+
+@endgroup
+
+@group ai-gateway
+@endpoint GET /ai-gateway/providers
+@returns(200)
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{site_id}/ai-gateway/token
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{account_id}/ai-gateway/token
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group sites
+@endpoint POST /sites/{site_id}/database
+@optional {database: map}
+@returns(201)
+@returns(200)
+
+@endpoint GET /sites/{site_id}/database
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}/database
+@returns(204)
+
+@endpoint POST /sites/{site_id}/database/branch
+@required {branch: map}
+@returns(201)
+@returns(200)
+
+@endpoint GET /sites/{site_id}/database/branch/{deploy_id}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /sites/{site_id}/database/branch/{deploy_id}
+@returns(204)
+
+@endpoint POST /sites/{site_id}/database/snapshot
+@optional {snapshot: map}
+@returns(201)
+
+@endpoint GET /sites/{site_id}/database/snapshots
+@returns(200)
+
+@endpoint DELETE /sites/{site_id}/database/snapshot/{snapshot_id}
+@returns(204)
+
+@endpoint POST /sites/{site_id}/database/snapshot/{snapshot_id}/restore
+@optional {restore: map}
+@returns(200)
+
+@endgroup
+
+@end

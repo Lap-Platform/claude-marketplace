@@ -1,0 +1,1030 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Akamai: Application Security API
+@base https://{hostname}/appsec/v1
+@version v1
+@common_fields {accountSwitchKey: str}
+@endpoints 213
+@hint download_for_search
+@toc activations(3), api-discovery(5), configs(179), contracts-groups(1), contracts(1), cves(6), export(1), hostname-coverage(1), onboardings(15), siem-definitions(1)
+
+@group activations
+@endpoint POST /activations
+@required {action: str(ACTIVATE/DEACTIVATE), activationConfigs: [map{configId!: int, configVersion!: int}], network: str(STAGING/PRODUCTION), note: str, notificationEmails: [str]}
+@optional {acknowledgedInvalidHosts: [str], acknowledgedInvalidHostsByConfig: [map{configId!: int, invalidHosts!: [str]}]}
+@returns(200) {action: str, activationConfigs: [map], activationId: int, completionDate: str(date-time), createDate: str(date-time), createdBy: str, dispatchCount: int, estimate: str, network: str, status: str}
+@returns(202) {createDate: str(date-time), links: map{check-status: str}, statusId: str}
+@errors {400, 403}
+
+@endpoint GET /activations/status/{statusId}
+@returns(200) {createDate: str(date-time), statusId: str}
+@errors {303}
+
+@endpoint GET /activations/{activationId}
+@returns(200) {action: str, activationConfigs: [map], activationId: int, completionDate: str(date-time), createDate: str(date-time), createdBy: str, dispatchCount: int, estimate: str, network: str, status: str}
+@errors {400, 403}
+
+@endgroup
+
+@group api-discovery
+@endpoint GET /api-discovery
+@optional {includeHidden: bool=False, search: str}
+@returns(200) {apis: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /api-discovery/host/{hostname}/basepath/{basePath}
+@optional {includeHidden: bool=False, search: str}
+@returns(200) {apiEndpointIds: [int], basePath: str, discoveryType: str, enrichment: map{options: int, browsers: int, clientErrors: int, clientReputation: num, dateFirstSeen: str, dateLastModified: str, dateLastSeen: str, deletes: int, dosAttackers: num, formats: [str], gets: int, hostSamples: [str], mobiles: int, newlyDiscovered: bool, paths: map{options: int, deletes: int, gets: int, posts: int, puts: int, samples: [str], template: str}, posts: int, puts: int, redirects: int, requests: int, requestsBadReputation: num, requestsLastDay: int, scanningTools: num, serverErrors: int, successes: int, totalDailyRequests: [map], totalErrors: int, trend: str, webAttackers: num, webScrapers: num}, host: str, visibility: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /api-discovery/host/{hostname}/basepath/{basePath}
+@required {hidden: bool}
+@optional {reason: str(NOT_ELIGIBLE/FALSE_POSITIVE)}
+@returns(200) {hidden: bool, reason: str}
+@errors {400, 403, 404, 500}
+
+@endpoint POST /api-discovery/host/{hostname}/basepath/{basePath}/endpoints
+@optional {apiEndpointId: int, apiName: str, contractId: str, groupId: int, version: int}
+@returns(201) {akamaiSecurityRestrictions: map?{ALLOW_UNDEFINED_RESPONSE_BODY_PARAMS: int, ALLOW_UNDEFINED_RESPONSE_HEADER_PARAMS: int, MAX_BODY_SIZE: int, MAX_DOC_DEPTH: int, MAX_ELEMENT_NAME_LENGTH: int, MAX_INTEGER_VALUE: int, MAX_JSONXML_ELEMENT: int, MAX_STRING_LENGTH: int, POSITIVE_SECURITY_ENABLED: int}, apiCategoryIds: [int]?, apiEndPointHosts: [str], apiEndPointId: int, apiEndPointLocked: bool, apiEndPointName: str, apiEndPointScheme: str, apiEndPointVersion: int, apiResources: [map], apiVersionInfo: map?{location: str, parameterName: str, value: str}, availableActions: [str], basePath: str?, caseSensitive: bool, clonedFromVersion: int?, consumeType: str, contractId: str, createDate: str, createdBy: str, description: str?, endpointHidden: bool, groupId: int, isGraphQL: bool, lockVersion: int, positiveConstrainsEnabled: bool?, productionStatus: str?, productionVersion: map, protectedByApiKey: bool, securityScheme: map{securitySchemeDetail: map{apiKeyLocation: str, apiKeyName: str}, securitySchemeType: str}, source: map?, stagingStatus: str?, stagingVersion: map, updateDate: str, updatedBy: str, versionHidden: bool, versionNumber: int}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /api-discovery/host/{hostname}/basepath/{basePath}/endpoints
+@returns(200) {configurations: [map]}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group configs
+@endpoint POST /configs
+@required {description: str, hostnames: [str], name: str}
+@optional {contractId: str, createFrom: map{configId!: int, version!: int}, groupId: int}
+@returns(201) {contractId: str, createFrom: map{configId: int, version: int}, description: str, groupId: int, hostnames: [str], name: str}
+@errors {400, 403}
+
+@endpoint GET /configs
+@returns(200) {configurations: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}
+@optional {includeHostnames: bool=False}
+@returns(200) {description: str, id: int, latestVersion: int, name: str, productionHostnames: [str], productionVersion: int, stagingVersion: int}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}
+@required {name: str}
+@optional {description: str}
+@returns(200) {description: str, name: str}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}
+@returns(204)
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/activations
+@returns(200) {activationHistory: [map], configId: int}
+@errors {403, 404}
+
+@endpoint POST /configs/{configId}/custom-rules
+@required {name: str, operation: str(AND/OR), structured: bool}
+@optional {conditions: [map{name: any, nameCase: bool, nameWildcard: bool, positiveMatch!: bool, type!: str, useXForwardForHeaders: bool, value: str, valueCase: bool, valueExactMatch: bool, valueIgnoreSegment: bool, valueNormalize: bool, valueRecursive: bool, valueWildcard: bool}], description: str, effectiveTimePeriod: map{endDate!: str, startDate!: str(date-time), status: str}, id: int, inspectRequest: bool, inspectResponse: bool, loggingOptions: [map{id!: str, name: str, value: str}], metadata: str, ruleActivated: bool, samplingRate: int, stagingOnly: bool=False, tag: [str], version: int}
+@returns(200) {conditions: [map], description: str, effectiveTimePeriod: map{endDate: str, startDate: str(date-time), status: str}, id: int, inspectRequest: bool, inspectResponse: bool, loggingOptions: [map], metadata: str, name: str, operation: str, ruleActivated: bool, samplingRate: int, stagingOnly: bool, structured: bool, tag: [str], version: int}
+
+@endpoint GET /configs/{configId}/custom-rules
+@returns(200) {customRules: [map]}
+
+@endpoint GET /configs/{configId}/custom-rules/{ruleId}
+@returns(200) {conditions: [map], description: str, effectiveTimePeriod: map{endDate: str, startDate: str(date-time), status: str}, id: int, inspectRequest: bool, inspectResponse: bool, loggingOptions: [map], metadata: str, name: str, operation: str, ruleActivated: bool, samplingRate: int, stagingOnly: bool, structured: bool, tag: [str], version: int}
+
+@endpoint PUT /configs/{configId}/custom-rules/{ruleId}
+@required {name: str, operation: str(AND/OR), structured: bool}
+@optional {conditions: [map{name: any, nameCase: bool, nameWildcard: bool, positiveMatch!: bool, type!: str, useXForwardForHeaders: bool, value: str, valueCase: bool, valueExactMatch: bool, valueIgnoreSegment: bool, valueNormalize: bool, valueRecursive: bool, valueWildcard: bool}], description: str, effectiveTimePeriod: map{endDate!: str, startDate!: str(date-time), status: str}, id: int, inspectRequest: bool, inspectResponse: bool, loggingOptions: [map{id!: str, name: str, value: str}], metadata: str, ruleActivated: bool, samplingRate: int, stagingOnly: bool=False, tag: [str], version: int}
+@returns(200) {conditions: [map], description: str, effectiveTimePeriod: map{endDate: str, startDate: str(date-time), status: str}, id: int, inspectRequest: bool, inspectResponse: bool, loggingOptions: [map], metadata: str, name: str, operation: str, ruleActivated: bool, samplingRate: int, stagingOnly: bool, structured: bool, tag: [str], version: int}
+
+@endpoint DELETE /configs/{configId}/custom-rules/{ruleId}
+@returns(204)
+@errors {403}
+
+@endpoint GET /configs/{configId}/failover-hostnames
+@returns(200) {hostnameList: [map], mode: str}
+@errors {400, 403, 404}
+
+@endpoint POST /configs/{configId}/notification/subscription/{feature}
+@required {action: str(subscribe/unsubscribe), emails: [str]}
+@returns(204)
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/notification/subscription/{feature}
+@returns(200) {emails: [str]}
+@errors {403, 404}
+
+@endpoint POST /configs/{configId}/versions
+@required {createFromVersion: int, ruleUpdate: bool}
+@returns(200) {basedOn: int, configId: int, configName: str, createDate: str, createdBy: str, production: map{action: str, status: str, time: str}, staging: map{action: str, status: str, time: str}, version: int, versionNotes: str}
+@errors {400, 403, 404, 412}
+
+@endpoint GET /configs/{configId}/versions
+@optional {page: int=1, pageSize: int=25, detail: bool=False}
+@returns(200) {configId: int, configName: str, lastCreatedVersion: int, page: int, pageSize: int, productionActiveVersion: int, productionExpediteRequestId: int, stagingActiveVersion: int, stagingExpediteRequestId: int, totalSize: int, versionList: [map]}
+@errors {400, 403, 404}
+
+@endpoint POST /configs/{configId}/versions/diff
+@required {from: int, to: int}
+@optional {outcomes: [str]=['MODIFIED']}
+@returns(200)
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}
+@returns(200) {basedOn: int, configId: int, configName: str, createDate: str, createdBy: str, production: map{action: str, status: str, time: str}, staging: map{action: str, status: str, time: str}, version: int, versionNotes: str}
+@errors {403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}
+@returns(204)
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/cookie-settings
+@returns(200) {cookieDomain: str, useAllSecureTraffic: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/cookie-settings
+@optional {cookieDomain: str(automatic/fqdn/legacy/psl), useAllSecureTraffic: bool}
+@returns(200) {cookieDomain: str, useAllSecureTraffic: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/evasive-path-match
+@returns(200) {enablePathMatch: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/evasive-path-match
+@required {enablePathMatch: bool}
+@returns(200) {enablePathMatch: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/logging
+@returns(200) {allowSampling: bool, cookies: map{type: str, values: [str]}, customHeaders: map{type: str, values: [str]}, standardHeaders: map{type: str, values: [str]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/logging
+@required {allowSampling: bool}
+@optional {cookies: map{type!: str, values: [str]}, customHeaders: map{type!: str, values: [str]}, standardHeaders: map{type!: str, values: [str]}}
+@returns(200) {allowSampling: bool, cookies: map{type: str, values: [str]}, customHeaders: map{type: str, values: [str]}, standardHeaders: map{type: str, values: [str]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/logging/attack-payload
+@returns(200) {enabled: bool, requestBody: map{type: str}, responseBody: map{type: str}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/logging/attack-payload
+@required {enabled: bool, requestBody: map{type!: str}, responseBody: map{type!: str}}
+@returns(200) {enabled: bool, requestBody: map{type: str}, responseBody: map{type: str}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/pii-learning
+@returns(200) {enablePiiLearning: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/pii-learning
+@required {enablePiiLearning: bool}
+@returns(200) {enablePiiLearning: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/pragma-header
+@returns(200) {action: str, conditionOperator: str, excludeCondition: [map]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/pragma-header
+@required {action: str}
+@optional {conditionOperator: str(OR/AND), excludeCondition: [map{header: str, name: str, positiveMatch!: bool, type!: str, useHeaders: bool, value!: [str], valueCase: bool, valueWildcard: bool}]}
+@returns(200) {action: str, conditionOperator: str, excludeCondition: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/prefetch
+@returns(200) {allExtensions: bool, enableAppLayer: bool, enableRateControls: bool, extensions: [str]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/prefetch
+@optional {allExtensions: bool, enableAppLayer: bool, enableRateControls: bool, extensions: [str]}
+@returns(200) {allExtensions: bool, enableAppLayer: bool, enableRateControls: bool, extensions: [str]}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/advanced-settings/request-body
+@returns(200) {requestBodyInspectionLimitInKB: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/advanced-settings/request-body
+@optional {requestBodyInspectionLimitInKB: str(8/16/32/default)}
+@returns(200) {requestBodyInspectionLimitInKB: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/bypass-network-lists
+@returns(200) {networkLists: [map]}
+@errors {400, 403}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/bypass-network-lists
+@required {networkLists: [str]}
+@returns(200) {networkLists: [str]}
+@errors {400, 403}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/custom-deny
+@required {name: str, parameters: [map{displayName: str, name!: str, value!: str}]}
+@optional {description: str, id: str}
+@returns(201) {description: str, id: str, name: str, parameters: [map]}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/custom-deny
+@optional {search: str}
+@returns(200) {ratePolicies: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/custom-deny/{customDenyId}
+@returns(200) {description: str, id: str, name: str, parameters: [map]}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/custom-deny/{customDenyId}
+@required {name: str, parameters: [map{displayName: str, name!: str, value!: str}]}
+@optional {description: str, id: str}
+@returns(200) {description: str, id: str, name: str, parameters: [map]}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/custom-deny/{customDenyId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/hostname-coverage/match-targets
+@optional {hostname: str}
+@returns(200) {matchTargets: map{apiTargets: [map], websiteTargets: [map]}}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/hostname-coverage/overlapping
+@optional {hostname: str}
+@returns(200) {overLappingList: [map]}
+@errors {400, 404, 500}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/malware-policies
+@required {hostnames: [str], name: str, paths: [str]}
+@optional {allowListId: str, blockListId: str, contentTypes: [map{encodedContentAttributes: [map{encoding: [str], path: str}], name!: str}], description: str, id: int, logFilename: bool=False}
+@returns(201) {allowListId: str, blockListId: str, contentTypes: [map], description: str, hostnames: [str], id: int, logFilename: bool, name: str, paths: [str]}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/malware-policies
+@returns(200) {malwarePolicies: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/malware-policies/content-types
+@returns(200) {malwareContentTypes: [str]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/malware-policies/{malwarePolicyId}
+@returns(200) {allowListId: str, blockListId: str, contentTypes: [map], description: str, hostnames: [str], id: int, logFilename: bool, name: str, paths: [str]}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/malware-policies/{malwarePolicyId}
+@required {hostnames: [str], name: str, paths: [str]}
+@optional {allowListId: str, blockListId: str, contentTypes: [map{encodedContentAttributes: [map{encoding: [str], path: str}], name!: str}], description: str, id: int, logFilename: bool=False}
+@returns(200) {allowListId: str, blockListId: str, contentTypes: [map], description: str, hostnames: [str], id: int, logFilename: bool, name: str, paths: [str]}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/malware-policies/{malwarePolicyId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/match-targets
+@required {securityPolicy: map{policyId!: str}, type: str(website/api)}
+@optional {apis: [map{id!: int, name: str}], bypassNetworkLists: [map{id!: str, name: str}], configId: int, configVersion: int, defaultFile: str(NO_MATCH/BASE_MATCH/RECURSIVE_MATCH)=NO_MATCH, effectiveSecurityControls: map{applyApiConstraints!: bool, applyApplicationLayerControls!: bool, applyBotmanControls!: bool, applyNetworkLayerControls!: bool, applyRateControls!: bool, applyReputationControls!: bool, applySlowPostControls!: bool}, fileExtensions: [str], filePaths: [str], hostnames: [str], isNegativeFileExtensionMatch: bool, isNegativePathMatch: bool, sequence: int, targetId: int, validations: map{errors!: [map{detail: str, fieldName: str, jsonReference: str, title!: str, type!: str}], notices!: [map{detail: str, fieldName: str, jsonReference: str, title!: str, type!: str}], warnings!: [map{detail: str, fieldName: str, jsonReference: str, title!: str, type!: str}]}}
+@returns(201) {apis: [map], bypassNetworkLists: [map], configId: int, configVersion: int, defaultFile: str, effectiveSecurityControls: map{applyApiConstraints: bool, applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}, fileExtensions: [str], filePaths: [str], hostnames: [str], isNegativeFileExtensionMatch: bool, isNegativePathMatch: bool, securityPolicy: map{policyId: str}, sequence: int, targetId: int, type: str, validations: map{errors: [map], notices: [map], warnings: [map]}}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/match-targets
+@optional {policyId: str, includeChildObjectName: bool=True}
+@returns(200) {matchTargets: map{apiTargets: [map], websiteTargets: [map]}}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/match-targets/sequence
+@required {targetSequence: [map{sequence!: int, targetId!: int}], type: str(WEBSITE/API)}
+@returns(200) {targetSequence: [map], type: str}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/match-targets/{targetId}
+@optional {includeChildObjectName: bool=True}
+@returns(200) {apis: [map], bypassNetworkLists: [map], configId: int, configVersion: int, defaultFile: str, effectiveSecurityControls: map{applyApiConstraints: bool, applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}, fileExtensions: [str], filePaths: [str], hostnames: [str], isNegativeFileExtensionMatch: bool, isNegativePathMatch: bool, securityPolicy: map{policyId: str}, sequence: int, targetId: int, type: str, validations: map{errors: [map], notices: [map], warnings: [map]}}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/match-targets/{targetId}
+@required {securityPolicy: map{policyId!: str}, type: str(website/api)}
+@optional {apis: [map{id!: int, name: str}], bypassNetworkLists: [map{id!: str, name: str}], configId: int, configVersion: int, defaultFile: str(NO_MATCH/BASE_MATCH/RECURSIVE_MATCH)=NO_MATCH, effectiveSecurityControls: map{applyApiConstraints!: bool, applyApplicationLayerControls!: bool, applyBotmanControls!: bool, applyNetworkLayerControls!: bool, applyRateControls!: bool, applyReputationControls!: bool, applySlowPostControls!: bool}, fileExtensions: [str], filePaths: [str], hostnames: [str], isNegativeFileExtensionMatch: bool, isNegativePathMatch: bool, sequence: int, targetId: int, validations: map{errors!: [map{detail: str, fieldName: str, jsonReference: str, title!: str, type!: str}], notices!: [map{detail: str, fieldName: str, jsonReference: str, title!: str, type!: str}], warnings!: [map{detail: str, fieldName: str, jsonReference: str, title!: str, type!: str}]}}
+@returns(200) {apis: [map], bypassNetworkLists: [map], configId: int, configVersion: int, defaultFile: str, effectiveSecurityControls: map{applyApiConstraints: bool, applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}, fileExtensions: [str], filePaths: [str], hostnames: [str], isNegativeFileExtensionMatch: bool, isNegativePathMatch: bool, securityPolicy: map{policyId: str}, sequence: int, targetId: int, type: str, validations: map{errors: [map], notices: [map], warnings: [map]}}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/match-targets/{targetId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/protect-eval-hostnames
+@required {hostnames: [str]}
+@optional {mode: str(append/remove/replace)}
+@returns(200) {hostnames: [str], mode: str}
+@errors {400, 403}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/rate-policies
+@required {averageThreshold: int, burstThreshold: int, clientIdentifier: str(api-key/ip-useragent/ip/cookie:value), matchType: str(path/api), name: str, pathMatchType: str(AllRequests/TopLevel/Custom), requestType: str(ClientRequest/ClientResponse/ForwardResponse/ForwardRequest), sameActionOnIpv6: bool, type: str(WAF/BOTMAN)}
+@optional {additionalMatchOptions: [map{positiveMatch!: bool, type!: str, values!: [str]}], apiSelectors: [map{apiDefinitionId!: int, definedResources: bool, resourceIds: [int], undefinedResources: bool}], bodyParameters: [map{name!: str, positiveMatch!: bool, valueInRange: bool, values!: [str]}], burstWindow: int, condition: map{atomicConditions: [any], positiveMatch: bool}, counterType: str(per_edge/region_aggregated)=per_edge, createDate: str(date-time), description: str, evaluation: map{averageThreshold!: int, burstThreshold!: int, burstWindow: int, counterType: str, endDate: str(date-time), evaluationId: int, evaluationStatus: str, startDate: str(date-time), version: int}, fileExtensions: map{positiveMatch!: bool, values!: [str]}, hostnames: [str], hosts: map{positiveMatch!: bool, values!: [str]}, id: int, path: map{positiveMatch!: bool, values!: [str]}, pathUriPositiveMatch: bool, queryParameters: [map{name!: str, positiveMatch!: bool, valueInRange: bool, values!: [str]}], updateDate: str(date-time), useXForwardForHeaders: bool, used: bool}
+@returns(201) {additionalMatchOptions: [map], apiSelectors: [map], averageThreshold: int, bodyParameters: [map], burstThreshold: int, burstWindow: int, clientIdentifier: str, condition: map{atomicConditions: [any], positiveMatch: bool}, counterType: str, createDate: str(date-time), description: str, evaluation: map{averageThreshold: int, burstThreshold: int, burstWindow: int, counterType: str, endDate: str(date-time), evaluationId: int, evaluationStatus: str, startDate: str(date-time), version: int}, fileExtensions: map{positiveMatch: bool, values: [str]}, hostnames: [str], hosts: map{positiveMatch: bool, values: [str]}, id: int, matchType: str, name: str, path: map{positiveMatch: bool, values: [str]}, pathMatchType: str, pathUriPositiveMatch: bool, queryParameters: [map], requestType: str, sameActionOnIpv6: bool, type: str, updateDate: str(date-time), useXForwardForHeaders: bool, used: bool}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/rate-policies
+@returns(200) {ratePolicies: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}
+@returns(200) {additionalMatchOptions: [map], apiSelectors: [map], averageThreshold: int, bodyParameters: [map], burstThreshold: int, burstWindow: int, clientIdentifier: str, condition: map{atomicConditions: [any], positiveMatch: bool}, counterType: str, createDate: str(date-time), description: str, evaluation: map{averageThreshold: int, burstThreshold: int, burstWindow: int, counterType: str, endDate: str(date-time), evaluationId: int, evaluationStatus: str, startDate: str(date-time), version: int}, fileExtensions: map{positiveMatch: bool, values: [str]}, hostnames: [str], hosts: map{positiveMatch: bool, values: [str]}, id: int, matchType: str, name: str, path: map{positiveMatch: bool, values: [str]}, pathMatchType: str, pathUriPositiveMatch: bool, queryParameters: [map], requestType: str, sameActionOnIpv6: bool, type: str, updateDate: str(date-time), useXForwardForHeaders: bool, used: bool}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}
+@required {averageThreshold: int, burstThreshold: int, clientIdentifier: str(api-key/ip-useragent/ip/cookie:value), matchType: str(path/api), name: str, pathMatchType: str(AllRequests/TopLevel/Custom), requestType: str(ClientRequest/ClientResponse/ForwardResponse/ForwardRequest), sameActionOnIpv6: bool, type: str(WAF/BOTMAN)}
+@optional {additionalMatchOptions: [map{positiveMatch!: bool, type!: str, values!: [str]}], apiSelectors: [map{apiDefinitionId!: int, definedResources: bool, resourceIds: [int], undefinedResources: bool}], bodyParameters: [map{name!: str, positiveMatch!: bool, valueInRange: bool, values!: [str]}], burstWindow: int, condition: map{atomicConditions: [any], positiveMatch: bool}, counterType: str(per_edge/region_aggregated)=per_edge, createDate: str(date-time), description: str, evaluation: map{averageThreshold!: int, burstThreshold!: int, burstWindow: int, counterType: str, endDate: str(date-time), evaluationId: int, evaluationStatus: str, startDate: str(date-time), version: int}, fileExtensions: map{positiveMatch!: bool, values!: [str]}, hostnames: [str], hosts: map{positiveMatch!: bool, values!: [str]}, id: int, path: map{positiveMatch!: bool, values!: [str]}, pathUriPositiveMatch: bool, queryParameters: [map{name!: str, positiveMatch!: bool, valueInRange: bool, values!: [str]}], updateDate: str(date-time), useXForwardForHeaders: bool, used: bool}
+@returns(200) {additionalMatchOptions: [map], apiSelectors: [map], averageThreshold: int, bodyParameters: [map], burstThreshold: int, burstWindow: int, clientIdentifier: str, condition: map{atomicConditions: [any], positiveMatch: bool}, counterType: str, createDate: str(date-time), description: str, evaluation: map{averageThreshold: int, burstThreshold: int, burstWindow: int, counterType: str, endDate: str(date-time), evaluationId: int, evaluationStatus: str, startDate: str(date-time), version: int}, fileExtensions: map{positiveMatch: bool, values: [str]}, hostnames: [str], hosts: map{positiveMatch: bool, values: [str]}, id: int, matchType: str, name: str, path: map{positiveMatch: bool, values: [str]}, pathMatchType: str, pathUriPositiveMatch: bool, queryParameters: [map], requestType: str, sameActionOnIpv6: bool, type: str, updateDate: str(date-time), useXForwardForHeaders: bool, used: bool}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}/evaluation
+@required {action: str(APPLY/DISCARD)}
+@returns(200) {additionalMatchOptions: [map], apiSelectors: [map], averageThreshold: int, bodyParameters: [map], burstThreshold: int, burstWindow: int, clientIdentifier: str, condition: map{atomicConditions: [any], positiveMatch: bool}, counterType: str, createDate: str(date-time), description: str, evaluation: map{averageThreshold: int, burstThreshold: int, burstWindow: int, counterType: str, endDate: str(date-time), evaluationId: int, evaluationStatus: str, startDate: str(date-time), version: int}, fileExtensions: map{positiveMatch: bool, values: [str]}, hostnames: [str], hosts: map{positiveMatch: bool, values: [str]}, id: int, matchType: str, name: str, path: map{positiveMatch: bool, values: [str]}, pathMatchType: str, pathUriPositiveMatch: bool, queryParameters: [map], requestType: str, sameActionOnIpv6: bool, type: str, updateDate: str(date-time), useXForwardForHeaders: bool, used: bool}
+@errors {400, 403, 404}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/reputation-profiles
+@required {context: str(WEBSCRP/DOSATCK/WEBATCK/SCANTL), name: str, sharedIpHandling: str(NON_SHARED/SHARED_ONLY/BOTH), threshold: num}
+@optional {condition: map{atomicConditions: [map{positiveMatch: bool, type: str, value: [str], valueCase: bool, valueWildcard: bool}], positiveMatch: bool}, contextReadable: str, description: str, enabled: bool, id: int}
+@returns(201) {condition: map{atomicConditions: [map], positiveMatch: bool}, context: str, contextReadable: str, description: str, enabled: bool, id: int, name: str, sharedIpHandling: str, threshold: num}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/reputation-profiles
+@returns(200) {reputationProfiles: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/reputation-profiles/{reputationProfileId}
+@returns(200) {condition: map{atomicConditions: [map], positiveMatch: bool}, context: str, contextReadable: str, description: str, enabled: bool, id: int, name: str, sharedIpHandling: str, threshold: num}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/reputation-profiles/{reputationProfileId}
+@required {context: str(WEBSCRP/DOSATCK/WEBATCK/SCANTL), name: str, sharedIpHandling: str(NON_SHARED/SHARED_ONLY/BOTH), threshold: num}
+@optional {condition: map{atomicConditions: [map{positiveMatch: bool, type: str, value: [str], valueCase: bool, valueWildcard: bool}], positiveMatch: bool}, contextReadable: str, description: str, enabled: bool, id: int}
+@returns(200) {condition: map{atomicConditions: [map], positiveMatch: bool}, context: str, contextReadable: str, description: str, enabled: bool, id: int, name: str, sharedIpHandling: str, threshold: num}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/reputation-profiles/{reputationProfileId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/security-policies
+@optional {createFromSecurityPolicy: str, defaultSettings: str, policyName: str, policyPrefix: str, source: str}
+@returns(201) {configId: int, hasRatePolicyWithApiKey: bool, policyId: str, policyName: str, policySecurityControls: map{applyApiConstraints: bool, applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}, version: int}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies
+@optional {notMatched: bool, detail: bool=False}
+@returns(200) {configId: int, policies: [map], version: int}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}
+@returns(200) {configId: int, hasRatePolicyWithApiKey: bool, policyId: str, policyName: str, policySecurityControls: map{applyApiConstraints: bool, applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}, version: int}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}
+@returns(200) {policyName: str}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/evasive-path-match
+@returns(200) {enablePathMatch: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/evasive-path-match
+@required {enablePathMatch: bool}
+@returns(200) {enablePathMatch: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/logging
+@returns(200) {allowSampling: bool, cookies: map{type: str, values: [str]}, customHeaders: map{type: str, values: [str]}, override: bool, standardHeaders: map{type: str, values: [str]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/logging
+@required {override: bool}
+@optional {allowSampling: bool, cookies: map{type!: str, values: [str]}, customHeaders: map{type!: str, values: [str]}, standardHeaders: map{type!: str, values: [str]}}
+@returns(200) {allowSampling: bool, cookies: map{type: str, values: [str]}, customHeaders: map{type: str, values: [str]}, override: bool, standardHeaders: map{type: str, values: [str]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/logging/attack-payload
+@returns(200) {enabled: bool, override: bool, requestBody: map{type: str}, responseBody: map{type: str}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/logging/attack-payload
+@required {enabled: bool, override: bool, requestBody: map{type!: str}, responseBody: map{type!: str}}
+@returns(200) {enabled: bool, override: bool, requestBody: map{type: str}, responseBody: map{type: str}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/pragma-header
+@returns(200) {action: str, conditionOperator: str, excludeCondition: [map]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/pragma-header
+@required {action: str}
+@optional {conditionOperator: str(OR/AND), excludeCondition: [map{header: str, name: str, positiveMatch!: bool, type!: str, useHeaders: bool, value!: [str], valueCase: bool, valueWildcard: bool}]}
+@returns(200) {action: str, conditionOperator: str, excludeCondition: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/request-body
+@returns(200) {requestBodyInspectionLimitInKB: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/request-body
+@optional {requestBodyInspectionLimitInKB: str(8/16/32/default)}
+@returns(200) {requestBodyInspectionLimitInKB: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-endpoints
+@returns(200) {apiEndpoints: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-request-constraints
+@returns(200) {apiEndpoints: [map]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-request-constraints
+@required {action: str(alert/deny/none)}
+@returns(200) {apiEndpoints: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-request-constraints/{apiId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups
+@returns(200) {attackGroupActions: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}/condition-exception
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}/condition-exception
+@optional {advancedExceptions: map{conditionOperator: str, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], headerCookieOrParamValues: [map{criteria: [map], valueWildcard: bool, values!: [str]}], specificHeaderCookieOrParamNameValue: [map{criteria: [map], namesValues!: [map], selector!: str, wildcard: bool}], specificHeaderCookieParamXmlOrJsonNames: [map{criteria: [map], names: [str], selector!: str, wildcard: bool}]}, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name!: str, selector!: str, value!: str}, specificHeaderCookieOrParamNames: map{names!: [str], selector!: str}, specificHeaderCookieOrParamPrefix: map{prefix!: str, selector!: str}, specificHeaderCookieParamXmlOrJsonNames: [map{names: [str], selector!: str, wildcard: bool}]}}
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/bypass-network-lists
+@returns(200) {networkLists: [map]}
+@errors {400, 403}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/bypass-network-lists
+@required {networkLists: [str]}
+@returns(200) {networkLists: [str]}
+@errors {400, 403}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/cpc
+@returns(200) {edgeInjection: map{autoLoadStaging: bool, clientSideProtectionConfigId: int, loadScriptAsync: bool}, edgeTestParameters: map{disableInjectionKey: str, disableInjectionValue: str, forceInjectionKey: str, forceInjectionValue: str}, injectionCriteria: map{injectionPathExcludes: str, injectionPathIncludes: str, injectionPercent: int, injectionPolicy: str}}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/cpc
+@required {edgeInjection: map{autoLoadStaging!: bool, clientSideProtectionConfigId!: int, loadScriptAsync!: bool}, edgeTestParameters: map{disableInjectionKey: str, disableInjectionValue: str, forceInjectionKey: str, forceInjectionValue: str}, injectionCriteria: map{injectionPathExcludes: str, injectionPathIncludes: str, injectionPercent!: int, injectionPolicy!: str}}
+@returns(200) {edgeInjection: map{autoLoadStaging: bool, clientSideProtectionConfigId: int, loadScriptAsync: bool}, edgeTestParameters: map{disableInjectionKey: str, disableInjectionValue: str, forceInjectionKey: str, forceInjectionValue: str}, injectionCriteria: map{injectionPathExcludes: str, injectionPathIncludes: str, injectionPercent: int, injectionPolicy: str}}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/custom-rules
+@returns(200) {customRules: [map]}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/custom-rules/{ruleId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval
+@required {eval: str(START/STOP/RESTART/COMPLETE/UPDATE)}
+@optional {mode: str(ASE_AUTO/ASE_MANUAL)}
+@returns(201) {eval: str, mode: str}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups
+@returns(200) {attackGroupActions: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}/condition-exception
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}/condition-exception
+@optional {advancedExceptions: map{conditionOperator: str, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], headerCookieOrParamValues: [map{criteria: [map], valueWildcard: bool, values!: [str]}], specificHeaderCookieOrParamNameValue: [map{criteria: [map], namesValues!: [map], selector!: str, wildcard: bool}], specificHeaderCookieParamXmlOrJsonNames: [map{criteria: [map], names: [str], selector!: str, wildcard: bool}]}, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name!: str, selector!: str, value!: str}, specificHeaderCookieOrParamNames: map{names!: [str], selector!: str}, specificHeaderCookieOrParamPrefix: map{prefix!: str, selector!: str}, specificHeaderCookieParamXmlOrJsonNames: [map{names: [str], selector!: str, wildcard: bool}]}}
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-hostnames
+@returns(200) {hostnames: [str], mode: str}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-hostnames
+@required {hostnames: [str]}
+@optional {mode: str(append/remove/replace)}
+@returns(200) {hostnames: [str], mode: str}
+@errors {400, 403}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-penalty-box
+@returns(200) {action: any, penaltyBoxProtection: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-penalty-box
+@required {action: any, penaltyBoxProtection: bool}
+@returns(200) {action: any, penaltyBoxProtection: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-penalty-box/conditions
+@returns(200) {conditionOperator: str, conditions: [map]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-penalty-box/conditions
+@required {conditionOperator: str(AND/OR), conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}]}
+@returns(200) {conditionOperator: str, conditions: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules
+@returns(200) {evalRuleActions: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}/condition-exception
+@returns(200) {conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}/condition-exception
+@required {conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name!: str, selector!: str, value!: str}, specificHeaderCookieOrParamNames: map{names!: [str], selector!: str}, specificHeaderCookieOrParamPrefix: map{prefix!: str, selector!: str}, specificHeaderCookieParamXmlOrJsonNames: [map{names: [str], selector!: str, wildcard: bool}]}}
+@optional {advancedExceptions: map{conditionOperator: str, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], headerCookieOrParamValues: [map{criteria: [map], valueWildcard: bool, values!: [str]}], specificHeaderCookieOrParamNameValue: [map{criteria: [map], namesValues!: [map], selector!: str, wildcard: bool}], specificHeaderCookieParamXmlOrJsonNames: [map{criteria: [map], names: [str], selector!: str, wildcard: bool}]}}
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/ip-geo-firewall
+@returns(200) {asnControls: map{allowedIPNetworkLists: map{networkList: [str]}, blockedIPNetworkLists: map{networkList: [str]}}, block: str, geoControls: map{blockedIPNetworkLists: map{networkList: [str]}}, ipControls: map{allowedIPNetworkLists: map{networkList: [str]}, blockedIPNetworkLists: map{networkList: [str]}}, ukraineGeoControl: map{ukraineGeoControl: map{action: str}}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/ip-geo-firewall
+@required {block: str(blockSpecificIPGeo/blockAllTrafficExceptAllowedIPs)}
+@optional {asnControls: map{allowedIPNetworkLists: map{networkList: [str]}, blockedIPNetworkLists: map{networkList: [str]}}, geoControls: map{blockedIPNetworkLists: map{networkList: [str]}}, ipControls: map{allowedIPNetworkLists: map{networkList: [str]}, blockedIPNetworkLists: map{networkList: [str]}}, ukraineGeoControl: map{ukraineGeoControl: map{action: str}}}
+@returns(200) {asnControls: map{allowedIPNetworkLists: map{networkList: [str]}, blockedIPNetworkLists: map{networkList: [str]}}, block: str, geoControls: map{blockedIPNetworkLists: map{networkList: [str]}}, ipControls: map{allowedIPNetworkLists: map{networkList: [str]}, blockedIPNetworkLists: map{networkList: [str]}}, ukraineGeoControl: map{ukraineGeoControl: map{action: str}}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/malware-policies
+@returns(200) {malwarePolicyActions: [map]}
+@errors {404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/malware-policies/{malwarePolicyId}
+@required {action: str(alert/deny/none), unscannedAction: str(alert/deny/none)}
+@returns(200) {action: str, unscannedAction: str}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/mode
+@returns(200) {current: str, eval: bool, evaluating: str, expires: str(date-time), mode: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/mode
+@required {mode: str(KRS/AAG/ASE_AUTO/ASE_MANUAL)}
+@returns(200) {current: str, mode: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/penalty-box
+@returns(200) {action: any, penaltyBoxProtection: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/penalty-box
+@required {action: any, penaltyBoxProtection: bool}
+@returns(200) {action: any, penaltyBoxProtection: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/penalty-box/conditions
+@returns(200) {conditionOperator: str, conditions: [map]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/penalty-box/conditions
+@required {conditionOperator: str(AND/OR), conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}]}
+@returns(200) {conditionOperator: str, conditions: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/protect-eval-hostnames
+@required {hostnames: [str]}
+@optional {mode: str(append/remove/replace)}
+@returns(200) {hostnames: [str], mode: str}
+@errors {400, 403}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/protections
+@returns(200) {applyApiConstraints: bool, applyApplicationLayerControls: bool, applyCpcControls: bool, applyMalwareControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/protections
+@optional {applyApiConstraints: bool, applyApplicationLayerControls: bool, applyCpcControls: bool=False, applyMalwareControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}
+@returns(200) {applyApiConstraints: bool, applyApplicationLayerControls: bool, applyCpcControls: bool, applyMalwareControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules
+@returns(200) {policyRules: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/action
+@returns(200) {action: map}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/action
+@required {action: map}
+@returns(200) {action: map}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/status
+@returns(200) {enabled: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/status
+@required {enabled: bool}
+@returns(200) {enabled: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/condition-exception
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/condition-exception
+@optional {advancedExceptions: map{conditionOperator: str, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], headerCookieOrParamValues: [map{criteria: [map], valueWildcard: bool, values!: [str]}], specificHeaderCookieOrParamNameValue: [map{criteria: [map], namesValues!: [map], selector!: str, wildcard: bool}], specificHeaderCookieParamXmlOrJsonNames: [map{criteria: [map], names: [str], selector!: str, wildcard: bool}]}, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name!: str, selector!: str, value!: str}, specificHeaderCookieOrParamNames: map{names!: [str], selector!: str}, specificHeaderCookieOrParamPrefix: map{prefix!: str, selector!: str}, specificHeaderCookieParamXmlOrJsonNames: [map{names: [str], selector!: str, wildcard: bool}]}}
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/lock
+@returns(200) {enabled: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/lock
+@optional {enabled: bool}
+@returns(200) {enabled: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/versions/{ruleVersion}/action
+@returns(200) {action: map, lock: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/versions/{ruleVersion}/action
+@required {action: map}
+@returns(200) {action: map, lock: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rate-policies
+@returns(200) {ratePolicyActions: [map]}
+@errors {404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rate-policies/{ratePolicyId}
+@required {ipv4Action: str, ipv6Action: str}
+@returns(200) {ipv4Action: str, ipv6Action: str}
+@errors {400, 403, 404}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations
+@required {action: str(ACCEPT/DECLINE/RESET), selectorId: int}
+@optional {type: str(ACTIVE/EVALUATION/ALL)=ACTIVE}
+@returns(201)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations
+@optional {type: str(ACTIVE/EVALUATION/ALL)=ACTIVE}
+@returns(200) {attackGroupRecommendations: [map], evaluationPeriodEnd: str, evaluationPeriodStart: str, ruleRecommendations: [map]}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations/attack-groups/{attackGroupId}
+@optional {type: str(ACTIVE/EVALUATION/ALL)=ACTIVE}
+@returns(200) {declinedRecommendations: [map], group: str, recommendations: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations/rules/{ruleId}
+@optional {type: str(ACTIVE/EVALUATION/ALL)=ACTIVE}
+@returns(200) {declinedRecommendations: [map], id: int, recommendations: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-analysis
+@returns(200) {forwardSharedIPToHTTPHeaderAndSIEM: bool, forwardToHTTPHeader: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-analysis
+@optional {forwardSharedIPToHTTPHeaderAndSIEM: bool, forwardToHTTPHeader: bool}
+@returns(200) {forwardSharedIPToHTTPHeaderAndSIEM: bool, forwardToHTTPHeader: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-profiles
+@returns(200) {reputationProfiles: [map]}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-profiles/{reputationProfileId}
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-profiles/{reputationProfileId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules
+@returns(200) {ruleActions: [map]}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules
+@returns(200) {current: str, eval: bool, evaluating: str, expires: str(date-time), mode: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/threat-intel
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/threat-intel
+@optional {action: str(on/off)}
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/upgrade-details
+@returns(200) {current: str, evalToEvalUpdates: map{deletedAttackGroups: [map], deletedRules: [map], newAttackGroups: [map], newRules: [map], updatedAttackGroups: [map], updatedRules: [map]}, evaluating: str, krsToEvalUpdates: map{deletedAttackGroups: [map], deletedRules: [map], newAttackGroups: [map], newRules: [map], updatedAttackGroups: [map], updatedRules: [map]}, krsToLatestUpdates: map{deletedAttackGroups: [map], deletedRules: [map], newAttackGroups: [map], newRules: [map], updatedAttackGroups: [map], updatedRules: [map]}, latest: str}
+@errors {400, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}
+@returns(200) {action: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}
+@required {action: str(alert/deny/none)}
+@returns(200) {action: str}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}/condition-exception
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}/condition-exception
+@optional {advancedExceptions: map{conditionOperator: str, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], headerCookieOrParamValues: [map{criteria: [map], valueWildcard: bool, values!: [str]}], specificHeaderCookieOrParamNameValue: [map{criteria: [map], namesValues!: [map], selector!: str, wildcard: bool}], specificHeaderCookieParamXmlOrJsonNames: [map{criteria: [map], names: [str], selector!: str, wildcard: bool}]}, conditions: [map{caseSensitive: bool, clientLists: [str], extensions: [str], filenames: [str], header: str, hosts: [str], ips: [str], methods: [str], name: str, nameCase: bool, paths: [str], positiveMatch!: bool, type!: str, useHeaders: bool, value: str, valueCase: bool, valueWildcard: bool, wildcard: bool}], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name!: str, selector!: str, value!: str}, specificHeaderCookieOrParamNames: map{names!: [str], selector!: str}, specificHeaderCookieOrParamPrefix: map{prefix!: str, selector!: str}, specificHeaderCookieParamXmlOrJsonNames: [map{names: [str], selector!: str, wildcard: bool}]}}
+@returns(200) {advancedExceptions: map{conditionOperator: str, conditions: [map], headerCookieOrParamValues: [map], specificHeaderCookieOrParamNameValue: [map], specificHeaderCookieParamXmlOrJsonNames: [map]}, conditions: [map], exception: map{anyHeaderCookieOrParam: [str], headerCookieOrParamValues: [str], specificHeaderCookieOrParamNameValue: map{name: str, selector: str, value: str}, specificHeaderCookieOrParamNames: map{names: [str], selector: str}, specificHeaderCookieOrParamPrefix: map{prefix: str, selector: str}, specificHeaderCookieParamXmlOrJsonNames: [map]}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/selected-hostnames
+@returns(200) {hostnameList: [map], mode: str}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/selected-hostnames
+@required {hostnameList: [map{hostname!: str}]}
+@optional {mode: str(append/remove/replace)}
+@returns(200) {hostnameList: [map], mode: str}
+@errors {400, 403}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/slow-post
+@returns(200) {action: str, durationThreshold: map{timeout: int}, slowRateThreshold: map{period: int, rate: int}}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/slow-post
+@required {action: str(alert/abort)}
+@optional {durationThreshold: map{timeout!: int}, slowRateThreshold: map{period!: int, rate!: int}}
+@returns(200) {action: str, durationThreshold: map{timeout: int}, slowRateThreshold: map{period: int, rate: int}}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/url-protections
+@returns(200) {urlProtectionActions: [map]}
+@errors {404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/url-protections/{urlProtectionPolicyId}
+@required {action: any}
+@returns(200) {action: any}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/selectable-hostnames
+@returns(200) {availableSet: [map], configId: int, configVersion: int, errorSet: [map], protectARLInclusionHost: bool, selectedSet: [map]}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/selected-hostnames
+@returns(200) {hostnameList: [map], mode: str}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/selected-hostnames
+@required {hostnameList: [map{hostname!: str}]}
+@optional {mode: str(append/remove/replace)}
+@returns(200) {hostnameList: [map], mode: str}
+@errors {400, 403}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/selected-hostnames/eval-hostnames
+@returns(200) {hostnames: [str], mode: str}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/selected-hostnames/eval-hostnames
+@required {hostnames: [str]}
+@optional {mode: str(append/remove/replace)}
+@returns(200) {hostnames: [str], mode: str}
+@errors {400, 403}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/siem
+@returns(200) {enableForAllPolicies: bool, enableSiem: bool, enabledBotmanSiemEvents: bool, exceptions: [map], firewallPolicyIds: [str], siemDefinitionId: int}
+@errors {400, 403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/siem
+@required {enableSiem: bool}
+@optional {enableForAllPolicies: bool, enabledBotmanSiemEvents: bool, exceptions: [map{actionTypes: [str], protection: str}], firewallPolicyIds: [str], siemDefinitionId: int}
+@returns(200) {enableForAllPolicies: bool, enableSiem: bool, enabledBotmanSiemEvents: bool, exceptions: [map], firewallPolicyIds: [str], siemDefinitionId: int}
+@errors {400, 403, 404}
+
+@endpoint POST /configs/{configId}/versions/{versionNumber}/url-protections
+@required {intelligentLoadShedding: bool, name: str, rateThreshold: int}
+@optional {apiDefinitions: [map{apiDefinitionId!: int(int64), definedResources: bool, resourceIds: [int(int64)], undefinedResources: bool}], bypassCondition: map{atomicConditions: [any]}, categories: [any], configId: int(int64), configVersion: int, createDate: str(date-time), createdBy: str, description: str, hostnamePaths: [map{hostname!: str, paths!: [str]}], policyId: int(int64), protectionType: str(SINGLE/MULTIPLE), sheddingThresholdHitsPerSec: int, updateDate: str(date-time), updatedBy: str, used: bool}
+@returns(201) {apiDefinitions: [map], bypassCondition: map{atomicConditions: [any]}, categories: [any], configId: int(int64), configVersion: int, createDate: str(date-time), createdBy: str, description: str, hostnamePaths: [map], intelligentLoadShedding: bool, name: str, policyId: int(int64), protectionType: str, rateThreshold: int, sheddingThresholdHitsPerSec: int, updateDate: str(date-time), updatedBy: str, used: bool}
+@errors {400, 403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/url-protections
+@returns(200) {urlProtectionPolicies: [map]}
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/url-protections/{urlProtectionPolicyId}
+@returns(200) {apiDefinitions: [map], bypassCondition: map{atomicConditions: [any]}, categories: [any], configId: int(int64), configVersion: int, createDate: str(date-time), createdBy: str, description: str, hostnamePaths: [map], intelligentLoadShedding: bool, name: str, policyId: int(int64), protectionType: str, rateThreshold: int, sheddingThresholdHitsPerSec: int, updateDate: str(date-time), updatedBy: str, used: bool}
+@errors {403, 404}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/url-protections/{urlProtectionPolicyId}
+@required {intelligentLoadShedding: bool, name: str, rateThreshold: int}
+@optional {apiDefinitions: [map{apiDefinitionId!: int(int64), definedResources: bool, resourceIds: [int(int64)], undefinedResources: bool}], bypassCondition: map{atomicConditions: [any]}, categories: [any], configId: int(int64), configVersion: int, createDate: str(date-time), createdBy: str, description: str, hostnamePaths: [map{hostname!: str, paths!: [str]}], policyId: int(int64), protectionType: str(SINGLE/MULTIPLE), sheddingThresholdHitsPerSec: int, updateDate: str(date-time), updatedBy: str, used: bool}
+@returns(200) {apiDefinitions: [map], bypassCondition: map{atomicConditions: [any]}, categories: [any], configId: int(int64), configVersion: int, createDate: str(date-time), createdBy: str, description: str, hostnamePaths: [map], intelligentLoadShedding: bool, name: str, policyId: int(int64), protectionType: str, rateThreshold: int, sheddingThresholdHitsPerSec: int, updateDate: str(date-time), updatedBy: str, used: bool}
+@errors {400, 403, 404}
+
+@endpoint DELETE /configs/{configId}/versions/{versionNumber}/url-protections/{urlProtectionPolicyId}
+@returns(204)
+@errors {403, 404}
+
+@endpoint GET /configs/{configId}/versions/{versionNumber}/version-notes
+@returns(200) {notes: str}
+@errors {400, 404, 500}
+
+@endpoint PUT /configs/{configId}/versions/{versionNumber}/version-notes
+@optional {notes: str}
+@returns(200) {notes: str}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group contracts-groups
+@endpoint GET /contracts-groups
+@returns(200) {contractId: str, displayName: str, groupId: int}
+@errors {403, 404}
+
+@endgroup
+
+@group contracts
+@endpoint GET /contracts/{contractId}/groups/{groupId}/selectable-hostnames
+@returns(200) {availableSet: [map], configId: int, configVersion: int, errorSet: [map], protectARLInclusionHost: bool, selectedSet: [map]}
+@errors {400, 403, 404}
+
+@endgroup
+
+@group cves
+@endpoint GET /cves
+@optional {modifiedAfter: str(date-time)}
+@returns(200) {cves: [map]}
+@errors {400, 401, 403, 404, 405, 406}
+
+@endpoint POST /cves/subscribe
+@required {cveIds: [str]}
+@returns(200) {cveIds: [str]}
+@errors {400, 401, 403, 404, 405, 406}
+
+@endpoint GET /cves/subscribed
+@returns(200) {cves: [map]}
+@errors {401, 403, 404, 405, 406}
+
+@endpoint POST /cves/unsubscribe
+@optional {all: bool=False}
+@returns(200) {cveIds: [str]}
+@errors {400, 401, 403, 404, 405, 406}
+
+@endpoint GET /cves/{cveId}
+@returns(200) {affectedSystems: [map], coverage: str, cveId: str, description: str, impactScore: num(float), impactSeverity: str, mitigation: map{attackGroups: [map]}, modifiedDate: str(date-time), publishedDate: str(date-time), weaknessIds: [str]}
+@errors {401, 403, 404, 405, 406}
+
+@endpoint GET /cves/{cveId}/security-coverage
+@returns(200) {configurations: [map]}
+@errors {401, 403, 404, 405, 406, 500}
+
+@endgroup
+
+@group export
+@endpoint GET /export/configs/{configId}/versions/{versionNumber}
+@returns(200) {advancedOptions: [map], basedOn: int, configId: int, configName: str, createDate: str, createdBy: str, customDenyList: [map], customRules: [map], errorHosts: [map], evaluating: map{securityPolicies: [map]}, malwarePolicies: [map], matchTargets: [map], production: map{action: str, status: str, time: str}, ratePolicies: [map], reputationProfiles: [map], ruleSets: [map], securityPolicies: [map], selectableHosts: [str], selectedHosts: [str], siem: [map], staging: map{action: str, status: str, time: str}, version: int, versionNotes: str}
+@errors {403, 404}
+
+@endgroup
+
+@group hostname-coverage
+@endpoint GET /hostname-coverage
+@returns(200) {configuration: map{id: int, name: str, version: str}, hasMatchTarget: bool, hostname: str, policyNames: [str], status: str}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group onboardings
+@endpoint POST /onboardings
+@required {contractId: str, groupId: int(int32), hostnames: [str]}
+@optional {createNewResourcesOnly: bool=False}
+@returns(201) {accountId: str, activations: [map], contractId: str, createdBy: str, createdDate: str(date-time), currentStep: num, groupId: int, hostnames: [str], modifiedBy: str, modifiedDate: str(date-time), nextSteps: [map], onboardingId: int, onboardingLink: str(uri), onboardingStatus: str, product: str, settings: map{certificate: map{adminContact: map{email: str, firstName: str, lastName: str, phone: str}, certificateType: str, commonName: str, enrollmentId: int, enrollmentLink: str(uri)}, delivery: map{origins: [map]}, security: map{cloneVersion: int, configId: int, configLink: str(uri), configName: str, configType: str, evalRequired: bool, policyId: str, policyLink: str(uri), policyName: str, policyType: str, protections: map{applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}}, settingsLink: str(uri)}, totalSteps: num}
+@errors {400, 403}
+
+@endpoint GET /onboardings
+@optional {onboardingStatuses: [str], hostnames: [str]}
+@returns(200) {onboardings: [map]}
+@errors {403, 404}
+
+@endpoint GET /onboardings/{onboardingId}
+@returns(200) {accountId: str, activations: [map], contractId: str, createdBy: str, createdDate: str(date-time), currentStep: num, groupId: int, hostnames: [str], modifiedBy: str, modifiedDate: str(date-time), nextSteps: [map], onboardingId: int, onboardingLink: str(uri), onboardingStatus: str, product: str, settings: map{certificate: map{adminContact: map{email: str, firstName: str, lastName: str, phone: str}, certificateType: str, commonName: str, enrollmentId: int, enrollmentLink: str(uri)}, delivery: map{origins: [map]}, security: map{cloneVersion: int, configId: int, configLink: str(uri), configName: str, configType: str, evalRequired: bool, policyId: str, policyLink: str(uri), policyName: str, policyType: str, protections: map{applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}}, settingsLink: str(uri)}, totalSteps: num}
+@errors {403, 404}
+
+@endpoint DELETE /onboardings/{onboardingId}
+@returns(204)
+@errors {400, 403, 404}
+
+@endpoint POST /onboardings/{onboardingId}/activations
+@required {network: str(STAGING/PRODUCTION), notificationEmails: [str]}
+@returns(202) {activationId: int, activationStatus: str, activationStatusLink: str(uri), completedDate: str(date-time), createdBy: str, createdDate: str(date-time), network: str, onboardingLink: str, percentComplete: int, retryAfter: int}
+@errors {403, 404, 409, 422}
+
+@endpoint GET /onboardings/{onboardingId}/activations/{activationId}
+@returns(200) {activationId: int, activationStatus: str, activationStatusLink: str(uri), completedDate: str(date-time), createdBy: str, createdDate: str(date-time), network: str, onboardingLink: str, percentComplete: int, retryAfter: int}
+@returns(202) {activationId: int, activationStatus: str, activationStatusLink: str(uri), completedDate: str(date-time), createdBy: str, createdDate: str(date-time), network: str, onboardingLink: str, percentComplete: int, retryAfter: int}
+@errors {403, 404, 500}
+
+@endpoint GET /onboardings/{onboardingId}/certificate-validation
+@returns(200) {certificateValidateLink: str(uri), certificateValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@errors {403, 404, 500}
+
+@endpoint POST /onboardings/{onboardingId}/certificate-validation/validate
+@returns(200) {certificateValidateLink: str(uri), certificateValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@returns(207) {certificateValidateLink: str(uri), certificateValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@errors {403, 404, 500}
+
+@endpoint GET /onboardings/{onboardingId}/cname-to-akamai
+@returns(200) {cnameValidateLink: str(uri), cnameValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@errors {403, 404, 500}
+
+@endpoint POST /onboardings/{onboardingId}/cname-to-akamai/validate
+@returns(200) {cnameValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@returns(202) {cnameValidateLink: str(uri), cnameValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@returns(207) {cnameValidateLink: str(uri), cnameValidationStatus: str, description: str, onboardingLink: str(uri), records: [map]}
+@errors {403, 404, 500}
+
+@endpoint GET /onboardings/{onboardingId}/origin-validation
+@returns(200) {description: str, onboardingLink: str(uri), originSkipLink: str(uri), originValidateLink: str(uri), originValidationStatus: str, records: [map]}
+@errors {403, 404, 500}
+
+@endpoint POST /onboardings/{onboardingId}/origin-validation/skip
+@returns(200) {description: str, onboardingLink: str(uri), originValidationStatus: str, records: [map]}
+@errors {403, 404, 500}
+
+@endpoint POST /onboardings/{onboardingId}/origin-validation/validate
+@returns(200) {description: str, onboardingLink: str(uri), originValidationStatus: str, records: [map]}
+@errors {403, 404, 500}
+
+@endpoint GET /onboardings/{onboardingId}/settings
+@returns(200) {certificate: map{adminContact: map{email: str, firstName: str, lastName: str, phone: str}, certificateType: str, commonName: str, enrollmentId: int, enrollmentLink: str(uri)}, delivery: map{origins: [map]}, onboardingLink: str(uri), security: map{cloneVersion: int, configId: int, configLink: str(uri), configName: str, configType: str, evalRequired: bool, policyId: str, policyLink: str(uri), policyName: str, policyType: str, protections: map{applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}}, settingsLink: str(uri)}
+@errors {403, 404}
+
+@endpoint PUT /onboardings/{onboardingId}/settings
+@required {certificate: map{adminContact!: map{email!: str, firstName!: str, lastName!: str, phone!: str}, certificateType!: str, commonName: str, enrollmentId: int, enrollmentLink: str(uri)}, delivery: map{origins!: [map{hostname!: str, origin!: str}]}, onboardingLink: str(uri), security: map{cloneVersion: int, configId: int, configLink: str(uri), configName: str, configType!: str, evalRequired: bool, policyId: str, policyLink: str(uri), policyName: str, policyType!: str, protections!: map{applyApplicationLayerControls!: bool, applyBotmanControls!: bool, applyNetworkLayerControls!: bool, applyRateControls!: bool, applyReputationControls: bool, applySlowPostControls!: bool}}, settingsLink: str(uri)}
+@returns(200) {certificate: map{adminContact: map{email: str, firstName: str, lastName: str, phone: str}, certificateType: str, commonName: str, enrollmentId: int, enrollmentLink: str(uri)}, delivery: map{origins: [map]}, onboardingLink: str(uri), security: map{cloneVersion: int, configId: int, configLink: str(uri), configName: str, configType: str, evalRequired: bool, policyId: str, policyLink: str(uri), policyName: str, policyType: str, protections: map{applyApplicationLayerControls: bool, applyBotmanControls: bool, applyNetworkLayerControls: bool, applyRateControls: bool, applyReputationControls: bool, applySlowPostControls: bool}}, settingsLink: str(uri)}
+@errors {400, 403, 404, 422}
+
+@endgroup
+
+@group siem-definitions
+@endpoint GET /siem-definitions
+@returns(200) {siemDefinitions: [map]}
+@errors {403}
+
+@endgroup
+
+@end

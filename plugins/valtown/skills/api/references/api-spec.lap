@@ -1,0 +1,261 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Val Town API
+@base https://api.val.town
+@version 1
+@auth Bearer bearer
+@endpoints 36
+@hint download_for_search
+@toc alias(2), me(2), blob(4), users(1), sqlite(2), email(1), telemetry(2), vals(17), files(1), orgs(2), connections(2)
+
+@group alias
+@endpoint GET /v1/alias/{username}
+@desc Get basic details about a user, given their username
+@required {username: str # Username of the user who you are looking for}
+@returns(200) {id: str(uuid), type: str, bio: any, username: any, profileImageUrl: any, url: str(uri), links: map{self: str(uri)}} # User object
+
+@endgroup
+
+@group me
+@endpoint GET /v1/me
+@desc Get profile information for the current user
+@returns(200) {id: str(uuid), type: str, bio: any, username: any, profileImageUrl: any, url: str(uri), links: map{self: str(uri)}, tier: any, email: any} # Your user information, with tier and email included
+
+@endgroup
+
+@group blob
+@endpoint GET /v1/blob
+@desc List blobs in your account
+@optional {prefix: str # If specified, only include blobs that start with this string}
+@returns(200) List of blobs that you’ve stored
+
+@endpoint GET /v1/blob/{key}
+@desc Get a blob’s contents.
+@required {key: str # Key that uniquely identifies this blob}
+@returns(200) Binary contents of the returned file
+
+@endpoint POST /v1/blob/{key}
+@desc Store data in blob storage
+@required {key: str # Key that uniquely identifies this blob}
+@returns(201) Successfully stored as blob
+@errors {400: Default Response}
+
+@endpoint DELETE /v1/blob/{key}
+@desc Delete a blob
+@required {key: str # Key that uniquely identifies this blob}
+@returns(204) Blob successfully deleted
+
+@endgroup
+
+@group users
+@endpoint GET /v1/users/{user_id}
+@desc Get basic information about a user
+@required {user_id: str(uuid) # User Id}
+@returns(200) {id: str(uuid), type: str, bio: any, username: any, profileImageUrl: any, url: str(uri), links: map{self: str(uri)}} # User object
+
+@endgroup
+
+@group sqlite
+@endpoint POST /v1/sqlite/execute
+@desc Execute a single SQLite statement and return results
+@required {statement: any}
+@returns(200) {columns: [str], columnTypes: [str], rows: [[any]], rowsAffected: num, lastInsertRowid: any} # Result of executing an SQL statement.
+@example_request {"statement":"SELECT 1;"}
+
+@endpoint POST /v1/sqlite/batch
+@desc Execute a batch of SQLite statements and return results for all of them
+@required {statements: [any]}
+@optional {mode: str(write/read/deferred)}
+@returns(200) Array of results from the statements executed
+@example_request {"statements":["SELECT 1;"],"mode":"read"}
+
+@endgroup
+
+@group email
+@endpoint POST /v1/email
+@desc Send emails
+@optional {subject: str # The subject line of the email, from: any, headers: map # A set of headers to include the email that you send, to: any # A single email or list of emails for one of the address fields, cc: any # A single email or list of emails for one of the address fields, bcc: any # A single email or list of emails for one of the address fields, text: str # Text content of the email, for email clients that may not support HTML, html: str # HTML content of the email. Can be specified alongside text, attachments: [map{content!: str, filename!: str, type: str, disposition: str, contentId: str}] # A list of attachments to add to the email, replyToList: any # A reply-to list of email addresses}
+@returns(202) {message: str} # Email accepted to be sent
+@errors {500: Default Response}
+@example_request {"subject":"An important message","text":"Hello world","html":"Hello <strong>world</strong>"}
+
+@endgroup
+
+@group telemetry
+@endpoint GET /v1/telemetry/traces
+@desc Get OpenTelemetry traces within a specified time window with flexible pagination options: Pass in only the end time to paginate backwards from there. Pass in a start time to paginate backwards from now until the start time. Pass in both to get resources within the time window. Choose to return in end_time order instead to view traces that completed in a window or since a time. Filter additionally by branch_ids or file_id.
+@required {direction: any=desc # Sort direction for the traces. Defaults to descending order of timestamp., limit: int=20 # Maximum items to return in each paginated response}
+@optional {file_id: str(uuid) # Include only resources from a given file identified by its ID, branch_ids: [str(uuid)] # Branch IDs to filter by, start: str(date-time) # Start date of the time window (earliest time), end: str(date-time) # End date of the time window (latest time), order_by: any=start_time # When set to end_time, traces are sorted by their end time, and pending traces are omitted. When set to start_time, all traces are included, with pending traces given "0" for their end time.}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endpoint GET /v1/telemetry/logs
+@desc Get OpenTelemetry logs within a specified time window with flexible pagination options: Pass in only the end time to paginate backwards from there. Pass in a start time to paginate backwards from now until the start time. Pass in both to get resources within the time window. Filter additionally by branch_ids or file_id.
+@required {direction: any=desc # Sort direction for the traces. Defaults to descending order of timestamp., limit: int=20 # Maximum items to return in each paginated response}
+@optional {trace_ids: [str], file_id: str(uuid) # Include only resources from a given file identified by its ID, branch_ids: [str(uuid)] # Branch IDs to filter by, start: str(date-time) # Start date of the time window (earliest time), end: str(date-time) # End date of the time window (latest time)}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endgroup
+
+@group vals
+@endpoint GET /v2/vals/{val_id}
+@desc Get a val by id
+@required {val_id: str(uuid) # Id of a val}
+@returns(200) {name: str, id: str(uuid), createdAt: str(date-time), privacy: str, author: map{type: any, id: str(uuid), username: any}, imageUrl: any, description: any, links: map{self: str(uri), html: str(uri)}} # A Val
+
+@endpoint DELETE /v2/vals/{val_id}
+@desc Delete a project
+@required {val_id: str(uuid) # Id of a val}
+@returns(204) Default Response
+@errors {404: Project not found}
+
+@endpoint GET /v2/vals
+@desc Lists all vals including all public vals and your unlisted and private vals
+@required {limit: int=20 # Maximum items to return in each paginated response}
+@optional {privacy: str(public/unlisted/private) # This resource's privacy setting. Unlisted resources do not appear on profile pages or elsewhere, but you can link to them., user_id: str(uuid) # User ID to filter by, cursor: str(date-time) # Cursor to start the pagination from}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endpoint POST /v2/vals
+@desc Create a new val
+@required {name: str, privacy: str(public/unlisted/private)}
+@optional {description: str, orgId: str(uuid) # ID of the org to create the val in}
+@returns(201) {name: str, id: str(uuid), createdAt: str(date-time), privacy: str, author: map{type: any, id: str(uuid), username: any}, imageUrl: any, description: any, links: map{self: str(uri), html: str(uri)}} # A Val
+@errors {409:Conflict: Project name already exists}
+@example_request {"name":"myVal","description":"My val","privacy":"public"}
+
+@endpoint GET /v2/vals/{val_id}/branches/{branch_id}
+@desc Get a branch by id
+@required {val_id: str(uuid) # Id of a val, branch_id: str(uuid) # Id of a branch}
+@returns(200) {name: str, id: str(uuid), version: int, createdAt: str(date-time), updatedAt: str(date-time), forkedBranchId: any, links: map{self: str(uri), html: str(uri)}} # A Branch
+
+@endpoint DELETE /v2/vals/{val_id}/branches/{branch_id}
+@desc Delete a branch
+@required {val_id: str(uuid) # Id of a val, branch_id: str(uuid) # Id of a branch}
+@returns(204) Default Response
+@errors {404: Branch not found}
+
+@endpoint GET /v2/vals/{val_id}/branches
+@desc List all branches for a val
+@required {offset: int=0 # Number of items to skip in order to deliver paginated results, limit: int=20 # Maximum items to return in each paginated response, val_id: str(uuid) # Id of a val}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endpoint POST /v2/vals/{val_id}/branches
+@desc Create a new branch
+@required {val_id: str(uuid) # Id of a val, name: str}
+@optional {branchId: str(uuid) # The branch ID to fork from. If this is not specified, the new branch will be forked from main.}
+@returns(201) {name: str, id: str(uuid), version: int, createdAt: str(date-time), updatedAt: str(date-time), forkedBranchId: any, links: map{self: str(uri), html: str(uri)}} # A Branch
+@errors {409:Conflict: Branch name already exists in this project}
+@example_request {"name":"my-branch","branchId":"00000000-0000-0000-0000-000000000000"}
+
+@endpoint GET /v2/vals/{val_id}/files
+@desc Get metadata for files and directories in a val. If path is an empty string, returns files at the root directory.
+@required {path: str # Path to a file or directory (e.g. 'dir/subdir/file.ts'). Pass in an empty string to represent the root directory., recursive: bool=False # Whether to recursively act on all files in the project, offset: int=0 # Number of items to skip in order to deliver paginated results, limit: int=20 # Maximum items to return in each paginated response, val_id: str(uuid) # Id of a val}
+@optional {version: int # Specific branch version to query, branch_id: str(uuid) # Id to query}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endpoint POST /v2/vals/{val_id}/files
+@desc Create a new file, project val or directory
+@required {path: str # Path to a file or directory (e.g. 'dir/subdir/file.ts'). Pass in an empty string to represent the root directory., val_id: str(uuid) # Id of a val}
+@optional {branch_id: str(uuid) # The specified branch of the resource. Defaults to main if not provided.}
+@returns(201) {name: str, id: str(uuid), path: str, version: int, updatedAt: str(date-time), type: str, links: map{self: str(uri), html: str(uri), module: str(uri), endpoint: str(uri), email: str(email)}} # A File or Directory's Metadata
+@errors {409: Default Response}
+
+@endpoint DELETE /v2/vals/{val_id}/files
+@desc Deletes a file or a directory. To delete a directory and all of its children, use the recursive flag. To delete all files, pass in an empty path and the recursive flag.
+@required {path: str # Path to a file or directory (e.g. 'dir/subdir/file.ts'). Pass in an empty string to represent the root directory., recursive: bool=False # Whether to recursively act on all files in the project, val_id: str(uuid) # Id of a val}
+@optional {branch_id: str(uuid) # The specified branch of the resource. Defaults to main if not provided.}
+@returns(204) Default Response
+@errors {404: File not found}
+
+@endpoint PUT /v2/vals/{val_id}/files
+@desc Update a file's content
+@required {path: str # Path to a file or directory (e.g. 'dir/subdir/file.ts'). Pass in an empty string to represent the root directory., val_id: str(uuid) # Id of a val}
+@optional {branch_id: str(uuid) # The specified branch of the resource. Defaults to main if not provided., content: str # File and val content. An empty string will create an empty file. When creating a directory, the content should be null or undefined., type: str(file/interval/http/email/script), parent_path: any, name: str}
+@returns(200) {name: str, id: str(uuid), path: str, version: int, updatedAt: str(date-time), type: str, links: map{self: str(uri), html: str(uri), module: str(uri), endpoint: str(uri), email: str(email)}} # A File or Directory's Metadata
+@returns(201) {name: str, id: str(uuid), path: str, version: int, updatedAt: str(date-time), type: str, links: map{self: str(uri), html: str(uri), module: str(uri), endpoint: str(uri), email: str(email)}} # A File or Directory's Metadata
+
+@endpoint GET /v2/vals/{val_id}/environment_variables
+@desc List environment variables defined in this project. This only includes names, not values.
+@required {offset: int=0 # Number of items to skip in order to deliver paginated results, limit: int=20 # Maximum items to return in each paginated response, val_id: str(uuid) # Id of a val}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endpoint POST /v2/vals/{val_id}/environment_variables
+@desc Create a new environment variable scoped to this project.
+@required {val_id: str(uuid) # Id of a val, value: str # Value of the environment variable., key: str # Name or key of the environment variable, accessible via Deno.env or process.env}
+@optional {description: str # Optional description of the environment variable}
+@returns(201) {key: str, description: any, updatedAt: str(date-time), createdAt: str(date-time)} # An environment variable
+@errors {409: Key already exists}
+
+@endpoint PUT /v2/vals/{val_id}/environment_variables/{key}
+@desc Update a environment variable scoped to this project.
+@required {val_id: str(uuid) # Id of a val, key: str, value: str # Value of the environment variable.}
+@optional {description: str # Optional description of the environment variable}
+@returns(201) {key: str, description: any, updatedAt: str(date-time), createdAt: str(date-time)} # An environment variable
+
+@endpoint DELETE /v2/vals/{val_id}/environment_variables/{key}
+@desc Delete a environment variable scoped to this project.
+@required {val_id: str(uuid) # Id of a val, key: str}
+@returns(204) Default Response
+@errors {404: Environment variable or project not found}
+
+@endpoint GET /v2/vals/{val_id}/files/content
+@desc Download file content
+@required {path: str # Path to a file or directory (e.g. 'dir/subdir/file.ts'). Pass in an empty string to represent the root directory., val_id: str(uuid) # Id of a val}
+@optional {version: int # Specific branch version to query, branch_id: str(uuid) # Id to query, If-Match: str, If-Unmodified-Since: str, If-None-Match: str, If-Modified-Since: str, Cache-Control: str}
+@returns(200) Contents of the file
+@errors {304: Cached version of the file is the same as the one requested, 412: Precondition failed}
+
+@endgroup
+
+@group files
+@endpoint GET /v2/files/{file_id}
+@desc Get file metadata by file ID
+@required {file_id: str # ID of a file in a val}
+@returns(200) {name: str, id: str(uuid), path: str, version: int, updatedAt: str(date-time), type: str, links: map{self: str(uri), html: str(uri), module: str(uri), endpoint: str(uri), email: str(email)}} # A File or Directory's Metadata
+
+@endgroup
+
+@group alias
+@endpoint GET /v2/alias/vals/{username}/{val_name}
+@desc Get a val
+@required {username: str # Username of the user whose val you are looking for, val_name: str # Name of the val you’re looking for}
+@returns(200) {name: str, id: str(uuid), createdAt: str(date-time), privacy: str, author: map{type: any, id: str(uuid), username: any}, imageUrl: any, description: any, links: map{self: str(uri), html: str(uri)}} # A Val
+
+@endgroup
+
+@group me
+@endpoint GET /v2/me/vals
+@desc [BETA] List all of a user's vals for authenticated users
+@required {offset: int=0 # Number of items to skip in order to deliver paginated results, limit: int=20 # Maximum items to return in each paginated response}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endgroup
+
+@group orgs
+@endpoint GET /v2/orgs
+@desc Get all orgs you are a member of
+@required {offset: int=0 # Number of items to skip in order to deliver paginated results, limit: int=20 # Maximum items to return in each paginated response}
+@returns(200) {data: [map], links: map{self: str(uri), prev: str(uri), next: str(uri)}} # A paginated result set
+
+@endpoint GET /v2/orgs/{org_id}/memberships
+@desc List all memberships of an org
+@required {org_id: str(uuid) # Id of an org}
+@returns(200) Default Response
+
+@endgroup
+
+@group connections
+@endpoint POST /v3/connections/slack/token
+@desc Get a valid Slack access token for a connected workspace. Automatically refreshes the token if expired.
+@required {team_id: str # The Slack team/workspace ID (e.g., 'T9TK3CUKW')}
+@returns(200) {access_token: str} # Default Response
+@errors {403: Default Response, 404: Default Response, 500: Default Response}
+
+@endpoint POST /v3/connections/google-docs/token
+@desc Get a valid Google access token for a connected Google account. Automatically refreshes the token if expired.
+@required {email: str # The Google account email}
+@returns(200) {access_token: str, granted_scopes: [str]} # Default Response
+@errors {403: Default Response, 404: Default Response, 500: Default Response}
+
+@endgroup
+
+@end

@@ -1,0 +1,234 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Access Analyzer
+@version 2019-11-01
+@auth AWS SigV4
+@endpoints 35
+@hint download_for_search
+@toc archive-rule(1), policy(8), access-preview(4), analyzer(9), recommendation(2), analyzed-resource(2), finding(3), findingv2(2), tags(3), resource(1)
+
+@group archive-rule
+@endpoint PUT /archive-rule
+@required {analyzerArn: str, ruleName: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group policy
+@endpoint PUT /policy/generation/{jobId}
+@required {jobId: str}
+
+@endpoint POST /policy/check-access-not-granted
+@required {policyDocument: str, access: [Access], policyType: str}
+@returns(200) {result: str?, message: str?, reasons: [ReasonSummary]?}
+
+@endpoint POST /policy/check-no-new-access
+@required {newPolicyDocument: str, existingPolicyDocument: str, policyType: str}
+@returns(200) {result: str?, message: str?, reasons: [ReasonSummary]?}
+
+@endpoint POST /policy/check-no-public-access
+@required {policyDocument: str, resourceType: str}
+@returns(200) {result: str?, message: str?, reasons: [ReasonSummary]?}
+
+@endgroup
+
+@group access-preview
+@endpoint PUT /access-preview
+@required {analyzerArn: str, configurations: map<str,Configuration>}
+@optional {clientToken: str}
+@returns(200) {id: str}
+
+@endgroup
+
+@group analyzer
+@endpoint PUT /analyzer
+@required {analyzerName: str, type: str}
+@optional {archiveRules: [InlineArchiveRule], tags: map<str,str>, clientToken: str, configuration: AnalyzerConfiguration}
+@returns(200) {arn: str?}
+
+@endpoint PUT /analyzer/{analyzerName}/archive-rule
+@required {analyzerName: str, ruleName: str, filter: map<str,Criterion>}
+@optional {clientToken: str}
+
+@endpoint DELETE /analyzer/{analyzerName}
+@required {analyzerName: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /analyzer/{analyzerName}/archive-rule/{ruleName}
+@required {analyzerName: str, ruleName: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group recommendation
+@endpoint POST /recommendation/{id}
+@required {analyzerArn: str, id: str}
+
+@endgroup
+
+@group access-preview
+@endpoint GET /access-preview/{accessPreviewId}
+@required {accessPreviewId: str, analyzerArn: str}
+@returns(200) {accessPreview: AccessPreview{id: str, analyzerArn: str, configurations: map<str,Configuration>, createdAt: str(timestamp), status: str, statusReason: AccessPreviewStatusReason?{code: str}}}
+
+@endgroup
+
+@group analyzed-resource
+@endpoint GET /analyzed-resource
+@required {analyzerArn: str, resourceArn: str}
+@returns(200) {resource: AnalyzedResource?{resourceArn: str, resourceType: str, createdAt: str(timestamp), analyzedAt: str(timestamp), updatedAt: str(timestamp), isPublic: bool, actions: [str]?, sharedVia: [str]?, status: str?, resourceOwnerAccount: str, error: str?}}
+
+@endgroup
+
+@group analyzer
+@endpoint GET /analyzer/{analyzerName}
+@required {analyzerName: str}
+@returns(200) {analyzer: AnalyzerSummary{arn: str, name: str, type: str, createdAt: str(timestamp), lastResourceAnalyzed: str?, lastResourceAnalyzedAt: str(timestamp)?, tags: map<str,str>?, status: str, statusReason: StatusReason?{code: str}, configuration: AnalyzerConfiguration?{unusedAccess: UnusedAccessConfiguration?{unusedAccessAge: int?}}}}
+
+@endpoint GET /analyzer/{analyzerName}/archive-rule/{ruleName}
+@required {analyzerName: str, ruleName: str}
+@returns(200) {archiveRule: ArchiveRuleSummary{ruleName: str, filter: map<str,Criterion>, createdAt: str(timestamp), updatedAt: str(timestamp)}}
+
+@endgroup
+
+@group finding
+@endpoint GET /finding/{id}
+@required {analyzerArn: str, id: str}
+@returns(200) {finding: Finding?{id: str, principal: map<str,str>?, action: [str]?, resource: str?, isPublic: bool?, resourceType: str, condition: map<str,str>, createdAt: str(timestamp), analyzedAt: str(timestamp), updatedAt: str(timestamp), status: str, resourceOwnerAccount: str, error: str?, sources: [FindingSource]?}}
+
+@endgroup
+
+@group recommendation
+@endpoint GET /recommendation/{id}
+@required {analyzerArn: str, id: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {startedAt: str(timestamp), completedAt: str(timestamp)?, nextToken: str?, error: RecommendationError?{code: str, message: str}, resourceArn: str, recommendedSteps: [RecommendedStep]?, recommendationType: str, status: str}
+
+@endgroup
+
+@group findingv2
+@endpoint GET /findingv2/{id}
+@required {analyzerArn: str, id: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {analyzedAt: str(timestamp), createdAt: str(timestamp), error: str?, id: str, nextToken: str?, resource: str?, resourceType: str, resourceOwnerAccount: str, status: str, updatedAt: str(timestamp), findingDetails: [FindingDetails], findingType: str?}
+
+@endgroup
+
+@group policy
+@endpoint GET /policy/generation/{jobId}
+@required {jobId: str}
+@optional {includeResourcePlaceholders: bool, includeServiceLevelTemplate: bool}
+@returns(200) {jobDetails: JobDetails{jobId: str, status: str, startedOn: str(timestamp), completedOn: str(timestamp)?, jobError: JobError?{code: str, message: str}}, generatedPolicyResult: GeneratedPolicyResult{properties: GeneratedPolicyProperties{isComplete: bool?, principalArn: str, cloudTrailProperties: CloudTrailProperties?{trailProperties: [TrailProperties], startTime: str(timestamp), endTime: str(timestamp)}}, generatedPolicies: [GeneratedPolicy]?}}
+
+@endgroup
+
+@group access-preview
+@endpoint POST /access-preview/{accessPreviewId}
+@required {accessPreviewId: str, analyzerArn: str}
+@optional {filter: map<str,Criterion>, nextToken: str, maxResults: int}
+@returns(200) {findings: [AccessPreviewFinding], nextToken: str?}
+
+@endpoint GET /access-preview
+@required {analyzerArn: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {accessPreviews: [AccessPreviewSummary], nextToken: str?}
+
+@endgroup
+
+@group analyzed-resource
+@endpoint POST /analyzed-resource
+@required {analyzerArn: str}
+@optional {resourceType: str, nextToken: str, maxResults: int}
+@returns(200) {analyzedResources: [AnalyzedResourceSummary], nextToken: str?}
+
+@endgroup
+
+@group analyzer
+@endpoint GET /analyzer
+@optional {nextToken: str, maxResults: int, type: str}
+@returns(200) {analyzers: [AnalyzerSummary], nextToken: str?}
+
+@endpoint GET /analyzer/{analyzerName}/archive-rule
+@required {analyzerName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {archiveRules: [ArchiveRuleSummary], nextToken: str?}
+
+@endgroup
+
+@group finding
+@endpoint POST /finding
+@required {analyzerArn: str}
+@optional {filter: map<str,Criterion>, sort: SortCriteria, nextToken: str, maxResults: int}
+@returns(200) {findings: [FindingSummary], nextToken: str?}
+
+@endgroup
+
+@group findingv2
+@endpoint POST /findingv2
+@required {analyzerArn: str}
+@optional {filter: map<str,Criterion>, maxResults: int, nextToken: str, sort: SortCriteria}
+@returns(200) {findings: [FindingSummaryV2], nextToken: str?}
+
+@endgroup
+
+@group policy
+@endpoint GET /policy/generation
+@optional {principalArn: str, maxResults: int, nextToken: str}
+@returns(200) {policyGenerations: [PolicyGeneration], nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group policy
+@endpoint PUT /policy/generation
+@required {policyGenerationDetails: PolicyGenerationDetails}
+@optional {cloudTrailDetails: CloudTrailDetails, clientToken: str}
+@returns(200) {jobId: str}
+
+@endgroup
+
+@group resource
+@endpoint POST /resource/scan
+@required {analyzerArn: str, resourceArn: str}
+@optional {resourceOwnerAccount: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group analyzer
+@endpoint PUT /analyzer/{analyzerName}/archive-rule/{ruleName}
+@required {analyzerName: str, ruleName: str, filter: map<str,Criterion>}
+@optional {clientToken: str}
+
+@endgroup
+
+@group finding
+@endpoint PUT /finding
+@required {analyzerArn: str, status: str}
+@optional {ids: [str], resourceArn: str, clientToken: str}
+
+@endgroup
+
+@group policy
+@endpoint POST /policy/validation
+@required {policyDocument: str, policyType: str}
+@optional {maxResults: int, nextToken: str, locale: str, validatePolicyResourceType: str}
+@returns(200) {findings: [ValidatePolicyFinding], nextToken: str?}
+
+@endgroup
+
+@end

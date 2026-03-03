@@ -1,0 +1,130 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Invoices
+@base https://api-m.sandbox.paypal.com
+@version 2.6
+@auth OAuth2
+@endpoints 22
+@hint download_for_search
+@toc invoicing(22)
+
+@endpoint POST /v2/invoicing/invoices
+@required {detail: map}
+@optional {id: str, parent_id: str, status: str(DRAFT/SENT/SCHEDULED/PAID/MARKED_AS_PAID/CANCELLED/REFUNDED/PARTIALLY_PAID/PARTIALLY_REFUNDED/MARKED_AS_REFUNDED/UNPAID/PAYMENT_PENDING/AUTO_CANCELLED/PAID_EXTERNAL/REFUNDED_EXTERNAL/SHARED), invoicer: map, primary_recipients: [map{billing_info: map, shipping_info: map}], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map{id: str, name!: str, description: str, quantity!: str, unit_amount!: map{currency_code!: str, value!: str}, tax: map{name!: str, percent!: str(ppaas_common_percentage_v2), amount: map, tax_note: str}, item_date: str(ppaas_date_notime_v2), discount: map{percent: str(ppaas_common_percentage_v2), amount: map}, unit_of_measure: str}], configuration: map, amount: map{currency_code: str, value: str, breakdown: map{item_total: map, discount: map, tax_total: map, shipping: map, custom: map}}, due_amount: map{currency_code!: str, value!: str}, gratuity: map{currency_code!: str, value!: str}, payments: map{paid_amount: map{currency_code!: str, value!: str}, transactions: [map{type: str, payment_id: str, payment_date: str(ppaas_date_notime_v2), method!: str, note: str, amount: map, shipping_info: map}]}, refunds: map{refund_amount: map{currency_code!: str, value!: str}, transactions: [map{type: str, refund_id: str, refund_date: str(ppaas_date_notime_v2), amount: map, method!: str}]}, links: [map{href!: str, rel!: str, method: str}]}
+@returns(201) {id: str, parent_id: str, status: str, detail: map, invoicer: map, primary_recipients: [map], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map], configuration: map, amount: map{currency_code: str, value: str, breakdown: map{item_total: map{currency_code: str, value: str}, discount: map{invoice_discount: map, item_discount: map}, tax_total: map{currency_code: str, value: str}, shipping: map{amount: map, tax: map}, custom: map{label: str, amount: map}}}, due_amount: map{currency_code: str, value: str}, gratuity: map{currency_code: str, value: str}, payments: map{paid_amount: map{currency_code: str, value: str}, transactions: [map]}, refunds: map{refund_amount: map{currency_code: str, value: str}, transactions: [map]}, links: [map]}
+@errors {400, 403, 422, 500}
+
+@endpoint GET /v2/invoicing/invoices
+@optional {page: int=1, page_size: int=20, total_required: bool=False, fields: str=all}
+@returns(200) {total_pages: int, total_items: int, items: [map], links: [map]}
+@errors {400, 403, 500}
+
+@endpoint POST /v2/invoicing/invoices/{invoice_id}/send
+@required {invoice_id: str}
+@optional {subject: str, note: str, send_to_invoicer: bool=False, send_to_recipient: bool=True, additional_recipients: [str(ppaas_common_email_address_v2)]}
+@returns(200) {href: str, rel: str, method: str}
+@returns(202) {href: str, rel: str, method: str}
+@errors {400, 403, 404, 422, 500}
+
+@endpoint POST /v2/invoicing/invoices/{invoice_id}/remind
+@required {invoice_id: str}
+@optional {subject: str, note: str, send_to_invoicer: bool=False, send_to_recipient: bool=True, additional_recipients: [str(ppaas_common_email_address_v2)]}
+@returns(204)
+@errors {400, 403, 404, 422, 500}
+
+@endpoint POST /v2/invoicing/invoices/{invoice_id}/cancel
+@required {invoice_id: str}
+@optional {subject: str, note: str, send_to_invoicer: bool=False, send_to_recipient: bool=True, additional_recipients: [str(ppaas_common_email_address_v2)]}
+@returns(204)
+@errors {400, 403, 404, 422, 500}
+
+@endpoint POST /v2/invoicing/invoices/{invoice_id}/payments
+@required {invoice_id: str, method: str(BANK_TRANSFER/CASH/CHECK/CREDIT_CARD/DEBIT_CARD/PAYPAL/WIRE_TRANSFER/OTHER)}
+@optional {type: str(PAYPAL/EXTERNAL), payment_id: str, payment_date: str(ppaas_date_notime_v2), note: str, amount: map{currency_code!: str, value!: str}, shipping_info: map}
+@returns(200) {payment_id: str}
+@errors {400, 403, 404, 422, 500}
+
+@endpoint DELETE /v2/invoicing/invoices/{invoice_id}/payments/{transaction_id}
+@required {invoice_id: str, transaction_id: str}
+@returns(204)
+@errors {400, 403, 404, 422, 500}
+
+@endpoint POST /v2/invoicing/invoices/{invoice_id}/refunds
+@required {invoice_id: str, method: str(BANK_TRANSFER/CASH/CHECK/CREDIT_CARD/DEBIT_CARD/PAYPAL/WIRE_TRANSFER/OTHER)}
+@optional {type: str(PAYPAL/EXTERNAL), refund_id: str, refund_date: str(ppaas_date_notime_v2), amount: map{currency_code!: str, value!: str}}
+@returns(200) {refund_id: str}
+@errors {400, 403, 404, 422, 500}
+
+@endpoint DELETE /v2/invoicing/invoices/{invoice_id}/refunds/{transaction_id}
+@required {invoice_id: str, transaction_id: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /v2/invoicing/invoices/{invoice_id}/generate-qr-code
+@required {invoice_id: str}
+@optional {width: int=500, height: int=500, action: str=pay}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /v2/invoicing/generate-next-invoice-number
+@optional {fetch_id: bool=false}
+@returns(200) {invoice_number: str, invoice_id: str}
+@errors {400, 403, 500}
+
+@endpoint GET /v2/invoicing/invoices/{invoice_id}
+@required {invoice_id: str}
+@returns(200) {id: str, parent_id: str, status: str, detail: map, invoicer: map, primary_recipients: [map], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map], configuration: map, amount: map{currency_code: str, value: str, breakdown: map{item_total: map{currency_code: str, value: str}, discount: map{invoice_discount: map, item_discount: map}, tax_total: map{currency_code: str, value: str}, shipping: map{amount: map, tax: map}, custom: map{label: str, amount: map}}}, due_amount: map{currency_code: str, value: str}, gratuity: map{currency_code: str, value: str}, payments: map{paid_amount: map{currency_code: str, value: str}, transactions: [map]}, refunds: map{refund_amount: map{currency_code: str, value: str}, transactions: [map]}, links: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /v2/invoicing/invoices/{invoice_id}
+@required {invoice_id: str, detail: map}
+@optional {send_to_recipient: bool=True, send_to_invoicer: bool=True, id: str, parent_id: str, status: str(DRAFT/SENT/SCHEDULED/PAID/MARKED_AS_PAID/CANCELLED/REFUNDED/PARTIALLY_PAID/PARTIALLY_REFUNDED/MARKED_AS_REFUNDED/UNPAID/PAYMENT_PENDING/AUTO_CANCELLED/PAID_EXTERNAL/REFUNDED_EXTERNAL/SHARED), invoicer: map, primary_recipients: [map{billing_info: map, shipping_info: map}], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map{id: str, name!: str, description: str, quantity!: str, unit_amount!: map{currency_code!: str, value!: str}, tax: map{name!: str, percent!: str(ppaas_common_percentage_v2), amount: map, tax_note: str}, item_date: str(ppaas_date_notime_v2), discount: map{percent: str(ppaas_common_percentage_v2), amount: map}, unit_of_measure: str}], configuration: map, amount: map{currency_code: str, value: str, breakdown: map{item_total: map, discount: map, tax_total: map, shipping: map, custom: map}}, due_amount: map{currency_code!: str, value!: str}, gratuity: map{currency_code!: str, value!: str}, payments: map{paid_amount: map{currency_code!: str, value!: str}, transactions: [map{type: str, payment_id: str, payment_date: str(ppaas_date_notime_v2), method!: str, note: str, amount: map, shipping_info: map}]}, refunds: map{refund_amount: map{currency_code!: str, value!: str}, transactions: [map{type: str, refund_id: str, refund_date: str(ppaas_date_notime_v2), amount: map, method!: str}]}, links: [map{href!: str, rel!: str, method: str}]}
+@returns(200) {id: str, parent_id: str, status: str, detail: map, invoicer: map, primary_recipients: [map], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map], configuration: map, amount: map{currency_code: str, value: str, breakdown: map{item_total: map{currency_code: str, value: str}, discount: map{invoice_discount: map, item_discount: map}, tax_total: map{currency_code: str, value: str}, shipping: map{amount: map, tax: map}, custom: map{label: str, amount: map}}}, due_amount: map{currency_code: str, value: str}, gratuity: map{currency_code: str, value: str}, payments: map{paid_amount: map{currency_code: str, value: str}, transactions: [map]}, refunds: map{refund_amount: map{currency_code: str, value: str}, transactions: [map]}, links: [map]}
+@errors {400, 403, 404, 422, 500}
+
+@endpoint DELETE /v2/invoicing/invoices/{invoice_id}
+@required {invoice_id: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /v2/invoicing/search-invoices
+@optional {page: int=1, page_size: int=20, total_required: bool=False, recipient_email: str, recipient_first_name: str, recipient_last_name: str, recipient_business_name: str, invoice_number: str, status: [str], reference: str, currency_code: str, memo: str, total_amount_range: map{lower_amount!: map{currency_code!: str, value!: str}, upper_amount!: map{currency_code!: str, value!: str}}, invoice_date_range: map{start!: str(ppaas_date_notime_v2), end!: str(ppaas_date_notime_v2)}, due_date_range: map{start!: str(ppaas_date_notime_v2), end!: str(ppaas_date_notime_v2)}, payment_date_range: map{start!: str(ppaas_date_time_v3), end!: str(ppaas_date_time_v3)}, creation_date_range: map{start!: str(ppaas_date_time_v3), end!: str(ppaas_date_time_v3)}, archived: bool, fields: [str]}
+@returns(200) {total_pages: int, total_items: int, items: [map], links: [map]}
+@errors {400, 403, 500}
+
+@endpoint GET /v2/invoicing/templates
+@optional {fields: str=all, page: int=1, page_size: int=20}
+@returns(200) {addresses: [map], emails: str(ppaas_common_email_address_v2), phones: [map], templates: [map], links: [map]}
+@errors {400, 403, 500}
+
+@endpoint POST /v2/invoicing/templates
+@optional {id: str, name: str, default_template: bool, template_info: map{detail: map, invoicer: map, primary_recipients: [map{billing_info: map, shipping_info: map}], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map{id: str, name!: str, description: str, quantity!: str, unit_amount!: map, tax: map, item_date: str(ppaas_date_notime_v2), discount: map, unit_of_measure: str}], configuration: map{tax_calculated_after_discount: bool, tax_inclusive: bool, allow_tip: bool, partial_payment: map, has_conditional_rule: bool}, amount: map{currency_code: str, value: str, breakdown: map}, due_amount: map{currency_code!: str, value!: str}}, settings: map{template_item_settings: [map{field_name: str, display_preference: map}], template_subtotal_settings: [map{field_name: str, display_preference: map}]}, unit_of_measure: str(QUANTITY/HOURS/AMOUNT), standard_template: bool, links: [map{href!: str, rel!: str, method: str}]}
+@returns(201) {id: str, name: str, default_template: bool, template_info: map{detail: map, invoicer: map, primary_recipients: [map], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map], configuration: map{tax_calculated_after_discount: bool, tax_inclusive: bool, allow_tip: bool, partial_payment: map{allow_partial_payment: bool, minimum_amount_due: map}, has_conditional_rule: bool}, amount: map{currency_code: str, value: str, breakdown: map{item_total: map, discount: map, tax_total: map, shipping: map, custom: map}}, due_amount: map{currency_code: str, value: str}}, settings: map{template_item_settings: [map], template_subtotal_settings: [map]}, unit_of_measure: str, standard_template: bool, links: [map]}
+@errors {400, 403, 422, 500}
+
+@endpoint GET /v2/invoicing/templates/{template_id}
+@required {template_id: str}
+@returns(200) {id: str, name: str, default_template: bool, template_info: map{detail: map, invoicer: map, primary_recipients: [map], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map], configuration: map{tax_calculated_after_discount: bool, tax_inclusive: bool, allow_tip: bool, partial_payment: map{allow_partial_payment: bool, minimum_amount_due: map}, has_conditional_rule: bool}, amount: map{currency_code: str, value: str, breakdown: map{item_total: map, discount: map, tax_total: map, shipping: map, custom: map}}, due_amount: map{currency_code: str, value: str}}, settings: map{template_item_settings: [map], template_subtotal_settings: [map]}, unit_of_measure: str, standard_template: bool, links: [map]}
+@errors {403, 404, 500}
+
+@endpoint PUT /v2/invoicing/templates/{template_id}
+@required {template_id: str}
+@optional {id: str, name: str, default_template: bool, template_info: map{detail: map, invoicer: map, primary_recipients: [map{billing_info: map, shipping_info: map}], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map{id: str, name!: str, description: str, quantity!: str, unit_amount!: map, tax: map, item_date: str(ppaas_date_notime_v2), discount: map, unit_of_measure: str}], configuration: map{tax_calculated_after_discount: bool, tax_inclusive: bool, allow_tip: bool, partial_payment: map, has_conditional_rule: bool}, amount: map{currency_code: str, value: str, breakdown: map}, due_amount: map{currency_code!: str, value!: str}}, settings: map{template_item_settings: [map{field_name: str, display_preference: map}], template_subtotal_settings: [map{field_name: str, display_preference: map}]}, unit_of_measure: str(QUANTITY/HOURS/AMOUNT), standard_template: bool, links: [map{href!: str, rel!: str, method: str}]}
+@returns(200) {id: str, name: str, default_template: bool, template_info: map{detail: map, invoicer: map, primary_recipients: [map], additional_recipients: [str(ppaas_common_email_address_v2)], items: [map], configuration: map{tax_calculated_after_discount: bool, tax_inclusive: bool, allow_tip: bool, partial_payment: map{allow_partial_payment: bool, minimum_amount_due: map}, has_conditional_rule: bool}, amount: map{currency_code: str, value: str, breakdown: map{item_total: map, discount: map, tax_total: map, shipping: map, custom: map}}, due_amount: map{currency_code: str, value: str}}, settings: map{template_item_settings: [map], template_subtotal_settings: [map]}, unit_of_measure: str, standard_template: bool, links: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /v2/invoicing/templates/{template_id}
+@required {template_id: str}
+@returns(204)
+@errors {403, 404, 500}
+
+@endpoint GET /v2/invoicing/accounting-sync/merchant/connections
+@returns(200) {connections: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /v2/invoicing/accounting-sync/invoices/{id}/connections
+@required {id: str}
+@returns(200) {id: str, connection_status: [map]}
+@errors {400, 403, 404, 500}
+
+@end

@@ -1,0 +1,196 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Data Exchange
+@version 2017-07-25
+@auth AWS SigV4
+@endpoints 30
+@hint download_for_search
+@toc jobs(5), data-sets(16), event-actions(5), tags(3), v1(1)
+
+@group jobs
+@endpoint DELETE /v1/jobs/{JobId}
+@required {JobId: str}
+
+@endgroup
+
+@group data-sets
+@endpoint POST /v1/data-sets
+@required {AssetType: str, Description: str, Name: str}
+@optional {Tags: map<str,str>}
+@returns(200) {Arn: str?, AssetType: str?, CreatedAt: str(timestamp)?, Description: str?, Id: str?, Name: str?, Origin: str?, OriginDetails: OriginDetails?{ProductId: str?}, SourceId: str?, Tags: map<str,str>?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group event-actions
+@endpoint POST /v1/event-actions
+@required {Action: Action, Event: Event}
+@returns(200) {Action: Action?{ExportRevisionToS3: AutoExportRevisionToS3RequestDetails?{Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionDestination: AutoExportRevisionDestinationEntry{Bucket: str, KeyPattern: str?}}}, Arn: str?, CreatedAt: str(timestamp)?, Event: Event?{RevisionPublished: RevisionPublished?{DataSetId: str}}, Id: str?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group jobs
+@endpoint POST /v1/jobs
+@required {Details: RequestDetails, Type: str}
+@returns(200) {Arn: str?, CreatedAt: str(timestamp)?, Details: ResponseDetails?{ExportAssetToSignedUrl: ExportAssetToSignedUrlResponseDetails?{AssetId: str, DataSetId: str, RevisionId: str, SignedUrl: str?, SignedUrlExpiresAt: str(timestamp)?}, ExportAssetsToS3: ExportAssetsToS3ResponseDetails?{AssetDestinations: [AssetDestinationEntry], DataSetId: str, Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionId: str}, ExportRevisionsToS3: ExportRevisionsToS3ResponseDetails?{DataSetId: str, Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionDestinations: [RevisionDestinationEntry], EventActionArn: str?}, ImportAssetFromSignedUrl: ImportAssetFromSignedUrlResponseDetails?{AssetName: str, DataSetId: str, Md5Hash: str?, RevisionId: str, SignedUrl: str?, SignedUrlExpiresAt: str(timestamp)?}, ImportAssetsFromS3: ImportAssetsFromS3ResponseDetails?{AssetSources: [AssetSourceEntry], DataSetId: str, RevisionId: str}, ImportAssetsFromRedshiftDataShares: ImportAssetsFromRedshiftDataSharesResponseDetails?{AssetSources: [RedshiftDataShareAssetSourceEntry], DataSetId: str, RevisionId: str}, ImportAssetFromApiGatewayApi: ImportAssetFromApiGatewayApiResponseDetails?{ApiDescription: str?, ApiId: str, ApiKey: str?, ApiName: str, ApiSpecificationMd5Hash: str, ApiSpecificationUploadUrl: str, ApiSpecificationUploadUrlExpiresAt: str(timestamp), DataSetId: str, ProtocolType: str, RevisionId: str, Stage: str}, CreateS3DataAccessFromS3Bucket: CreateS3DataAccessFromS3BucketResponseDetails?{AssetSource: S3DataAccessAssetSourceEntry{Bucket: str, KeyPrefixes: [str]?, Keys: [str]?, KmsKeysToGrant: [KmsKeyToGrant]?}, DataSetId: str, RevisionId: str}, ImportAssetsFromLakeFormationTagPolicy: ImportAssetsFromLakeFormationTagPolicyResponseDetails?{CatalogId: str, Database: DatabaseLFTagPolicyAndPermissions?{Expression: [LFTag], Permissions: [str]}, Table: TableLFTagPolicyAndPermissions?{Expression: [LFTag], Permissions: [str]}, RoleArn: str, DataSetId: str, RevisionId: str}}, Errors: [JobError]?, Id: str?, State: str?, Type: str?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group data-sets
+@endpoint POST /v1/data-sets/{DataSetId}/revisions
+@required {DataSetId: str}
+@optional {Comment: str, Tags: map<str,str>}
+@returns(200) {Arn: str?, Comment: str?, CreatedAt: str(timestamp)?, DataSetId: str?, Finalized: bool?, Id: str?, SourceId: str?, Tags: map<str,str>?, UpdatedAt: str(timestamp)?, RevocationComment: str?, Revoked: bool?, RevokedAt: str(timestamp)?}
+
+@endpoint DELETE /v1/data-sets/{DataSetId}/revisions/{RevisionId}/assets/{AssetId}
+@required {AssetId: str, DataSetId: str, RevisionId: str}
+
+@endpoint DELETE /v1/data-sets/{DataSetId}
+@required {DataSetId: str}
+
+@endgroup
+
+@group event-actions
+@endpoint DELETE /v1/event-actions/{EventActionId}
+@required {EventActionId: str}
+
+@endgroup
+
+@group data-sets
+@endpoint DELETE /v1/data-sets/{DataSetId}/revisions/{RevisionId}
+@required {DataSetId: str, RevisionId: str}
+
+@endpoint GET /v1/data-sets/{DataSetId}/revisions/{RevisionId}/assets/{AssetId}
+@required {AssetId: str, DataSetId: str, RevisionId: str}
+@returns(200) {Arn: str?, AssetDetails: AssetDetails?{S3SnapshotAsset: S3SnapshotAsset?{Size: num(f64)}, RedshiftDataShareAsset: RedshiftDataShareAsset?{Arn: str}, ApiGatewayApiAsset: ApiGatewayApiAsset?{ApiDescription: str?, ApiEndpoint: str?, ApiId: str?, ApiKey: str?, ApiName: str?, ApiSpecificationDownloadUrl: str?, ApiSpecificationDownloadUrlExpiresAt: str(timestamp)?, ProtocolType: str?, Stage: str?}, S3DataAccessAsset: S3DataAccessAsset?{Bucket: str, KeyPrefixes: [str]?, Keys: [str]?, S3AccessPointAlias: str?, S3AccessPointArn: str?, KmsKeysToGrant: [KmsKeyToGrant]?}, LakeFormationDataPermissionAsset: LakeFormationDataPermissionAsset?{LakeFormationDataPermissionDetails: LakeFormationDataPermissionDetails{LFTagPolicy: LFTagPolicyDetails?}, LakeFormationDataPermissionType: str, Permissions: [str], RoleArn: str?}}, AssetType: str?, CreatedAt: str(timestamp)?, DataSetId: str?, Id: str?, Name: str?, RevisionId: str?, SourceId: str?, UpdatedAt: str(timestamp)?}
+
+@endpoint GET /v1/data-sets/{DataSetId}
+@required {DataSetId: str}
+@returns(200) {Arn: str?, AssetType: str?, CreatedAt: str(timestamp)?, Description: str?, Id: str?, Name: str?, Origin: str?, OriginDetails: OriginDetails?{ProductId: str?}, SourceId: str?, Tags: map<str,str>?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group event-actions
+@endpoint GET /v1/event-actions/{EventActionId}
+@required {EventActionId: str}
+@returns(200) {Action: Action?{ExportRevisionToS3: AutoExportRevisionToS3RequestDetails?{Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionDestination: AutoExportRevisionDestinationEntry{Bucket: str, KeyPattern: str?}}}, Arn: str?, CreatedAt: str(timestamp)?, Event: Event?{RevisionPublished: RevisionPublished?{DataSetId: str}}, Id: str?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /v1/jobs/{JobId}
+@required {JobId: str}
+@returns(200) {Arn: str?, CreatedAt: str(timestamp)?, Details: ResponseDetails?{ExportAssetToSignedUrl: ExportAssetToSignedUrlResponseDetails?{AssetId: str, DataSetId: str, RevisionId: str, SignedUrl: str?, SignedUrlExpiresAt: str(timestamp)?}, ExportAssetsToS3: ExportAssetsToS3ResponseDetails?{AssetDestinations: [AssetDestinationEntry], DataSetId: str, Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionId: str}, ExportRevisionsToS3: ExportRevisionsToS3ResponseDetails?{DataSetId: str, Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionDestinations: [RevisionDestinationEntry], EventActionArn: str?}, ImportAssetFromSignedUrl: ImportAssetFromSignedUrlResponseDetails?{AssetName: str, DataSetId: str, Md5Hash: str?, RevisionId: str, SignedUrl: str?, SignedUrlExpiresAt: str(timestamp)?}, ImportAssetsFromS3: ImportAssetsFromS3ResponseDetails?{AssetSources: [AssetSourceEntry], DataSetId: str, RevisionId: str}, ImportAssetsFromRedshiftDataShares: ImportAssetsFromRedshiftDataSharesResponseDetails?{AssetSources: [RedshiftDataShareAssetSourceEntry], DataSetId: str, RevisionId: str}, ImportAssetFromApiGatewayApi: ImportAssetFromApiGatewayApiResponseDetails?{ApiDescription: str?, ApiId: str, ApiKey: str?, ApiName: str, ApiSpecificationMd5Hash: str, ApiSpecificationUploadUrl: str, ApiSpecificationUploadUrlExpiresAt: str(timestamp), DataSetId: str, ProtocolType: str, RevisionId: str, Stage: str}, CreateS3DataAccessFromS3Bucket: CreateS3DataAccessFromS3BucketResponseDetails?{AssetSource: S3DataAccessAssetSourceEntry{Bucket: str, KeyPrefixes: [str]?, Keys: [str]?, KmsKeysToGrant: [KmsKeyToGrant]?}, DataSetId: str, RevisionId: str}, ImportAssetsFromLakeFormationTagPolicy: ImportAssetsFromLakeFormationTagPolicyResponseDetails?{CatalogId: str, Database: DatabaseLFTagPolicyAndPermissions?{Expression: [LFTag], Permissions: [str]}, Table: TableLFTagPolicyAndPermissions?{Expression: [LFTag], Permissions: [str]}, RoleArn: str, DataSetId: str, RevisionId: str}}, Errors: [JobError]?, Id: str?, State: str?, Type: str?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group data-sets
+@endpoint GET /v1/data-sets/{DataSetId}/revisions/{RevisionId}
+@required {DataSetId: str, RevisionId: str}
+@returns(200) {Arn: str?, Comment: str?, CreatedAt: str(timestamp)?, DataSetId: str?, Finalized: bool?, Id: str?, SourceId: str?, Tags: map<str,str>?, UpdatedAt: str(timestamp)?, RevocationComment: str?, Revoked: bool?, RevokedAt: str(timestamp)?}
+
+@endpoint GET /v1/data-sets/{DataSetId}/revisions
+@required {DataSetId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, Revisions: [RevisionEntry]?}
+
+@endpoint GET /v1/data-sets
+@optional {maxResults: int, nextToken: str, origin: str}
+@returns(200) {DataSets: [DataSetEntry]?, NextToken: str?}
+
+@endgroup
+
+@group event-actions
+@endpoint GET /v1/event-actions
+@optional {eventSourceId: str, maxResults: int, nextToken: str}
+@returns(200) {EventActions: [EventActionEntry]?, NextToken: str?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /v1/jobs
+@optional {dataSetId: str, maxResults: int, nextToken: str, revisionId: str}
+@returns(200) {Jobs: [JobEntry]?, NextToken: str?}
+
+@endgroup
+
+@group data-sets
+@endpoint GET /v1/data-sets/{DataSetId}/revisions/{RevisionId}/assets
+@required {DataSetId: str, RevisionId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Assets: [AssetEntry]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group data-sets
+@endpoint POST /v1/data-sets/{DataSetId}/revisions/{RevisionId}/revoke
+@required {DataSetId: str, RevisionId: str, RevocationComment: str}
+@returns(200) {Arn: str?, Comment: str?, CreatedAt: str(timestamp)?, DataSetId: str?, Finalized: bool?, Id: str?, SourceId: str?, UpdatedAt: str(timestamp)?, RevocationComment: str?, Revoked: bool?, RevokedAt: str(timestamp)?}
+
+@endgroup
+
+@group v1
+@endpoint POST /v1
+@required {x-amzn-dataexchange-asset-id: str, x-amzn-dataexchange-data-set-id: str, x-amzn-dataexchange-revision-id: str}
+@optional {QueryStringParameters: map<str,str>, x-amzn-dataexchange-http-method: str, x-amzn-dataexchange-path: str, Body: str, RequestHeaders: map<str,str>}
+@returns(200) {Body: str?, ResponseHeaders: map<str,str>?}
+
+@endgroup
+
+@group data-sets
+@endpoint POST /v1/data-sets/{DataSetId}/notification
+@required {DataSetId: str, Type: str}
+@optional {Scope: ScopeDetails, ClientToken: str, Comment: str, Details: NotificationDetails}
+
+@endgroup
+
+@group jobs
+@endpoint PATCH /v1/jobs/{JobId}
+@required {JobId: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group data-sets
+@endpoint PATCH /v1/data-sets/{DataSetId}/revisions/{RevisionId}/assets/{AssetId}
+@required {AssetId: str, DataSetId: str, RevisionId: str, Name: str}
+@returns(200) {Arn: str?, AssetDetails: AssetDetails?{S3SnapshotAsset: S3SnapshotAsset?{Size: num(f64)}, RedshiftDataShareAsset: RedshiftDataShareAsset?{Arn: str}, ApiGatewayApiAsset: ApiGatewayApiAsset?{ApiDescription: str?, ApiEndpoint: str?, ApiId: str?, ApiKey: str?, ApiName: str?, ApiSpecificationDownloadUrl: str?, ApiSpecificationDownloadUrlExpiresAt: str(timestamp)?, ProtocolType: str?, Stage: str?}, S3DataAccessAsset: S3DataAccessAsset?{Bucket: str, KeyPrefixes: [str]?, Keys: [str]?, S3AccessPointAlias: str?, S3AccessPointArn: str?, KmsKeysToGrant: [KmsKeyToGrant]?}, LakeFormationDataPermissionAsset: LakeFormationDataPermissionAsset?{LakeFormationDataPermissionDetails: LakeFormationDataPermissionDetails{LFTagPolicy: LFTagPolicyDetails?}, LakeFormationDataPermissionType: str, Permissions: [str], RoleArn: str?}}, AssetType: str?, CreatedAt: str(timestamp)?, DataSetId: str?, Id: str?, Name: str?, RevisionId: str?, SourceId: str?, UpdatedAt: str(timestamp)?}
+
+@endpoint PATCH /v1/data-sets/{DataSetId}
+@required {DataSetId: str}
+@optional {Description: str, Name: str}
+@returns(200) {Arn: str?, AssetType: str?, CreatedAt: str(timestamp)?, Description: str?, Id: str?, Name: str?, Origin: str?, OriginDetails: OriginDetails?{ProductId: str?}, SourceId: str?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group event-actions
+@endpoint PATCH /v1/event-actions/{EventActionId}
+@required {EventActionId: str}
+@optional {Action: Action}
+@returns(200) {Action: Action?{ExportRevisionToS3: AutoExportRevisionToS3RequestDetails?{Encryption: ExportServerSideEncryption?{KmsKeyArn: str?, Type: str}, RevisionDestination: AutoExportRevisionDestinationEntry{Bucket: str, KeyPattern: str?}}}, Arn: str?, CreatedAt: str(timestamp)?, Event: Event?{RevisionPublished: RevisionPublished?{DataSetId: str}}, Id: str?, UpdatedAt: str(timestamp)?}
+
+@endgroup
+
+@group data-sets
+@endpoint PATCH /v1/data-sets/{DataSetId}/revisions/{RevisionId}
+@required {DataSetId: str, RevisionId: str}
+@optional {Comment: str, Finalized: bool}
+@returns(200) {Arn: str?, Comment: str?, CreatedAt: str(timestamp)?, DataSetId: str?, Finalized: bool?, Id: str?, SourceId: str?, UpdatedAt: str(timestamp)?, RevocationComment: str?, Revoked: bool?, RevokedAt: str(timestamp)?}
+
+@endgroup
+
+@end

@@ -1,0 +1,194 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api NOWPayments API
+@auth ApiKey x-api-key in header
+@endpoints 35
+@hint download_for_search
+@toc {{api-host}}(34), {{api-host}}o(1)
+
+@group {{api-host}}
+@endpoint POST /{{api-host}}/v1/subscriptions/plans
+@auth Bearer token
+@required {title: str, interval_day: int, amount: int, currency: str}
+@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: num, currency: str, created_at: str, updated_at: str}}
+
+@endpoint PATCH /{{api-host}}/v1/subscriptions/plans/{plan}-id
+@auth Bearer token
+@required {plan-id: str, title: str, interval_day: int, amount: int, currency: str}
+@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: int, currency: str, created_at: str, updated_at: str}}
+
+@endpoint GET /{{api-host}}/v1/subscriptions/plans/{plan}-id
+@required {plan-id: str}
+@optional {x-api-key: str}
+@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: int, currency: str, created_at: str, updated_at: str}}
+@errors {404}
+
+@endpoint GET /{{api-host}}/v1/subscriptions/plans
+@optional {limit: str, offset: str, x-api-key: str}
+@returns(200) {result: [map], count: int}
+
+@endpoint POST /{{api-host}}/v1/subscriptions
+@auth Bearer token
+@required {subscription_plan_id: int, email: str}
+@optional {x-api-key: str}
+@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{email: str}, created_at: str, updated_at: str}}
+@errors {400}
+
+@endpoint GET /{{api-host}}/v1/subscriptions
+@optional {status: str, subscription_plan_id: str, is_active: str, limit: str, offset: str, x-api-key: str}
+@returns(200) {result: [map], count: int}
+
+@endpoint GET /{{api-host}}/v1/subscriptions/{sub_id}
+@required {sub_id: str}
+@optional {x-api-key: str}
+@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{sub_partner_id: str}, created_at: str, updated_at: str}}
+@errors {404}
+
+@endpoint DELETE /{{api-host}}/v1/subscriptions/{sub_id}
+@auth Bearer token
+@required {sub_id: str}
+@returns(200) {result: str}
+@errors {404}
+
+@endpoint POST /{{api-host}}/v1/sub-partner/balance
+@auth Bearer token
+@required {name: str}
+@returns(200) {result: map{id: str, name: str, created_at: str, updated_at: str}}
+@errors {400}
+
+@endpoint POST /{{api-host}}/v1/subscriptions
+@auth Bearer token
+@required {subscription_plan_id: int, sub_partner_id: int}
+@optional {x-api-key: str}
+@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{sub_partner_id: str}, created_at: str, updated_at: str}}
+
+@endpoint GET /{{api-host}}/v1/sub-partner/balance/{id}
+@required {id: str}
+@optional {x-api-key: str}
+@returns(200) {result: map{subPartnerId: str, balances: map{usddtrc20: map, usdtbsc: map}}}
+
+@endgroup
+
+@group {{api-host}}o
+@endpoint GET /{{api-host}}o/v1/sub-partner
+@auth Bearer token
+@required {id: str, offset: str, limit: str, order: str}
+@returns(200) {result: [map], count: int}
+
+@endgroup
+
+@group {{api-host}}
+@endpoint GET /{{api-host}}/v1/sub-partner/transfers
+@required {id: str, status: str, limit: str, offset: str, order: str}
+@returns(200) {result: [map], count: int}
+
+@endpoint GET /{{api-host}}/v1/sub-partner/transfer/{id}
+@required {id: str}
+@returns(200) {result: map{id: str, from_sub_id: str, to_sub_id: str, status: str, created_at: str, updated_at: str, amount: str, currency: str}}
+
+@endpoint POST /{{api-host}}/v1/sub-partner/transfer
+@auth Bearer token
+@required {currency: str, amount: num, from_id: int, to_id: int}
+@optional {x-api-key: str}
+@returns(200)
+
+@endpoint POST /{{api-host}}/v1/sub-partner/payment
+@auth Bearer token
+@required {currency: str, amount: num, sub_partner_id: str, fixed_rate: bool}
+@optional {x-api-key: str}
+@returns(200) {result: map{payment_id: str, payment_status: str, pay_address: str, price_amount: int, price_currency: str, pay_amount: int, amount_received: num, pay_currency: str, order_id: any?, order_description: any?, ipn_callback_url: any?, created_at: str, updated_at: str, purchase_id: str, smart_contract: any?, network: str, network_precision: any?, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}}
+
+@endpoint POST /{{api-host}}/v1/sub-partner/deposit
+@auth Bearer token
+@required {currency: str, amount: num, sub_partner_id: str}
+@optional {x-api-key: str}
+@returns(200)
+
+@endpoint POST /{{api-host}}/v1/sub-partner/write-off
+@auth Bearer token
+@required {currency: str, amount: num, sub_partner_id: str}
+@optional {x-api-key: str}
+@returns(200)
+
+@endpoint GET /{{api-host}}/v1/estimate
+@required {amount: str, currency_from: str, currency_to: str}
+@optional {x-api-key: str}
+@returns(200) {currency_from: str, amount_from: num, currency_to: str, estimated_amount: num}
+
+@endpoint POST /{{api-host}}/v1/payment
+@required {price_amount: num, price_currency: str, pay_currency: str, ipn_callback_url: str, order_id: str, order_description: str, is_fixed_rate: bool, is_fee_paid_by_user: bool}
+@optional {x-api-key: str}
+@returns(201) {payment_id: str, payment_status: str, pay_address: str, price_amount: num, price_currency: str, pay_amount: num, pay_currency: str, order_id: str, order_description: str, ipn_callback_url: str, created_at: str, updated_at: str, purchase_id: str, amount_received: any?, payin_extra_id: any?, smart_contract: str, network: str, network_precision: int, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}
+
+@endpoint POST /{{api-host}}/v1/invoice-payment
+@optional {x-api-key: str}
+@returns(201) {payment_id: str, payment_status: str, pay_address: str, price_amount: num, price_currency: str, pay_amount: num, pay_currency: str, order_id: str, order_description: str, ipn_callback_url: str, created_at: str, updated_at: str, purchase_id: str, amount_received: any?, payin_extra_id: any?, smart_contract: str, network: str, network_precision: int, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}
+
+@endpoint POST /{{api-host}}/v1/payment/{id}/update-merchant-estimate
+@required {id: str}
+@optional {x-api-key: str}
+@returns(200) {id: str, token_id: str, pay_amount: num, expiration_estimate_date: str}
+
+@endpoint GET /{{api-host}}/v1/payment/{payment_id}
+@required {payment_id: str}
+@optional {x-api-key: str}
+@returns(200) {payment_id: int, payment_status: str, pay_address: str, price_amount: int, price_currency: str, pay_amount: num, actually_paid: int, pay_currency: str, order_id: str, order_description: str, purchase_id: str, created_at: str, updated_at: str, outcome_amount: num, outcome_currency: str}
+
+@endpoint GET /{{api-host}}/v1/min-amount
+@required {currency_from: str, currency_to: str}
+@optional {x-api-key: str}
+@returns(200) {currency_from: str, currency_to: str, min_amount: num, fiat_equivalent: num}
+
+@endpoint GET /{{api-host}}/v1/payment/
+@auth Bearer token
+@required {limit: str, page: str, sortBy: str, orderBy: str, dateFrom: str, dateTo: str}
+@optional {x-api-key: str}
+@returns(200) {data: [map], limit: int, page: int, pagesCount: int, total: int}
+
+@endpoint POST /{{api-host}}/v1/invoice
+@required {price_amount: int, price_currency: str, order_id: str, order_description: str, ipn_callback_url: str, success_url: str, cancel_url: str, partially_paid_url: str, is_fixed_rate: bool, is_fee_paid_by_user: bool}
+@optional {x-api-key: str}
+@returns(201) {id: str, order_id: str, order_description: str, price_amount: str, price_currency: str, pay_currency: any?, ipn_callback_url: str, invoice_url: str, success_url: str, cancel_url: str, created_at: str, updated_at: str}
+
+@endpoint GET /{{api-host}}/v1/currencies
+@optional {x-api-key: str}
+@returns(200) {currencies: [str]}
+
+@endpoint GET /{{api-host}}/v1/full-currencies
+@optional {x-api-key: str}
+@returns(200)
+
+@endpoint GET /{{api-host}}/v1/merchant/coins
+@optional {x-api-key: str}
+@returns(200) {currencies: [str]}
+
+@endpoint POST /{{api-host}}/v1/payout
+@auth Bearer token
+@required {ipn_callback_url: str, withdrawals: [map]}
+@optional {x-api-key: str}
+@returns(200) {id: str, withdrawals: [map]}
+
+@endpoint GET /{{api-host}}/v1/payout/<payout_id>
+@optional {x-api-key: str}
+@returns(200) {id: str, address: str, currency: str, amount: str, batchWithdrawalId: str, status: str, extra_id: any?, hash: any?, error: any?, createdAt: str, requestedAt: any?, updatedAt: any?}
+
+@endpoint GET /{{api-host}}/v1/balance
+@optional {x-api-key: str}
+@returns(200) {eth: map{amount: num, pendingAmount: int}, trx: map{amount: int, pendingAmount: int}, xmr: map{amount: int, pendingAmount: int}}
+
+@endpoint POST /{{api-host}}/v1/payout/{withdrawals}-id/verify
+@auth Bearer token
+@required {withdrawals-id: str, verification_code: str}
+@optional {x-api-key: str}
+@returns(200)
+
+@endpoint GET /{{api-host}}/v1/status
+@returns(200) {message: str}
+
+@endpoint POST /{{api-host}}/v1/auth
+@required {email: str, password: str}
+@returns(200) {token: str}
+
+@endgroup
+
+@end

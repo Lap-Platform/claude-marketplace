@@ -1,0 +1,1013 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Render Public API
+@base https://api.render.com/v1
+@version 1.0.0
+@auth Bearer bearer
+@endpoints 196
+@hint download_for_search
+@toc blueprints(6), owners(6), disks(7), users(1), organizations(1), notification-settings(5), registrycredentials(5), services(48), cron-jobs(2), events(1), logs(10), metrics-stream(3), metrics(20), key-value(8), redis(6), postgres(17), projects(5), environments(7), env-groups(13), maintenance(4), webhooks(6), workflows(5), workflowversions(3), tasks(2), task-runs(5)
+
+@group blueprints
+@endpoint GET /blueprints
+@optional {ownerId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /blueprints/validate
+@returns(200) {valid: bool, errors: [map], plan: map{services: [str], databases: [str], keyValue: [str], envGroups: [str], totalActions: int}}
+@errors {400, 401, 403, 429, 500}
+
+@endgroup
+
+@group owners
+@endpoint PATCH /owners/{ownerId}/members/{userId}
+@required {role: str(ADMIN/DEVELOPER/WORKSPACE_CONTRIBUTOR/WORKSPACE_BILLING/WORKSPACE_VIEWER)}
+@returns(200) {userId: str, name: str, email: str, status: str, role: str, mfaEnabled: bool}
+@errors {400, 401, 403, 404, 409, 429, 500, 503}
+
+@endpoint DELETE /owners/{ownerId}/members/{userId}
+@returns(204)
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group blueprints
+@endpoint GET /blueprints/{blueprintId}
+@returns(200) {id: any, name: str, status: str, autoSync: bool, repo: str, branch: str, path: str, lastSync: str(date-time), resources: [map]}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PATCH /blueprints/{blueprintId}
+@optional {name: str, autoSync: bool, path: str}
+@returns(200) {id: any, name: str, status: str, autoSync: bool, repo: str, branch: str, path: str, lastSync: str(date-time)}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /blueprints/{blueprintId}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /blueprints/{blueprintId}/syncs
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group disks
+@endpoint GET /disks
+@optional {ownerId: [str], diskId: [any], name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), serviceId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /disks
+@required {name: str, sizeGB: int, mountPath: str, serviceId: str}
+@returns(201) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /disks/{diskId}
+@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PATCH /disks/{diskId}
+@optional {name: str, sizeGB: int, mountPath: str}
+@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /disks/{diskId}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /disks/{diskId}/snapshots
+@returns(201)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /disks/{diskId}/snapshots/restore
+@required {snapshotKey: str}
+@optional {instanceId: str}
+@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@returns(200) {email: str, name: str}
+@errors {401, 406, 429, 500, 503}
+
+@endgroup
+
+@group owners
+@endpoint GET /owners
+@optional {name: [str], email: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 406, 429, 500, 503}
+
+@endpoint GET /owners/{ownerId}
+@returns(200) {id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}
+@errors {401, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /owners/{ownerId}/members
+@returns(200)
+@errors {401, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /owners/{ownerId}/audit-logs
+@optional {startTime: str(date-time), endTime: str(date-time), cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group organizations
+@endpoint GET /organizations/{orgId}/audit-logs
+@optional {startTime: str(date-time), endTime: str(date-time), cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group notification-settings
+@endpoint GET /notification-settings/owners/{ownerId}
+@returns(200) {ownerId: str, slackEnabled: bool, emailEnabled: bool, previewNotificationsEnabled: bool, notificationsToSend: any}
+@errors {401, 406, 429, 500, 503}
+
+@endpoint PATCH /notification-settings/owners/{ownerId}
+@optional {emailEnabled: bool, previewNotificationsEnabled: bool, notificationsToSend: str(none/failure/all)}
+@returns(200)
+@errors {401, 406, 429, 500, 503}
+
+@endpoint GET /notification-settings/overrides
+@optional {ownerId: [str], serviceId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 406, 429, 500, 503}
+
+@endpoint GET /notification-settings/overrides/services/{serviceId}
+@returns(200) {serviceId: str, previewNotificationsEnabled: str, notificationsToSend: str}
+@errors {401, 406, 429, 500, 503}
+
+@endpoint PATCH /notification-settings/overrides/services/{serviceId}
+@optional {previewNotificationsEnabled: str(default/false/true), notificationsToSend: str(default/none/failure/all)}
+@returns(200)
+@errors {401, 406, 429, 500, 503}
+
+@endgroup
+
+@group registrycredentials
+@endpoint GET /registrycredentials
+@optional {name: [str], username: [str], type: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 406, 429, 500, 503}
+
+@endpoint POST /registrycredentials
+@required {registry: str(GITHUB/GITLAB/DOCKER/GOOGLE_ARTIFACT/AWS_ECR), name: str, username: str, authToken: str, ownerId: str}
+@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)}
+@errors {400, 401, 402, 406, 409, 429, 500, 503}
+
+@endpoint GET /registrycredentials/{registryCredentialId}
+@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PATCH /registrycredentials/{registryCredentialId}
+@required {registry: str(GITHUB/GITLAB/DOCKER/GOOGLE_ARTIFACT/AWS_ECR), name: str, username: str, authToken: str}
+@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)}
+@errors {400, 401, 402, 403, 404, 406, 409, 410, 429, 500, 503}
+
+@endpoint DELETE /registrycredentials/{registryCredentialId}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group services
+@endpoint GET /services
+@optional {name: [str], type: [str], environmentId: [str], env: [str], region: [str], suspended: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], includePreviews: bool=True, cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 406, 429, 500, 503}
+
+@endpoint POST /services
+@required {type: str(static_site/web_service/private_service/background_worker/cron_job), name: str, ownerId: str}
+@optional {repo: str, autoDeploy: str(yes/no)=yes, branch: str, image: map{ownerId!: str, registryCredentialId: str, imagePath!: str}, buildFilter: map{paths!: [str], ignoredPaths!: [str]}, rootDir: str, envVars: [map], secretFiles: [map{name!: str, content!: str}], environmentId: str, serviceDetails: any}
+@returns(201) {service: map{id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}, deployId: str}
+@errors {400, 401, 402, 406, 409, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}
+@returns(200) {id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PATCH /services/{serviceId}
+@optional {autoDeploy: str(yes/no)=yes, repo: str, branch: str, image: map{ownerId!: str, registryCredentialId: str, imagePath!: str}, name: str, buildFilter: map{paths!: [str], ignoredPaths!: [str]}, rootDir: str, serviceDetails: any}
+@returns(200) {id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}
+@errors {400, 401, 402, 403, 404, 406, 409, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/cache/purge
+@returns(202)
+@errors {400, 401, 404, 406, 409, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/deploys
+@optional {status: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), finishedBefore: str(date-time), finishedAfter: str(date-time), cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/deploys
+@optional {clearCache: str(clear/do_not_clear)=do_not_clear, commitId: str, imageUrl: str, deployMode: str(deploy_only/build_and_deploy)=build_and_deploy}
+@returns(201) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(202)
+@errors {400, 401, 404, 406, 409, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/deploys/{deployId}
+@returns(200) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/deploys/{deployId}/cancel
+@returns(200) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/rollback
+@required {deployId: str}
+@returns(201) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/env-vars
+@optional {cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/env-vars
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/env-vars/{envVarKey}
+@returns(200) {key: str, value: str}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/env-vars/{envVarKey}
+@returns(200) {key: str, value: str}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}/env-vars/{envVarKey}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/secret-files
+@optional {cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/secret-files
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/secret-files/{secretFileName}
+@returns(200) {name: str, content: str}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/secret-files/{secretFileName}
+@optional {content: str}
+@returns(201) {name: str, content: str}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}/secret-files/{secretFileName}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/events
+@required {serviceId: str}
+@optional {type: any, startTime: str(date-time), endTime: str(date-time), cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/headers
+@optional {path: [str], name: [str], value: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/headers
+@required {path: str, name: str, value: str}
+@returns(201) {headers: map{id: str, path: str, name: str, value: str}}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/headers
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}/headers/{headerId}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/routes
+@optional {type: [str], source: [str], destination: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/routes
+@required {type: str(redirect/rewrite), source: str, destination: str}
+@optional {priority: int}
+@returns(201) {id: str, type: str, source: str, destination: str, priority: int}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PATCH /services/{serviceId}/routes
+@required {priority: int}
+@returns(200) {headers: map{id: str, type: str, source: str, destination: str, priority: int}}
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/routes
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}/routes/{routeId}
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/custom-domains
+@optional {cursor: str, limit: int=20, name: [str], domainType: str(apex/subdomain), verificationStatus: str(verified/unverified), createdBefore: str(date-time), createdAfter: str(date-time)}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/custom-domains
+@required {name: str}
+@returns(201)
+@errors {400, 401, 402, 403, 404, 406, 409, 410, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/custom-domains/{customDomainIdOrName}
+@returns(200) {id: str, name: str, domainType: str, publicSuffix: str, redirectForName: str, verificationStatus: str, createdAt: str(date-time), server: map{id: str, name: str}}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}/custom-domains/{customDomainIdOrName}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/custom-domains/{customDomainIdOrName}/verify
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/suspend
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/resume
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/restart
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/scale
+@required {numInstances: int}
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /services/{serviceId}/autoscaling
+@required {enabled: bool=False, min: int, max: int, criteria: map{cpu!: map{enabled!: bool, percentage!: int}, memory!: map{enabled!: bool, percentage!: int}}}
+@returns(200) {enabled: bool, min: int, max: int, criteria: map{cpu: map{enabled: bool, percentage: int}, memory: map{enabled: bool, percentage: int}}}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /services/{serviceId}/autoscaling
+@returns(204)
+@errors {401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/preview
+@required {imagePath: str}
+@optional {name: str, plan: str(starter/starter_plus/standard/standard_plus/pro/pro_plus/pro_max/pro_ultra/free/custom)}
+@returns(200) {service: map{id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}, deployId: str}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/jobs
+@optional {cursor: str, limit: int=20, status: [str], createdBefore: str(date-time), createdAfter: str(date-time), startedBefore: str(date-time), startedAfter: str(date-time), finishedBefore: str(date-time), finishedAfter: str(date-time)}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/jobs
+@required {startCommand: str}
+@optional {planId: str}
+@returns(201) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/jobs/{jobId}
+@returns(200) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /services/{serviceId}/jobs/{jobId}/cancel
+@returns(200) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /services/{serviceId}/instances
+@returns(200)
+@errors {401, 404, 429, 500, 503}
+
+@endgroup
+
+@group cron-jobs
+@endpoint POST /cron-jobs/{cronJobId}/runs
+@returns(200) {id: str, status: str, startedAt: str(date-time), finishedAt: str(date-time), triggeredBy: str, canceledBy: str}
+@errors {401, 406, 429, 500, 503}
+
+@endpoint DELETE /cron-jobs/{cronJobId}/runs
+@returns(204)
+@errors {401, 406, 429, 500, 503}
+
+@endgroup
+
+@group events
+@endpoint GET /events/{eventId}
+@returns(200) {id: any, timestamp: str(date-time), serviceId: str, type: str, details: any}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group logs
+@endpoint GET /logs
+@required {ownerId: str, resource: [str]}
+@optional {startTime: str(date-time), endTime: str(date-time), direction: str(forward/backward)=backward, instance: [str], host: [str], statusCode: [str], method: [str], task: [str], taskRun: [str], level: [str], type: [str], text: [str], path: [str], limit: int=20}
+@returns(200) {hasMore: bool, nextStartTime: str(date-time), nextEndTime: str(date-time), logs: [any]}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /logs/subscribe
+@required {ownerId: str}
+@optional {startTime: str(date-time), endTime: str(date-time), limit: int=20}
+@errors {101, 400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /logs/values
+@required {ownerId: str, label: str(instance/host/statusCode/method/level/type)}
+@optional {startTime: str(date-time), endTime: str(date-time), limit: int=20}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /logs/streams/owner/{ownerId}
+@required {ownerId: str}
+@returns(200) {ownerId: str, endpoint: str, preview: any}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /logs/streams/owner/{ownerId}
+@required {ownerId: str, preview: str(send/drop)}
+@optional {endpoint: str, token: str}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /logs/streams/owner/{ownerId}
+@required {ownerId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /logs/streams/resource
+@optional {ownerId: [str], logStreamId: [str], resourceId: [str], setting: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /logs/streams/resource/{resourceId}
+@required {resourceId: str}
+@returns(200) {resourceId: str, endpoint: str, setting: any}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint PUT /logs/streams/resource/{resourceId}
+@required {resourceId: str, setting: any}
+@optional {endpoint: any, token: any}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /logs/streams/resource/{resourceId}
+@required {resourceId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group metrics-stream
+@endpoint GET /metrics-stream/{ownerId}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /metrics-stream/{ownerId}
+@optional {provider: str(BETTER_STACK/GRAFANA/DATADOG/NEW_RELIC/HONEYCOMB/SIGNOZ/GROUNDCOVER/CUSTOM), url: str, token: str}
+@returns(200) {ownerId: str, provider: any, url: str}
+@errors {400, 500}
+
+@endpoint DELETE /metrics-stream/{ownerId}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group metrics
+@endpoint GET /metrics/cpu
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/cpu-limit
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/cpu-target
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/memory
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/memory-limit
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/memory-target
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/http-requests
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/http-latency
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/bandwidth
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/bandwidth-sources
+@returns(200) {data: [map]}
+@errors {400, 500}
+
+@endpoint GET /metrics/disk-usage
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/disk-capacity
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/instance-count
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/active-connections
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/replication-lag
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/filters/application
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/filters/http
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/filters/path
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/task-runs-queued
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /metrics/task-runs-completed
+@returns(200)
+@errors {400, 500}
+
+@endgroup
+
+@group key-value
+@endpoint GET /key-value
+@optional {name: [str], region: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 409, 429, 500, 503}
+
+@endpoint POST /key-value
+@required {name: str, ownerId: str, plan: str(free/starter/standard/pro/pro_plus/custom)}
+@optional {region: str, environmentId: str, maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /key-value/{keyValueId}
+@required {keyValueId: str}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /key-value/{keyValueId}
+@required {keyValueId: str}
+@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom), maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
+@errors {400, 401, 404, 409, 429, 500, 503}
+
+@endpoint DELETE /key-value/{keyValueId}
+@required {keyValueId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /key-value/{keyValueId}/connection-info
+@required {keyValueId: str}
+@returns(200) {internalConnectionString: str, externalConnectionString: str(password), cliCommand: str(password)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /key-value/{keyValueId}/suspend
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /key-value/{keyValueId}/resume
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endgroup
+
+@group redis
+@endpoint GET /redis
+@optional {name: [str], region: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 409, 429, 500, 503}
+
+@endpoint POST /redis
+@required {name: str, ownerId: str, plan: str(free/starter/standard/pro/pro_plus/custom)}
+@optional {region: str, environmentId: str, maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /redis/{redisId}
+@required {redisId: str}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /redis/{redisId}
+@required {redisId: str}
+@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom), maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
+@errors {400, 401, 404, 409, 429, 500, 503}
+
+@endpoint DELETE /redis/{redisId}
+@required {redisId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /redis/{redisId}/connection-info
+@required {redisId: str}
+@returns(200) {internalConnectionString: str, externalConnectionString: str(password), redisCLICommand: str(password)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group postgres
+@endpoint GET /postgres
+@optional {name: [str], region: [str], suspended: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], includeReplicas: bool=True, cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 409, 429, 500, 503}
+
+@endpoint POST /postgres
+@required {name: str, ownerId: str, plan: str(free/starter/standard/pro/pro_plus/custom/basic_256mb/basic_1gb/basic_4gb/pro_4gb/pro_8gb/pro_16gb/pro_32gb/pro_64gb/pro_128gb/pro_192gb/pro_256gb/pro_384gb/pro_512gb/accelerated_16gb/accelerated_32gb/accelerated_64gb/accelerated_128gb/accelerated_256gb/accelerated_384gb/accelerated_512gb/accelerated_768gb/accelerated_1024gb), version: str(11/12/13/14/15/16/17/18)}
+@optional {databaseName: str=randomly generated, databaseUser: str=randomly generated, datadogAPIKey: str, datadogSite: str, enableHighAvailability: bool=False, environmentId: str, diskSizeGB: int, enableDiskAutoscaling: bool=False, region: str, ipAllowList: [map{cidrBlock!: str, description!: str}], parameterOverrides: map, readReplicas: [map{name!: str, parameterOverrides: map}]}
+@returns(201) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /postgres/{postgresId}
+@required {postgresId: str}
+@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /postgres/{postgresId}
+@required {postgresId: str}
+@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom/basic_256mb/basic_1gb/basic_4gb/pro_4gb/pro_8gb/pro_16gb/pro_32gb/pro_64gb/pro_128gb/pro_192gb/pro_256gb/pro_384gb/pro_512gb/accelerated_16gb/accelerated_32gb/accelerated_64gb/accelerated_128gb/accelerated_256gb/accelerated_384gb/accelerated_512gb/accelerated_768gb/accelerated_1024gb), diskSizeGB: int, enableDiskAutoscaling: bool, enableHighAvailability: bool, datadogAPIKey: str, datadogSite: str, ipAllowList: [map{cidrBlock!: str, description!: str}], parameterOverrides: map, readReplicas: [map{name!: str, parameterOverrides: map}]}
+@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
+@errors {400, 401, 404, 409, 429, 500, 503}
+
+@endpoint DELETE /postgres/{postgresId}
+@required {postgresId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /postgres/{postgresId}/connection-info
+@required {postgresId: str}
+@returns(200) {password: str(password), internalConnectionString: str(password), externalConnectionString: str(password), psqlCommand: str(password)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /postgres/{postgresId}/recovery
+@required {postgresId: str}
+@returns(200) {recoveryStatus: str, startsAt: str(date-time)}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/recovery
+@required {postgresId: str, restoreTime: str(date-time)}
+@optional {restoreName: str, datadogApiKey: str, datadogSite: str, plan: str, environmentId: str}
+@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/suspend
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/resume
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/restart
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/failover
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /postgres/{postgresId}/export
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/export
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint GET /postgres/{postgresId}/credentials
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /postgres/{postgresId}/credentials
+@required {username: str}
+@returns(202)
+@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+
+@endpoint DELETE /postgres/{postgresId}/credentials/{username}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects
+@optional {name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /projects
+@required {name: str, ownerId: str, environments: [map{name!: str, protectedStatus: str, networkIsolationEnabled: bool, ipAllowList: [map{cidrBlock!: str, description!: str}]}]}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /projects/{projectId}
+@required {projectId: str}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /projects/{projectId}
+@required {projectId: str}
+@optional {name: str}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /projects/{projectId}
+@required {projectId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group environments
+@endpoint POST /environments
+@required {name: str, projectId: str}
+@optional {protectedStatus: str(unprotected/protected), networkIsolationEnabled: bool, ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(201) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /environments
+@required {projectId: [str]}
+@optional {name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /environments/{environmentId}
+@required {environmentId: str}
+@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /environments/{environmentId}
+@required {environmentId: str}
+@optional {name: str, networkIsolationEnabled: bool, protectedStatus: str(unprotected/protected), ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /environments/{environmentId}
+@required {environmentId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /environments/{environmentId}/resources
+@required {environmentId: str, resourceIds: [str]}
+@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /environments/{environmentId}/resources
+@required {environmentId: str, resourceIds: [str]}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group env-groups
+@endpoint GET /env-groups
+@optional {name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /env-groups
+@required {name: str, ownerId: str, envVars: [map]}
+@optional {secretFiles: [map{name!: str, content!: str}], serviceIds: [str], environmentId: str}
+@returns(201)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /env-groups/{envGroupId}
+@required {envGroupId: str}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /env-groups/{envGroupId}
+@required {envGroupId: str, name: str}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /env-groups/{envGroupId}
+@required {envGroupId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /env-groups/{envGroupId}/services/{serviceId}
+@required {envGroupId: str, serviceId: str}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /env-groups/{envGroupId}/services/{serviceId}
+@required {envGroupId: str, serviceId: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /env-groups/{envGroupId}/env-vars/{envVarKey}
+@required {envGroupId: str, envVarKey: str}
+@returns(200) {key: str, value: str}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PUT /env-groups/{envGroupId}/env-vars/{envVarKey}
+@required {envGroupId: str, envVarKey: str}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /env-groups/{envGroupId}/env-vars/{envVarKey}
+@required {envGroupId: str, envVarKey: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /env-groups/{envGroupId}/secret-files/{secretFileName}
+@required {envGroupId: str, secretFileName: str}
+@returns(200) {name: str, content: str}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PUT /env-groups/{envGroupId}/secret-files/{secretFileName}
+@required {envGroupId: str, secretFileName: str}
+@optional {content: str}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /env-groups/{envGroupId}/secret-files/{secretFileName}
+@required {envGroupId: str, secretFileName: str}
+@returns(204)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group maintenance
+@endpoint GET /maintenance
+@optional {resourceId: [str], ownerId: [str], state: [str]}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /maintenance/{maintenanceRunParam}
+@required {maintenanceRunParam: str}
+@returns(200) {id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any, resourceId: any}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint PATCH /maintenance/{maintenanceRunParam}
+@optional {scheduledAt: str(date-time)}
+@returns(202)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint POST /maintenance/{maintenanceRunParam}/trigger
+@returns(202)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group webhooks
+@endpoint POST /webhooks
+@required {ownerId: str, url: str, name: str, enabled: bool, eventFilter: [str]}
+@returns(201) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /webhooks
+@optional {cursor: str, limit: int=20, ownerId: [str]}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint GET /webhooks/{webhookId}
+@returns(200) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]}
+@errors {401, 404, 429, 500, 503}
+
+@endpoint PATCH /webhooks/{webhookId}
+@optional {name: str, url: str, enabled: bool, eventFilter: [str]}
+@returns(200) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]}
+@errors {400, 401, 404, 429, 500, 503}
+
+@endpoint DELETE /webhooks/{webhookId}
+@returns(204)
+@errors {401, 404, 429, 500, 503}
+
+@endpoint GET /webhooks/{webhookId}/events
+@optional {sentBefore: str(date-time), sentAfter: str(date-time), limit: int=20, cursor: str}
+@returns(200)
+@errors {400, 401, 404, 429, 500, 503}
+
+@endgroup
+
+@group workflows
+@endpoint GET /workflows
+@optional {name: [str], ownerId: [str], workflowID: [str], environmentId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint POST /workflows
+@required {name: str, ownerId: str, buildConfig: map{branch: str, buildCommand!: str, repo!: str, rootDir: str, runtime!: str}, runCommand: str, region: str(frankfurt/oregon/ohio/singapore/virginia)=oregon}
+@returns(201) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str}
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint GET /workflows/{workflowId}
+@returns(200) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str}
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint PATCH /workflows/{workflowId}
+@optional {name: str, buildConfig: map{branch: str, buildCommand!: str, repo!: str, rootDir: str, runtime!: str}, runCommand: str}
+@returns(200) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str}
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint DELETE /workflows/{workflowId}
+@returns(204)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group workflowversions
+@endpoint GET /workflowversions
+@optional {ownerId: [str], workflowID: [str], workflowVersionId: [str], cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint POST /workflowversions
+@required {workflowId: str}
+@optional {commit: str}
+@returns(202)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint GET /workflowversions/{workflowVersionId}
+@returns(200) {id: str, workflowId: str, name: str, createdAt: str(date-time), status: str}
+@errors {401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group tasks
+@endpoint GET /tasks
+@optional {cursor: str, limit: int=20}
+@returns(200)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint GET /tasks/{taskId}
+@returns(200) {id: str, name: str, createdAt: str(date-time), workflowId: str, workflowVersionId: str}
+@errors {401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group task-runs
+@endpoint GET /task-runs
+@optional {cursor: str, limit: int=20, rootTaskRunId: [str], ownerId: [str]}
+@returns(200)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint POST /task-runs
+@required {task: str, input: any}
+@returns(202) {id: str, taskId: str, status: str, startedAt: str(date-time), completedAt: str(date-time), parentTaskRunId: str, rootTaskRunId: str, retries: int, attempts: [map]}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint GET /task-runs/events
+@required {taskRunIds: [str]}
+@optional {Accept: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint GET /task-runs/{taskRunId}
+@returns(200) {id: str, taskId: str, status: any, results: [any], error: str, startedAt: str(date-time), completedAt: str(date-time), input: any, parentTaskRunId: str, rootTaskRunId: str, retries: int, attempts: [map]}
+@errors {401, 403, 404, 429, 500, 503}
+
+@endpoint DELETE /task-runs/{taskRunId}
+@returns(204)
+@errors {401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@end

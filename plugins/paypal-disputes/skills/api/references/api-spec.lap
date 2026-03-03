@@ -1,0 +1,90 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Disputes
+@base https://api-m.sandbox.paypal.com
+@version 1.11
+@auth OAuth2
+@endpoints 15
+@toc customer(15)
+
+@endpoint GET /v1/customer/disputes
+@optional {start_time: str=Current date and time, disputed_transaction_id: str, page_size: int=10, next_page_token: str=The first page of data, dispute_state: str, update_time_before: str, update_time_after: str}
+@returns(200) {items: [map], links: [map]}
+@errors {400}
+
+@endpoint GET /v1/customer/disputes/{id}
+@required {id: str}
+@returns(200) {dispute_id: str, create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3), disputed_transactions: [map], reason: str, status: str, dispute_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, dispute_asset: map{asset_symbol: str, quantity: str, quantity_in_subunits: str, decimals: int}, fee_policy: map, external_reason_code: str, dispute_outcome: map{outcome_code: str, outcome_reason: str, amount_refunded: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, asset_refunded: map{asset_symbol: str, quantity: str, quantity_in_subunits: str, decimals: int}}, adjudications: [map], money_movements: [map], fund_movements: [map], dispute_life_cycle_stage: str, dispute_channel: str, messages: [map], extensions: map{merchant_contacted: bool, merchant_contacted_outcome: str, merchant_contacted_time: str(ppaas_date_time_v3), merchant_contacted_mode: str, buyer_contacted_time: str(ppaas_date_time_v3), buyer_contacted_channel: str, billing_dispute_properties: map{duplicate_transaction: map{received_duplicate: bool, original_transaction: map}, incorrect_transaction_amount: map{correct_transaction_amount: map, correct_transaction_asset: map, correct_transaction_time: str(ppaas_date_time_v3)}, payment_by_other_means: map{charge_different_from_original: bool, received_duplicate: bool, payment_method: str, payment_instrument_suffix: str}, credit_not_processed: map{issue_type: str, expected_refund: map, cancellation_details: map, product_details: map, service_details: map, agreed_refund_details: map}, canceled_recurring_billing: map{expected_refund: map, cancellation_details: map}}, merchandize_dispute_properties: map{issue_type: str, product_details: map{description: str, product_received: str, product_received_time: str(ppaas_date_time_v3), expected_delivery_date: str(ppaas_date_time_v3), sub_reasons: [str], purchase_url: str(uri), return_details: map}, service_details: map{description: str, service_started: str, note: str, sub_reasons: [str], purchase_url: str(uri)}, cancellation_details: map{cancellation_date: str(ppaas_date_time_v3), cancellation_number: str, cancelled: bool, cancellation_mode: str}, return_shipping_address: map{address_line_1: str, address_line_2: str, address_line_3: str, admin_area_4: str, admin_area_3: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code: str(ppaas_common_country_code_v2), address_details: map}}, reported_source: str}, evidences: [map], buyer_response_due_date: str(ppaas_date_time_v3), seller_response_due_date: str(ppaas_date_time_v3), offer: map{buyer_requested_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, seller_offered_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, offer_type: str, history: [map]}, refund_details: map{allowed_refund_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}}, communication_details: map{email: str(ppaas_common_email_address_v2), note: str, time_posted: str(ppaas_date_time_v3)}, supporting_info: [map], allowed_response_options: map{acknowledge_return_item: map{acknowledgement_types: [str]}, accept_claim: map{accept_claim_types: [str]}, make_offer: map{offer_types: [str]}}, links: [map]}
+@errors {500}
+
+@endpoint PATCH /v1/customer/disputes/{id}
+@required {id: str}
+@returns(202) {links: [map]}
+@returns(204)
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/provide-evidence
+@required {id: str}
+@returns(200) {links: [map]}
+@errors {400}
+
+@endpoint POST /v1/customer/disputes/{id}/appeal
+@required {id: str}
+@returns(200) {links: [map]}
+@errors {400}
+
+@endpoint POST /v1/customer/disputes/{id}/accept-claim
+@required {id: str}
+@returns(200) {links: [map]}
+@errors {400}
+
+@endpoint POST /v1/customer/disputes/{id}/adjudicate
+@required {id: str, adjudication_outcome: str(BUYER_FAVOR/SELLER_FAVOR)}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/require-evidence
+@required {id: str, action: str(BUYER_EVIDENCE/SELLER_EVIDENCE)}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/escalate
+@required {id: str}
+@optional {note: str, buyer_escalation_reason: any}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/send-message
+@required {id: str}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/make-offer
+@required {id: str, note: str, offer_type: str(REFUND/REFUND_WITH_RETURN/REFUND_WITH_REPLACEMENT/REPLACEMENT_WITHOUT_REFUND)}
+@optional {offer_amount: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str}, return_shipping_address: map{address_line_1: str, address_line_2: str, address_line_3: str, admin_area_4: str, admin_area_3: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code!: str(ppaas_common_country_code_v2), address_details: map{street_number: str, street_name: str, street_type: str, delivery_service: str, building_name: str, sub_building: str}}, invoice_id: str}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/accept-offer
+@required {id: str}
+@optional {note: str}
+@returns(200) {links: [map]}
+@returns(202) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/deny-offer
+@required {id: str, note: str}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/acknowledge-return-item
+@required {id: str}
+@returns(200) {links: [map]}
+@errors {400, 422, 500}
+
+@endpoint POST /v1/customer/disputes/{id}/provide-supporting-info
+@required {id: str}
+@returns(200) {links: [map]}
+@errors {400, 404, 422, 500}
+
+@end

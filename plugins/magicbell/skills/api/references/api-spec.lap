@@ -1,0 +1,521 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api MagicBell API
+@base https://api.magicbell.com/v2
+@version 2.0.0
+@endpoints 126
+@hint download_for_search
+@toc broadcasts(3), channels(26), events(1), integrations(72), jwt(6), users(18)
+
+@group broadcasts
+@endpoint GET /broadcasts
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /broadcasts
+@required {recipients: [map], title: str}
+@optional {action_url: str, category: str, content: str, created_at: str(date-time), custom_attributes: map, id: str, overrides: map{channels: map{email: map, in_app: map, mobile_push: map, slack: map, sms: map, web_push: map}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, status: map{errors!: [map{message: str}], status!: str, summary!: map{failures!: int, total!: int}}, topic: str}
+@returns(201) {action_url: str?, category: str?, content: str?, created_at: str(date-time), custom_attributes: map?, id: str, overrides: map?{channels: map{email: map{action_url: str?, content: str, title: str}, in_app: map{action_url: str?, content: str, title: str}, mobile_push: map{action_url: str?, content: str, title: str}, slack: map{action_url: str?, content: str, title: str}, sms: map{action_url: str?, content: str, title: str}, web_push: map{action_url: str?, content: str, title: str}}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, recipients: [map], status: map{errors: [map]?, status: str, summary: map{failures: int, total: int}}, title: str, topic: str?}
+
+@endpoint GET /broadcasts/{broadcast_id}
+@required {broadcast_id: str}
+@returns(200) {action_url: str?, category: str?, content: str?, created_at: str(date-time), custom_attributes: map?, id: str, overrides: map?{channels: map{email: map{action_url: str?, content: str, title: str}, in_app: map{action_url: str?, content: str, title: str}, mobile_push: map{action_url: str?, content: str, title: str}, slack: map{action_url: str?, content: str, title: str}, sms: map{action_url: str?, content: str, title: str}, web_push: map{action_url: str?, content: str, title: str}}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, recipients: [map], status: map{errors: [map]?, status: str, summary: map{failures: int, total: int}}, title: str, topic: str?}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/deliveryconfig
+@optional {key: str}
+@returns(200) {channels: [map], disabled: bool, key: str}
+
+@endpoint PUT /channels/deliveryconfig
+@required {channels: [map{channel!: str, delay: int, disabled: bool, if: str, priority: int}], key: str}
+@optional {disabled: bool=False}
+@returns(200) {channels: [map], disabled: bool, key: str}
+
+@endpoint GET /channels/mobile_push/apns/tokens
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /channels/mobile_push/apns/tokens
+@required {device_token: str}
+@optional {app_id: str, installation_id: str(development/production)}
+@returns(201) {app_id: str, device_token: str, installation_id: str}
+
+@endpoint DELETE /channels/mobile_push/apns/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /channels/mobile_push/apns/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {app_id: str, created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+
+@endpoint GET /channels/mobile_push/expo/tokens
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /channels/mobile_push/expo/tokens
+@required {device_token: str}
+@returns(201) {device_token: str}
+
+@endpoint DELETE /channels/mobile_push/expo/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /channels/mobile_push/expo/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?}
+
+@endpoint GET /channels/mobile_push/fcm/tokens
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /channels/mobile_push/fcm/tokens
+@required {device_token: str}
+@optional {installation_id: str(development/production)}
+@returns(201) {device_token: str, installation_id: str}
+
+@endpoint DELETE /channels/mobile_push/fcm/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /channels/mobile_push/fcm/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+
+@endpoint GET /channels/slack/tokens
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /channels/slack/tokens
+@optional {oauth: map{channel_id!: str, installation_id!: str, scope: str}, webhook: map{url!: str(uri)}}
+@returns(201) {oauth: map{channel_id: str, installation_id: str, scope: str}, webhook: map{url: str(uri)}}
+
+@endpoint DELETE /channels/slack/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /channels/slack/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, oauth: map{channel_id: str, installation_id: str, scope: str}, updated_at: str(date-time)?, webhook: map{url: str(uri)}}
+
+@endpoint GET /channels/teams/tokens
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /channels/teams/tokens
+@optional {webhook: map{url: str}}
+@returns(201) {webhook: map{url: str}}
+
+@endpoint DELETE /channels/teams/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /channels/teams/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?, webhook: map{url: str}}
+
+@endpoint GET /channels/web_push/tokens
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /channels/web_push/tokens
+@required {endpoint: str(uri), keys: map{auth!: str, p256dh!: str}}
+@returns(201) {endpoint: str(uri), keys: map{auth: str, p256dh: str}}
+
+@endpoint DELETE /channels/web_push/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /channels/web_push/tokens/{token_id}
+@required {token_id: str}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, endpoint: str(uri), id: str, keys: map{auth: str, p256dh: str}, updated_at: str(date-time)?}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endgroup
+
+@group integrations
+@endpoint GET /integrations
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /integrations/apns
+@returns(204)
+
+@endpoint GET /integrations/apns
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/apns
+@required {app_id: str, badge: str(unread/unseen), certificate: str, key_id: str, team_id: str}
+@optional {payload_version: str(1/2)=2}
+@returns(200) {app_id: str, badge: str, certificate: str, key_id: str, payload_version: str, team_id: str}
+
+@endpoint DELETE /integrations/apns/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/awssns
+@returns(204)
+
+@endpoint GET /integrations/awssns
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/awssns
+@required {webhook_signing_secret: str}
+@returns(200) {webhook_signing_secret: str}
+
+@endpoint POST /integrations/awssns/webhooks/incoming/{id}
+@required {id: str}
+@optional {description: str, payload: map, type: str}
+@returns(201) {description: str, payload: map?, type: str}
+
+@endpoint DELETE /integrations/awssns/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/expo
+@returns(204)
+
+@endpoint GET /integrations/expo
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/expo
+@required {access_token: str}
+@returns(200) {access_token: str}
+
+@endpoint DELETE /integrations/expo/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/fcm
+@returns(204)
+
+@endpoint GET /integrations/fcm
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/fcm
+@required {auth_provider_x509_cert_url: str, auth_uri: str, client_email: str, client_id: str, client_x509_cert_url: str, private_key: str, private_key_id: str, project_id: str, token_uri: str, type: str, universe_domain: str}
+@returns(200) {auth_provider_x509_cert_url: str, auth_uri: str, client_email: str, client_id: str, client_x509_cert_url: str, private_key: str, private_key_id: str, project_id: str, token_uri: str, type: str, universe_domain: str}
+
+@endpoint DELETE /integrations/fcm/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/github
+@returns(204)
+
+@endpoint GET /integrations/github
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/github
+@required {webhook_signing_secret: str}
+@returns(200) {webhook_signing_secret: str}
+
+@endpoint POST /integrations/github/webhooks/incoming/{id}
+@required {id: str}
+@optional {description: str, payload: map, type: str}
+@returns(201) {description: str, payload: map, type: str}
+
+@endpoint DELETE /integrations/github/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/inbox
+@returns(204)
+
+@endpoint GET /integrations/inbox
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/inbox
+@required {images: map{emptyInboxUrl!: str}, locale: str, theme: map{banner: map{backgroundColor!: str, backgroundOpacity: num, fontSize!: str, textColor!: str}, dialog: map{accentColor!: str, backgroundColor!: str, textColor!: str}, footer: map{backgroundColor!: str, borderRadius!: str, fontSize!: str, textColor!: str}, header: map{backgroundColor!: str, borderRadius!: str, fontFamily!: str, fontSize!: str, textColor!: str}, icon: map{borderColor!: str, width!: str}, notification: map{default!: map, unread!: map, unseen!: map}, unseenBadge: map{backgroundColor!: str}}}
+@returns(200) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}}
+
+@endpoint POST /integrations/inbox/installations
+@required {images: map{emptyInboxUrl!: str}, locale: str, theme: map{banner: map{backgroundColor!: str, backgroundOpacity: num, fontSize!: str, textColor!: str}, dialog: map{accentColor!: str, backgroundColor!: str, textColor!: str}, footer: map{backgroundColor!: str, borderRadius!: str, fontSize!: str, textColor!: str}, header: map{backgroundColor!: str, borderRadius!: str, fontFamily!: str, fontSize!: str, textColor!: str}, icon: map{borderColor!: str, width!: str}, notification: map{default!: map, unread!: map, unseen!: map}, unseenBadge: map{backgroundColor!: str}}}
+@returns(201) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}}
+
+@endpoint POST /integrations/inbox/installations/start
+@returns(201) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}}
+
+@endpoint DELETE /integrations/inbox/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/mailgun
+@returns(204)
+
+@endpoint GET /integrations/mailgun
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/mailgun
+@required {api_key: str, domain: str, region: str(us/eu)}
+@returns(200) {api_key: str, domain: str, region: str}
+
+@endpoint DELETE /integrations/mailgun/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/ping_email
+@returns(204)
+
+@endpoint GET /integrations/ping_email
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/ping_email
+@required {url: str(uri)}
+@returns(200) {url: str(uri)}
+
+@endpoint DELETE /integrations/ping_email/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/sendgrid
+@returns(204)
+
+@endpoint GET /integrations/sendgrid
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/sendgrid
+@required {api_key: str}
+@optional {from: map{email!: str(email), name: str}, reply_to: map{email!: str(email), name: str}}
+@returns(200) {api_key: str, from: map{email: str(email), name: str?}, reply_to: map{email: str(email), name: str?}}
+
+@endpoint DELETE /integrations/sendgrid/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/ses
+@returns(204)
+
+@endpoint GET /integrations/ses
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/ses
+@required {key_id: str, region: str, secret_key: str}
+@optional {from: map{email!: str(email), name: str}}
+@returns(200) {from: map{email: str(email), name: str?}, key_id: str, region: str, secret_key: str}
+
+@endpoint DELETE /integrations/ses/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/slack
+@returns(204)
+
+@endpoint GET /integrations/slack
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/slack
+@required {app_id: str, client_id: str, client_secret: str, signing_secret: str}
+@returns(200) {app_id: str, client_id: str, client_secret: str, signing_secret: str}
+
+@endpoint POST /integrations/slack/installations
+@required {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id!: str, refresh_token: str, scope: str, token_type: str}, team: map{id!: str, name: str}}
+@optional {bot_user_id: str, enterprise: map{id!: str, name!: str}, expires_in: int, id: str, incoming_webhook: map{channel!: str, configuration_url!: str, url!: str}, is_enterprise_install: bool, refresh_token: str, scope: str, token_type: str}
+@returns(201) {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id: str, refresh_token: str, scope: str, token_type: str}, bot_user_id: str, enterprise: map{id: str, name: str}, expires_in: int, id: str, incoming_webhook: map{channel: str, configuration_url: str, url: str}, is_enterprise_install: bool, refresh_token: str, scope: str, team: map{id: str, name: str}, token_type: str}
+
+@endpoint POST /integrations/slack/installations/finish
+@required {app_id: str, code: str}
+@optional {redirect_url: str}
+@returns(201) {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id: str, refresh_token: str, scope: str, token_type: str}, bot_user_id: str, enterprise: map{id: str, name: str}, expires_in: int, id: str, incoming_webhook: map{channel: str, configuration_url: str, url: str}, is_enterprise_install: bool, refresh_token: str, scope: str, team: map{id: str, name: str}, token_type: str}
+
+@endpoint POST /integrations/slack/installations/start
+@required {app_id: str}
+@optional {auth_url: str, extra_scopes: [str], redirect_url: str}
+@returns(201) {app_id: str, auth_url: str, scopes: [str]}
+
+@endpoint DELETE /integrations/slack/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/stripe
+@returns(204)
+
+@endpoint GET /integrations/stripe
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/stripe
+@required {webhook_signing_secret: str}
+@returns(200) {webhook_signing_secret: str}
+
+@endpoint POST /integrations/stripe/webhooks/incoming/{id}
+@required {id: str, description: str, id: str}
+@returns(201) {description: str, id: str}
+
+@endpoint DELETE /integrations/stripe/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/templates
+@returns(204)
+
+@endpoint GET /integrations/templates
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/templates
+@returns(200)
+
+@endpoint POST /integrations/templates/installations
+@required {channel: str, text: str}
+@optional {category: str}
+@returns(201) {category: str?, channel: str, text: str}
+
+@endpoint DELETE /integrations/templates/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/twilio
+@returns(204)
+
+@endpoint GET /integrations/twilio
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/twilio
+@required {account_sid: str, api_key: str, api_secret: str, from: str}
+@optional {region: str(us1/ie1/au1)}
+@returns(200) {account_sid: str, api_key: str, api_secret: str, from: str, region: str}
+
+@endpoint DELETE /integrations/twilio/{id}
+@required {id: str}
+@returns(204)
+
+@endpoint DELETE /integrations/web_push
+@returns(204)
+
+@endpoint GET /integrations/web_push
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint PUT /integrations/web_push
+@required {private_key: str, public_key: str}
+@returns(200) {private_key: str, public_key: str}
+
+@endpoint POST /integrations/web_push/installations
+@required {endpoint: str(uri), keys: map{auth!: str, p256dh!: str}}
+@returns(201) {endpoint: str(uri), keys: map{auth: str, p256dh: str}}
+
+@endpoint POST /integrations/web_push/installations/start
+@returns(201) {auth_token: str, public_key: str}
+
+@endpoint DELETE /integrations/web_push/{id}
+@required {id: str}
+@returns(204)
+
+@endgroup
+
+@group jwt
+@endpoint GET /jwt/project
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint POST /jwt/project
+@required {name: str}
+@optional {expiry: int}
+@returns(201) {created_at: str(date-time), expires_at: str(date-time), token: str, token_id: str(uuid)}
+
+@endpoint DELETE /jwt/project/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str(date-time), token_id: str(uuid)}
+
+@endpoint POST /jwt/user
+@optional {email: str, expiry: int, external_id: str, name: str}
+@returns(201) {created_at: str(date-time), expires_at: str(date-time), token: str, token_id: str(uuid)}
+
+@endpoint DELETE /jwt/user/{token_id}
+@required {token_id: str}
+@returns(200) {discarded_at: str(date-time), token_id: str(uuid)}
+
+@endpoint GET /jwt/user/{user_id}
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endgroup
+
+@group users
+@endpoint GET /users/{user_id}/channels/mobile_push/apns/tokens
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /users/{user_id}/channels/mobile_push/apns/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /users/{user_id}/channels/mobile_push/apns/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {app_id: str, created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+
+@endpoint GET /users/{user_id}/channels/mobile_push/expo/tokens
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /users/{user_id}/channels/mobile_push/expo/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /users/{user_id}/channels/mobile_push/expo/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?}
+
+@endpoint GET /users/{user_id}/channels/mobile_push/fcm/tokens
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /users/{user_id}/channels/mobile_push/fcm/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /users/{user_id}/channels/mobile_push/fcm/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+
+@endpoint GET /users/{user_id}/channels/slack/tokens
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /users/{user_id}/channels/slack/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /users/{user_id}/channels/slack/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, oauth: map{channel_id: str, installation_id: str, scope: str}, updated_at: str(date-time)?, webhook: map{url: str(uri)}}
+
+@endpoint GET /users/{user_id}/channels/teams/tokens
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /users/{user_id}/channels/teams/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /users/{user_id}/channels/teams/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?, webhook: map{url: str}}
+
+@endpoint GET /users/{user_id}/channels/web_push/tokens
+@required {user_id: str}
+@optional {page[size]: int, page[after]: str, page[before]: str}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+
+@endpoint DELETE /users/{user_id}/channels/web_push/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {discarded_at: str, id: str}
+
+@endpoint GET /users/{user_id}/channels/web_push/tokens/{token_id}
+@required {user_id: str, token_id: str}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, endpoint: str(uri), id: str, keys: map{auth: str, p256dh: str}, updated_at: str(date-time)?}
+
+@endgroup
+
+@end

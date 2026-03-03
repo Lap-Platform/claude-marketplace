@@ -1,0 +1,391 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS AppSync
+@version 2017-07-25
+@auth AWS SigV4
+@endpoints 64
+@hint download_for_search
+@toc domainnames(8), sourceApis(2), mergedApis(6), apis(41), dataplane-evaluatecode(1), dataplane-evaluatetemplate(1), datasources(2), tags(3)
+
+@group domainnames
+@endpoint POST /v1/domainnames/{domainName}/apiassociation
+@required {domainName: str, apiId: str}
+@returns(200) {apiAssociation: ApiAssociation?{domainName: str?, apiId: str?, associationStatus: str?, deploymentDetail: str?}}
+
+@endgroup
+
+@group sourceApis
+@endpoint POST /v1/sourceApis/{sourceApiIdentifier}/mergedApiAssociations
+@required {sourceApiIdentifier: str, mergedApiIdentifier: str}
+@optional {description: str, sourceApiAssociationConfig: SourceApiAssociationConfig}
+@returns(200) {sourceApiAssociation: SourceApiAssociation?{associationId: str?, associationArn: str?, sourceApiId: str?, sourceApiArn: str?, mergedApiArn: str?, mergedApiId: str?, description: str?, sourceApiAssociationConfig: SourceApiAssociationConfig?{mergeType: str?}, sourceApiAssociationStatus: str?, sourceApiAssociationStatusDetail: str?, lastSuccessfulMergeDate: str(timestamp)?}}
+
+@endgroup
+
+@group mergedApis
+@endpoint POST /v1/mergedApis/{mergedApiIdentifier}/sourceApiAssociations
+@required {mergedApiIdentifier: str, sourceApiIdentifier: str}
+@optional {description: str, sourceApiAssociationConfig: SourceApiAssociationConfig}
+@returns(200) {sourceApiAssociation: SourceApiAssociation?{associationId: str?, associationArn: str?, sourceApiId: str?, sourceApiArn: str?, mergedApiArn: str?, mergedApiId: str?, description: str?, sourceApiAssociationConfig: SourceApiAssociationConfig?{mergeType: str?}, sourceApiAssociationStatus: str?, sourceApiAssociationStatusDetail: str?, lastSuccessfulMergeDate: str(timestamp)?}}
+
+@endgroup
+
+@group apis
+@endpoint POST /v1/apis/{apiId}/ApiCaches
+@required {apiId: str, ttl: int(i64), apiCachingBehavior: str, type: str}
+@optional {transitEncryptionEnabled: bool, atRestEncryptionEnabled: bool, healthMetricsConfig: str}
+@returns(200) {apiCache: ApiCache?{ttl: int(i64)?, apiCachingBehavior: str?, transitEncryptionEnabled: bool?, atRestEncryptionEnabled: bool?, type: str?, status: str?, healthMetricsConfig: str?}}
+
+@endpoint POST /v1/apis/{apiId}/apikeys
+@required {apiId: str}
+@optional {description: str, expires: int(i64)}
+@returns(200) {apiKey: ApiKey?{id: str?, description: str?, expires: int(i64)?, deletes: int(i64)?}}
+
+@endpoint POST /v1/apis/{apiId}/datasources
+@required {apiId: str, name: str, type: str}
+@optional {description: str, serviceRoleArn: str, dynamodbConfig: DynamodbDataSourceConfig, lambdaConfig: LambdaDataSourceConfig, elasticsearchConfig: ElasticsearchDataSourceConfig, openSearchServiceConfig: OpenSearchServiceDataSourceConfig, httpConfig: HttpDataSourceConfig, relationalDatabaseConfig: RelationalDatabaseDataSourceConfig, eventBridgeConfig: EventBridgeDataSourceConfig, metricsConfig: str}
+@returns(200) {dataSource: DataSource?{dataSourceArn: str?, name: str?, description: str?, type: str?, serviceRoleArn: str?, dynamodbConfig: DynamodbDataSourceConfig?{tableName: str, awsRegion: str, useCallerCredentials: bool?, deltaSyncConfig: DeltaSyncConfig?{baseTableTTL: int(i64)?, deltaSyncTableName: str?, deltaSyncTableTTL: int(i64)?}, versioned: bool?}, lambdaConfig: LambdaDataSourceConfig?{lambdaFunctionArn: str}, elasticsearchConfig: ElasticsearchDataSourceConfig?{endpoint: str, awsRegion: str}, openSearchServiceConfig: OpenSearchServiceDataSourceConfig?{endpoint: str, awsRegion: str}, httpConfig: HttpDataSourceConfig?{endpoint: str?, authorizationConfig: AuthorizationConfig?{authorizationType: str, awsIamConfig: AwsIamConfig?}}, relationalDatabaseConfig: RelationalDatabaseDataSourceConfig?{relationalDatabaseSourceType: str?, rdsHttpEndpointConfig: RdsHttpEndpointConfig?{awsRegion: str?, dbClusterIdentifier: str?, databaseName: str?, schema: str?, awsSecretStoreArn: str?}}, eventBridgeConfig: EventBridgeDataSourceConfig?{eventBusArn: str}, metricsConfig: str?}}
+
+@endgroup
+
+@group domainnames
+@endpoint POST /v1/domainnames
+@required {domainName: str, certificateArn: str}
+@optional {description: str}
+@returns(200) {domainNameConfig: DomainNameConfig?{domainName: str?, description: str?, certificateArn: str?, appsyncDomainName: str?, hostedZoneId: str?}}
+
+@endgroup
+
+@group apis
+@endpoint POST /v1/apis/{apiId}/functions
+@required {apiId: str, name: str, dataSourceName: str}
+@optional {description: str, requestMappingTemplate: str, responseMappingTemplate: str, functionVersion: str, syncConfig: SyncConfig, maxBatchSize: int, runtime: AppSyncRuntime, code: str}
+@returns(200) {functionConfiguration: FunctionConfiguration?{functionId: str?, functionArn: str?, name: str?, description: str?, dataSourceName: str?, requestMappingTemplate: str?, responseMappingTemplate: str?, functionVersion: str?, syncConfig: SyncConfig?{conflictHandler: str?, conflictDetection: str?, lambdaConflictHandlerConfig: LambdaConflictHandlerConfig?{lambdaConflictHandlerArn: str?}}, maxBatchSize: int?, runtime: AppSyncRuntime?{name: str, runtimeVersion: str}, code: str?}}
+
+@endpoint POST /v1/apis
+@required {name: str, authenticationType: str}
+@optional {logConfig: LogConfig, userPoolConfig: UserPoolConfig, openIDConnectConfig: OpenIDConnectConfig, tags: map<str,str>, additionalAuthenticationProviders: [AdditionalAuthenticationProvider], xrayEnabled: bool, lambdaAuthorizerConfig: LambdaAuthorizerConfig, visibility: str, apiType: str, mergedApiExecutionRoleArn: str, ownerContact: str, introspectionConfig: str, queryDepthLimit: int, resolverCountLimit: int, enhancedMetricsConfig: EnhancedMetricsConfig}
+@returns(200) {graphqlApi: GraphqlApi?{name: str?, apiId: str?, authenticationType: str?, logConfig: LogConfig?{fieldLogLevel: str, cloudWatchLogsRoleArn: str, excludeVerboseContent: bool?}, userPoolConfig: UserPoolConfig?{userPoolId: str, awsRegion: str, defaultAction: str, appIdClientRegex: str?}, openIDConnectConfig: OpenIDConnectConfig?{issuer: str, clientId: str?, iatTTL: int(i64)?, authTTL: int(i64)?}, arn: str?, uris: map<str,str>?, tags: map<str,str>?, additionalAuthenticationProviders: [AdditionalAuthenticationProvider]?, xrayEnabled: bool?, wafWebAclArn: str?, lambdaAuthorizerConfig: LambdaAuthorizerConfig?{authorizerResultTtlInSeconds: int?, authorizerUri: str, identityValidationExpression: str?}, dns: map<str,str>?, visibility: str?, apiType: str?, mergedApiExecutionRoleArn: str?, owner: str?, ownerContact: str?, introspectionConfig: str?, queryDepthLimit: int?, resolverCountLimit: int?, enhancedMetricsConfig: EnhancedMetricsConfig?{resolverLevelMetricsBehavior: str, dataSourceLevelMetricsBehavior: str, operationLevelMetricsConfig: str}}}
+
+@endpoint POST /v1/apis/{apiId}/types/{typeName}/resolvers
+@required {apiId: str, typeName: str, fieldName: str}
+@optional {dataSourceName: str, requestMappingTemplate: str, responseMappingTemplate: str, kind: str, pipelineConfig: PipelineConfig, syncConfig: SyncConfig, cachingConfig: CachingConfig, maxBatchSize: int, runtime: AppSyncRuntime, code: str, metricsConfig: str}
+@returns(200) {resolver: Resolver?{typeName: str?, fieldName: str?, dataSourceName: str?, resolverArn: str?, requestMappingTemplate: str?, responseMappingTemplate: str?, kind: str?, pipelineConfig: PipelineConfig?{functions: [str]?}, syncConfig: SyncConfig?{conflictHandler: str?, conflictDetection: str?, lambdaConflictHandlerConfig: LambdaConflictHandlerConfig?{lambdaConflictHandlerArn: str?}}, cachingConfig: CachingConfig?{ttl: int(i64), cachingKeys: [str]?}, maxBatchSize: int?, runtime: AppSyncRuntime?{name: str, runtimeVersion: str}, code: str?, metricsConfig: str?}}
+
+@endpoint POST /v1/apis/{apiId}/types
+@required {apiId: str, definition: str, format: str}
+@returns(200) {type: Type?{name: str?, description: str?, arn: str?, definition: str?, format: str?}}
+
+@endpoint DELETE /v1/apis/{apiId}/ApiCaches
+@required {apiId: str}
+
+@endpoint DELETE /v1/apis/{apiId}/apikeys/{id}
+@required {apiId: str, id: str}
+
+@endpoint DELETE /v1/apis/{apiId}/datasources/{name}
+@required {apiId: str, name: str}
+
+@endgroup
+
+@group domainnames
+@endpoint DELETE /v1/domainnames/{domainName}
+@required {domainName: str}
+
+@endgroup
+
+@group apis
+@endpoint DELETE /v1/apis/{apiId}/functions/{functionId}
+@required {apiId: str, functionId: str}
+
+@endpoint DELETE /v1/apis/{apiId}
+@required {apiId: str}
+
+@endpoint DELETE /v1/apis/{apiId}/types/{typeName}/resolvers/{fieldName}
+@required {apiId: str, typeName: str, fieldName: str}
+
+@endpoint DELETE /v1/apis/{apiId}/types/{typeName}
+@required {apiId: str, typeName: str}
+
+@endgroup
+
+@group domainnames
+@endpoint DELETE /v1/domainnames/{domainName}/apiassociation
+@required {domainName: str}
+
+@endgroup
+
+@group sourceApis
+@endpoint DELETE /v1/sourceApis/{sourceApiIdentifier}/mergedApiAssociations/{associationId}
+@required {sourceApiIdentifier: str, associationId: str}
+@returns(200) {sourceApiAssociationStatus: str?}
+
+@endgroup
+
+@group mergedApis
+@endpoint DELETE /v1/mergedApis/{mergedApiIdentifier}/sourceApiAssociations/{associationId}
+@required {mergedApiIdentifier: str, associationId: str}
+@returns(200) {sourceApiAssociationStatus: str?}
+
+@endgroup
+
+@group dataplane-evaluatecode
+@endpoint POST /v1/dataplane-evaluatecode
+@required {runtime: AppSyncRuntime, code: str, context: str}
+@optional {function: str}
+@returns(200) {evaluationResult: str?, error: EvaluateCodeErrorDetail?{message: str?, codeErrors: [CodeError]?}, logs: [str]?}
+
+@endgroup
+
+@group dataplane-evaluatetemplate
+@endpoint POST /v1/dataplane-evaluatetemplate
+@required {template: str, context: str}
+@returns(200) {evaluationResult: str?, error: ErrorDetail?{message: str?}, logs: [str]?}
+
+@endgroup
+
+@group apis
+@endpoint DELETE /v1/apis/{apiId}/FlushCache
+@required {apiId: str}
+
+@endgroup
+
+@group domainnames
+@endpoint GET /v1/domainnames/{domainName}/apiassociation
+@required {domainName: str}
+@returns(200) {apiAssociation: ApiAssociation?{domainName: str?, apiId: str?, associationStatus: str?, deploymentDetail: str?}}
+
+@endgroup
+
+@group apis
+@endpoint GET /v1/apis/{apiId}/ApiCaches
+@required {apiId: str}
+@returns(200) {apiCache: ApiCache?{ttl: int(i64)?, apiCachingBehavior: str?, transitEncryptionEnabled: bool?, atRestEncryptionEnabled: bool?, type: str?, status: str?, healthMetricsConfig: str?}}
+
+@endpoint GET /v1/apis/{apiId}/datasources/{name}
+@required {apiId: str, name: str}
+@returns(200) {dataSource: DataSource?{dataSourceArn: str?, name: str?, description: str?, type: str?, serviceRoleArn: str?, dynamodbConfig: DynamodbDataSourceConfig?{tableName: str, awsRegion: str, useCallerCredentials: bool?, deltaSyncConfig: DeltaSyncConfig?{baseTableTTL: int(i64)?, deltaSyncTableName: str?, deltaSyncTableTTL: int(i64)?}, versioned: bool?}, lambdaConfig: LambdaDataSourceConfig?{lambdaFunctionArn: str}, elasticsearchConfig: ElasticsearchDataSourceConfig?{endpoint: str, awsRegion: str}, openSearchServiceConfig: OpenSearchServiceDataSourceConfig?{endpoint: str, awsRegion: str}, httpConfig: HttpDataSourceConfig?{endpoint: str?, authorizationConfig: AuthorizationConfig?{authorizationType: str, awsIamConfig: AwsIamConfig?}}, relationalDatabaseConfig: RelationalDatabaseDataSourceConfig?{relationalDatabaseSourceType: str?, rdsHttpEndpointConfig: RdsHttpEndpointConfig?{awsRegion: str?, dbClusterIdentifier: str?, databaseName: str?, schema: str?, awsSecretStoreArn: str?}}, eventBridgeConfig: EventBridgeDataSourceConfig?{eventBusArn: str}, metricsConfig: str?}}
+
+@endgroup
+
+@group datasources
+@endpoint GET /v1/datasources/introspections/{introspectionId}
+@required {introspectionId: str}
+@optional {includeModelsSDL: bool, nextToken: str, maxResults: int}
+@returns(200) {introspectionId: str?, introspectionStatus: str?, introspectionStatusDetail: str?, introspectionResult: DataSourceIntrospectionResult?{models: [DataSourceIntrospectionModel]?, nextToken: str?}}
+
+@endgroup
+
+@group domainnames
+@endpoint GET /v1/domainnames/{domainName}
+@required {domainName: str}
+@returns(200) {domainNameConfig: DomainNameConfig?{domainName: str?, description: str?, certificateArn: str?, appsyncDomainName: str?, hostedZoneId: str?}}
+
+@endgroup
+
+@group apis
+@endpoint GET /v1/apis/{apiId}/functions/{functionId}
+@required {apiId: str, functionId: str}
+@returns(200) {functionConfiguration: FunctionConfiguration?{functionId: str?, functionArn: str?, name: str?, description: str?, dataSourceName: str?, requestMappingTemplate: str?, responseMappingTemplate: str?, functionVersion: str?, syncConfig: SyncConfig?{conflictHandler: str?, conflictDetection: str?, lambdaConflictHandlerConfig: LambdaConflictHandlerConfig?{lambdaConflictHandlerArn: str?}}, maxBatchSize: int?, runtime: AppSyncRuntime?{name: str, runtimeVersion: str}, code: str?}}
+
+@endpoint GET /v1/apis/{apiId}
+@required {apiId: str}
+@returns(200) {graphqlApi: GraphqlApi?{name: str?, apiId: str?, authenticationType: str?, logConfig: LogConfig?{fieldLogLevel: str, cloudWatchLogsRoleArn: str, excludeVerboseContent: bool?}, userPoolConfig: UserPoolConfig?{userPoolId: str, awsRegion: str, defaultAction: str, appIdClientRegex: str?}, openIDConnectConfig: OpenIDConnectConfig?{issuer: str, clientId: str?, iatTTL: int(i64)?, authTTL: int(i64)?}, arn: str?, uris: map<str,str>?, tags: map<str,str>?, additionalAuthenticationProviders: [AdditionalAuthenticationProvider]?, xrayEnabled: bool?, wafWebAclArn: str?, lambdaAuthorizerConfig: LambdaAuthorizerConfig?{authorizerResultTtlInSeconds: int?, authorizerUri: str, identityValidationExpression: str?}, dns: map<str,str>?, visibility: str?, apiType: str?, mergedApiExecutionRoleArn: str?, owner: str?, ownerContact: str?, introspectionConfig: str?, queryDepthLimit: int?, resolverCountLimit: int?, enhancedMetricsConfig: EnhancedMetricsConfig?{resolverLevelMetricsBehavior: str, dataSourceLevelMetricsBehavior: str, operationLevelMetricsConfig: str}}}
+
+@endpoint GET /v1/apis/{apiId}/environmentVariables
+@required {apiId: str}
+@returns(200) {environmentVariables: map<str,str>?}
+
+@endpoint GET /v1/apis/{apiId}/schema
+@required {apiId: str, format: str}
+@optional {includeDirectives: bool}
+@returns(200) {schema: bytes?}
+
+@endpoint GET /v1/apis/{apiId}/types/{typeName}/resolvers/{fieldName}
+@required {apiId: str, typeName: str, fieldName: str}
+@returns(200) {resolver: Resolver?{typeName: str?, fieldName: str?, dataSourceName: str?, resolverArn: str?, requestMappingTemplate: str?, responseMappingTemplate: str?, kind: str?, pipelineConfig: PipelineConfig?{functions: [str]?}, syncConfig: SyncConfig?{conflictHandler: str?, conflictDetection: str?, lambdaConflictHandlerConfig: LambdaConflictHandlerConfig?{lambdaConflictHandlerArn: str?}}, cachingConfig: CachingConfig?{ttl: int(i64), cachingKeys: [str]?}, maxBatchSize: int?, runtime: AppSyncRuntime?{name: str, runtimeVersion: str}, code: str?, metricsConfig: str?}}
+
+@endpoint GET /v1/apis/{apiId}/schemacreation
+@required {apiId: str}
+@returns(200) {status: str?, details: str?}
+
+@endgroup
+
+@group mergedApis
+@endpoint GET /v1/mergedApis/{mergedApiIdentifier}/sourceApiAssociations/{associationId}
+@required {mergedApiIdentifier: str, associationId: str}
+@returns(200) {sourceApiAssociation: SourceApiAssociation?{associationId: str?, associationArn: str?, sourceApiId: str?, sourceApiArn: str?, mergedApiArn: str?, mergedApiId: str?, description: str?, sourceApiAssociationConfig: SourceApiAssociationConfig?{mergeType: str?}, sourceApiAssociationStatus: str?, sourceApiAssociationStatusDetail: str?, lastSuccessfulMergeDate: str(timestamp)?}}
+
+@endgroup
+
+@group apis
+@endpoint GET /v1/apis/{apiId}/types/{typeName}
+@required {apiId: str, typeName: str, format: str}
+@returns(200) {type: Type?{name: str?, description: str?, arn: str?, definition: str?, format: str?}}
+
+@endpoint GET /v1/apis/{apiId}/apikeys
+@required {apiId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {apiKeys: [ApiKey]?, nextToken: str?}
+
+@endpoint GET /v1/apis/{apiId}/datasources
+@required {apiId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {dataSources: [DataSource]?, nextToken: str?}
+
+@endgroup
+
+@group domainnames
+@endpoint GET /v1/domainnames
+@optional {nextToken: str, maxResults: int}
+@returns(200) {domainNameConfigs: [DomainNameConfig]?, nextToken: str?}
+
+@endgroup
+
+@group apis
+@endpoint GET /v1/apis/{apiId}/functions
+@required {apiId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {functions: [FunctionConfiguration]?, nextToken: str?}
+
+@endpoint GET /v1/apis
+@optional {nextToken: str, maxResults: int, apiType: str, owner: str}
+@returns(200) {graphqlApis: [GraphqlApi]?, nextToken: str?}
+
+@endpoint GET /v1/apis/{apiId}/types/{typeName}/resolvers
+@required {apiId: str, typeName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {resolvers: [Resolver]?, nextToken: str?}
+
+@endpoint GET /v1/apis/{apiId}/functions/{functionId}/resolvers
+@required {apiId: str, functionId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {resolvers: [Resolver]?, nextToken: str?}
+
+@endpoint GET /v1/apis/{apiId}/sourceApiAssociations
+@required {apiId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {sourceApiAssociationSummaries: [SourceApiAssociationSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /v1/tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group apis
+@endpoint GET /v1/apis/{apiId}/types
+@required {apiId: str, format: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {types: [Type]?, nextToken: str?}
+
+@endgroup
+
+@group mergedApis
+@endpoint GET /v1/mergedApis/{mergedApiIdentifier}/sourceApiAssociations/{associationId}/types
+@required {mergedApiIdentifier: str, associationId: str, format: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {types: [Type]?, nextToken: str?}
+
+@endgroup
+
+@group apis
+@endpoint PUT /v1/apis/{apiId}/environmentVariables
+@required {apiId: str, environmentVariables: map<str,str>}
+@returns(200) {environmentVariables: map<str,str>?}
+
+@endgroup
+
+@group datasources
+@endpoint POST /v1/datasources/introspections
+@optional {rdsDataApiConfig: RdsDataApiConfig}
+@returns(200) {introspectionId: str?, introspectionStatus: str?, introspectionStatusDetail: str?}
+
+@endgroup
+
+@group apis
+@endpoint POST /v1/apis/{apiId}/schemacreation
+@required {apiId: str, definition: bytes}
+@returns(200) {status: str?}
+
+@endgroup
+
+@group mergedApis
+@endpoint POST /v1/mergedApis/{mergedApiIdentifier}/sourceApiAssociations/{associationId}/merge
+@required {associationId: str, mergedApiIdentifier: str}
+@returns(200) {sourceApiAssociationStatus: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /v1/tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /v1/tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group apis
+@endpoint POST /v1/apis/{apiId}/ApiCaches/update
+@required {apiId: str, ttl: int(i64), apiCachingBehavior: str, type: str}
+@optional {healthMetricsConfig: str}
+@returns(200) {apiCache: ApiCache?{ttl: int(i64)?, apiCachingBehavior: str?, transitEncryptionEnabled: bool?, atRestEncryptionEnabled: bool?, type: str?, status: str?, healthMetricsConfig: str?}}
+
+@endpoint POST /v1/apis/{apiId}/apikeys/{id}
+@required {apiId: str, id: str}
+@optional {description: str, expires: int(i64)}
+@returns(200) {apiKey: ApiKey?{id: str?, description: str?, expires: int(i64)?, deletes: int(i64)?}}
+
+@endpoint POST /v1/apis/{apiId}/datasources/{name}
+@required {apiId: str, name: str, type: str}
+@optional {description: str, serviceRoleArn: str, dynamodbConfig: DynamodbDataSourceConfig, lambdaConfig: LambdaDataSourceConfig, elasticsearchConfig: ElasticsearchDataSourceConfig, openSearchServiceConfig: OpenSearchServiceDataSourceConfig, httpConfig: HttpDataSourceConfig, relationalDatabaseConfig: RelationalDatabaseDataSourceConfig, eventBridgeConfig: EventBridgeDataSourceConfig, metricsConfig: str}
+@returns(200) {dataSource: DataSource?{dataSourceArn: str?, name: str?, description: str?, type: str?, serviceRoleArn: str?, dynamodbConfig: DynamodbDataSourceConfig?{tableName: str, awsRegion: str, useCallerCredentials: bool?, deltaSyncConfig: DeltaSyncConfig?{baseTableTTL: int(i64)?, deltaSyncTableName: str?, deltaSyncTableTTL: int(i64)?}, versioned: bool?}, lambdaConfig: LambdaDataSourceConfig?{lambdaFunctionArn: str}, elasticsearchConfig: ElasticsearchDataSourceConfig?{endpoint: str, awsRegion: str}, openSearchServiceConfig: OpenSearchServiceDataSourceConfig?{endpoint: str, awsRegion: str}, httpConfig: HttpDataSourceConfig?{endpoint: str?, authorizationConfig: AuthorizationConfig?{authorizationType: str, awsIamConfig: AwsIamConfig?}}, relationalDatabaseConfig: RelationalDatabaseDataSourceConfig?{relationalDatabaseSourceType: str?, rdsHttpEndpointConfig: RdsHttpEndpointConfig?{awsRegion: str?, dbClusterIdentifier: str?, databaseName: str?, schema: str?, awsSecretStoreArn: str?}}, eventBridgeConfig: EventBridgeDataSourceConfig?{eventBusArn: str}, metricsConfig: str?}}
+
+@endgroup
+
+@group domainnames
+@endpoint POST /v1/domainnames/{domainName}
+@required {domainName: str}
+@optional {description: str}
+@returns(200) {domainNameConfig: DomainNameConfig?{domainName: str?, description: str?, certificateArn: str?, appsyncDomainName: str?, hostedZoneId: str?}}
+
+@endgroup
+
+@group apis
+@endpoint POST /v1/apis/{apiId}/functions/{functionId}
+@required {apiId: str, functionId: str, name: str, dataSourceName: str}
+@optional {description: str, requestMappingTemplate: str, responseMappingTemplate: str, functionVersion: str, syncConfig: SyncConfig, maxBatchSize: int, runtime: AppSyncRuntime, code: str}
+@returns(200) {functionConfiguration: FunctionConfiguration?{functionId: str?, functionArn: str?, name: str?, description: str?, dataSourceName: str?, requestMappingTemplate: str?, responseMappingTemplate: str?, functionVersion: str?, syncConfig: SyncConfig?{conflictHandler: str?, conflictDetection: str?, lambdaConflictHandlerConfig: LambdaConflictHandlerConfig?{lambdaConflictHandlerArn: str?}}, maxBatchSize: int?, runtime: AppSyncRuntime?{name: str, runtimeVersion: str}, code: str?}}
+
+@endpoint POST /v1/apis/{apiId}
+@required {apiId: str, name: str, authenticationType: str}
+@optional {logConfig: LogConfig, userPoolConfig: UserPoolConfig, openIDConnectConfig: OpenIDConnectConfig, additionalAuthenticationProviders: [AdditionalAuthenticationProvider], xrayEnabled: bool, lambdaAuthorizerConfig: LambdaAuthorizerConfig, mergedApiExecutionRoleArn: str, ownerContact: str, introspectionConfig: str, queryDepthLimit: int, resolverCountLimit: int, enhancedMetricsConfig: EnhancedMetricsConfig}
+@returns(200) {graphqlApi: GraphqlApi?{name: str?, apiId: str?, authenticationType: str?, logConfig: LogConfig?{fieldLogLevel: str, cloudWatchLogsRoleArn: str, excludeVerboseContent: bool?}, userPoolConfig: UserPoolConfig?{userPoolId: str, awsRegion: str, defaultAction: str, appIdClientRegex: str?}, openIDConnectConfig: OpenIDConnectConfig?{issuer: str, clientId: str?, iatTTL: int(i64)?, authTTL: int(i64)?}, arn: str?, uris: map<str,str>?, tags: map<str,str>?, additionalAuthenticationProviders: [AdditionalAuthenticationProvider]?, xrayEnabled: bool?, wafWebAclArn: str?, lambdaAuthorizerConfig: LambdaAuthorizerConfig?{authorizerResultTtlInSeconds: int?, authorizerUri: str, identityValidationExpression: str?}, dns: map<str,str>?, visibility: str?, apiType: str?, mergedApiExecutionRoleArn: str?, owner: str?, ownerContact: str?, introspectionConfig: str?, queryDepthLimit: int?, resolverCountLimit: int?, enhancedMetricsConfig: EnhancedMetricsConfig?{resolverLevelMetricsBehavior: str, dataSourceLevelMetricsBehavior: str, operationLevelMetricsConfig: str}}}
+
+@endpoint POST /v1/apis/{apiId}/types/{typeName}/resolvers/{fieldName}
+@required {apiId: str, typeName: str, fieldName: str}
+@optional {dataSourceName: str, requestMappingTemplate: str, responseMappingTemplate: str, kind: str, pipelineConfig: PipelineConfig, syncConfig: SyncConfig, cachingConfig: CachingConfig, maxBatchSize: int, runtime: AppSyncRuntime, code: str, metricsConfig: str}
+@returns(200) {resolver: Resolver?{typeName: str?, fieldName: str?, dataSourceName: str?, resolverArn: str?, requestMappingTemplate: str?, responseMappingTemplate: str?, kind: str?, pipelineConfig: PipelineConfig?{functions: [str]?}, syncConfig: SyncConfig?{conflictHandler: str?, conflictDetection: str?, lambdaConflictHandlerConfig: LambdaConflictHandlerConfig?{lambdaConflictHandlerArn: str?}}, cachingConfig: CachingConfig?{ttl: int(i64), cachingKeys: [str]?}, maxBatchSize: int?, runtime: AppSyncRuntime?{name: str, runtimeVersion: str}, code: str?, metricsConfig: str?}}
+
+@endgroup
+
+@group mergedApis
+@endpoint POST /v1/mergedApis/{mergedApiIdentifier}/sourceApiAssociations/{associationId}
+@required {associationId: str, mergedApiIdentifier: str}
+@optional {description: str, sourceApiAssociationConfig: SourceApiAssociationConfig}
+@returns(200) {sourceApiAssociation: SourceApiAssociation?{associationId: str?, associationArn: str?, sourceApiId: str?, sourceApiArn: str?, mergedApiArn: str?, mergedApiId: str?, description: str?, sourceApiAssociationConfig: SourceApiAssociationConfig?{mergeType: str?}, sourceApiAssociationStatus: str?, sourceApiAssociationStatusDetail: str?, lastSuccessfulMergeDate: str(timestamp)?}}
+
+@endgroup
+
+@group apis
+@endpoint POST /v1/apis/{apiId}/types/{typeName}
+@required {apiId: str, typeName: str, format: str}
+@optional {definition: str}
+@returns(200) {type: Type?{name: str?, description: str?, arn: str?, definition: str?, format: str?}}
+
+@endgroup
+
+@end

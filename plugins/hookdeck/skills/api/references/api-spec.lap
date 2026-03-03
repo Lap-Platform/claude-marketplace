@@ -1,0 +1,580 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Hookdeck Admin REST API
+@base https://api.hookdeck.com/2024-09-01
+@version 1.0.0
+@auth Bearer bearer | Bearer basic
+@endpoints 101
+@hint download_for_search
+@toc issue-triggers(8), attempts(2), bookmarks(7), destinations(10), bulk(15), events(5), integrations(7), issues(5), requests(6), sources(10), notifications(1), teams(3), transformations(9), connections(13)
+
+@group issue-triggers
+@endpoint GET /issue-triggers
+@optional {name: str, type: any, disabled_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /issue-triggers
+@required {type: str(delivery/transformation/backpressure), channels: map{slack: map{channel_name!: str}, opsgenie: map, email: map}}
+@optional {configs: any, name: str}
+@returns(200) {id: str, team_id: str?, name: str?, type: str, configs: any, channels: map?{slack: map{channel_name: str}, opsgenie: map, email: map}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time), deleted_at: str(date-time)?}
+@errors {400, 422}
+
+@endpoint PUT /issue-triggers
+@required {type: str(delivery/transformation/backpressure), channels: map{slack: map{channel_name!: str}, opsgenie: map, email: map}, name: str}
+@optional {configs: any}
+@returns(200) {id: str, team_id: str?, name: str?, type: str, configs: any, channels: map?{slack: map{channel_name: str}, opsgenie: map, email: map}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time), deleted_at: str(date-time)?}
+@errors {400, 422}
+
+@endpoint GET /issue-triggers/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str?, name: str?, type: str, configs: any, channels: map?{slack: map{channel_name: str}, opsgenie: map, email: map}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time), deleted_at: str(date-time)?}
+@errors {404}
+
+@endpoint PUT /issue-triggers/{id}
+@required {id: str}
+@optional {configs: any, channels: map{slack: map{channel_name!: str}, opsgenie: map, email: map}, disabled_at: str(date-time), name: str}
+@returns(200) {id: str, team_id: str?, name: str?, type: str, configs: any, channels: map?{slack: map{channel_name: str}, opsgenie: map, email: map}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time), deleted_at: str(date-time)?}
+@errors {400, 422}
+
+@endpoint DELETE /issue-triggers/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint PUT /issue-triggers/{id}/disable
+@required {id: str}
+@returns(200) {id: str, team_id: str?, name: str?, type: str, configs: any, channels: map?{slack: map{channel_name: str}, opsgenie: map, email: map}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time), deleted_at: str(date-time)?}
+@errors {404}
+
+@endpoint PUT /issue-triggers/{id}/enable
+@required {id: str}
+@returns(200) {id: str, team_id: str?, name: str?, type: str, configs: any, channels: map?{slack: map{channel_name: str}, opsgenie: map, email: map}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time), deleted_at: str(date-time)?}
+@errors {404}
+
+@endgroup
+
+@group attempts
+@endpoint GET /attempts
+@optional {event_id: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint GET /attempts/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, event_id: str, destination_id: str, response_status: int?, attempt_number: int?, trigger: str?, error_code: str, body: any, requested_url: str?, http_method: str?, bulk_retry_id: str?, status: str, successful_at: str(date-time)?, delivered_at: str(date-time)?, responded_at: str(date-time)?, delivery_latency: int?, response_latency: int?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endgroup
+
+@group bookmarks
+@endpoint GET /bookmarks
+@optional {id: any, name: any, webhook_id: any, event_data_id: any, label: any, last_used_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /bookmarks
+@required {event_data_id: str, webhook_id: str, label: str}
+@optional {name: str}
+@returns(200) {id: str, team_id: str, webhook_id: str, event_data_id: str, label: str, alias: str?, data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}, last_used_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint GET /bookmarks/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, webhook_id: str, event_data_id: str, label: str, alias: str?, data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}, last_used_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /bookmarks/{id}
+@required {id: str}
+@optional {event_data_id: str, webhook_id: str, label: str, name: str}
+@returns(200) {id: str, team_id: str, webhook_id: str, event_data_id: str, label: str, alias: str?, data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}, last_used_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 404, 422}
+
+@endpoint DELETE /bookmarks/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint GET /bookmarks/{id}/raw_body
+@required {id: str}
+@returns(200) {body: str}
+@errors {404}
+
+@endpoint POST /bookmarks/{id}/trigger
+@required {id: str}
+@optional {target: str(http/cli)}
+@returns(200)
+@errors {400, 404, 422}
+
+@endgroup
+
+@group destinations
+@endpoint GET /destinations
+@optional {id: any, name: any, disabled: bool, disabled_at: any, url: any, cli_path: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /destinations
+@required {name: str}
+@optional {description: str, url: str(URL), cli_path: str, rate_limit: int, rate_limit_period: str(second/minute/hour/concurrent), http_method: str(GET/POST/PUT/PATCH/DELETE), auth_method: any, path_forwarding_disabled: bool}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint PUT /destinations
+@required {name: str}
+@optional {description: str, url: str(URL), cli_path: str, rate_limit: int, rate_limit_period: str(second/minute/hour/concurrent), http_method: str(GET/POST/PUT/PATCH/DELETE), auth_method: any, path_forwarding_disabled: bool}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint GET /destinations/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404, 410}
+
+@endpoint PUT /destinations/{id}
+@required {id: str}
+@optional {name: str, description: str, url: str(URL), cli_path: str, rate_limit: int, rate_limit_period: str(second/minute/hour/concurrent), http_method: str(GET/POST/PUT/PATCH/DELETE), auth_method: any, path_forwarding_disabled: bool}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 404, 422}
+
+@endpoint DELETE /destinations/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint PUT /destinations/{id}/disable
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /destinations/{id}/archive
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /destinations/{id}/enable
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /destinations/{id}/unarchive
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endgroup
+
+@group bulk
+@endpoint GET /bulk/events/retry
+@optional {cancelled_at: any, completed_at: any, created_at: any, id: any, query: map, query_partial_match: bool, in_progress: bool, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /bulk/events/retry
+@optional {query: map{id: any, status: any, webhook_id: any, destination_id: any, source_id: any, attempts: any, response_status: any, successful_at: any, created_at: any, error_code: any, cli_id: any, last_attempt_at: any, search_term: str, headers: any, body: any, parsed_query: any, path: str, cli_user_id: any, issue_id: any, event_data_id: any, bulk_retry_id: any}}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {400, 422}
+
+@endpoint GET /bulk/events/retry/plan
+@optional {query: map}
+@returns(200) {estimated_batch: int?, estimated_count: int?, progress: num(float)?}
+@errors {400, 422}
+
+@endpoint GET /bulk/events/retry/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {404}
+
+@endpoint POST /bulk/events/retry/{id}/cancel
+@required {id: str}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {404}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@optional {id: any, status: any, webhook_id: any, destination_id: any, source_id: any, attempts: any, response_status: any, successful_at: any, created_at: any, error_code: any, cli_id: any, last_attempt_at: any, search_term: str, headers: any, body: any, parsed_query: any, path: str, cli_user_id: any, issue_id: any, event_data_id: any, bulk_retry_id: any, include: str, order_by: str(last_attempt_at/created_at), dir: str(asc/desc), limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint GET /events/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, webhook_id: str, source_id: str, destination_id: str, event_data_id: str, request_id: str, attempts: int, last_attempt_at: str(date-time)?, next_attempt_at: str(date-time)?, response_status: int?, error_code: str, status: str, successful_at: str(date-time)?, cli_id: str?, updated_at: str(date-time), created_at: str(date-time), data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}}
+@errors {404}
+
+@endpoint GET /events/{id}/raw_body
+@required {id: str}
+@returns(200) {body: str}
+@errors {404}
+
+@endpoint POST /events/{id}/retry
+@required {id: str}
+@returns(200) {id: str, team_id: str, webhook_id: str, source_id: str, destination_id: str, event_data_id: str, request_id: str, attempts: int, last_attempt_at: str(date-time)?, next_attempt_at: str(date-time)?, response_status: int?, error_code: str, status: str, successful_at: str(date-time)?, cli_id: str?, updated_at: str(date-time), created_at: str(date-time), data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}}
+@errors {404}
+
+@endpoint PUT /events/{id}/mute
+@required {id: str}
+@returns(200) {id: str, team_id: str, webhook_id: str, source_id: str, destination_id: str, event_data_id: str, request_id: str, attempts: int, last_attempt_at: str(date-time)?, next_attempt_at: str(date-time)?, response_status: int?, error_code: str, status: str, successful_at: str(date-time)?, cli_id: str?, updated_at: str(date-time), created_at: str(date-time), data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}}
+@errors {404}
+
+@endgroup
+
+@group bulk
+@endpoint GET /bulk/ignored-events/retry
+@optional {cancelled_at: any, completed_at: any, created_at: any, id: any, query: map, query_partial_match: bool, in_progress: bool, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /bulk/ignored-events/retry
+@optional {query: map{cause: any, webhook_id: any, transformation_id: str}}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {400, 422}
+
+@endpoint GET /bulk/ignored-events/retry/plan
+@optional {query: map}
+@returns(200) {estimated_batch: int?, estimated_count: int?, progress: num(float)?}
+@errors {400, 422}
+
+@endpoint GET /bulk/ignored-events/retry/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {404}
+
+@endpoint POST /bulk/ignored-events/retry/{id}/cancel
+@required {id: str}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {404}
+
+@endgroup
+
+@group integrations
+@endpoint GET /integrations
+@optional {label: str, provider: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /integrations
+@optional {label: str, configs: any, provider: str(HMAC/BASIC_AUTH/API_KEY/BRIDGE/CLOUDSIGNAL/COURIER/FRONTAPP/TWITTER/STRIPE/RECHARGE/TWILIO/GITHUB/SHOPIFY/POSTMARK/TYPEFORM/XERO/SVIX/ZOOM/AKENEO/ADYEN/GITLAB/PROPERTY-FINDER/WOOCOMMERCE/OURA/COMMERCELAYER/HUBSPOT/MAILGUN/PERSONA/PIPEDRIVE/SENDGRID/WORKOS/SYNCTERA/AWS_SNS/THREE_D_EYE/TWITCH/ENODE/FAVRO/LINEAR/SHOPLINE/WIX/NMI/ORB/PYLON/REPAY/SQUARE/SOLIDGATE/TRELLO/SANITY/EBAY/TELNYX/DISCORD/TOKENIO/FISERV/BONDSMITH/VERCEL_LOG_DRAINS/VERCEL/TEBEX/SLACK/RAZORPAY/MAILCHIMP/PADDLE/PAYPAL/TREEZOR/PRAXIS), features: [str]}
+@returns(200) {id: str, team_id: str, label: str, provider: str, features: [str], configs: any, sources: [str], updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint GET /integrations/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, label: str, provider: str, features: [str], configs: any, sources: [str], updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /integrations/{id}
+@required {id: str}
+@optional {label: str, configs: any, provider: str(HMAC/BASIC_AUTH/API_KEY/BRIDGE/CLOUDSIGNAL/COURIER/FRONTAPP/TWITTER/STRIPE/RECHARGE/TWILIO/GITHUB/SHOPIFY/POSTMARK/TYPEFORM/XERO/SVIX/ZOOM/AKENEO/ADYEN/GITLAB/PROPERTY-FINDER/WOOCOMMERCE/OURA/COMMERCELAYER/HUBSPOT/MAILGUN/PERSONA/PIPEDRIVE/SENDGRID/WORKOS/SYNCTERA/AWS_SNS/THREE_D_EYE/TWITCH/ENODE/FAVRO/LINEAR/SHOPLINE/WIX/NMI/ORB/PYLON/REPAY/SQUARE/SOLIDGATE/TRELLO/SANITY/EBAY/TELNYX/DISCORD/TOKENIO/FISERV/BONDSMITH/VERCEL_LOG_DRAINS/VERCEL/TEBEX/SLACK/RAZORPAY/MAILCHIMP/PADDLE/PAYPAL/TREEZOR/PRAXIS), features: [str]}
+@returns(200) {id: str, team_id: str, label: str, provider: str, features: [str], configs: any, sources: [str], updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 404, 422}
+
+@endpoint DELETE /integrations/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint PUT /integrations/{id}/attach/{source_id}
+@required {id: str, source_id: str}
+@returns(200) {success: bool}
+@errors {400, 404}
+
+@endpoint PUT /integrations/{id}/detach/{source_id}
+@required {id: str, source_id: str}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group issues
+@endpoint GET /issues
+@optional {id: any, issue_trigger_id: any, type: any, status: any, merged_with: any, aggregation_keys: map, created_at: any, first_seen_at: any, last_seen_at: any, dismissed_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [any]}
+@errors {400, 422}
+
+@endpoint GET /issues/count
+@optional {id: any, issue_trigger_id: any, type: any, status: any, merged_with: any, aggregation_keys: map, created_at: any, first_seen_at: any, last_seen_at: any, dismissed_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {count: int}
+@errors {422}
+
+@endpoint GET /issues/{id}
+@required {id: str}
+@returns(200)
+@errors {404}
+
+@endpoint PUT /issues/{id}
+@required {id: str, status: str(OPENED/IGNORED/ACKNOWLEDGED/RESOLVED)}
+@returns(200)
+@errors {400, 422}
+
+@endpoint DELETE /issues/{id}
+@required {id: str}
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group requests
+@endpoint GET /requests
+@optional {id: any, status: str(accepted/rejected), rejection_cause: any, source_id: any, verified: bool, search_term: str, headers: any, body: any, parsed_query: any, path: str, ignored_count: any, events_count: any, ingested_at: any, bulk_retry_id: any, include: str, order_by: str(ingested_at/created_at), dir: str(asc/desc), limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint GET /requests/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, verified: bool?, original_event_data_id: str?, rejection_cause: str, ingest_priority: str?, ingested_at: str(date-time)?, source_id: str, events_count: int?, cli_events_count: int?, ignored_count: int?, updated_at: str(date-time), created_at: str(date-time), data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}}
+@errors {404}
+
+@endpoint GET /requests/{id}/raw_body
+@required {id: str}
+@returns(200) {body: str}
+@errors {404}
+
+@endpoint POST /requests/{id}/retry
+@required {id: str, webhook_ids: [str]}
+@returns(200) {request: map{id: str, team_id: str, verified: bool?, original_event_data_id: str?, rejection_cause: str, ingest_priority: str?, ingested_at: str(date-time)?, source_id: str, events_count: int?, cli_events_count: int?, ignored_count: int?, updated_at: str(date-time), created_at: str(date-time), data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}}, events: [map]?}
+@errors {400, 404, 422}
+
+@endpoint GET /requests/{id}/events
+@required {id: str}
+@optional {id: any, status: any, webhook_id: any, destination_id: any, source_id: any, attempts: any, response_status: any, successful_at: any, created_at: any, error_code: any, cli_id: any, last_attempt_at: any, search_term: str, headers: any, body: any, parsed_query: any, path: str, cli_user_id: any, issue_id: any, event_data_id: any, bulk_retry_id: any, include: str, order_by: str(last_attempt_at/created_at), dir: str(asc/desc), limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 404, 422}
+
+@endpoint GET /requests/{id}/ignored_events
+@required {id: str}
+@optional {id: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 404, 422}
+
+@endgroup
+
+@group bulk
+@endpoint GET /bulk/requests/retry
+@optional {cancelled_at: any, completed_at: any, created_at: any, id: any, in_progress: bool, query: map, query_partial_match: bool, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /bulk/requests/retry
+@optional {query: map{id: any, status: str, rejection_cause: any, source_id: any, verified: bool, search_term: str, headers: any, body: any, parsed_query: any, path: str, ignored_count: any, events_count: any, ingested_at: any, bulk_retry_id: any}}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {400, 422}
+
+@endpoint GET /bulk/requests/retry/plan
+@optional {query: map}
+@returns(200) {estimated_batch: int?, estimated_count: int?, progress: num(float)?}
+@errors {400, 422}
+
+@endpoint GET /bulk/requests/retry/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {404}
+
+@endpoint POST /bulk/requests/retry/{id}/cancel
+@required {id: str}
+@returns(200) {id: str, team_id: str, query: any?, created_at: str(date-time), updated_at: str(date-time), cancelled_at: str(date-time)?, completed_at: str(date-time)?, estimated_batch: int?, estimated_count: int?, processed_batch: int?, completed_count: int?, in_progress: bool, progress: num(float)?, failed_count: int?, number: num(float)?}
+@errors {404}
+
+@endgroup
+
+@group sources
+@endpoint GET /sources
+@optional {id: any, name: any, disabled: bool, disabled_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /sources
+@required {name: str}
+@optional {description: str, allowed_http_methods: [str], custom_response: map{content_type!: str, body!: str}, verification: any}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint PUT /sources
+@required {name: str}
+@optional {description: str, allowed_http_methods: [str], custom_response: map{content_type!: str, body!: str}, verification: any}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint GET /sources/{id}
+@required {id: str}
+@optional {include: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404, 410}
+
+@endpoint PUT /sources/{id}
+@required {id: str}
+@optional {name: str, description: str, allowed_http_methods: [str], custom_response: map{content_type!: str, body!: str}, verification: any}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 404, 422}
+
+@endpoint DELETE /sources/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint PUT /sources/{id}/disable
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /sources/{id}/archive
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /sources/{id}/enable
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /sources/{id}/unarchive
+@required {id: str}
+@returns(200) {id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endgroup
+
+@group notifications
+@endpoint PUT /notifications/webhooks
+@optional {enabled: bool, topics: [str], source_id: str}
+@returns(200) {enabled: bool, topics: [str]?, source_id: str}
+
+@endgroup
+
+@group teams
+@endpoint POST /teams/current/custom_domains
+@required {hostname: str}
+@returns(200) {hostname: str}
+
+@endpoint GET /teams/current/custom_domains
+@returns(200)
+
+@endpoint DELETE /teams/current/custom_domains/{domain_id}
+@required {domain_id: str}
+@returns(200) {id: str}
+
+@endgroup
+
+@group transformations
+@endpoint GET /transformations
+@optional {id: any, name: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /transformations
+@required {name: str, code: str}
+@optional {env: map}
+@returns(200) {id: str, team_id: str, name: str, code: str, encrypted_env: str?, iv: str?, env: map?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint PUT /transformations
+@required {name: str, code: str}
+@optional {env: map}
+@returns(200) {id: str, team_id: str, name: str, code: str, encrypted_env: str?, iv: str?, env: map?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint GET /transformations/{id}
+@required {id: str}
+@returns(200) {id: str, team_id: str, name: str, code: str, encrypted_env: str?, iv: str?, env: map?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint DELETE /transformations/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint PUT /transformations/{id}
+@required {id: str}
+@optional {name: str, code: str, env: map}
+@returns(200) {id: str, team_id: str, name: str, code: str, encrypted_env: str?, iv: str?, env: map?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 404, 422}
+
+@endpoint PUT /transformations/run
+@optional {env: map, webhook_id: str, code: str, transformation_id: str, request: map{headers!: map, body: any, path: str, query: str, parsed_query: map}, event_id: str}
+@returns(200) {request_id: str?, transformation_id: str?, execution_id: str?, log_level: str, request: map?{headers: any?, path: str, query: any?, parsed_query: any?, body: any?}, console: [map]?}
+@errors {400, 422}
+
+@endpoint GET /transformations/{id}/executions
+@required {id: str}
+@optional {log_level: any, webhook_id: any, issue_id: any, created_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint GET /transformations/{id}/executions/{execution_id}
+@required {id: str, execution_id: str}
+@returns(200) {id: str, transformed_event_data_id: str, original_event_data_id: str, transformation_id: str, team_id: str, webhook_id: str, log_level: str, logs: [map], updated_at: str(date-time), created_at: str(date-time), original_event_data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}, transformed_event_data: map?{path: str, query: str?, parsed_query: any?, headers: any?, body: any?, is_large_payload: bool?}, issue_id: str?}
+@errors {404}
+
+@endgroup
+
+@group connections
+@endpoint GET /connections
+@optional {id: any, name: any, destination_id: any, source_id: any, disabled: bool, disabled_at: any, full_name: str, paused_at: any, order_by: any, dir: any, limit: int, next: str, prev: str}
+@returns(200) {pagination: map{order_by: any, dir: any, limit: int, prev: str, next: str}, count: int, models: [map]}
+@errors {400, 422}
+
+@endpoint POST /connections
+@optional {name: str, description: str, destination_id: str, source_id: str, destination: map{name!: str, description: str, url: str(URL), cli_path: str, rate_limit: int, rate_limit_period: str, http_method: str, auth_method: any, path_forwarding_disabled: bool}, source: map{name!: str, description: str, allowed_http_methods: [str], custom_response: map{content_type!: str, body!: str}, verification: any}, rules: [any]}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint PUT /connections
+@optional {name: str, description: str, destination_id: str, source_id: str, destination: map{name!: str, description: str, url: str(URL), cli_path: str, rate_limit: int, rate_limit_period: str, http_method: str, auth_method: any, path_forwarding_disabled: bool}, source: map{name!: str, description: str, allowed_http_methods: [str], custom_response: map{content_type!: str, body!: str}, verification: any}, rules: [any]}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 422}
+
+@endpoint GET /connections/count
+@optional {destination_id: any, source_id: any, disabled: bool, disabled_at: any, paused_at: any}
+@returns(200) {count: num(float)}
+@errors {400, 422}
+
+@endpoint GET /connections/{id}
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404, 410}
+
+@endpoint PUT /connections/{id}
+@required {id: str}
+@optional {name: str, description: str, rules: [any]}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {400, 404, 422}
+
+@endpoint DELETE /connections/{id}
+@required {id: str}
+@returns(200) {id: str}
+@errors {404}
+
+@endpoint PUT /connections/{id}/disable
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /connections/{id}/archive
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /connections/{id}/enable
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /connections/{id}/unarchive
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /connections/{id}/pause
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endpoint PUT /connections/{id}/unpause
+@required {id: str}
+@returns(200) {id: str, name: str?, full_name: str?, description: str?, team_id: str, destination: map{id: str, name: str, description: str?, team_id: str, path_forwarding_disabled: bool?, url: str(URL)?, cli_path: str?, rate_limit: int?, rate_limit_period: str?, http_method: str?, auth_method: any, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, source: map{id: str, name: str, description: str?, team_id: str, url: str(URL), verification: any?, allowed_http_methods: [str]?, custom_response: map?{content_type: str, body: str}, disabled_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}, rules: [any]?, disabled_at: str(date-time)?, paused_at: str(date-time)?, updated_at: str(date-time), created_at: str(date-time)}
+@errors {404}
+
+@endgroup
+
+@end

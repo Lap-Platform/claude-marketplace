@@ -1,0 +1,510 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Typesense API
+@base {protocol}://{hostname}:{port}
+@version 30.0
+@auth ApiKey X-TYPESENSE-API-KEY in header
+@endpoints 79
+@hint download_for_search
+@toc collections(14), synonym_sets(8), curation_sets(8), conversations(5), keys(4), aliases(4), debug(1), health(1), operations(5), config(1), multi_search(1), analytics(9), metrics.json(1), stats.json(1), stopwords(4), presets(4), stemming(3), nl_search_models(5)
+
+@group collections
+@endpoint GET /collections
+@desc List all collections
+@optional {getCollectionsParameters: map}
+@returns(200) List of all collections
+
+@endpoint POST /collections
+@desc Create a new collection
+@required {name: str # Name of the collection, fields: [map{name!: str, type!: str, optional: bool, facet: bool, index: bool, locale: str, sort: bool, infix: bool, reference: str, async_reference: bool, num_dim: int, drop: bool, store: bool, vec_dist: str, range_index: bool, stem: bool, stem_dictionary: str, token_separators: [str], symbols_to_index: [str], embed: map{from!: [str], model_config!: map}}] # A list of fields for querying, filtering and faceting}
+@optional {default_sorting_field: str= # The name of an int32 / float field that determines the order in which the search results are ranked when a sort_by clause is not provided during searching. This field must indicate some kind of popularity., token_separators: [str]=[] # List of symbols or special characters to be used for splitting the text into individual words in addition to space and new-line characters., synonym_sets: [str] # List of synonym set names to associate with this collection, enable_nested_fields: bool=False # Enables experimental support at a collection level for nested object or object array fields. This field is only available if the Typesense server is version `0.24.0.rcn34` or later., symbols_to_index: [str]=[] # List of symbols or special characters to be indexed., voice_query_model: map{model_name: str} # Configuration for the voice query model, metadata: map # Optional details about the collection, e.g., when it was created, who created it etc.}
+@returns(201) Collection successfully created
+@errors {400: Bad request, see error message for details, 409: Collection already exists}
+
+@endpoint GET /collections/{collectionName}
+@desc Retrieve a single collection
+@required {collectionName: str # The name of the collection to retrieve}
+@returns(200) Collection fetched
+@errors {404: Collection not found}
+
+@endpoint PATCH /collections/{collectionName}
+@desc Update a collection
+@required {collectionName: str # The name of the collection to update, fields: [map{name!: str, type!: str, optional: bool, facet: bool, index: bool, locale: str, sort: bool, infix: bool, reference: str, async_reference: bool, num_dim: int, drop: bool, store: bool, vec_dist: str, range_index: bool, stem: bool, stem_dictionary: str, token_separators: [str], symbols_to_index: [str], embed: map{from!: [str], model_config!: map}}] # A list of fields for querying, filtering and faceting}
+@optional {synonym_sets: [str] # List of synonym set names to associate with this collection, metadata: map # Optional details about the collection, e.g., when it was created, who created it etc.}
+@returns(200) {fields: [map], synonym_sets: [str], metadata: map} # The updated partial collection schema
+@errors {400: Bad request, see error message for details, 404: The collection was not found}
+
+@endpoint DELETE /collections/{collectionName}
+@desc Delete a collection
+@required {collectionName: str # The name of the collection to delete}
+@returns(200) Collection deleted
+@errors {404: Collection not found}
+
+@endpoint POST /collections/{collectionName}/documents
+@desc Index a document
+@required {collectionName: str # The name of the collection to add the document to}
+@optional {action: str # Additional action to perform, dirty_values: str # Dealing with Dirty Data}
+@returns(201) Document successfully created/indexed
+@errors {404: Collection not found}
+
+@endpoint PATCH /collections/{collectionName}/documents
+@desc Update documents with conditional query
+@required {collectionName: str # The name of the collection to update documents in}
+@optional {updateDocumentsParameters: map}
+@returns(200) {num_updated: int} # The response contains a single field, `num_updated`, indicating the number of documents affected.
+@errors {400: Bad request, see error message for details, 404: The collection was not found}
+
+@endpoint DELETE /collections/{collectionName}/documents
+@desc Delete a bunch of documents
+@required {collectionName: str # The name of the collection to delete documents from}
+@optional {deleteDocumentsParameters: map}
+@returns(200) {num_deleted: int} # Documents successfully deleted
+@errors {404: Collection not found}
+
+@endpoint GET /collections/{collectionName}/documents/search
+@desc Search for documents in a collection
+@required {collectionName: str # The name of the collection to search for the document under, searchParameters: map}
+@returns(200) {facet_counts: [map], found: int, found_docs: int, search_time_ms: int, out_of: int, search_cutoff: bool, page: int, grouped_hits: [map], hits: [map], request_params: map{collection_name: str, q: str, per_page: int, voice_query: map{transcribed_query: str}}, conversation: map{answer: str, conversation_history: [map], conversation_id: str, query: str}, union_request_params: [map], metadata: map} # Search results
+@errors {400: Bad request, see error message for details, 404: The collection or field was not found}
+
+@endgroup
+
+@group synonym_sets
+@endpoint GET /synonym_sets
+@desc List all synonym sets
+@returns(200) List of all synonym sets
+
+@endpoint GET /synonym_sets/{synonymSetName}
+@desc Retrieve a synonym set
+@required {synonymSetName: str # The name of the synonym set to retrieve}
+@returns(200) Synonym set fetched
+@errors {404: Synonym set not found}
+
+@endpoint PUT /synonym_sets/{synonymSetName}
+@desc Create or update a synonym set
+@required {synonymSetName: str # The name of the synonym set to create/update, items: [any] # Array of synonym items}
+@returns(200) Synonym set successfully created/updated
+@errors {400: Bad request, see error message for details}
+
+@endpoint DELETE /synonym_sets/{synonymSetName}
+@desc Delete a synonym set
+@required {synonymSetName: str # The name of the synonym set to delete}
+@returns(200) {name: str} # Synonym set successfully deleted
+@errors {404: Synonym set not found}
+
+@endpoint GET /synonym_sets/{synonymSetName}/items
+@desc List items in a synonym set
+@required {synonymSetName: str # The name of the synonym set to retrieve items for}
+@returns(200) List of synonym items
+@errors {404: Synonym set not found}
+
+@endpoint GET /synonym_sets/{synonymSetName}/items/{itemId}
+@desc Retrieve a synonym set item
+@required {synonymSetName: str # The name of the synonym set, itemId: str # The id of the synonym item to retrieve}
+@returns(200) Synonym item fetched
+@errors {404: Synonym item not found}
+
+@endpoint PUT /synonym_sets/{synonymSetName}/items/{itemId}
+@desc Create or update a synonym set item
+@required {synonymSetName: str # The name of the synonym set, itemId: str # The id of the synonym item to upsert, synonyms: [str] # Array of words that should be considered as synonyms}
+@optional {root: str # For 1-way synonyms, indicates the root word that words in the synonyms parameter map to, locale: str # Locale for the synonym, leave blank to use the standard tokenizer, symbols_to_index: [str] # By default, special characters are dropped from synonyms. Use this attribute to specify which special characters should be indexed as is}
+@returns(200) Synonym item successfully created/updated
+@errors {400: Bad request, see error message for details}
+
+@endpoint DELETE /synonym_sets/{synonymSetName}/items/{itemId}
+@desc Delete a synonym set item
+@required {synonymSetName: str # The name of the synonym set, itemId: str # The id of the synonym item to delete}
+@returns(200) {id: str} # Synonym item successfully deleted
+@errors {404: Synonym item not found}
+
+@endgroup
+
+@group curation_sets
+@endpoint GET /curation_sets
+@desc List all curation sets
+@returns(200) List of all curation sets
+
+@endpoint GET /curation_sets/{curationSetName}
+@desc Retrieve a curation set
+@required {curationSetName: str # The name of the curation set to retrieve}
+@returns(200) Curation set fetched
+@errors {404: Curation set not found}
+
+@endpoint PUT /curation_sets/{curationSetName}
+@desc Create or update a curation set
+@required {curationSetName: str # The name of the curation set to create/update, items: [map{rule!: map{tags: [str], query: str, match: str, filter_by: str}, includes: [map{id!: str, position!: int}], excludes: [map{id!: str}], filter_by: str, remove_matched_tokens: bool, metadata: map, sort_by: str, replace_query: str, filter_curated_hits: bool, effective_from_ts: int, effective_to_ts: int, stop_processing: bool, id: str}] # Array of curation items}
+@optional {description: str # Optional description for the curation set}
+@returns(200) Curation set successfully created/updated
+@errors {400: Bad request, see error message for details}
+
+@endpoint DELETE /curation_sets/{curationSetName}
+@desc Delete a curation set
+@required {curationSetName: str # The name of the curation set to delete}
+@returns(200) {name: str} # Curation set successfully deleted
+@errors {404: Curation set not found}
+
+@endpoint GET /curation_sets/{curationSetName}/items
+@desc List items in a curation set
+@required {curationSetName: str # The name of the curation set to retrieve items for}
+@returns(200) List of curation items
+@errors {404: Curation set not found}
+
+@endpoint GET /curation_sets/{curationSetName}/items/{itemId}
+@desc Retrieve a curation set item
+@required {curationSetName: str # The name of the curation set, itemId: str # The id of the curation item to retrieve}
+@returns(200) Curation item fetched
+@errors {404: Curation item not found}
+
+@endpoint PUT /curation_sets/{curationSetName}/items/{itemId}
+@desc Create or update a curation set item
+@required {curationSetName: str # The name of the curation set, itemId: str # The id of the curation item to upsert, rule: map{tags: [str], query: str, match: str, filter_by: str}}
+@optional {includes: [map{id!: str, position!: int}] # List of document `id`s that should be included in the search results with their corresponding `position`s., excludes: [map{id!: str}] # List of document `id`s that should be excluded from the search results., filter_by: str # A filter by clause that is applied to any search query that matches the curation rule., remove_matched_tokens: bool # Indicates whether search query tokens that exist in the curation's rule should be removed from the search query., metadata: map # Return a custom JSON object in the Search API response, when this rule is triggered. This can can be used to display a pre-defined message (eg: a promotion banner) on the front-end when a particular rule is triggered., sort_by: str # A sort by clause that is applied to any search query that matches the curation rule., replace_query: str # Replaces the current search query with this value, when the search query matches the curation rule., filter_curated_hits: bool # When set to true, the filter conditions of the query is applied to the curated records as well. Default: false., effective_from_ts: int # A Unix timestamp that indicates the date/time from which the curation will be active. You can use this to create rules that start applying from a future point in time., effective_to_ts: int # A Unix timestamp that indicates the date/time until which the curation will be active. You can use this to create rules that stop applying after a period of time., stop_processing: bool # When set to true, curation processing will stop at the first matching rule. When set to false curation processing will continue and multiple curation actions will be triggered in sequence. Curations are processed in the lexical sort order of their id field., id: str # ID of the curation item}
+@returns(200) Curation item successfully created/updated
+@errors {400: Bad request, see error message for details}
+
+@endpoint DELETE /curation_sets/{curationSetName}/items/{itemId}
+@desc Delete a curation set item
+@required {curationSetName: str # The name of the curation set, itemId: str # The id of the curation item to delete}
+@returns(200) {id: str} # Curation item successfully deleted
+@errors {404: Curation item not found}
+
+@endgroup
+
+@group collections
+@endpoint GET /collections/{collectionName}/documents/export
+@desc Export all documents in a collection
+@required {collectionName: str # The name of the collection}
+@optional {exportDocumentsParameters: map}
+@returns(200) Exports all the documents in a given collection.
+@errors {404: The collection was not found}
+
+@endpoint POST /collections/{collectionName}/documents/import
+@desc Import documents into a collection
+@required {collectionName: str # The name of the collection}
+@optional {importDocumentsParameters: map}
+@returns(200) Result of the import operation. Each line of the response indicates the result of each document present in the request body (in the same order). If the import of a single document fails, it does not affect the other documents. If there is a failure, the response line will include a corresponding error message and as well as the actual document content.
+@errors {400: Bad request, see error message for details, 404: The collection was not found}
+
+@endpoint GET /collections/{collectionName}/documents/{documentId}
+@desc Retrieve a document
+@required {collectionName: str # The name of the collection to search for the document under, documentId: str # The Document ID}
+@returns(200) The document referenced by the ID
+@errors {404: The document or collection was not found}
+
+@endpoint PATCH /collections/{collectionName}/documents/{documentId}
+@desc Update a document
+@required {collectionName: str # The name of the collection to search for the document under, documentId: str # The Document ID}
+@optional {dirty_values: str # Dealing with Dirty Data}
+@returns(200) The document referenced by the ID was updated
+@errors {404: The document or collection was not found}
+
+@endpoint DELETE /collections/{collectionName}/documents/{documentId}
+@desc Delete a document
+@required {collectionName: str # The name of the collection to search for the document under, documentId: str # The Document ID}
+@returns(200) The document referenced by the ID was deleted
+@errors {404: The document or collection was not found}
+
+@endgroup
+
+@group conversations
+@endpoint GET /conversations/models
+@desc List all conversation models
+@returns(200) List of all conversation models
+
+@endpoint POST /conversations/models
+@desc Create a conversation model
+@returns(201) Created Conversation Model
+@errors {400: Bad request, see error message for details}
+
+@endpoint GET /conversations/models/{modelId}
+@desc Retrieve a conversation model
+@required {modelId: str # The id of the conversation model to retrieve}
+@returns(200) A conversation model
+
+@endpoint PUT /conversations/models/{modelId}
+@desc Update a conversation model
+@required {modelId: str # The id of the conversation model to update}
+@optional {id: str # An explicit id for the model, otherwise the API will return a response with an auto-generated conversation model id., model_name: str # Name of the LLM model offered by OpenAI, Cloudflare or vLLM, api_key: str # The LLM service's API Key, history_collection: str # Typesense collection that stores the historical conversations, account_id: str # LLM service's account ID (only applicable for Cloudflare), system_prompt: str # The system prompt that contains special instructions to the LLM, ttl: int # Time interval in seconds after which the messages would be deleted. Default: 86400 (24 hours), max_bytes: int # The maximum number of bytes to send to the LLM in every API call. Consult the LLM's documentation on the number of bytes supported in the context window., vllm_url: str # URL of vLLM service}
+@returns(200) The conversation model was successfully updated
+
+@endpoint DELETE /conversations/models/{modelId}
+@desc Delete a conversation model
+@required {modelId: str # The id of the conversation model to delete}
+@returns(200) The conversation model was successfully deleted
+
+@endgroup
+
+@group keys
+@endpoint GET /keys
+@desc Retrieve (metadata about) all keys.
+@returns(200) {keys: [any]} # List of all keys
+
+@endpoint POST /keys
+@desc Create an API Key
+@required {description: str, actions: [str], collections: [str]}
+@optional {value: str, expires_at: int(int64)}
+@returns(201) Created API key
+@errors {400: Bad request, see error message for details, 409: API key generation conflict}
+
+@endpoint GET /keys/{keyId}
+@desc Retrieve (metadata about) a key
+@required {keyId: int(int64) # The ID of the key to retrieve}
+@returns(200) The key referenced by the ID
+@errors {404: The key was not found}
+
+@endpoint DELETE /keys/{keyId}
+@desc Delete an API key given its ID.
+@required {keyId: int(int64) # The ID of the key to delete}
+@returns(200) {id: int(int64)} # The key referenced by the ID
+@errors {400: Bad request, see error message for details, 404: Key not found}
+
+@endgroup
+
+@group aliases
+@endpoint GET /aliases
+@desc List all aliases
+@returns(200) {aliases: [map]} # List of all collection aliases
+
+@endpoint PUT /aliases/{aliasName}
+@desc Create or update a collection alias
+@required {aliasName: str # The name of the alias to create/update, collection_name: str # Name of the collection you wish to map the alias to}
+@returns(200) {name: str, collection_name: str} # The collection alias was created/updated
+@errors {400: Bad request, see error message for details, 404: Alias not found}
+
+@endpoint GET /aliases/{aliasName}
+@desc Retrieve an alias
+@required {aliasName: str # The name of the alias to retrieve}
+@returns(200) {name: str, collection_name: str} # Collection alias fetched
+@errors {404: The alias was not found}
+
+@endpoint DELETE /aliases/{aliasName}
+@desc Delete an alias
+@required {aliasName: str # The name of the alias to delete}
+@returns(200) {name: str, collection_name: str} # Collection alias was deleted
+@errors {404: Alias not found}
+
+@endgroup
+
+@group debug
+@endpoint GET /debug
+@desc Print debugging information
+@returns(200) {version: str} # Debugging information
+
+@endgroup
+
+@group health
+@endpoint GET /health
+@desc Checks if Typesense server is ready to accept requests.
+@returns(200) {ok: bool} # Search service is ready for requests.
+
+@endgroup
+
+@group operations
+@endpoint GET /operations/schema_changes
+@desc Get the status of in-progress schema change operations
+@returns(200) List of schema changes in progress
+
+@endpoint POST /operations/snapshot
+@desc Creates a point-in-time snapshot of a Typesense node's state and data in the specified directory.
+@required {snapshot_path: str # The directory on the server where the snapshot should be saved.}
+@returns(201) {success: bool} # Snapshot is created.
+
+@endpoint POST /operations/vote
+@desc Triggers a follower node to initiate the raft voting process, which triggers leader re-election.
+@returns(200) {success: bool} # Re-election is performed.
+
+@endpoint POST /operations/cache/clear
+@desc Clear the cached responses of search requests in the LRU cache.
+@returns(200) {success: bool} # Clear cache succeeded.
+
+@endpoint POST /operations/db/compact
+@desc Compacting the on-disk database
+@returns(200) {success: bool} # Compacting the on-disk database succeeded.
+
+@endgroup
+
+@group config
+@endpoint POST /config
+@desc Toggle Slow Request Log
+@required {log-slow-requests-time-ms: int}
+@returns(200) {success: bool} # Toggle Slow Request Log database succeeded.
+
+@endgroup
+
+@group multi_search
+@endpoint POST /multi_search
+@desc send multiple search requests in a single HTTP request
+@required {multiSearchParameters: map, searches: [any]}
+@optional {union: bool=False # When true, merges the search results from each search query into a single ordered set of hits.}
+@returns(200) {results: [any], conversation: map{answer: str, conversation_history: [map], conversation_id: str, query: str}} # Search results
+@errors {400: Bad request, see error message for details}
+
+@endgroup
+
+@group analytics
+@endpoint POST /analytics/events
+@desc Create an analytics event
+@required {name: str # Name of the analytics rule this event corresponds to, event_type: str # Type of event (e.g., click, conversion, query, visit), data: map{user_id: str, doc_id: str, doc_ids: [str], q: str, analytics_tag: str} # Event payload}
+@returns(200) {ok: bool} # Analytics event successfully created
+@errors {400: Bad request, see error message for details}
+
+@endpoint GET /analytics/events
+@desc Retrieve analytics events
+@required {user_id: str, name: str # Analytics rule name, n: int # Number of events to return (max 1000)}
+@returns(200) {events: [map]} # Events fetched
+@errors {400: Bad request, see error message for details}
+
+@endpoint POST /analytics/flush
+@desc Flush in-memory analytics to disk
+@returns(200) {ok: bool} # Flush triggered
+
+@endpoint GET /analytics/status
+@desc Get analytics subsystem status
+@returns(200) {popular_prefix_queries: int, nohits_prefix_queries: int, log_prefix_queries: int, query_log_events: int, query_counter_events: int, doc_log_events: int, doc_counter_events: int} # Status fetched
+
+@endpoint POST /analytics/rules
+@desc Create analytics rule(s)
+@returns(200) Analytics rule(s) successfully created
+@errors {400: Bad request, see error message for details}
+
+@endpoint GET /analytics/rules
+@desc Retrieve analytics rules
+@optional {rule_tag: str # Filter rules by rule_tag}
+@returns(200) Analytics rules fetched
+
+@endpoint PUT /analytics/rules/{ruleName}
+@desc Upserts an analytics rule
+@required {ruleName: str # The name of the analytics rule to upsert}
+@optional {name: str, rule_tag: str, params: map{destination_collection: str, limit: int, capture_search_requests: bool, meta_fields: [str], expand_query: bool, counter_field: str, weight: int}}
+@returns(200) Analytics rule successfully upserted
+@errors {400: Bad request, see error message for details}
+
+@endpoint GET /analytics/rules/{ruleName}
+@desc Retrieves an analytics rule
+@required {ruleName: str # The name of the analytics rule to retrieve}
+@returns(200) Analytics rule fetched
+@errors {404: Analytics rule not found}
+
+@endpoint DELETE /analytics/rules/{ruleName}
+@desc Delete an analytics rule
+@required {ruleName: str # The name of the analytics rule to delete}
+@returns(200) Analytics rule deleted
+@errors {404: Analytics rule not found}
+
+@endgroup
+
+@group metrics.json
+@endpoint GET /metrics.json
+@desc Get current RAM, CPU, Disk & Network usage metrics.
+@returns(200) Metrics fetched.
+
+@endgroup
+
+@group stats.json
+@endpoint GET /stats.json
+@desc Get stats about API endpoints.
+@returns(200) {delete_latency_ms: num(double), delete_requests_per_second: num(double), import_latency_ms: num(double), import_requests_per_second: num(double), latency_ms: map, overloaded_requests_per_second: num(double), pending_write_batches: num(double), requests_per_second: map, search_latency_ms: num(double), search_requests_per_second: num(double), total_requests_per_second: num(double), write_latency_ms: num(double), write_requests_per_second: num(double)} # Stats fetched.
+
+@endgroup
+
+@group stopwords
+@endpoint GET /stopwords
+@desc Retrieves all stopwords sets.
+@returns(200) {stopwords: [map]} # Stopwords sets fetched.
+
+@endpoint PUT /stopwords/{setId}
+@desc Upserts a stopwords set.
+@required {setId: str # The ID of the stopwords set to upsert., stopwords: [str]}
+@optional {locale: str}
+@returns(200) {id: str, stopwords: [str], locale: str} # Stopwords set successfully upserted.
+@errors {400: Bad request, see error message for details.}
+
+@endpoint GET /stopwords/{setId}
+@desc Retrieves a stopwords set.
+@required {setId: str # The ID of the stopwords set to retrieve.}
+@returns(200) {stopwords: map{id: str, stopwords: [str], locale: str}} # Stopwords set fetched.
+@errors {404: Stopwords set not found.}
+
+@endpoint DELETE /stopwords/{setId}
+@desc Delete a stopwords set.
+@required {setId: str # The ID of the stopwords set to delete.}
+@returns(200) {id: str} # Stopwords set rule deleted.
+@errors {404: Stopwords set not found.}
+
+@endgroup
+
+@group presets
+@endpoint GET /presets
+@desc Retrieves all presets.
+@returns(200) {presets: [any]} # Presets fetched.
+
+@endpoint GET /presets/{presetId}
+@desc Retrieves a preset.
+@required {presetId: str # The ID of the preset to retrieve.}
+@returns(200) Preset fetched.
+@errors {404: Preset not found.}
+
+@endpoint PUT /presets/{presetId}
+@desc Upserts a preset.
+@required {presetId: str # The name of the preset set to upsert., value: any}
+@returns(200) Preset successfully upserted.
+@errors {400: Bad request, see error message for details}
+
+@endpoint DELETE /presets/{presetId}
+@desc Delete a preset.
+@required {presetId: str # The ID of the preset to delete.}
+@returns(200) {name: str} # Preset deleted.
+@errors {404: Preset not found.}
+
+@endgroup
+
+@group stemming
+@endpoint GET /stemming/dictionaries
+@desc List all stemming dictionaries
+@returns(200) {dictionaries: [str]} # List of all dictionaries
+
+@endpoint GET /stemming/dictionaries/{dictionaryId}
+@desc Retrieve a stemming dictionary
+@required {dictionaryId: str # The ID of the dictionary to retrieve}
+@returns(200) {id: str, words: [map]} # Stemming dictionary details
+@errors {404: Dictionary not found}
+
+@endpoint POST /stemming/dictionaries/import
+@desc Import a stemming dictionary
+@required {id: str # The ID to assign to the dictionary}
+@returns(200) Dictionary successfully imported
+@errors {400: Bad request, see error message for details}
+
+@endgroup
+
+@group nl_search_models
+@endpoint GET /nl_search_models
+@desc List all NL search models
+@returns(200) List of all NL search models
+
+@endpoint POST /nl_search_models
+@desc Create a NL search model
+@returns(201) NL search model successfully created
+@errors {400: Bad request, see error message for details}
+
+@endpoint GET /nl_search_models/{modelId}
+@desc Retrieve a NL search model
+@required {modelId: str # The ID of the NL search model to retrieve}
+@returns(200) NL search model fetched
+@errors {404: NL search model not found}
+
+@endpoint PUT /nl_search_models/{modelId}
+@desc Update a NL search model
+@required {modelId: str # The ID of the NL search model to update}
+@returns(200) NL search model successfully updated
+@errors {400: Bad request, see error message for details, 404: NL search model not found}
+
+@endpoint DELETE /nl_search_models/{modelId}
+@desc Delete a NL search model
+@required {modelId: str # The ID of the NL search model to delete}
+@returns(200) {id: str} # NL search model successfully deleted
+@errors {404: NL search model not found}
+
+@endgroup
+
+@end

@@ -1,0 +1,77 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Webhook API
+@base https://unify.apideck.com
+@version 10.24.0
+@auth ApiKey Authorization in header
+@endpoints 10
+@toc webhook(10)
+
+@endpoint GET /webhook/webhooks
+@desc List webhook subscriptions
+@required {x-apideck-app-id: str # The ID of your Unify application}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20}
+@returns(200) {status_code: int, status: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # Webhooks
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /webhook/webhooks
+@desc Create webhook subscription
+@required {x-apideck-app-id: str # The ID of your Unify application, unified_api: str(accounting/ats/calendar/crm/csp/customer-support/ecommerce/email/email-marketing/expense-management/file-storage/form/hris/lead/payroll/pos/procurement/project-management/script/sms/spreadsheet/team-messaging/issue-tracking/time-registration/transactional-email/vault/data-warehouse) # Name of Apideck Unified API, status: str(enabled/disabled) # The status of the webhook., delivery_url: str(uri) # The delivery url of the webhook endpoint., events: [str] # The list of subscribed events for this webhook. [`*`] indicates that all events are enabled.}
+@optional {description: str # A description of the object.}
+@returns(201) {status_code: int, status: str, data: map{id: str, description: str?, unified_api: str, status: str, disabled_reason: str, delivery_url: str(uri), execute_base_url: str(uri), events: [str], updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # Webhooks
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /webhook/webhooks/{id}
+@desc Get webhook subscription
+@required {id: str # JWT Webhook token that represents the unifiedApi and applicationId associated to the event source., x-apideck-app-id: str # The ID of your Unify application}
+@returns(200) {status_code: int, status: str, data: map{id: str, description: str?, unified_api: str, status: str, disabled_reason: str, delivery_url: str(uri), execute_base_url: str(uri), events: [str], updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # Webhooks
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint PATCH /webhook/webhooks/{id}
+@desc Update webhook subscription
+@required {id: str # JWT Webhook token that represents the unifiedApi and applicationId associated to the event source., x-apideck-app-id: str # The ID of your Unify application}
+@optional {description: str # A description of the object., status: str(enabled/disabled) # The status of the webhook., delivery_url: str(uri) # The delivery url of the webhook endpoint., events: [str] # The list of subscribed events for this webhook. [`*`] indicates that all events are enabled.}
+@returns(200) {status_code: int, status: str, data: map{id: str, description: str?, unified_api: str, status: str, disabled_reason: str, delivery_url: str(uri), execute_base_url: str(uri), events: [str], updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # Webhooks
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint DELETE /webhook/webhooks/{id}
+@desc Delete webhook subscription
+@required {id: str # JWT Webhook token that represents the unifiedApi and applicationId associated to the event source., x-apideck-app-id: str # The ID of your Unify application}
+@returns(200) {status_code: int, status: str, data: map{id: str, description: str?, unified_api: str, status: str, disabled_reason: str, delivery_url: str(uri), execute_base_url: str(uri), events: [str], updated_at: str(date-time)?, created_at: str(date-time)?}, _raw: map?} # Webhooks
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /webhook/webhooks/{id}/execute/{serviceId}
+@desc Execute a webhook
+@required {id: str # JWT Webhook token that represents the unifiedApi and applicationId associated to the event source., serviceId: str # Service provider ID.}
+@returns(200) {status_code: int, status: str, request_id: str, timestamp: str} # Execute Webhook
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /webhook/webhooks/{id}/x/{serviceId}
+@desc Execute a webhook
+@required {id: str # JWT Webhook token that represents the unifiedApi and applicationId associated to the event source., serviceId: str # Service provider ID.}
+@optional {l_id: str # Unique identifier to used to look up consumer/connection when receiving connector events from downstream., e: str # The name of downstream event when connector does not supply in body or header}
+@returns(200) {status_code: int, status: str, request_id: str, timestamp: str} # Execute Webhook
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint POST /webhook/w/{id}/{serviceId}
+@desc Resolve and Execute a connection webhook
+@required {id: str # JWT Webhook token that represents the connection lookupId. Signed so we know source came from us, serviceId: str # Service provider ID.}
+@optional {e: str # The name of downstream event when connector does not supply in body or header, validationToken: str # Validation token for webhook verification}
+@returns(200) {status_code: int, status: str, request_id: str, timestamp: str, _raw: map?} # Resolve Webhook
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /webhook/w/{id}/{serviceId}
+@desc Resolve and Execute a connection webhook
+@required {id: str # JWT Webhook token that represents the connection lookupId. Signed so we know source came from us, serviceId: str # Service provider ID.}
+@optional {e: str # The name of downstream event when connector does not supply in body or header}
+@returns(200) {status_code: int, status: str, request_id: str, timestamp: str, _raw: map?} # Resolve Webhook
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@endpoint GET /webhook/logs
+@desc List event logs
+@required {x-apideck-app-id: str # The ID of your Unify application}
+@optional {cursor: str # Cursor to start from. You can find cursors for next/previous pages in the meta.cursors property of the response., limit: int=20 # Number of results to return. Minimum 1, Maximum 200, Default 20, filter: map # Filter results}
+@returns(200) {status_code: int, status: str, data: [map], meta: map{items_on_page: int, cursors: map{previous: str?, current: str?, next: str?}}, links: map{previous: str?, current: str, next: str?}, _raw: map?} # EventLogs
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 404: The specified resource was not found, 422: Unprocessable}
+
+@end

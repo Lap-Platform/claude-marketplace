@@ -1,0 +1,380 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Meilisearch Core API
+@base {protocol}://{domain}:{port}
+@version 1.7.0
+@auth Bearer bearer
+@endpoints 73
+@hint download_for_search
+@toc dumps(1), snapshots(1), health(1), indexes(54), multi-search(1), keys(5), stats(1), version(1), tasks(4), swap-indexes(1), experimental-features(2), metrics(1)
+
+@group dumps
+@endpoint POST /dumps
+@returns(202)
+@errors {401}
+
+@endgroup
+
+@group snapshots
+@endpoint POST /snapshots
+@returns(202)
+@errors {401}
+
+@endgroup
+
+@group health
+@endpoint GET /health
+@returns(200) {status: str}
+
+@endgroup
+
+@group indexes
+@endpoint GET /indexes
+@optional {limit: num=20, offset: num=0}
+@returns(200) {results: [map], limit: int, offset: int, total: int}
+@errors {401}
+
+@endpoint POST /indexes
+@required {Content-Type: str, uid: str}
+@optional {primaryKey: str}
+@returns(202)
+@errors {400, 401}
+
+@endpoint GET /indexes/{indexUid}
+@returns(200) {uid: str, primaryKey: str?, createdAt: str, updatedAt: str}
+@errors {401, 404}
+
+@endpoint PATCH /indexes/{indexUid}
+@required {Content-Type: str, primaryKey: str}
+@returns(202)
+@errors {400, 401, 404}
+
+@endpoint DELETE /indexes/{indexUid}
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/documents
+@optional {limit: num=20, offset: num=0, fields: str=*, filter: any}
+@returns(200) {results: [map], limit: int, offset: int, total: int}
+@errors {401, 404}
+
+@endpoint POST /indexes/{indexUid}/documents
+@required {Content-Type: str(application/json/text/csv/application/x-ndjson)}
+@optional {primaryKey: str, csvDelimiter: str=,}
+@returns(202)
+@errors {401, 413}
+
+@endpoint PUT /indexes/{indexUid}/documents
+@required {Content-Type: str(application/json/text/csv/application/x-ndjson)}
+@optional {primaryKey: str, csvDelimiter: str=,}
+@returns(202)
+@errors {401, 413}
+
+@endpoint DELETE /indexes/{indexUid}/documents
+@returns(202)
+@errors {401, 404}
+
+@endpoint POST /indexes/{indexUid}/documents/fetch
+@optional {offset: num=0, limit: num=20, fields: [str], filter: any}
+@returns(200) {results: [map], limit: int, offset: int, total: int}
+@errors {401, 404}
+
+@endpoint POST /indexes/{indexUid}/documents/delete-batch
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint POST /indexes/{indexUid}/documents/delete
+@required {Content-Type: str}
+@optional {filter: any}
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/documents/{documentId}
+@optional {fields: str=*}
+@returns(200)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/documents/{documentId}
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/search
+@optional {q: str="", attributesToRetrieve: str=*, attributesToHighlight: str, highlightPreTag: str=<em>, highlightPostTag: str=</em>, attributesToCrop: str, cropMarker: str=…, cropLength: int=10, facets: str, filter: any, offset: num=0, sort: str, limit: num=20, page: num=1, hitsPerPage: num=20, showMatchesPosition: bool=false, matchingStrategy: str(last/all)=last}
+@returns(200) {hits: [map], offset: int, limit: int, estimatedTotalHits: int, page: int, hitsPerPage: int, totalHits: int, totalPages: int, facetDistribution: map, facetStats: map, processingTimeMs: int, query: str}
+@errors {401, 404}
+
+@endpoint POST /indexes/{indexUid}/search
+@required {Content-Type: str}
+@optional {q: str="", vector: [any]=null, attributesToRetrieve: [str], attributesToHighlight: [str], highlightPreTag: str=<em>, highlightPostTag: str=</em>, attributesToCrop: [str], cropMarker: str=…, cropLength: num=10, showMatchesPosition: bool=False, showRankingScore: bool=False, showRankingScoreDetails: bool=False, matchingStrategy: str=last, attributesToSearchOn: [any]=["*"], filter: any, facets: [str], offset: num=0, limit: num=20, page: num, hitsPerPage: num, sort: any}
+@returns(200) {hits: [map], offset: int, limit: int, estimatedTotalHits: int, page: int, hitsPerPage: int, totalHits: int, totalPages: int, facetDistribution: map, facetStats: map, processingTimeMs: int, query: str}
+@errors {401, 404}
+
+@endpoint POST /indexes/{indexUid}/facet-search
+@required {Content-Type: str}
+@optional {facetName: str, facetQuery: str="", q: str="", matchingStrategy: str=last, filter: any}
+@returns(200) {facetHits: [map], facetQuery: str, processingTimeMs: int}
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings
+@returns(200) {rankingRules: [str], distinctAttribute: str?, searchableAttributes: [str], displayedAttributes: [str], stopWords: [str], synonyms: map, filterableAttributes: [str], sortableAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}, pagination: map{maxTotalHits: int}, faceting: map{maxValuesPerFacet: int, sortFacetValuesBy: map}}
+@errors {401, 404}
+
+@endpoint PATCH /indexes/{indexUid}/settings
+@required {Content-Type: str}
+@optional {synonyms: map, stopWords: [str], rankingRules: [str], distinctAttribute: str, searchableAttributes: [str], displayedAttributes: [str], filterableAttributes: [str], sortableAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}, pagination: map{maxTotalHits: int}, faceting: map{maxValuesPerFacet: int, sortFacetValuesBy: map}}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/synonyms
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/synonyms
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/synonyms
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/sortable-attributes
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/sortable-attributes
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/sortable-attributes
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/stop-words
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/stop-words
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/stop-words
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/ranking-rules
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/ranking-rules
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/ranking-rules
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/typo-tolerance
+@returns(200) {enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}
+@errors {401, 404}
+
+@endpoint PATCH /indexes/{indexUid}/settings/typo-tolerance
+@required {Content-Type: str}
+@optional {enabled: bool=True, disableOnAttributes: [str]=[], disableOnWords: [str]=[], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/typo-tolerance
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/pagination
+@returns(200) {maxTotalHits: int}
+@errors {401, 404}
+
+@endpoint PATCH /indexes/{indexUid}/settings/pagination
+@required {Content-Type: str}
+@optional {maxTotalHits: int=1000}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/pagination
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/faceting
+@returns(200) {maxValuesPerFacet: int, sortFacetValuesBy: map}
+@errors {401, 404}
+
+@endpoint PATCH /indexes/{indexUid}/settings/faceting
+@required {Content-Type: str}
+@optional {maxValuesPerFacet: int=100, sortFacetValuesBy: map}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/faceting
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/filterable-attributes
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/filterable-attributes
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/filterable-attributes
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/distinct-attribute
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/distinct-attribute
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/distinct-attribute
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/searchable-attributes
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/searchable-attributes
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/searchable-attributes
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/settings/displayed-attributes
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /indexes/{indexUid}/settings/displayed-attributes
+@required {Content-Type: str}
+@returns(202)
+@errors {401, 404}
+
+@endpoint DELETE /indexes/{indexUid}/settings/displayed-attributes
+@returns(202)
+@errors {401, 404}
+
+@endpoint GET /indexes/{indexUid}/stats
+@returns(200) {numberOfDocuments: int, isIndexing: bool, fieldDistribution: map}
+@errors {401, 404}
+
+@endgroup
+
+@group multi-search
+@endpoint POST /multi-search
+@required {Content-Type: str, queries: [map{indexUid!: str, $ref: any}]}
+@returns(200) {results: [map]}
+@errors {401}
+
+@endgroup
+
+@group keys
+@endpoint GET /keys
+@optional {limit: num=20, offset: num=0}
+@returns(200) {results: [map], limit: int, offset: int, total: int}
+@errors {401}
+
+@endpoint POST /keys
+@required {Content-Type: str, actions: [str], indexes: [str], expiresAt: str}
+@optional {uid: str, key: str, name: str=None, description: str=None, createdAt: str, updatedAt: str=None}
+@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?}
+
+@endpoint GET /keys/{uid_or_key}
+@required {uidOrKey: str}
+@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?}
+
+@endpoint DELETE /keys/{uid_or_key}
+@returns(204)
+
+@endpoint PATCH /keys/{uid_or_key}
+@required {Content-Type: str}
+@optional {name: str, description: str}
+@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?}
+
+@endgroup
+
+@group stats
+@endpoint GET /stats
+@returns(200) {databaseSize: num, lastUpdate: str, indexes: map{indexUid: map{numberOfDocuments: int, isIndexing: bool, fieldDistribution: map}}}
+@errors {401}
+
+@endgroup
+
+@group version
+@endpoint GET /version
+@returns(200) {commitSha: str, commitDate: str, pkgVersion: str}
+@errors {401}
+
+@endgroup
+
+@group tasks
+@endpoint GET /tasks
+@optional {limit: num=20, from: num, uids: num, indexUids: str, statuses: str, types: str, canceledBy: str, beforeEnqueuedAt: str, afterEnqueuedAt: str, beforeStartedAt: str, afterStartedAt: str, beforeFinishedAt: str, afterFinishedAt: str}
+@returns(200) {results: [map], total: int, limit: int, from: int, next: int}
+
+@endpoint DELETE /tasks
+@optional {uids: num, indexUids: str, statuses: str, types: str, canceledBy: str, beforeEnqueuedAt: str, afterEnqueuedAt: str, beforeStartedAt: str, afterStartedAt: str, beforeFinishedAt: str, afterFinishedAt: str}
+@returns(202)
+@errors {400}
+
+@endpoint GET /tasks/:taskUid
+@required {taskUid: int}
+@returns(200) {uid: int, indexUid: str, status: str, type: str, canceledBy: int, details: map{receivedDocuments: int, indexedDocuments: int, providedIds: int, deletedDocuments: int, primaryKey: str, settings: map{synonyms: map, stopWords: [str], rankingRules: [str], filterableAttributes: [str], distinctAttribute: str?, searchableAttributes: [str], displayedAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map}}, dumpUid: str, matchedTasks: int, canceledTasks: int, deletedTasks: int, originalFilter: str}, error: map{message: str, code: str, type: str, link: str}, duration: str?, enqueuedAt: str, startedAt: str, finishedAt: str}
+@errors {401, 404}
+
+@endpoint POST /tasks/cancel
+@optional {uids: num, indexUids: str, statuses: str, types: str, canceledBy: str, beforeEnqueuedAt: str, afterEnqueuedAt: str, beforeStartedAt: str, afterStartedAt: str, beforeFinishedAt: str, afterFinishedAt: str}
+@returns(202) {taskUid: int, indexUid: str, status: str, type: str, enqueuedAt: str}
+@errors {400, 401}
+
+@endgroup
+
+@group swap-indexes
+@endpoint POST /swap-indexes
+@required {Content-Type: str}
+@returns(202)
+@errors {401}
+
+@endgroup
+
+@group experimental-features
+@endpoint GET /experimental-features
+@returns(200) {vectorStore: bool, metrics: bool, exportPuffinReports: bool}
+@errors {401}
+
+@endpoint PATCH /experimental-features
+@optional {vectorStore: bool, metrics: bool, exportPuffinReports: bool}
+@returns(200) {vectorStore: bool, metrics: bool, exportPuffinReports: bool}
+@errors {401}
+
+@endgroup
+
+@group metrics
+@endpoint GET /metrics
+@returns(200)
+
+@endgroup
+
+@end

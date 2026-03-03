@@ -1,0 +1,272 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Connect Customer Profiles
+@version 2020-08-15
+@auth AWS SigV4
+@endpoints 52
+@hint download_for_search
+@toc domains(46), templates(2), integrations(1), tags(3)
+
+@group domains
+@endpoint POST /domains/{DomainName}/profiles/keys
+@required {DomainName: str, ProfileId: str, KeyName: str, Values: [str]}
+@returns(200) {KeyName: str?, Values: [str]?}
+
+@endpoint POST /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@required {DomainName: str, CalculatedAttributeName: str, AttributeDetails: AttributeDetails, Statistic: str}
+@optional {DisplayName: str, Description: str, Conditions: Conditions, Tags: map<str,str>}
+@returns(200) {CalculatedAttributeName: str?, DisplayName: str?, Description: str?, AttributeDetails: AttributeDetails?{Attributes: [AttributeItem], Expression: str}, Conditions: Conditions?{Range: Range?{Value: int, Unit: str}, ObjectCount: int?, Threshold: Threshold?{Value: str, Operator: str}}, Statistic: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Tags: map<str,str>?}
+
+@endpoint POST /domains/{DomainName}
+@required {DomainName: str, DefaultExpirationDays: int}
+@optional {DefaultEncryptionKey: str, DeadLetterQueueUrl: str, Matching: MatchingRequest, RuleBasedMatching: RuleBasedMatchingRequest, Tags: map<str,str>}
+@returns(200) {DomainName: str, DefaultExpirationDays: int, DefaultEncryptionKey: str?, DeadLetterQueueUrl: str?, Matching: MatchingResponse?{Enabled: bool?, JobSchedule: JobSchedule?{DayOfTheWeek: str, Time: str}, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, RuleBasedMatching: RuleBasedMatchingResponse?{Enabled: bool?, MatchingRules: [MatchingRule]?, Status: str?, MaxAllowedRuleLevelForMerging: int?, MaxAllowedRuleLevelForMatching: int?, AttributeTypesSelector: AttributeTypesSelector?{AttributeMatchingModel: str, Address: [str]?, PhoneNumber: [str]?, EmailAddress: [str]?}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?}
+
+@endpoint POST /domains/{DomainName}/event-streams/{EventStreamName}
+@required {DomainName: str, EventStreamName: str, Uri: str}
+@optional {Tags: map<str,str>}
+@returns(200) {EventStreamArn: str, Tags: map<str,str>?}
+
+@endpoint POST /domains/{DomainName}/workflows/integrations
+@required {DomainName: str, WorkflowType: str, IntegrationConfig: IntegrationConfig, ObjectTypeName: str, RoleArn: str}
+@optional {Tags: map<str,str>}
+@returns(200) {WorkflowId: str, Message: str}
+
+@endpoint POST /domains/{DomainName}/profiles
+@required {DomainName: str}
+@optional {AccountNumber: str, AdditionalInformation: str, PartyType: str, BusinessName: str, FirstName: str, MiddleName: str, LastName: str, BirthDate: str, Gender: str, PhoneNumber: str, MobilePhoneNumber: str, HomePhoneNumber: str, BusinessPhoneNumber: str, EmailAddress: str, PersonalEmailAddress: str, BusinessEmailAddress: str, Address: Address, ShippingAddress: Address, MailingAddress: Address, BillingAddress: Address, Attributes: map<str,str>, PartyTypeString: str, GenderString: str}
+@returns(200) {ProfileId: str}
+
+@endpoint DELETE /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@required {DomainName: str, CalculatedAttributeName: str}
+
+@endpoint DELETE /domains/{DomainName}
+@required {DomainName: str}
+@returns(200) {Message: str}
+
+@endpoint DELETE /domains/{DomainName}/event-streams/{EventStreamName}
+@required {DomainName: str, EventStreamName: str}
+
+@endpoint POST /domains/{DomainName}/integrations/delete
+@required {DomainName: str, Uri: str}
+@returns(200) {Message: str}
+
+@endpoint POST /domains/{DomainName}/profiles/delete
+@required {DomainName: str, ProfileId: str}
+@returns(200) {Message: str?}
+
+@endpoint POST /domains/{DomainName}/profiles/keys/delete
+@required {DomainName: str, ProfileId: str, KeyName: str, Values: [str]}
+@returns(200) {Message: str?}
+
+@endpoint POST /domains/{DomainName}/profiles/objects/delete
+@required {DomainName: str, ProfileId: str, ProfileObjectUniqueKey: str, ObjectTypeName: str}
+@returns(200) {Message: str?}
+
+@endpoint DELETE /domains/{DomainName}/object-types/{ObjectTypeName}
+@required {DomainName: str, ObjectTypeName: str}
+@returns(200) {Message: str}
+
+@endpoint DELETE /domains/{DomainName}/workflows/{WorkflowId}
+@required {DomainName: str, WorkflowId: str}
+
+@endpoint POST /domains/{DomainName}/detect/object-types
+@required {DomainName: str, Objects: [str]}
+@returns(200) {DetectedProfileObjectTypes: [DetectedProfileObjectType]?}
+
+@endpoint POST /domains/{DomainName}/identity-resolution-jobs/auto-merging-preview
+@required {DomainName: str, Consolidation: Consolidation, ConflictResolution: ConflictResolution}
+@optional {MinAllowedConfidenceScoreForMerging: num(f64)}
+@returns(200) {DomainName: str, NumberOfMatchesInSample: int(i64)?, NumberOfProfilesInSample: int(i64)?, NumberOfProfilesWillBeMerged: int(i64)?}
+
+@endpoint GET /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@required {DomainName: str, CalculatedAttributeName: str}
+@returns(200) {CalculatedAttributeName: str?, DisplayName: str?, Description: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Statistic: str?, Conditions: Conditions?{Range: Range?{Value: int, Unit: str}, ObjectCount: int?, Threshold: Threshold?{Value: str, Operator: str}}, AttributeDetails: AttributeDetails?{Attributes: [AttributeItem], Expression: str}, Tags: map<str,str>?}
+
+@endpoint GET /domains/{DomainName}/profile/{ProfileId}/calculated-attributes/{CalculatedAttributeName}
+@required {DomainName: str, ProfileId: str, CalculatedAttributeName: str}
+@returns(200) {CalculatedAttributeName: str?, DisplayName: str?, IsDataPartial: str?, Value: str?}
+
+@endpoint GET /domains/{DomainName}
+@required {DomainName: str}
+@returns(200) {DomainName: str, DefaultExpirationDays: int?, DefaultEncryptionKey: str?, DeadLetterQueueUrl: str?, Stats: DomainStats?{ProfileCount: int(i64)?, MeteringProfileCount: int(i64)?, ObjectCount: int(i64)?, TotalSize: int(i64)?}, Matching: MatchingResponse?{Enabled: bool?, JobSchedule: JobSchedule?{DayOfTheWeek: str, Time: str}, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, RuleBasedMatching: RuleBasedMatchingResponse?{Enabled: bool?, MatchingRules: [MatchingRule]?, Status: str?, MaxAllowedRuleLevelForMerging: int?, MaxAllowedRuleLevelForMatching: int?, AttributeTypesSelector: AttributeTypesSelector?{AttributeMatchingModel: str, Address: [str]?, PhoneNumber: [str]?, EmailAddress: [str]?}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?}
+
+@endpoint GET /domains/{DomainName}/event-streams/{EventStreamName}
+@required {DomainName: str, EventStreamName: str}
+@returns(200) {DomainName: str, EventStreamArn: str, CreatedAt: str(timestamp), State: str, StoppedSince: str(timestamp)?, DestinationDetails: EventStreamDestinationDetails{Uri: str, Status: str, UnhealthySince: str(timestamp)?, Message: str?}, Tags: map<str,str>?}
+
+@endpoint GET /domains/{DomainName}/identity-resolution-jobs/{JobId}
+@required {DomainName: str, JobId: str}
+@returns(200) {DomainName: str?, JobId: str?, Status: str?, Message: str?, JobStartTime: str(timestamp)?, JobEndTime: str(timestamp)?, LastUpdatedAt: str(timestamp)?, JobExpirationTime: str(timestamp)?, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingLocation: ExportingLocation?{S3Exporting: S3ExportingLocation?{S3BucketName: str?, S3KeyName: str?}}, JobStats: JobStats?{NumberOfProfilesReviewed: int(i64)?, NumberOfMatchesFound: int(i64)?, NumberOfMergesDone: int(i64)?}}
+
+@endpoint POST /domains/{DomainName}/integrations
+@required {DomainName: str, Uri: str}
+@returns(200) {DomainName: str, Uri: str, ObjectTypeName: str?, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?, ObjectTypeNames: map<str,str>?, WorkflowId: str?, IsUnstructured: bool?}
+
+@endpoint GET /domains/{DomainName}/matches
+@required {DomainName: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {NextToken: str?, MatchGenerationDate: str(timestamp)?, PotentialMatches: int?, Matches: [MatchItem]?}
+
+@endpoint GET /domains/{DomainName}/object-types/{ObjectTypeName}
+@required {DomainName: str, ObjectTypeName: str}
+@returns(200) {ObjectTypeName: str, Description: str, TemplateId: str?, ExpirationDays: int?, EncryptionKey: str?, AllowProfileCreation: bool?, SourceLastUpdatedTimestampFormat: str?, MaxAvailableProfileObjectCount: int?, MaxProfileObjectCount: int?, Fields: map<str,ObjectTypeField>?, Keys: map<str,[ObjectTypeKey]>?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Tags: map<str,str>?}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates/{TemplateId}
+@required {TemplateId: str}
+@returns(200) {TemplateId: str?, SourceName: str?, SourceObject: str?, AllowProfileCreation: bool?, SourceLastUpdatedTimestampFormat: str?, Fields: map<str,ObjectTypeField>?, Keys: map<str,[ObjectTypeKey]>?}
+
+@endgroup
+
+@group domains
+@endpoint POST /domains/{DomainName}/matches
+@required {DomainName: str, MatchType: str, SearchKey: str, SearchValue: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {ProfileIds: [str]?, MatchId: str?, MatchType: str?, RuleLevel: int?, ConfidenceScore: num(f64)?, NextToken: str?}
+
+@endpoint GET /domains/{DomainName}/workflows/{WorkflowId}
+@required {DomainName: str, WorkflowId: str}
+@returns(200) {WorkflowId: str?, WorkflowType: str?, Status: str?, ErrorDescription: str?, StartDate: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Attributes: WorkflowAttributes?{AppflowIntegration: AppflowIntegrationWorkflowAttributes?{SourceConnectorType: str, ConnectorProfileName: str, RoleArn: str?}}, Metrics: WorkflowMetrics?{AppflowIntegration: AppflowIntegrationWorkflowMetrics?{RecordsProcessed: int(i64), StepsCompleted: int(i64), TotalSteps: int(i64)}}}
+
+@endpoint GET /domains/{DomainName}/workflows/{WorkflowId}/steps
+@required {DomainName: str, WorkflowId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {WorkflowId: str?, WorkflowType: str?, Items: [WorkflowStepItem]?, NextToken: str?}
+
+@endgroup
+
+@group integrations
+@endpoint POST /integrations
+@required {Uri: str}
+@optional {next-token: str, max-results: int, include-hidden: bool}
+@returns(200) {Items: [ListIntegrationItem]?, NextToken: str?}
+
+@endgroup
+
+@group domains
+@endpoint GET /domains/{DomainName}/calculated-attributes
+@required {DomainName: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Items: [ListCalculatedAttributeDefinitionItem]?, NextToken: str?}
+
+@endpoint GET /domains/{DomainName}/profile/{ProfileId}/calculated-attributes
+@required {DomainName: str, ProfileId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Items: [ListCalculatedAttributeForProfileItem]?, NextToken: str?}
+
+@endpoint GET /domains
+@optional {next-token: str, max-results: int}
+@returns(200) {Items: [ListDomainItem]?, NextToken: str?}
+
+@endpoint GET /domains/{DomainName}/event-streams
+@required {DomainName: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Items: [EventStreamSummary]?, NextToken: str?}
+
+@endpoint GET /domains/{DomainName}/identity-resolution-jobs
+@required {DomainName: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {IdentityResolutionJobsList: [IdentityResolutionJob]?, NextToken: str?}
+
+@endpoint GET /domains/{DomainName}/integrations
+@required {DomainName: str}
+@optional {next-token: str, max-results: int, include-hidden: bool}
+@returns(200) {Items: [ListIntegrationItem]?, NextToken: str?}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates
+@optional {next-token: str, max-results: int}
+@returns(200) {Items: [ListProfileObjectTypeTemplateItem]?, NextToken: str?}
+
+@endgroup
+
+@group domains
+@endpoint GET /domains/{DomainName}/object-types
+@required {DomainName: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Items: [ListProfileObjectTypeItem]?, NextToken: str?}
+
+@endpoint POST /domains/{DomainName}/profiles/objects
+@required {DomainName: str, ObjectTypeName: str, ProfileId: str}
+@optional {next-token: str, max-results: int, ObjectFilter: ObjectFilter}
+@returns(200) {Items: [ListProfileObjectsItem]?, NextToken: str?}
+
+@endpoint GET /domains/{DomainName}/profiles/ruleBasedMatches
+@required {DomainName: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {MatchIds: [str]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group domains
+@endpoint POST /domains/{DomainName}/workflows
+@required {DomainName: str}
+@optional {next-token: str, max-results: int, WorkflowType: str, Status: str, QueryStartDate: str(timestamp), QueryEndDate: str(timestamp)}
+@returns(200) {Items: [ListWorkflowsItem]?, NextToken: str?}
+
+@endpoint POST /domains/{DomainName}/profiles/objects/merge
+@required {DomainName: str, MainProfileId: str, ProfileIdsToBeMerged: [str]}
+@optional {FieldSourceProfileIds: FieldSourceProfileIds}
+@returns(200) {Message: str?}
+
+@endpoint PUT /domains/{DomainName}/integrations
+@required {DomainName: str}
+@optional {Uri: str, ObjectTypeName: str, Tags: map<str,str>, FlowDefinition: FlowDefinition, ObjectTypeNames: map<str,str>}
+@returns(200) {DomainName: str, Uri: str, ObjectTypeName: str?, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?, ObjectTypeNames: map<str,str>?, WorkflowId: str?, IsUnstructured: bool?}
+
+@endpoint PUT /domains/{DomainName}/profiles/objects
+@required {DomainName: str, ObjectTypeName: str, Object: str}
+@returns(200) {ProfileObjectUniqueKey: str?}
+
+@endpoint PUT /domains/{DomainName}/object-types/{ObjectTypeName}
+@required {DomainName: str, ObjectTypeName: str, Description: str}
+@optional {TemplateId: str, ExpirationDays: int, EncryptionKey: str, AllowProfileCreation: bool, SourceLastUpdatedTimestampFormat: str, MaxProfileObjectCount: int, Fields: map<str,ObjectTypeField>, Keys: map<str,[ObjectTypeKey]>, Tags: map<str,str>}
+@returns(200) {ObjectTypeName: str, Description: str, TemplateId: str?, ExpirationDays: int?, EncryptionKey: str?, AllowProfileCreation: bool?, SourceLastUpdatedTimestampFormat: str?, MaxProfileObjectCount: int?, MaxAvailableProfileObjectCount: int?, Fields: map<str,ObjectTypeField>?, Keys: map<str,[ObjectTypeKey]>?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Tags: map<str,str>?}
+
+@endpoint POST /domains/{DomainName}/profiles/search
+@required {DomainName: str, KeyName: str, Values: [str]}
+@optional {next-token: str, max-results: int, AdditionalSearchKeys: [AdditionalSearchKey], LogicalOperator: str}
+@returns(200) {Items: [Profile]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group domains
+@endpoint PUT /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@required {DomainName: str, CalculatedAttributeName: str}
+@optional {DisplayName: str, Description: str, Conditions: Conditions}
+@returns(200) {CalculatedAttributeName: str?, DisplayName: str?, Description: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Statistic: str?, Conditions: Conditions?{Range: Range?{Value: int, Unit: str}, ObjectCount: int?, Threshold: Threshold?{Value: str, Operator: str}}, AttributeDetails: AttributeDetails?{Attributes: [AttributeItem], Expression: str}, Tags: map<str,str>?}
+
+@endpoint PUT /domains/{DomainName}
+@required {DomainName: str}
+@optional {DefaultExpirationDays: int, DefaultEncryptionKey: str, DeadLetterQueueUrl: str, Matching: MatchingRequest, RuleBasedMatching: RuleBasedMatchingRequest, Tags: map<str,str>}
+@returns(200) {DomainName: str, DefaultExpirationDays: int?, DefaultEncryptionKey: str?, DeadLetterQueueUrl: str?, Matching: MatchingResponse?{Enabled: bool?, JobSchedule: JobSchedule?{DayOfTheWeek: str, Time: str}, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, RuleBasedMatching: RuleBasedMatchingResponse?{Enabled: bool?, MatchingRules: [MatchingRule]?, Status: str?, MaxAllowedRuleLevelForMerging: int?, MaxAllowedRuleLevelForMatching: int?, AttributeTypesSelector: AttributeTypesSelector?{AttributeMatchingModel: str, Address: [str]?, PhoneNumber: [str]?, EmailAddress: [str]?}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?}
+
+@endpoint PUT /domains/{DomainName}/profiles
+@required {DomainName: str, ProfileId: str}
+@optional {AdditionalInformation: str, AccountNumber: str, PartyType: str, BusinessName: str, FirstName: str, MiddleName: str, LastName: str, BirthDate: str, Gender: str, PhoneNumber: str, MobilePhoneNumber: str, HomePhoneNumber: str, BusinessPhoneNumber: str, EmailAddress: str, PersonalEmailAddress: str, BusinessEmailAddress: str, Address: UpdateAddress, ShippingAddress: UpdateAddress, MailingAddress: UpdateAddress, BillingAddress: UpdateAddress, Attributes: map<str,str>, PartyTypeString: str, GenderString: str}
+@returns(200) {ProfileId: str}
+
+@endgroup
+
+@end

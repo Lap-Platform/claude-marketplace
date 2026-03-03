@@ -1,0 +1,102 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Braket
+@version 2019-09-01
+@auth AWS SigV4
+@endpoints 13
+@toc job(3), quantum-task(3), device(1), tags(3), devices(1), jobs(1), quantum-tasks(1)
+
+@group job
+@endpoint PUT /job/{jobArn}/cancel
+@required {jobArn: str}
+@returns(200) {cancellationStatus: str, jobArn: str}
+
+@endgroup
+
+@group quantum-task
+@endpoint PUT /quantum-task/{quantumTaskArn}/cancel
+@required {quantumTaskArn: str, clientToken: str}
+@returns(200) {cancellationStatus: str, quantumTaskArn: str}
+
+@endgroup
+
+@group job
+@endpoint POST /job
+@required {algorithmSpecification: AlgorithmSpecification, clientToken: str, deviceConfig: DeviceConfig, instanceConfig: InstanceConfig, jobName: str, outputDataConfig: JobOutputDataConfig, roleArn: str}
+@optional {associations: [Association], checkpointConfig: JobCheckpointConfig, hyperParameters: map<str,str>, inputDataConfig: [InputFileConfig], stoppingCondition: JobStoppingCondition, tags: map<str,str>}
+@returns(200) {jobArn: str}
+
+@endgroup
+
+@group quantum-task
+@endpoint POST /quantum-task
+@required {action: str, clientToken: str, deviceArn: str, outputS3Bucket: str, outputS3KeyPrefix: str, shots: int(i64)}
+@optional {associations: [Association], deviceParameters: str, jobToken: str, tags: map<str,str>}
+@returns(200) {quantumTaskArn: str}
+
+@endgroup
+
+@group device
+@endpoint GET /device/{deviceArn}
+@required {deviceArn: str}
+@returns(200) {deviceArn: str, deviceCapabilities: str, deviceName: str, deviceQueueInfo: [DeviceQueueInfo]?, deviceStatus: str, deviceType: str, providerName: str}
+
+@endgroup
+
+@group job
+@endpoint GET /job/{jobArn}
+@required {jobArn: str}
+@optional {additionalAttributeNames: [str]}
+@returns(200) {algorithmSpecification: AlgorithmSpecification{containerImage: ContainerImage?{uri: str}, scriptModeConfig: ScriptModeConfig?{compressionType: str?, entryPoint: str, s3Uri: str}}, associations: [Association]?, billableDuration: int?, checkpointConfig: JobCheckpointConfig?{localPath: str?, s3Uri: str}, createdAt: str(timestamp), deviceConfig: DeviceConfig?{device: str}, endedAt: str(timestamp)?, events: [JobEventDetails]?, failureReason: str?, hyperParameters: map<str,str>?, inputDataConfig: [InputFileConfig]?, instanceConfig: InstanceConfig{instanceCount: int?, instanceType: str, volumeSizeInGb: int}, jobArn: str, jobName: str, outputDataConfig: JobOutputDataConfig{kmsKeyId: str?, s3Path: str}, queueInfo: HybridJobQueueInfo?{message: str?, position: str, queue: str}, roleArn: str, startedAt: str(timestamp)?, status: str, stoppingCondition: JobStoppingCondition?{maxRuntimeInSeconds: int?}, tags: map<str,str>?}
+
+@endgroup
+
+@group quantum-task
+@endpoint GET /quantum-task/{quantumTaskArn}
+@required {quantumTaskArn: str}
+@optional {additionalAttributeNames: [str]}
+@returns(200) {associations: [Association]?, createdAt: str(timestamp), deviceArn: str, deviceParameters: str, endedAt: str(timestamp)?, failureReason: str?, jobArn: str?, outputS3Bucket: str, outputS3Directory: str, quantumTaskArn: str, queueInfo: QuantumTaskQueueInfo?{message: str?, position: str, queue: str, queuePriority: str?}, shots: int(i64), status: str, tags: map<str,str>?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group devices
+@endpoint POST /devices
+@required {filters: [SearchDevicesFilter]}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {devices: [DeviceSummary], nextToken: str?}
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs
+@required {filters: [SearchJobsFilter]}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {jobs: [JobSummary], nextToken: str?}
+
+@endgroup
+
+@group quantum-tasks
+@endpoint POST /quantum-tasks
+@required {filters: [SearchQuantumTasksFilter]}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, quantumTasks: [QuantumTaskSummary]}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@end

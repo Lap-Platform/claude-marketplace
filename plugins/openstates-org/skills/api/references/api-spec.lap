@@ -1,0 +1,94 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Open States API v3
+@version 2021.11.12
+@auth ApiKey apikey in query
+@endpoints 12
+@toc jurisdictions(2), people(1), people.geo(1), bills(3), committees(2), events(2), metrics(1)
+
+@group jurisdictions
+@endpoint GET /jurisdictions
+@optional {classification: any, include: [str]=[], page: int=1, per_page: int=52, apikey: str, x-api-key: str}
+@returns(200) {results: [map], pagination: map{per_page: int, page: int, max_page: int, total_items: int}}
+@errors {422}
+
+@endpoint GET /jurisdictions/{jurisdiction_id}
+@required {jurisdiction_id: str}
+@optional {include: [str]=[], apikey: str, x-api-key: str}
+@returns(200) {id: str, name: str, classification: any, division_id: str, url: str, latest_bill_update: str(date-time), latest_people_update: str(date-time), organizations: [map], legislative_sessions: [map], latest_runs: [map]}
+@errors {422}
+
+@endgroup
+
+@group people
+@endpoint GET /people
+@optional {jurisdiction: str, name: str, id: [str]=[], org_classification: any, district: str, include: [str]=[], page: int=1, per_page: int=10, apikey: str, x-api-key: str}
+@returns(200) {results: [map], pagination: map{per_page: int, page: int, max_page: int, total_items: int}}
+@errors {422}
+
+@endgroup
+
+@group people.geo
+@endpoint GET /people.geo
+@required {lat: num, lng: num}
+@optional {include: [str]=[], apikey: str, x-api-key: str}
+@returns(200) {results: [map], pagination: map{per_page: int, page: int, max_page: int, total_items: int}}
+@errors {422}
+
+@endgroup
+
+@group bills
+@endpoint GET /bills
+@optional {jurisdiction: str, session: str, chamber: str, identifier: [str]=[], classification: str, subject: [str]=[], updated_since: str, created_since: str, action_since: str, sort: any=updated_desc, sponsor: str, sponsor_classification: str, q: str, include: [str]=[], page: int=1, per_page: int=10, apikey: str, x-api-key: str}
+@returns(200) {results: [map], pagination: map{per_page: int, page: int, max_page: int, total_items: int}}
+@errors {422}
+
+@endpoint GET /bills/ocd-bill/{openstates_bill_id}
+@required {openstates_bill_id: str}
+@optional {include: [str]=[], apikey: str, x-api-key: str}
+@returns(200) {id: str, session: str, jurisdiction: map{id: str, name: str, classification: any}, from_organization: map{id: str, name: str, classification: str}, identifier: str, title: str, classification: [str], subject: [str], extras: map, created_at: str(date-time), updated_at: str(date-time), openstates_url: str, first_action_date: str, latest_action_date: str, latest_action_description: str, latest_passage_date: str, related_bills: [map], abstracts: [map], other_titles: [map], other_identifiers: [map], sponsorships: [map], actions: [map], sources: [map], versions: [map], documents: [map], votes: [map]}
+@errors {422}
+
+@endpoint GET /bills/{jurisdiction}/{session}/{bill_id}
+@required {jurisdiction: str, session: str, bill_id: str}
+@optional {include: [str]=[], apikey: str, x-api-key: str}
+@returns(200) {id: str, session: str, jurisdiction: map{id: str, name: str, classification: any}, from_organization: map{id: str, name: str, classification: str}, identifier: str, title: str, classification: [str], subject: [str], extras: map, created_at: str(date-time), updated_at: str(date-time), openstates_url: str, first_action_date: str, latest_action_date: str, latest_action_description: str, latest_passage_date: str, related_bills: [map], abstracts: [map], other_titles: [map], other_identifiers: [map], sponsorships: [map], actions: [map], sources: [map], versions: [map], documents: [map], votes: [map]}
+@errors {422}
+
+@endgroup
+
+@group committees
+@endpoint GET /committees
+@optional {jurisdiction: str, classification: str, parent: str, chamber: any, include: [str]=[], apikey: str, page: int=1, per_page: int=20, x-api-key: str}
+@returns(200) {results: [map], pagination: map{per_page: int, page: int, max_page: int, total_items: int}}
+@errors {422}
+
+@endpoint GET /committees/{committee_id}
+@required {committee_id: str}
+@optional {include: [str]=[], apikey: str, x-api-key: str}
+@returns(200) {id: str, name: str, classification: str, parent_id: str, extras: map, memberships: [map], other_names: [map], links: [map], sources: [map]}
+@errors {422}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@optional {jurisdiction: str, deleted: bool=False, before: str, after: str, require_bills: bool=False, include: [str]=[], apikey: str, page: int=1, per_page: int=20, x-api-key: str}
+@returns(200) {results: [map], pagination: map{per_page: int, page: int, max_page: int, total_items: int}}
+@errors {422}
+
+@endpoint GET /events/{event_id}
+@required {event_id: str}
+@optional {include: [str]=[], apikey: str, x-api-key: str}
+@returns(200) {id: str, name: str, jurisdiction: map{id: str, name: str, classification: any}, description: str, classification: str, start_date: str, end_date: str, all_day: bool, status: str, upstream_id: str, deleted: bool, location: map{name: str, url: str}, links: [map], sources: [map], media: [map], documents: [map], participants: [map], agenda: [map]}
+@errors {422}
+
+@endgroup
+
+@group metrics
+@endpoint GET /metrics
+@returns(200)
+
+@endgroup
+
+@end

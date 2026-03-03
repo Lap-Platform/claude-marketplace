@@ -1,0 +1,63 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Adyen Recurring API
+@base https://paltokenization-test.adyen.com/paltokenization/servlet/Recurring/v68
+@version 68
+@auth ApiKey X-API-Key in header | Bearer basic
+@common_fields {merchantAccount: str}
+@endpoints 6
+@toc createPermit(1), disable(1), disablePermit(1), listRecurringDetails(1), notifyShopper(1), scheduleAccountUpdater(1)
+
+@group createPermit
+@endpoint POST /createPermit
+@required {permits: [map{partnerId: str, profileReference: str, restriction: map, resultKey: str, validTillDate: str(date-time)}], recurringDetailReference: str, shopperReference: str}
+@returns(200) {permitResultList: [map], pspReference: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group disable
+@endpoint POST /disable
+@required {shopperReference: str}
+@optional {contract: str, recurringDetailReference: str}
+@returns(200) {response: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group disablePermit
+@endpoint POST /disablePermit
+@required {token: str}
+@returns(200) {pspReference: str, status: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group listRecurringDetails
+@endpoint POST /listRecurringDetails
+@required {shopperReference: str}
+@optional {recurring: map{contract: str, recurringDetailName: str, recurringExpiry: str(date-time), recurringFrequency: str, tokenService: str}}
+@returns(200) {creationDate: str(date-time), details: [any], lastKnownShopperEmail: str, shopperReference: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group notifyShopper
+@endpoint POST /notifyShopper
+@required {amount: map{currency!: str, value!: int(int64)}, reference: str, shopperReference: str}
+@optional {billingDate: str, billingSequenceNumber: str, displayedReference: str, recurringDetailReference: str, storedPaymentMethodId: str}
+@returns(200) {displayedReference: str, message: str, pspReference: str, reference: str, resultCode: str, shopperNotificationReference: str, storedPaymentMethodId: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@group scheduleAccountUpdater
+@endpoint POST /scheduleAccountUpdater
+@required {reference: str}
+@optional {additionalData: map, card: map{cvc: str, expiryMonth: str, expiryYear: str, holderName: str, issueNumber: str, number: str, startMonth: str, startYear: str}, selectedRecurringDetailReference: str, shopperReference: str}
+@returns(200) {pspReference: str, result: str}
+@errors {400, 401, 403, 422, 500}
+
+@endgroup
+
+@end

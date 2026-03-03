@@ -1,0 +1,346 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Apicurio Registry API [v2]
+@version 2.6.x
+@endpoints 65
+@hint download_for_search
+@toc ids(6), admin(18), system(2), search(2), groups(36), users(1)
+
+@group ids
+@endpoint GET /ids/globalIds/{globalId}
+@optional {dereference: bool}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin/artifactTypes
+@returns(200)
+@errors {401, 403, 500}
+
+@endpoint GET /admin/rules
+@returns(200)
+@errors {401, 403, 500}
+
+@endpoint POST /admin/rules
+@required {config: str}
+@optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
+@returns(204)
+@errors {400, 401, 403, 409, 500}
+
+@endpoint DELETE /admin/rules
+@returns(204)
+@errors {401, 403, 500}
+
+@endpoint GET /admin/rules/{rule}
+@returns(200) {config: str, type: str}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /admin/rules/{rule}
+@required {config: str}
+@optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
+@returns(200) {config: str, type: str}
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /admin/rules/{rule}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group system
+@endpoint GET /system/info
+@returns(200) {name: str, description: str, version: str, builtOn: str(date-time)}
+@errors {500}
+
+@endgroup
+
+@group search
+@endpoint GET /search/artifacts
+@optional {name: str, offset: int=0, limit: int=20, order: str, orderby: str, labels: [str], properties: [str], description: str, group: str, globalId: int(int64), contentId: int(int64)}
+@returns(200) {artifacts: [map], count: int}
+@errors {401, 403, 500}
+
+@endpoint POST /search/artifacts
+@optional {canonical: bool, artifactType: str, offset: int=0, limit: int=20, order: str(asc/desc), orderby: str(name/createdOn)}
+@returns(200) {artifacts: [map], count: int}
+@errors {401, 403, 500}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin/export
+@optional {forBrowser: bool}
+@returns(200) {downloadId: str, href: str}
+@errors {401, 403, 500}
+
+@endpoint POST /admin/import
+@optional {X-Registry-Preserve-GlobalId: bool, X-Registry-Preserve-ContentId: bool}
+@returns(201)
+@errors {401, 403, 500}
+
+@endgroup
+
+@group groups
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/state
+@required {state: str(ENABLED/DISABLED/DEPRECATED)}
+@returns(204)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
+@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
+@optional {name: str, description: str, labels: [str], properties: map}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}
+@optional {dereference: bool}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}
+@returns(204)
+@errors {401, 403, 404, 405, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/state
+@required {state: str(ENABLED/DISABLED/DEPRECATED)}
+@returns(204)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/rules
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint POST /groups/{groupId}/artifacts/{artifactId}/rules
+@required {config: str}
+@optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
+@returns(204)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/rules
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+@returns(200) {config: str, type: str}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+@required {config: str}
+@optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
+@returns(200) {config: str, type: str}
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin/roleMappings/{principalId}
+@returns(200) {principalId: str, role: str, principalName: str}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /admin/roleMappings/{principalId}
+@required {role: str(READ_ONLY/DEVELOPER/ADMIN)}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /admin/roleMappings/{principalId}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /admin/roleMappings
+@returns(200)
+@errors {401, 403, 500}
+
+@endpoint POST /admin/roleMappings
+@required {principalId: str, role: str(READ_ONLY/DEVELOPER/ADMIN)}
+@optional {principalName: str}
+@returns(204)
+@errors {401, 403, 500}
+
+@endgroup
+
+@group users
+@endpoint GET /users/me
+@returns(200) {username: str, displayName: str, admin: bool, developer: bool, viewer: bool}
+@errors {401, 403, 500}
+
+@endgroup
+
+@group ids
+@endpoint GET /ids/contentHashes/{contentHash}/references
+@returns(200)
+@errors {401, 403}
+
+@endpoint GET /ids/contentIds/{contentId}/references
+@returns(200)
+@errors {401, 403}
+
+@endpoint GET /ids/globalIds/{globalId}/references
+@returns(200)
+@errors {401, 403}
+
+@endgroup
+
+@group groups
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/references
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin/config/properties
+@returns(200)
+@errors {401, 403, 500}
+
+@endpoint GET /admin/config/properties/{propertyName}
+@returns(200) {name: str, value: str, type: str, label: str, description: str}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /admin/config/properties/{propertyName}
+@required {value: str}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /admin/config/properties/{propertyName}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group system
+@endpoint GET /system/limits
+@returns(200) {maxTotalSchemasCount: int(int64), maxSchemaSizeBytes: int(int64), maxArtifactsCount: int(int64), maxVersionsPerArtifactCount: int(int64), maxArtifactPropertiesCount: int(int64), maxPropertyKeySizeBytes: int(int64), maxPropertyValueSizeBytes: int(int64), maxArtifactLabelsCount: int(int64), maxLabelSizeBytes: int(int64), maxArtifactNameLengthChars: int(int64), maxArtifactDescriptionLengthChars: int(int64), maxRequestsPerSecondCount: int(int64)}
+@errors {401, 403, 500}
+
+@endgroup
+
+@group groups
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}
+@optional {dereference: bool}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}
+@optional {X-Registry-Version: str, X-Registry-Name: str, X-Registry-Name-Encoded: str, X-Registry-Description: str, X-Registry-Description-Encoded: str}
+@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]}
+@errors {401, 403, 404, 409, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts/{artifactId}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}/artifacts
+@optional {limit: int, offset: int, order: str, orderby: str}
+@returns(200) {artifacts: [map], count: int}
+@errors {401, 403, 500}
+
+@endpoint POST /groups/{groupId}/artifacts
+@optional {X-Registry-ArtifactType: str, X-Registry-ArtifactId: str, X-Registry-Version: str, ifExists: str, canonical: bool, X-Registry-Description: str, X-Registry-Description-Encoded: str, X-Registry-Name: str, X-Registry-Name-Encoded: str, X-Registry-Content-Hash: str, X-Registry-Hash-Algorithm: str(SHA256/MD5)}
+@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]}
+@errors {400, 401, 403, 409, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts
+@returns(204)
+@errors {401, 403, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/test
+@returns(204)
+@errors {401, 403, 404, 409, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions
+@optional {offset: int, limit: int}
+@returns(200) {count: int, versions: [map]}
+@errors {401, 403, 404, 500}
+
+@endpoint POST /groups/{groupId}/artifacts/{artifactId}/versions
+@optional {X-Registry-Version: str, X-Registry-Name: str, X-Registry-Description: str, X-Registry-Description-Encoded: str, X-Registry-Name-Encoded: str}
+@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)}
+@errors {401, 403, 404, 409, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/owner
+@returns(200) {owner: str}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/owner
+@optional {owner: str}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}
+@returns(200) {id: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), properties: map}
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /groups/{groupId}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /groups
+@optional {limit: int, offset: int, order: str, orderby: str}
+@returns(200) {groups: [map], count: int}
+@errors {401, 403, 500}
+
+@endpoint POST /groups
+@required {id: str}
+@optional {description: str, properties: map}
+@returns(200) {id: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), properties: map}
+@errors {400, 401, 403, 409, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/meta
+@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/meta
+@optional {name: str, description: str, labels: [str], properties: map}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint POST /groups/{groupId}/artifacts/{artifactId}/meta
+@optional {canonical: bool}
+@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)}
+@errors {401, 403, 404, 500}
+
+@endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint POST /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
+@required {value: str}
+@returns(200) {value: str, createdOn: str(date-time), createdBy: str, commentId: str}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments/{commentId}
+@required {value: str}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments/{commentId}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@group ids
+@endpoint GET /ids/contentIds/{contentId}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endpoint GET /ids/contentHashes/{contentHash}
+@returns(200)
+@errors {401, 403, 404, 500}
+
+@endgroup
+
+@end

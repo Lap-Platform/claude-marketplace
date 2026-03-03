@@ -1,0 +1,157 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Notion API
+@base https://api.notion.com
+@version 2.0.0
+@auth Bearer bearer | Bearer basic
+@common_fields {Notion-Version: str=2025-09-03}
+@endpoints 22
+@hint download_for_search
+@toc users(3), search(1), blocks(5), pages(5), comments(2), data_sources(5), databases(1)
+
+@group users
+@endpoint GET /v1/users/{user_id}
+@required {user_id: str(uuid)}
+@returns(200)
+@errors {400}
+
+@endpoint GET /v1/users
+@optional {start_cursor: str, page_size: int=100}
+@returns(200)
+@errors {400}
+
+@endpoint GET /v1/users/me
+@returns(200) {object: str, id: str, name: str, avatar_url: any, type: str, bot: map{owner: map{type: str, user: map{object: str, id: str, name: str, avatar_url: any, type: str, person: map}}}}
+@errors {400}
+
+@endgroup
+
+@group search
+@endpoint POST /v1/search
+@optional {query: str, sort: map{direction: str, timestamp: str}, filter: map{value: str, property: str}, start_cursor: str, page_size: int(int32)=100}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group blocks
+@endpoint GET /v1/blocks/{block_id}/children
+@required {block_id: str}
+@optional {start_cursor: str, page_size: int(int32)=100}
+@returns(200)
+@errors {400}
+
+@endpoint PATCH /v1/blocks/{block_id}/children
+@required {block_id: str, children: [any]}
+@optional {after: str}
+@returns(200)
+@errors {400}
+
+@endpoint GET /v1/blocks/{block_id}
+@required {block_id: str}
+@returns(200)
+@errors {400}
+
+@endpoint PATCH /v1/blocks/{block_id}
+@required {block_id: str}
+@optional {type: map, archived: bool=True}
+@returns(200)
+@errors {400}
+
+@endpoint DELETE /v1/blocks/{block_id}
+@required {block_id: str}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group pages
+@endpoint GET /v1/pages/{page_id}
+@required {page_id: str}
+@optional {filter_properties: str}
+@returns(200)
+@errors {400}
+
+@endpoint PATCH /v1/pages/{page_id}
+@required {page_id: str}
+@optional {properties: map, in_trash: bool=False, archived: bool, icon: map{emoji!: str}, cover: map{external!: map{url!: str}, type: str}}
+@returns(200)
+@errors {400}
+
+@endpoint POST /v1/pages
+@required {parent: any, properties: map}
+@optional {children: [str], icon: str(json), cover: str(json)}
+@returns(200)
+@errors {400}
+
+@endpoint GET /v1/pages/{page_id}/properties/{property_id}
+@required {page_id: str, property_id: str}
+@optional {page_size: int(int32), start_cursor: str}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group comments
+@endpoint GET /v1/comments
+@required {block_id: str}
+@optional {start_cursor: str, page_size: int(int32)}
+@returns(200)
+@errors {400}
+
+@endpoint POST /v1/comments
+@required {parent: map{page_id!: str}, rich_text: [map{text!: map{content!: str}}]}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group data_sources
+@endpoint POST /v1/data_sources/{data_source_id}/query
+@required {data_source_id: str}
+@optional {filter_properties: [str], filter: map, sorts: [map{property!: str, direction!: str}], start_cursor: str, page_size: int=100, archived: bool, in_trash: bool}
+@returns(200)
+@errors {400}
+
+@endpoint GET /v1/data_sources/{data_source_id}
+@required {data_source_id: str}
+@returns(200)
+@errors {400}
+
+@endpoint PATCH /v1/data_sources/{data_source_id}
+@required {data_source_id: str}
+@optional {title: [map{text!: map{content!: str, link: map}, type: str}], description: [map{text!: map{content!: str, link: map}, type: str}], properties: map}
+@returns(200)
+@errors {400}
+
+@endpoint POST /v1/data_sources
+@required {parent: map{page_id!: str(uuid)}, properties: map}
+@optional {title: [map{text!: map{content!: str, link: map}, type: str}]}
+@returns(200)
+@errors {400}
+
+@endpoint GET /v1/data_sources/{data_source_id}/templates
+@required {data_source_id: str}
+@optional {start_cursor: str, page_size: int=100}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group databases
+@endpoint GET /v1/databases/{database_id}
+@required {database_id: str}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group pages
+@endpoint POST /v1/pages/{page_id}/move
+@required {page_id: str(uuid), parent: any}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@end

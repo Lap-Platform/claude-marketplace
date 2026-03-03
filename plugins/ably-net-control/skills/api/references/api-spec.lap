@@ -1,0 +1,134 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Control API v1
+@base https://control.ably.net/v1
+@version 1.0.32
+@auth Bearer bearer
+@endpoints 22
+@hint download_for_search
+@toc accounts(2), apps(19), me(1)
+
+@group accounts
+@endpoint GET /accounts/{account_id}/apps
+@required {account_id: str}
+@returns(200)
+@errors {401, 404, 500}
+
+@endpoint POST /accounts/{account_id}/apps
+@required {account_id: str, name: str}
+@optional {status: str, tlsOnly: bool, fcmKey: str, fcmServiceAccount: str, fcmProjectId: str, apnsCertificate: str, apnsPrivateKey: str, apnsUseSandboxEndpoint: bool}
+@returns(201) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?}
+@errors {400, 401, 404, 422, 500}
+
+@endgroup
+
+@group apps
+@endpoint PATCH /apps/{id}
+@required {id: str}
+@optional {name: str, status: str, tlsOnly: bool, fcmKey: str, fcmServiceAccount: str, fcmProjectId: str, apnsCertificate: str, apnsPrivateKey: str, apnsUseSandboxEndpoint: bool}
+@returns(200) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint DELETE /apps/{id}
+@required {id: str}
+@returns(204)
+@errors {401, 404, 422, 500}
+
+@endpoint POST /apps/{id}/pkcs12
+@required {id: str}
+@returns(200) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?}
+@errors {400, 401, 404, 500}
+
+@endpoint GET /apps/{app_id}/keys
+@required {app_id: str}
+@returns(200)
+@errors {401, 404, 500, 504}
+
+@endpoint POST /apps/{app_id}/keys
+@required {app_id: str, name: str, capability: map}
+@returns(201) {appId: str, id: str, name: str, status: int, key: str, capability: map, created: int, modified: int}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint PATCH /apps/{app_id}/keys/{key_id}
+@required {app_id: str, key_id: str}
+@optional {name: str, capability: map}
+@returns(200) {appId: str, id: str, name: str, status: int, key: str, capability: map, created: int, modified: int}
+@errors {400, 401, 404, 422, 500, 504}
+
+@endpoint POST /apps/{app_id}/keys/{key_id}/revoke
+@required {app_id: str, key_id: str}
+@returns(200)
+@errors {401, 404, 500, 504}
+
+@endpoint GET /apps/{app_id}/namespaces
+@required {app_id: str}
+@returns(200)
+@errors {401, 404, 500, 504}
+
+@endpoint POST /apps/{app_id}/namespaces
+@required {app_id: str, id: str}
+@optional {authenticated: bool=False, persisted: bool=False, persistLast: bool=False, pushEnabled: bool=False, batchingEnabled: bool=False, batchingPolicy: str=simple, batchingInterval: int=20, tlsOnly: bool=False, exposeTimeserial: bool=False}
+@returns(201) {authenticated: bool, created: int, modified: int, id: str, persisted: bool, persistLast: bool, pushEnabled: bool, batchingEnabled: bool, batchingPolicy: str, batchingInterval: int, tlsOnly: bool, exposeTimeserial: bool}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint PATCH /apps/{app_id}/namespaces/{namespace_id}
+@required {app_id: str, namespace_id: str}
+@optional {authenticated: bool=False, persisted: bool=False, persistLast: bool=False, pushEnabled: bool=False, batchingEnabled: bool=False, batchingPolicy: str=simple, batchingInterval: int=20, tlsOnly: bool=False, exposeTimeserial: bool}
+@returns(200) {authenticated: bool, created: int, modified: int, id: str, persisted: bool, persistLast: bool, pushEnabled: bool, batchingEnabled: bool, batchingPolicy: str, batchingInterval: int, tlsOnly: bool, exposeTimeserial: bool}
+@errors {400, 401, 404, 500, 504}
+
+@endpoint DELETE /apps/{app_id}/namespaces/{namespace_id}
+@required {app_id: str, namespace_id: str}
+@returns(204)
+@errors {401, 404, 500, 504}
+
+@endpoint GET /apps/{app_id}/queues
+@required {app_id: str}
+@returns(200)
+@errors {401, 404, 500, 503, 504}
+
+@endpoint POST /apps/{app_id}/queues
+@required {app_id: str, name: str, ttl: int, maxLength: int, region: str}
+@returns(201) {id: str, appId: str, name: str, region: str, amqp: map{uri: str, queueName: str}, stomp: map{uri: str, host: str, destination: str}, state: str, messages: map{ready: int?, unacknowledged: int?, total: int?}, stats: map{publishRate: num?, deliveryRate: num?, acknowledgementRate: num?}, ttl: int, maxLength: int, deadletter: bool, deadletterId: str?}
+@errors {400, 401, 404, 422, 500}
+
+@endpoint DELETE /apps/{app_id}/queues/{queue_id}
+@required {app_id: str, queue_id: str}
+@returns(204)
+@errors {400, 401, 404, 500, 503}
+
+@endpoint GET /apps/{app_id}/rules
+@required {app_id: str}
+@returns(200)
+@errors {401, 404, 500, 504}
+
+@endpoint POST /apps/{app_id}/rules
+@required {app_id: str}
+@returns(201)
+@errors {400, 401, 404, 422, 500, 504}
+
+@endpoint GET /apps/{app_id}/rules/{rule_id}
+@required {app_id: str, rule_id: str}
+@returns(200)
+@errors {401, 404, 500, 504}
+
+@endpoint PATCH /apps/{app_id}/rules/{rule_id}
+@required {app_id: str, rule_id: str}
+@returns(200)
+@errors {400, 401, 404, 422, 500, 504}
+
+@endpoint DELETE /apps/{app_id}/rules/{rule_id}
+@required {app_id: str, rule_id: str}
+@returns(204)
+@errors {401, 404, 500, 504}
+
+@endgroup
+
+@group me
+@endpoint GET /me
+@returns(200) {token: map{id: int, name: str, capabilities: [str]}, user: map{id: int, email: str}, account: map{id: str, name: str}}
+@errors {401, 500}
+
+@endgroup
+
+@end

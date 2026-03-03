@@ -1,0 +1,121 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Query API
+@base https://{regionAndDomain}.com/api/query
+@version 1.0.0
+@common_fields {workspace_id: int}
+@endpoints 19
+@toc insights(1), funnels(2), retention(2), segmentation(4), stream(1), cohorts(1), engage(1), events(6), jql(1)
+
+@group insights
+@endpoint GET /insights
+@required {bookmark_id: int}
+@returns(200) {computed_at: str, date_range: map{from_date: str, to_date: str}, headers: [str], series: map}
+
+@endgroup
+
+@group funnels
+@endpoint GET /funnels
+@required {funnel_id: int}
+@optional {length: int, length_unit: str(day/hour/minute/second), interval: int, unit: str(day/week/month), on: str, where: str, limit: int}
+@returns(200) {meta: map{dates: [str]}, data: map}
+
+@endpoint GET /funnels/list
+@returns(200)
+
+@endgroup
+
+@group retention
+@endpoint GET /retention
+@optional {retention_type: str(birth/compounded), born_event: str, event: str, born_where: str, where: str, interval: int, interval_count: int, unit: str(day/week/month), unbounded_retention: bool=False, on: str, limit: int}
+@returns(200)
+
+@endpoint GET /retention/addiction
+@required {unit: str(day/week/month), addiction_unit: str(hour/day)}
+@optional {event: str, where: str, on: str, limit: int}
+@returns(200) {data: map}
+
+@endgroup
+
+@group segmentation
+@endpoint GET /segmentation
+@required {event: str}
+@optional {on: str, unit: str(minute/hour/day/month), interval: int, where: str, limit: int, type: str(general/unique/average), format: str}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+
+@endpoint GET /segmentation/numeric
+@required {event: str, on: str}
+@optional {unit: str(hour/day), where: str, type: str(general/unique/average)}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+
+@endpoint GET /segmentation/sum
+@required {event: str, on: str}
+@optional {unit: str(hour/day), where: str}
+@returns(200) {status: str, computed_at: str, results: map}
+
+@endpoint GET /segmentation/average
+@required {event: str, on: str}
+@optional {unit: str(hour/day), where: str}
+@returns(200) {results: map, status: str}
+
+@endgroup
+
+@group stream
+@endpoint GET /stream/query
+@required {distinct_ids: str}
+@returns(200) {status: str, results: map{events: [map]}}
+
+@endgroup
+
+@group cohorts
+@endpoint POST /cohorts/list
+@returns(200)
+
+@endgroup
+
+@group engage
+@endpoint POST /engage
+@returns(200) {page: int, page_size: int, session_id: str, status: str, total: int, results: [map]}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@required {event: str, type: str(general/unique/average), unit: str(minute/hour/day/week/month)}
+@optional {interval: int, format: str(json/csv)}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+
+@endpoint GET /events/top
+@required {type: str(general/unique/average)}
+@optional {limit: int}
+@returns(200) {events: [map], type: str}
+
+@endpoint GET /events/names
+@required {type: str(general/unique/average)}
+@optional {limit: int}
+@returns(200)
+
+@endpoint GET /events/properties
+@required {event: str, name: str, type: str(general/unique/average), unit: str(minute/hour/day/week/month)}
+@optional {values: [str], interval: int, format: str(json/csv), limit: int}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+
+@endpoint GET /events/properties/top
+@required {event: str}
+@optional {limit: int}
+@returns(200)
+
+@endpoint GET /events/properties/values
+@required {event: str, name: str}
+@optional {limit: int}
+@returns(200)
+
+@endgroup
+
+@group jql
+@endpoint POST /jql
+@returns(200)
+
+@endgroup
+
+@end

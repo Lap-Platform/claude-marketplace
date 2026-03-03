@@ -1,0 +1,104 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Orders V3
+@base https://api.bigcommerce.com/stores/{store_hash}/v3
+@auth ApiKey X-Auth-Token in header
+@endpoints 21
+@hint download_for_search
+@toc orders(21)
+
+@endpoint POST /orders/{order_id}/payment_actions/capture
+@required {Content-Type: str=application/json}
+@returns(201)
+@errors {400, 404, 422, 502, 503, 504}
+
+@endpoint POST /orders/{order_id}/payment_actions/void
+@required {Content-Type: str=application/json}
+@returns(201)
+@errors {400, 404, 422, 502, 503, 504}
+
+@endpoint GET /orders/{order_id}/transactions
+@returns(200) {data: [any], meta: map{pagination: map{total: int(int32), count: int(int32), per_page: int(int32), current_page: int(int32), total_pages: int(int32), links: map{previous: str, current: str, next: str}}}}
+@returns(204) {status: int, title: str, type: str, instance: str}
+@errors {404, 503}
+
+@endpoint POST /orders/{order_id}/payment_actions/refund_quotes
+@required {Content-Type: str=application/json}
+@returns(201) {data: map{order_id: int, total_refund_amount: num(float), total_refund_tax_amount: num, order_level_refund_amount: num, rounding: num, adjustment: num(float), tax_inclusive: bool, refund_methods: [[map]]}, meta: map}
+@errors {422}
+
+@endpoint POST /orders/{order_id}/payment_actions/refunds
+@required {Content-Type: str=application/json}
+@returns(201) {data: map{id: int, order_id: int, user_id: int, created: str(date-time), reason: str, total_amount: num(float), total_tax: num, uses_merchant_override_values: bool, items: [map], payments: [map]}, meta: map}
+@errors {422, 503}
+
+@endpoint GET /orders/{order_id}/payment_actions/refunds
+@returns(200) {data: [map], meta: map}
+
+@endpoint GET /orders/payment_actions/refunds/{refund_id}
+@returns(200) {data: map{id: int, order_id: int, user_id: int, created: str(date-time), reason: str, total_amount: num, total_tax: num, uses_merchant_override_values: bool, payments: [map], items: [map]}, meta: map}
+
+@endpoint GET /orders/payment_actions/refunds
+@optional {order_id:in: [int], id:in: [int], created:min: str(date-time), created:max: str(date-time), transaction_id: str, page: int, limit: int}
+@returns(200) {data: [map], meta: map}
+
+@endpoint GET /orders/{order_id}/metafields
+@optional {page: int, limit: int, key: str, key:in: [str], namespace: str, namespace:in: [str], direction: str(asc/desc), include_fields: [str], date_created: str, date_modified: str, date_created:min: str, date_created:max: str, date_modified:min: str, date_modified:max: str, before: str, after: str}
+@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
+
+@endpoint POST /orders/{order_id}/metafields
+@required {Content-Type: str=application/json, permission_set: str(app_only/read/write/read_and_sf_access/write_and_sf_access), namespace: str, key: str, value: str}
+@optional {description: str}
+@returns(200) {data: any, meta: map}
+@errors {400, 409, 422}
+
+@endpoint GET /orders/{order_id}/metafields/{metafield_id}
+@returns(200) {data: any, meta: map}
+@errors {404}
+
+@endpoint PUT /orders/{order_id}/metafields/{metafield_id}
+@required {Content-Type: str=application/json}
+@returns(200) {data: any, meta: map}
+@errors {400, 404}
+
+@endpoint DELETE /orders/{order_id}/metafields/{metafield_id}
+@returns(204)
+@errors {404}
+
+@endpoint GET /orders/settings
+@returns(200)
+@errors {400}
+
+@endpoint PUT /orders/settings
+@required {Content-Type: str=application/json}
+@optional {notifications: map{order_placed: map{email_addresses: [str]}, forward_invoice: map{email_addresses: [str]}}}
+@returns(200)
+@errors {400, 422}
+
+@endpoint GET /orders/settings/channels/{channel_id}
+@returns(200)
+@errors {400}
+
+@endpoint PUT /orders/settings/channels/{channel_id}
+@required {Content-Type: str=application/json}
+@optional {notifications: map{order_placed: map{email_addresses: [str]}, forward_invoice: map{email_addresses: [str]}}}
+@returns(200)
+@errors {400, 422}
+
+@endpoint GET /orders/metafields
+@optional {page: int, limit: int, key: str, key:in: [str], namespace: str, namespace:in: [str], direction: str(asc/desc), include_fields: [str], date_created: str, date_modified: str, date_created:min: str, date_created:max: str, date_modified:min: str, date_modified:max: str, before: str, after: str}
+@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
+
+@endpoint POST /orders/metafields
+@returns(200) {data: [any], errors: [any], meta: map{total: int, success: int, failed: int}}
+@errors {400, 422}
+
+@endpoint PUT /orders/metafields
+@returns(200) {data: [any], errors: [any], meta: map{total: int, success: int, failed: int}}
+@errors {400, 422}
+
+@endpoint DELETE /orders/metafields
+@returns(200) {data: [int], errors: [any], meta: map{total: int, success: int, failed: int}}
+@errors {400, 422}
+
+@end

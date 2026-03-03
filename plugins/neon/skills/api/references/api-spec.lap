@@ -1,0 +1,547 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Neon API
+@base https://console.neon.tech/api/v2
+@version v2
+@auth Bearer bearer | ApiKey zenith in cookie | ApiKey keycloak_token in cookie
+@endpoints 138
+@hint download_for_search
+@toc projects(111), api_keys(3), consumption_history(3), organizations(16), regions(1), users(3), auth(1)
+
+@group projects
+@endpoint GET /projects/{project_id}/advisors
+@optional {branch_id: str, database_name: str, category: str, min_severity: str(INFO/WARN/ERROR)}
+@returns(200) {issues: [map]}
+
+@endgroup
+
+@group api_keys
+@endpoint GET /api_keys
+@returns(200)
+
+@endpoint POST /api_keys
+@required {key_name: str}
+@returns(200) {id: int(int64), key: str, name: str, created_at: str(date-time), created_by: str(uuid)}
+
+@endpoint DELETE /api_keys/{key_id}
+@required {key_id: int(int64)}
+@returns(200) {id: int(int64), name: str, created_at: str(date-time), created_by: str(uuid), last_used_at: str(date-time)?, last_used_from_addr: str, revoked: bool}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects/{project_id}/operations/{operation_id}
+@returns(200) {operation: map{id: str(uuid), project_id: str, branch_id: str, endpoint_id: str, action: str, status: str, error: str, failures_count: int(int32), retry_at: str(date-time), created_at: str(date-time), updated_at: str(date-time), total_duration_ms: int(int32)}}
+
+@endpoint GET /projects
+@optional {cursor: str, limit: int=10, search: str, org_id: str, timeout: int, recoverable: bool=False}
+@returns(200)
+
+@endpoint POST /projects
+@required {project: map{settings: map{quota: map, allowed_ips: map, enable_logical_replication: bool, maintenance_window: map, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map}, name: str, branch: map{name: str, role_name: str, database_name: str, annotations: map}, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, provisioner: str, region_id: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, pg_version: int, store_passwords: bool, history_retention_seconds: int(int32), org_id: str}}
+@returns(201)
+
+@endpoint GET /projects/shared
+@optional {cursor: str, limit: int=10, search: str, timeout: int}
+@returns(200)
+
+@endpoint GET /projects/{project_id}
+@returns(200) {project: map{data_storage_bytes_hour: int(int64), data_transfer_bytes: int(int64), written_data_bytes: int(int64), compute_time_seconds: int(int64), active_time_seconds: int(int64), cpu_used_sec: int(int64), id: str, platform_id: str, region_id: str, name: str, provisioner: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, settings: map{quota: map{active_time_seconds: int(int64), compute_time_seconds: int(int64), written_data_bytes: int(int64), data_transfer_bytes: int(int64), logical_size_bytes: int(int64)}, allowed_ips: map{ips: [str], protected_branches_only: bool}, enable_logical_replication: bool, maintenance_window: map{weekdays: [int], start_time: str, end_time: str}, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pg_version: int, proxy_host: str, branch_logical_size_limit: int(int64), branch_logical_size_limit_bytes: int(int64), store_passwords: bool, maintenance_starts_at: str(date-time), creation_source: str, history_retention_seconds: int(int32), created_at: str(date-time), updated_at: str(date-time), synthetic_storage_size: int(int64), consumption_period_start: str(date-time), consumption_period_end: str(date-time), quota_reset_at: str(date-time), owner_id: str, owner: map{email: str(email), name: str, branches_limit: int, subscription_type: str}, compute_last_active_at: str(date-time), org_id: str, maintenance_scheduled_for: str(date-time), hipaa_enabled_at: str(date-time)}}
+
+@endpoint PATCH /projects/{project_id}
+@required {project: map{settings: map{quota: map, allowed_ips: map, enable_logical_replication: bool, maintenance_window: map, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map}, name: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, history_retention_seconds: int(int32)}}
+@returns(200)
+
+@endpoint DELETE /projects/{project_id}
+@returns(200) {project: map{data_storage_bytes_hour: int(int64), data_transfer_bytes: int(int64), written_data_bytes: int(int64), compute_time_seconds: int(int64), active_time_seconds: int(int64), cpu_used_sec: int(int64), id: str, platform_id: str, region_id: str, name: str, provisioner: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, settings: map{quota: map{active_time_seconds: int(int64), compute_time_seconds: int(int64), written_data_bytes: int(int64), data_transfer_bytes: int(int64), logical_size_bytes: int(int64)}, allowed_ips: map{ips: [str], protected_branches_only: bool}, enable_logical_replication: bool, maintenance_window: map{weekdays: [int], start_time: str, end_time: str}, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pg_version: int, proxy_host: str, branch_logical_size_limit: int(int64), branch_logical_size_limit_bytes: int(int64), store_passwords: bool, maintenance_starts_at: str(date-time), creation_source: str, history_retention_seconds: int(int32), created_at: str(date-time), updated_at: str(date-time), synthetic_storage_size: int(int64), consumption_period_start: str(date-time), consumption_period_end: str(date-time), quota_reset_at: str(date-time), owner_id: str, owner: map{email: str(email), name: str, branches_limit: int, subscription_type: str}, compute_last_active_at: str(date-time), org_id: str, maintenance_scheduled_for: str(date-time), hipaa_enabled_at: str(date-time)}}
+
+@endpoint POST /projects/{project_id}/restore
+@returns(200)
+
+@endpoint POST /projects/{project_id}/recover
+@returns(200)
+
+@endpoint GET /projects/{project_id}/operations
+@required {project_id: str}
+@optional {cursor: str, limit: int}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/permissions
+@returns(200) {project_permissions: [map]}
+
+@endpoint POST /projects/{project_id}/permissions
+@required {email: str(email)}
+@returns(200) {id: str, granted_to_email: str(email), granted_at: str(date-time), revoked_at: str(date-time)}
+
+@endpoint DELETE /projects/{project_id}/permissions/{permission_id}
+@returns(200) {id: str, granted_to_email: str(email), granted_at: str(date-time), revoked_at: str(date-time)}
+
+@endpoint GET /projects/{project_id}/available_preload_libraries
+@required {project_id: str}
+@returns(200) {libraries: [map]}
+
+@endpoint POST /projects/{project_id}/transfer_requests
+@optional {ttl_seconds: int(int64)}
+@returns(201) {id: str(uuid), project_id: str, created_at: str(date-time), expires_at: str(date-time)}
+
+@endpoint PUT /projects/{project_id}/transfer_requests/{request_id}
+@optional {org_id: str}
+@returns(204)
+@errors {406}
+
+@endpoint GET /projects/{project_id}/jwks
+@returns(200) {jwks: [map]}
+
+@endpoint POST /projects/{project_id}/jwks
+@required {jwks_url: str, provider_name: str}
+@optional {branch_id: str, jwt_audience: str, role_names: [str], skip_role_creation: bool=False}
+@returns(201)
+
+@endpoint DELETE /projects/{project_id}/jwks/{jwks_id}
+@returns(200) {id: str, project_id: str, branch_id: str, jwks_url: str, provider_name: str, created_at: str(date-time), updated_at: str(date-time), jwt_audience: str, role_names: [str]}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+@optional {auth_provider: str(neon_auth/external), jwks_url: str(uri), provider_name: str, jwt_audience: str, add_default_grants: bool=False, skip_auth_schema: bool=False, settings: map{db_aggregates_enabled: bool, db_anon_role: str, db_extra_search_path: str, db_max_rows: int, db_schemas: [str], jwt_role_claim_key: str, jwt_cache_max_lifetime: int, openapi_mode: str, server_cors_allowed_origins: str, server_timing_enabled: bool}}
+@returns(201) {url: str(uri)}
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+@optional {settings: map{db_aggregates_enabled: bool, db_anon_role: str, db_extra_search_path: str, db_max_rows: int, db_schemas: [str], jwt_role_claim_key: str, jwt_cache_max_lifetime: int, openapi_mode: str, server_cors_allowed_origins: str, server_timing_enabled: bool}}
+@returns(201)
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+@returns(200) {url: str(uri), status: str, settings: map?, available_schemas: [str]?}
+
+@endpoint POST /projects/auth/create
+@required {auth_provider: str(mock/stack/stack_v2/better_auth), project_id: str, branch_id: str}
+@optional {database_name: str, role_name: str}
+@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth
+@returns(200) {auth_provider: str, auth_provider_project_id: str, branch_id: str, db_name: str, created_at: str(date-time), owned_by: str, transfer_status: str, jwks_url: str, base_url: str}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/auth
+@required {auth_provider: str(mock/stack/stack_v2/better_auth)}
+@optional {database_name: str}
+@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str}
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth
+@optional {delete_data: bool=False}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/auth/domains
+@returns(200) {domains: [map]}
+
+@endpoint POST /projects/{project_id}/auth/domains
+@required {domain: str(uri), auth_provider: str(mock/stack/stack_v2/better_auth)}
+@returns(201)
+
+@endpoint DELETE /projects/{project_id}/auth/domains
+@required {auth_provider: str(mock/stack/stack_v2/better_auth), domains: [map{domain!: str(uri)}]}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/domains
+@returns(200) {domains: [map]}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/auth/domains
+@required {domain: str(uri), auth_provider: str(mock/stack/stack_v2/better_auth)}
+@returns(201)
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth/domains
+@required {auth_provider: str(mock/stack/stack_v2/better_auth), domains: [map{domain!: str(uri)}]}
+@returns(200)
+
+@endpoint POST /projects/auth/keys
+@required {project_id: str, auth_provider: str(mock/stack/stack_v2/better_auth)}
+@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str}
+
+@endpoint POST /projects/auth/user
+@required {project_id: str, auth_provider: str(mock/stack/stack_v2/better_auth), email: str(email)}
+@optional {name: str}
+@returns(201) {id: str}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/auth/users
+@required {email: str(email)}
+@optional {name: str}
+@returns(201) {id: str}
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth/users/{auth_user_id}
+@returns(204)
+
+@endpoint PUT /projects/{project_id}/branches/{branch_id}/auth/users/{auth_user_id}/role
+@required {roles: [str]}
+@returns(200) {id: str}
+
+@endpoint DELETE /projects/{project_id}/auth/users/{auth_user_id}
+@required {project_id: str, auth_user_id: str}
+@returns(204)
+
+@endpoint POST /projects/auth/transfer_ownership
+@required {project_id: str, auth_provider: str(mock/stack/stack_v2/better_auth)}
+@returns(200) {url: str}
+
+@endpoint GET /projects/{project_id}/auth/integrations
+@required {project_id: str}
+@returns(200) {data: [map]}
+
+@endpoint GET /projects/{project_id}/auth/oauth_providers
+@returns(200) {providers: [map]}
+
+@endpoint POST /projects/{project_id}/auth/oauth_providers
+@required {id: str(google/github/microsoft/vercel)}
+@optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/oauth_providers
+@returns(200) {providers: [map]}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/auth/oauth_providers
+@required {id: str(google/github/microsoft/vercel)}
+@optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+
+@endpoint PATCH /projects/{project_id}/auth/oauth_providers/{oauth_provider_id}
+@optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+
+@endpoint DELETE /projects/{project_id}/auth/oauth_providers/{oauth_provider_id}
+@returns(200)
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/oauth_providers/{oauth_provider_id}
+@optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth/oauth_providers/{oauth_provider_id}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/auth/email_server
+@returns(200)
+
+@endpoint PATCH /projects/{project_id}/auth/email_server
+@returns(200)
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/auth/send_test_email
+@returns(200) {success: bool, error_message: str}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/email_and_password
+@returns(200) {enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/email_and_password
+@optional {enabled: bool, email_verification_method: str(link/otp), require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}
+@returns(200) {enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/email_provider
+@returns(200)
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/email_provider
+@returns(200)
+
+@endpoint DELETE /projects/{project_id}/auth/integration/{auth_provider}
+@required {project_id: str, auth_provider: str}
+@optional {delete_data: bool=False}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/connection_uri
+@required {project_id: str, database_name: str, role_name: str}
+@optional {branch_id: str, endpoint_id: str, pooled: bool}
+@returns(200) {uri: str}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/allow_localhost
+@returns(200) {allow_localhost: bool}
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/allow_localhost
+@required {allow_localhost: bool}
+@returns(200) {allow_localhost: bool}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/plugins
+@returns(200) {organization: map{enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str}, email_provider: map, email_and_password: map{enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}, oauth_providers: [map], allow_localhost: bool}
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/plugins/organization
+@optional {enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str(admin/owner)}
+@returns(200) {enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/auth/webhooks
+@returns(200) {enabled: bool, webhook_url: str, enabled_events: [str], timeout_seconds: int}
+
+@endpoint PUT /projects/{project_id}/branches/{branch_id}/auth/webhooks
+@required {enabled: bool}
+@optional {webhook_url: str, enabled_events: [str], timeout_seconds: int=5}
+@returns(200) {enabled: bool, webhook_url: str, enabled_events: [str], timeout_seconds: int}
+
+@endpoint POST /projects/{project_id}/branches
+@returns(201)
+
+@endpoint GET /projects/{project_id}/branches
+@optional {search: str, sort_by: str(name/created_at/updated_at)=updated_at, cursor: str, sort_order: str(asc/desc)=desc, limit: int}
+@returns(200)
+
+@endpoint POST /projects/{project_id}/branch_anonymized
+@returns(201)
+
+@endpoint GET /projects/{project_id}/branches/count
+@optional {search: str}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}
+@returns(200)
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}
+@returns(200)
+@returns(204)
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}
+@required {branch: map{name: str, protected: bool, expires_at: str(date-time)}}
+@returns(200)
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/restore
+@required {project_id: str, branch_id: str, source_branch_id: str}
+@optional {source_lsn: str, source_timestamp: str(date-time), preserve_under_name: str}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/schema
+@required {project_id: str, branch_id: str, db_name: str}
+@optional {lsn: str, timestamp: str(date-time), format: str}
+@returns(200) {sql: str, json: map{tables: [map]}}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/compare_schema
+@required {project_id: str, branch_id: str, db_name: str}
+@optional {base_branch_id: str, lsn: str, timestamp: str(date-time), base_lsn: str, base_timestamp: str(date-time)}
+@returns(200) {diff: str}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/masking_rules
+@returns(200) {masking_rules: [map]}
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/masking_rules
+@required {masking_rules: [map{database_name!: str, schema_name!: str, table_name!: str, column_name!: str, masking_function: str, masking_value: str}]}
+@returns(200) {masking_rules: [map]}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/anonymized_status
+@returns(200) {project_id: str, branch_id: str, state: str, status_message: str, created_at: str(date-time), updated_at: str(date-time), failed_at: str(date-time), last_run: map{started_at: str(date-time), completed_at: str(date-time), triggered_by: str(uuid), triggered_by_username: str, masked_columns: int}}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/anonymize
+@returns(200) {project_id: str, branch_id: str, state: str, status_message: str, created_at: str(date-time), updated_at: str(date-time), failed_at: str(date-time), last_run: map{started_at: str(date-time), completed_at: str(date-time), triggered_by: str(uuid), triggered_by_username: str, masked_columns: int}}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/set_as_default
+@returns(200)
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/finalize_restore
+@optional {name: str}
+@returns(200) {operations: [map]}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/endpoints
+@returns(200) {endpoints: [map]}
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/databases
+@returns(200) {databases: [map]}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/databases
+@required {database: map{name!: str, owner_name!: str}}
+@returns(201)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+@returns(200) {database: map{id: int(int64), branch_id: str, name: str, owner_name: str, created_at: str(date-time), updated_at: str(date-time)}}
+
+@endpoint PATCH /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+@required {database: map{name: str, owner_name: str}}
+@returns(200)
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+@returns(200)
+@returns(204)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/roles
+@returns(200) {roles: [map]}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/roles
+@required {role: map{name!: str, no_login: bool}}
+@returns(201)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}
+@returns(200) {role: map{branch_id: str, name: str, password: str, protected: bool, authentication_method: str, created_at: str(date-time), updated_at: str(date-time)}}
+
+@endpoint DELETE /projects/{project_id}/branches/{branch_id}/roles/{role_name}
+@returns(200)
+@returns(204)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reveal_password
+@returns(200) {password: str}
+@errors {404, 412}
+
+@endpoint POST /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reset_password
+@returns(200)
+
+@endpoint GET /projects/{project_id}/vpc_endpoints
+@returns(200) {endpoints: [map]}
+
+@endpoint POST /projects/{project_id}/vpc_endpoints/{vpc_endpoint_id}
+@required {label: str}
+@returns(200)
+
+@endpoint DELETE /projects/{project_id}/vpc_endpoints/{vpc_endpoint_id}
+@returns(200)
+
+@endpoint POST /projects/{project_id}/endpoints
+@required {endpoint: map{branch_id!: str, region_id: str, type!: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map}, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, provisioner: str, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, suspend_timeout_seconds: int(int64), name: str}}
+@returns(201)
+
+@endpoint GET /projects/{project_id}/endpoints
+@returns(200) {endpoints: [map]}
+
+@endpoint GET /projects/{project_id}/endpoints/{endpoint_id}
+@returns(200) {endpoint: map{host: str, id: str, name: str, project_id: str, branch_id: str, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, region_id: str, type: str, current_state: str, pending_state: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, last_active: str(date-time), creation_source: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), suspended_at: str(date-time), proxy_host: str, suspend_timeout_seconds: int(int64), provisioner: str, compute_release_version: str}}
+
+@endpoint DELETE /projects/{project_id}/endpoints/{endpoint_id}
+@returns(200)
+@returns(204)
+
+@endpoint PATCH /projects/{project_id}/endpoints/{endpoint_id}
+@required {endpoint: map{branch_id: str, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, provisioner: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map}, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, suspend_timeout_seconds: int(int64), name: str}}
+@returns(200)
+
+@endpoint POST /projects/{project_id}/endpoints/{endpoint_id}/start
+@required {project_id: str, endpoint_id: str}
+@returns(200)
+
+@endpoint POST /projects/{project_id}/endpoints/{endpoint_id}/suspend
+@returns(200)
+
+@endpoint POST /projects/{project_id}/endpoints/{endpoint_id}/restart
+@returns(200)
+
+@endgroup
+
+@group consumption_history
+@endpoint GET /consumption_history/account
+@required {from: str(date-time), to: str(date-time), granularity: str}
+@optional {org_id: str, include_v1_metrics: bool, metrics: [str]}
+@returns(200) {periods: [map]}
+@errors {403, 404, 406, 429}
+
+@endpoint GET /consumption_history/projects
+@required {from: str(date-time), to: str(date-time), granularity: str}
+@optional {cursor: str, limit: int=10, project_ids: [str], org_id: str, include_v1_metrics: bool, metrics: [str]}
+@returns(200)
+@errors {403, 404, 406, 429}
+
+@endpoint GET /consumption_history/v2/projects
+@required {from: str(date-time), to: str(date-time), granularity: str, org_id: str}
+@optional {cursor: str, limit: int=10, project_ids: [str], metrics: [str]}
+@returns(200)
+@errors {403, 404, 406, 429}
+
+@endgroup
+
+@group organizations
+@endpoint GET /organizations/{org_id}
+@returns(200) {id: str, name: str, handle: str, plan: str, created_at: str(date-time), managed_by: str, updated_at: str(date-time), allow_hipaa_projects: bool}
+
+@endpoint GET /organizations/{org_id}/api_keys
+@returns(200)
+
+@endpoint POST /organizations/{org_id}/api_keys
+@returns(200)
+
+@endpoint DELETE /organizations/{org_id}/api_keys/{key_id}
+@required {key_id: int(int64)}
+@returns(200)
+
+@endpoint GET /organizations/{org_id}/members
+@returns(200) {members: [map]}
+
+@endpoint GET /organizations/{org_id}/members/{member_id}
+@returns(200) {id: str(uuid), user_id: str(uuid), org_id: str, role: str, joined_at: str(date-time)}
+
+@endpoint PATCH /organizations/{org_id}/members/{member_id}
+@required {role: str(admin/member)}
+@returns(200) {id: str(uuid), user_id: str(uuid), org_id: str, role: str, joined_at: str(date-time)}
+
+@endpoint DELETE /organizations/{org_id}/members/{member_id}
+@returns(200)
+
+@endpoint GET /organizations/{org_id}/invitations
+@returns(200) {invitations: [map]}
+
+@endpoint POST /organizations/{org_id}/invitations
+@required {invitations: [map{email!: str(email), role!: str}]}
+@returns(200) {invitations: [map]}
+
+@endpoint POST /organizations/{source_org_id}/projects/transfer
+@required {destination_org_id: str, project_ids: [str]}
+@returns(200)
+@errors {406, 422}
+
+@endpoint GET /organizations/{org_id}/vpc/vpc_endpoints
+@returns(200) {endpoints: [any]}
+
+@endpoint GET /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints
+@returns(200) {endpoints: [map]}
+
+@endpoint GET /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
+@returns(200) {vpc_endpoint_id: str, label: str, state: str, num_restricted_projects: int, example_restricted_projects: [str]}
+
+@endpoint POST /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
+@required {label: str}
+@returns(200)
+
+@endpoint DELETE /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
+@returns(200)
+
+@endgroup
+
+@group regions
+@endpoint GET /regions
+@returns(200) {regions: [map]}
+
+@endgroup
+
+@group users
+@endpoint GET /users/me
+@returns(200) {active_seconds_limit: int(int64), billing_account: map{state: str, payment_source: map{type: str, card: map{last4: str, brand: str, exp_month: int(int64), exp_year: int(int64)}}, subscription_type: str, payment_method: str, quota_reset_at_last: str(date-time), name: str, email: str(email), address_city: str, address_country: str, address_country_name: str, address_line1: str, address_line2: str, address_postal_code: str, address_state: str, orb_portal_url: str, tax_id: str, tax_id_type: str, plan_details: map{name: str, version: map{major: int, minor: int}}}, auth_accounts: [map], email: str(email), id: str, image: str, login: str, name: str, last_name: str, projects_limit: int(int64), branches_limit: int(int64), max_autoscaling_limit: num, compute_seconds_limit: int(int64), plan: str}
+
+@endpoint GET /users/me/organizations
+@returns(200) {organizations: [map]}
+
+@endpoint POST /users/me/projects/transfer
+@required {destination_org_id: str, project_ids: [str]}
+@returns(200)
+@errors {406, 422}
+
+@endgroup
+
+@group auth
+@endpoint GET /auth
+@returns(200) {account_id: str, auth_method: str, auth_data: str}
+
+@endgroup
+
+@group projects
+@endpoint POST /projects/{project_id}/branches/{branch_id}/snapshot
+@optional {lsn: str, timestamp: str, name: str, expires_at: str}
+@returns(200) {snapshot: map{id: str, name: str, lsn: str, timestamp: str, source_branch_id: str, created_at: str, expires_at: str, manual: bool}, operations: [map]}
+
+@endpoint GET /projects/{project_id}/snapshots
+@returns(200) {snapshots: [map]}
+
+@endpoint DELETE /projects/{project_id}/snapshots/{snapshot_id}
+@returns(202) {operations: [map]}
+
+@endpoint PATCH /projects/{project_id}/snapshots/{snapshot_id}
+@required {snapshot: map{name: str}}
+@returns(200) {snapshot: map{id: str, name: str, lsn: str, timestamp: str, source_branch_id: str, created_at: str, expires_at: str, manual: bool}}
+
+@endpoint POST /projects/{project_id}/snapshots/{snapshot_id}/restore
+@optional {name: str, name: str, target_branch_id: str, finalize_restore: bool=False}
+@returns(200)
+
+@endpoint GET /projects/{project_id}/branches/{branch_id}/backup_schedule
+@returns(200) {schedule: [map]}
+
+@endpoint PUT /projects/{project_id}/branches/{branch_id}/backup_schedule
+@required {schedule: [map{frequency!: str, hour: int, day: int, month: int, retention_seconds: int}]}
+@returns(200)
+
+@endgroup
+
+@end

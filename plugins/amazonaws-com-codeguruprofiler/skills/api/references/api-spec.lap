@@ -1,0 +1,137 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon CodeGuru Profiler
+@version 2019-07-18
+@auth AWS SigV4
+@endpoints 23
+@hint download_for_search
+@toc profilingGroups(16), internal(4), tags(3)
+
+@group profilingGroups
+@endpoint POST /profilingGroups/{profilingGroupName}/notificationConfiguration
+@required {profilingGroupName: str, channels: [Channel]}
+@returns(200) {notificationConfiguration: NotificationConfiguration?{channels: [Channel]?}}
+
+@endpoint POST /profilingGroups/{profilingGroupName}/frames/-/metrics
+@required {profilingGroupName: str}
+@optional {endTime: str(timestamp), period: str, startTime: str(timestamp), targetResolution: str, frameMetrics: [FrameMetric]}
+@returns(200) {endTime: str(timestamp), endTimes: [TimestampStructure], frameMetricData: [FrameMetricDatum], resolution: str, startTime: str(timestamp), unprocessedEndTimes: map<str,[TimestampStructure]>}
+
+@endpoint POST /profilingGroups/{profilingGroupName}/configureAgent
+@required {profilingGroupName: str}
+@optional {fleetInstanceId: str, metadata: map<str,str>}
+@returns(200) {configuration: AgentConfiguration{agentParameters: map<str,str>?, periodInSeconds: int, shouldProfile: bool}}
+
+@endpoint POST /profilingGroups
+@required {clientToken: str, profilingGroupName: str}
+@optional {agentOrchestrationConfig: AgentOrchestrationConfig, computePlatform: str, tags: map<str,str>}
+@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str,str>?, updatedAt: str(timestamp)?}}
+
+@endpoint DELETE /profilingGroups/{profilingGroupName}
+@required {profilingGroupName: str}
+
+@endpoint GET /profilingGroups/{profilingGroupName}
+@required {profilingGroupName: str}
+@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str,str>?, updatedAt: str(timestamp)?}}
+
+@endgroup
+
+@group internal
+@endpoint GET /internal/findingsReports
+@optional {dailyReportsOnly: bool, maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, reportSummaries: [FindingsReportSummary]}
+
+@endgroup
+
+@group profilingGroups
+@endpoint GET /profilingGroups/{profilingGroupName}/notificationConfiguration
+@required {profilingGroupName: str}
+@returns(200) {notificationConfiguration: NotificationConfiguration{channels: [Channel]?}}
+
+@endpoint GET /profilingGroups/{profilingGroupName}/policy
+@required {profilingGroupName: str}
+@returns(200) {policy: str, revisionId: str}
+
+@endpoint GET /profilingGroups/{profilingGroupName}/profile
+@required {profilingGroupName: str}
+@optional {Accept: str, endTime: str(timestamp), maxDepth: int, period: str, startTime: str(timestamp)}
+@returns(200) {contentEncoding: str?, contentType: str, profile: bytes}
+
+@endgroup
+
+@group internal
+@endpoint GET /internal/profilingGroups/{profilingGroupName}/recommendations
+@required {endTime: str(timestamp), profilingGroupName: str, startTime: str(timestamp)}
+@optional {locale: str}
+@returns(200) {anomalies: [Anomaly], profileEndTime: str(timestamp), profileStartTime: str(timestamp), profilingGroupName: str, recommendations: [Recommendation]}
+
+@endpoint GET /internal/profilingGroups/{profilingGroupName}/findingsReports
+@required {endTime: str(timestamp), profilingGroupName: str, startTime: str(timestamp)}
+@optional {dailyReportsOnly: bool, maxResults: int, nextToken: str}
+@returns(200) {findingsReportSummaries: [FindingsReportSummary], nextToken: str?}
+
+@endgroup
+
+@group profilingGroups
+@endpoint GET /profilingGroups/{profilingGroupName}/profileTimes
+@required {endTime: str(timestamp), period: str, profilingGroupName: str, startTime: str(timestamp)}
+@optional {maxResults: int, nextToken: str, orderBy: str}
+@returns(200) {nextToken: str?, profileTimes: [ProfileTime]}
+
+@endpoint GET /profilingGroups
+@optional {includeDescription: bool, maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, profilingGroupNames: [str], profilingGroups: [ProfilingGroupDescription]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group profilingGroups
+@endpoint POST /profilingGroups/{profilingGroupName}/agentProfile
+@required {Content-Type: str, profilingGroupName: str, agentProfile: bytes}
+@optional {profileToken: str}
+
+@endpoint PUT /profilingGroups/{profilingGroupName}/policy/{actionGroup}
+@required {actionGroup: str, profilingGroupName: str, principals: [str]}
+@optional {revisionId: str}
+@returns(200) {policy: str, revisionId: str}
+
+@endpoint DELETE /profilingGroups/{profilingGroupName}/notificationConfiguration/{channelId}
+@required {channelId: str, profilingGroupName: str}
+@returns(200) {notificationConfiguration: NotificationConfiguration?{channels: [Channel]?}}
+
+@endpoint DELETE /profilingGroups/{profilingGroupName}/policy/{actionGroup}
+@required {actionGroup: str, profilingGroupName: str, revisionId: str}
+@returns(200) {policy: str, revisionId: str}
+
+@endgroup
+
+@group internal
+@endpoint POST /internal/profilingGroups/{profilingGroupName}/anomalies/{anomalyInstanceId}/feedback
+@required {anomalyInstanceId: str, profilingGroupName: str, type: str}
+@optional {comment: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group profilingGroups
+@endpoint PUT /profilingGroups/{profilingGroupName}
+@required {profilingGroupName: str, agentOrchestrationConfig: AgentOrchestrationConfig}
+@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str,str>?, updatedAt: str(timestamp)?}}
+
+@endgroup
+
+@end
