@@ -1,0 +1,143 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS IoT Greengrass V2
+@version 2020-11-30
+@auth AWS SigV4
+@endpoints 29
+@hint download_for_search
+@toc greengrass(26), tags(3)
+
+@group greengrass
+@endpoint PUT /greengrass/servicerole
+@required {roleArn: str}
+@returns(200) {associatedAt: str?}
+
+@endpoint POST /greengrass/v2/coreDevices/{coreDeviceThingName}/associateClientDevices
+@required {coreDeviceThingName: str}
+@optional {entries: [AssociateClientDeviceWithCoreDeviceEntry]}
+@returns(200) {errorEntries: [AssociateClientDeviceWithCoreDeviceErrorEntry]?}
+
+@endpoint POST /greengrass/v2/coreDevices/{coreDeviceThingName}/disassociateClientDevices
+@required {coreDeviceThingName: str}
+@optional {entries: [DisassociateClientDeviceFromCoreDeviceEntry]}
+@returns(200) {errorEntries: [DisassociateClientDeviceFromCoreDeviceErrorEntry]?}
+
+@endpoint POST /greengrass/v2/deployments/{deploymentId}/cancel
+@required {deploymentId: str}
+@returns(200) {message: str?}
+
+@endpoint POST /greengrass/v2/createComponentVersion
+@optional {inlineRecipe: bytes, lambdaFunction: LambdaFunctionRecipeSource, tags: map<str,str>, clientToken: str}
+@returns(200) {arn: str?, componentName: str, componentVersion: str, creationTimestamp: str(timestamp), status: CloudComponentStatus{componentState: str?, message: str?, errors: map<str,str>?, vendorGuidance: str?, vendorGuidanceMessage: str?}}
+
+@endpoint POST /greengrass/v2/deployments
+@required {targetArn: str}
+@optional {deploymentName: str, components: map<str,ComponentDeploymentSpecification>, iotJobConfiguration: DeploymentIoTJobConfiguration, deploymentPolicies: DeploymentPolicies, parentTargetArn: str, tags: map<str,str>, clientToken: str}
+@returns(200) {deploymentId: str?, iotJobId: str?, iotJobArn: str?}
+
+@endpoint DELETE /greengrass/v2/components/{arn}
+@required {arn: str}
+
+@endpoint DELETE /greengrass/v2/coreDevices/{coreDeviceThingName}
+@required {coreDeviceThingName: str}
+
+@endpoint DELETE /greengrass/v2/deployments/{deploymentId}
+@required {deploymentId: str}
+
+@endpoint GET /greengrass/v2/components/{arn}/metadata
+@required {arn: str}
+@returns(200) {arn: str?, componentName: str?, componentVersion: str?, creationTimestamp: str(timestamp)?, publisher: str?, description: str?, status: CloudComponentStatus?{componentState: str?, message: str?, errors: map<str,str>?, vendorGuidance: str?, vendorGuidanceMessage: str?}, platforms: [ComponentPlatform]?, tags: map<str,str>?}
+
+@endpoint DELETE /greengrass/servicerole
+@returns(200) {disassociatedAt: str?}
+
+@endpoint GET /greengrass/v2/components/{arn}
+@required {arn: str}
+@optional {recipeOutputFormat: str}
+@returns(200) {recipeOutputFormat: str, recipe: bytes, tags: map<str,str>?}
+
+@endpoint GET /greengrass/v2/components/{arn}/artifacts/{artifactName+}
+@required {arn: str, artifactName: str}
+@optional {s3EndpointType: str, x-amz-iot-endpoint-type: str}
+@returns(200) {preSignedUrl: str}
+
+@endpoint GET /greengrass/things/{thingName}/connectivityInfo
+@required {thingName: str}
+@returns(200) {connectivityInfo: [ConnectivityInfo]?, message: str?}
+
+@endpoint GET /greengrass/v2/coreDevices/{coreDeviceThingName}
+@required {coreDeviceThingName: str}
+@returns(200) {coreDeviceThingName: str?, coreVersion: str?, platform: str?, architecture: str?, status: str?, lastStatusUpdateTimestamp: str(timestamp)?, tags: map<str,str>?}
+
+@endpoint GET /greengrass/v2/deployments/{deploymentId}
+@required {deploymentId: str}
+@returns(200) {targetArn: str?, revisionId: str?, deploymentId: str?, deploymentName: str?, deploymentStatus: str?, iotJobId: str?, iotJobArn: str?, components: map<str,ComponentDeploymentSpecification>?, deploymentPolicies: DeploymentPolicies?{failureHandlingPolicy: str?, componentUpdatePolicy: DeploymentComponentUpdatePolicy?{timeoutInSeconds: int?, action: str?}, configurationValidationPolicy: DeploymentConfigurationValidationPolicy?{timeoutInSeconds: int?}}, iotJobConfiguration: DeploymentIoTJobConfiguration?{jobExecutionsRolloutConfig: IoTJobExecutionsRolloutConfig?{exponentialRate: IoTJobExponentialRolloutRate?{baseRatePerMinute: int, incrementFactor: num(f64), rateIncreaseCriteria: IoTJobRateIncreaseCriteria}, maximumPerMinute: int?}, abortConfig: IoTJobAbortConfig?{criteriaList: [IoTJobAbortCriteria]}, timeoutConfig: IoTJobTimeoutConfig?{inProgressTimeoutInMinutes: int(i64)?}}, creationTimestamp: str(timestamp)?, isLatestForTarget: bool?, parentTargetArn: str?, tags: map<str,str>?}
+
+@endpoint GET /greengrass/servicerole
+@returns(200) {associatedAt: str?, roleArn: str?}
+
+@endpoint GET /greengrass/v2/coreDevices/{coreDeviceThingName}/associatedClientDevices
+@required {coreDeviceThingName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {associatedClientDevices: [AssociatedClientDevice]?, nextToken: str?}
+
+@endpoint GET /greengrass/v2/components/{arn}/versions
+@required {arn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {componentVersions: [ComponentVersionListItem]?, nextToken: str?}
+
+@endpoint GET /greengrass/v2/components
+@optional {scope: str, maxResults: int, nextToken: str}
+@returns(200) {components: [Component]?, nextToken: str?}
+
+@endpoint GET /greengrass/v2/coreDevices
+@optional {thingGroupArn: str, status: str, maxResults: int, nextToken: str}
+@returns(200) {coreDevices: [CoreDevice]?, nextToken: str?}
+
+@endpoint GET /greengrass/v2/deployments
+@optional {targetArn: str, historyFilter: str, parentTargetArn: str, maxResults: int, nextToken: str}
+@returns(200) {deployments: [Deployment]?, nextToken: str?}
+
+@endpoint GET /greengrass/v2/coreDevices/{coreDeviceThingName}/effectiveDeployments
+@required {coreDeviceThingName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {effectiveDeployments: [EffectiveDeployment]?, nextToken: str?}
+
+@endpoint GET /greengrass/v2/coreDevices/{coreDeviceThingName}/installedComponents
+@required {coreDeviceThingName: str}
+@optional {maxResults: int, nextToken: str, topologyFilter: str}
+@returns(200) {installedComponents: [InstalledComponent]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group greengrass
+@endpoint POST /greengrass/v2/resolveComponentCandidates
+@optional {platform: ComponentPlatform, componentCandidates: [ComponentCandidate]}
+@returns(200) {resolvedComponentVersions: [ResolvedComponentVersion]?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group greengrass
+@endpoint PUT /greengrass/things/{thingName}/connectivityInfo
+@required {thingName: str, connectivityInfo: [ConnectivityInfo]}
+@returns(200) {version: str?, message: str?}
+
+@endgroup
+
+@end

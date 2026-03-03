@@ -1,0 +1,489 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api ShipEngine API
+@base https://api.shipengine.com
+@version 1.1.202602041002
+@auth ApiKey API-Key in header
+@endpoints 95
+@hint download_for_search
+@toc account(6), addresses(2), batches(10), carriers(7), connections(6), documents(1), downloads(1), environment(5), insurance(2), labels(9), manifests(4), packages(5), pickups(4), rates(4), service_points(2), shipments(12), tags(5), tokens(1), tracking(3), warehouses(6)
+
+@group account
+@endpoint GET /v1/account/settings
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/account/settings/images
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/account/settings/images
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/account/settings/images/{label_image_id}
+@required {label_image_id: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/account/settings/images/{label_image_id}
+@required {label_image_id: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/account/settings/images/{label_image_id}
+@required {label_image_id: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group addresses
+@endpoint PUT /v1/addresses/recognize
+@required {text: str}
+@optional {address: any}
+@returns(200) {score: num(double), address: any, entities: [map]}
+@errors {400, 500}
+
+@endpoint POST /v1/addresses/validate
+@returns(200)
+@errors {400, 500}
+
+@endgroup
+
+@group batches
+@endpoint GET /v1/batches
+@optional {status: str, page: int(int32)=1, page_size: int(int32)=25, sort_dir: any=desc, batch_number: str, created_at_start: str(date-time), created_at_end: str(date-time), processed_at_start: str(date-time), processed_at_end: str(date-time), sort_by: str}
+@returns(200) {batches: [any], total: int(int64), page: int(int32), pages: int(int32), links: any}
+@errors {404, 500}
+
+@endpoint POST /v1/batches
+@returns(200)
+@returns(207)
+@errors {400, 500}
+
+@endpoint GET /v1/batches/external_batch_id/{external_batch_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/batches/{batch_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/batches/{batch_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/batches/{batch_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/batches/{batch_id}/add
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/batches/{batch_id}/errors
+@optional {page: int(int32)=1, pagesize: int(int32)}
+@returns(200) {errors: [map], links: any}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/batches/{batch_id}/process/labels
+@optional {ship_date: any, label_layout: str=4x6, label_format: any=pdf, display_scheme: any=label}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/batches/{batch_id}/remove
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group carriers
+@endpoint GET /v1/carriers
+@returns(200)
+@returns(207)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/carriers/{carrier_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/carriers/{carrier_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/carriers/{carrier_id}/add_funds
+@returns(200) {balance: any}
+@errors {400, 404, 500}
+
+@endpoint GET /v1/carriers/{carrier_id}/options
+@returns(200) {options: [any]}
+@errors {400, 404, 500}
+
+@endpoint GET /v1/carriers/{carrier_id}/packages
+@returns(200) {packages: [any]}
+@errors {400, 404, 500}
+
+@endpoint GET /v1/carriers/{carrier_id}/services
+@returns(200) {services: [any]}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group connections
+@endpoint POST /v1/connections/carriers/{carrier_name}
+@returns(200) {carrier_id: any}
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/connections/carriers/{carrier_name}/{carrier_id}
+@returns(204)
+@errors {404, 500}
+
+@endpoint GET /v1/connections/carriers/{carrier_name}/{carrier_id}/settings
+@returns(200)
+@errors {404, 500}
+
+@endpoint PUT /v1/connections/carriers/{carrier_name}/{carrier_id}/settings
+@returns(204)
+@errors {404, 500}
+
+@endpoint DELETE /v1/connections/insurance/shipsurance
+@returns(200)
+@errors {400, 500}
+
+@endpoint POST /v1/connections/insurance/shipsurance
+@required {email: any, policy_id: str}
+@returns(200)
+@errors {400, 500}
+
+@endgroup
+
+@group documents
+@endpoint POST /v1/documents/combined_labels
+@optional {label_ids: [any], label_format: str, label_download_type: any=inline}
+@returns(200) {label_download: any}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group downloads
+@endpoint GET /v1/downloads/{dir}/{subdir}/{filename}
+@optional {download: str, rotation: int(int32)}
+@returns(200)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group environment
+@endpoint GET /v1/environment/webhooks
+@returns(200)
+@errors {400, 500}
+
+@endpoint POST /v1/environment/webhooks
+@required {event: any, url: any}
+@optional {headers: [any], name: str, store_id: int(int32)}
+@returns(200)
+@errors {400, 409, 500}
+
+@endpoint GET /v1/environment/webhooks/{webhook_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/environment/webhooks/{webhook_id}
+@optional {url: any, headers: [any], name: str, store_id: int(int32)}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/environment/webhooks/{webhook_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group insurance
+@endpoint PATCH /v1/insurance/shipsurance/add_funds
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /v1/insurance/shipsurance/balance
+@returns(200)
+@errors {400, 500}
+
+@endgroup
+
+@group labels
+@endpoint GET /v1/labels
+@optional {label_status: str, service_code: str, carrier_id: str, tracking_number: str, batch_id: str, rate_id: str, shipment_id: str, warehouse_id: str, created_at_start: str(date-time), created_at_end: str(date-time), page: int(int32)=1, page_size: int(int32)=25, sort_dir: any=desc, sort_by: str(modified_at/created_at/voided_at)=created_at}
+@returns(200) {labels: [map]}
+@errors {400, 500}
+
+@endpoint POST /v1/labels
+@optional {ship_to_service_point_id: str, ship_from_service_point_id: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/labels/external_shipment_id/{external_shipment_id}
+@optional {label_download_type: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/labels/rates/{rate_id}
+@optional {custom_field1: str, custom_field2: str, custom_field3: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/labels/shipment/{shipment_id}
+@optional {validate_address: any, label_layout: any=4x6, label_format: any=pdf, label_download_type: any=url, display_scheme: any=label}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/labels/{label_id}
+@optional {label_download_type: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/labels/{label_id}/return
+@optional {charge_event: any, label_layout: any=4x6, label_format: any=pdf, label_download_type: any=url, display_scheme: any=label, label_image_id: any, rma_number: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/labels/{label_id}/track
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/labels/{label_id}/void
+@returns(200) {approved: bool, message: str, reason_code: str}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group manifests
+@endpoint GET /v1/manifests
+@optional {warehouse_id: str, ship_date_start: str(date-time), ship_date_end: str(date-time), created_at_start: str(date-time), created_at_end: str(date-time), carrier_id: str, page: int(int32)=1, page_size: int(int32)=25, label_ids: [str]}
+@returns(200) {manifests: [any], total: int(int64), page: int(int32), pages: int(int32), links: any}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/manifests
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /v1/manifests/{manifest_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/manifests/requests/{manifest_request_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group packages
+@endpoint GET /v1/packages
+@returns(200) {packages: [any]}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/packages
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /v1/packages/{package_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/packages/{package_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/packages/{package_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group pickups
+@endpoint GET /v1/pickups
+@optional {carrier_id: str, warehouse_id: str, created_at_start: str(date-time), created_at_end: str(date-time), page: int(int32)=1, page_size: int(int32)=25}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/pickups
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/pickups/{pickup_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/pickups/{pickup_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group rates
+@endpoint POST /v1/rates
+@optional {ship_to_service_point_id: str, ship_from_service_point_id: str}
+@returns(200)
+@errors {400, 500}
+
+@endpoint POST /v1/rates/bulk
+@optional {ship_to_service_point_id: str, ship_from_service_point_id: str}
+@returns(200)
+@errors {400, 500}
+
+@endpoint POST /v1/rates/estimate
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /v1/rates/{rate_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group service_points
+@endpoint POST /v1/service_points/list
+@returns(200) {lat: num(double), long: num(double), service_points: [map], errors: [any]}
+@errors {400, 404, 500}
+
+@endpoint GET /v1/service_points/{carrier_code}/{country_code}/{service_point_id}
+@returns(200) {service_point: map{carrier_code: any, service_codes: [str], service_point_id: str, company_name: str, address_line1: str, city_locality: str, state_province: str, postal_code: any, country_code: any, phone_number: str, lat: num(double), long: num(double), hours_of_operation: map{monday: [map], tuesday: [map], wednesday: [map], thursday: [map], friday: [map], saturday: [map], sunday: [map]}, features: [str], type: str}}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group shipments
+@endpoint GET /v1/shipments
+@optional {shipment_status: str, batch_id: str, tag: str, created_at_start: str(date-time), created_at_end: str(date-time), modified_at_start: str(date-time), modified_at_end: str(date-time), page: int(int32)=1, page_size: int(int32)=25, sales_order_id: str, sort_dir: any=desc, sort_by: str}
+@returns(200) {shipments: [any], total: int(int64), page: int(int32), pages: int(int32), links: any}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/shipments
+@required {shipments: [any]}
+@returns(200) {has_errors: bool, shipments: [any]}
+@errors {400, 500}
+
+@endpoint GET /v1/shipments/external_shipment_id/{external_shipment_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/shipments/recognize
+@required {text: str}
+@optional {shipment: any}
+@returns(200) {score: num(double), shipment: any, entities: [map]}
+@errors {400, 500}
+
+@endpoint GET /v1/shipments/{shipment_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/shipments/{shipment_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/shipments/{shipment_id}/cancel
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/shipments/{shipment_id}/rates
+@optional {created_at_start: str(date-time)}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/shipments/tags
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/shipments/{shipment_id}/tags
+@returns(200) {tags: [str]}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/shipments/{shipment_id}/tags/{tag_name}
+@returns(200) {tags: [str]}
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/shipments/{shipment_id}/tags/{tag_name}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group tags
+@endpoint GET /v1/tags
+@returns(200) {tags: [any]}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/tags
+@required {name: str}
+@optional {color: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/tags/{tag_name}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/tags/{tag_name}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/tags/{tag_name}/{new_tag_name}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group tokens
+@endpoint POST /v1/tokens/ephemeral
+@optional {redirect: str}
+@returns(200) {token: str, redirect_url: str}
+
+@endgroup
+
+@group tracking
+@endpoint GET /v1/tracking
+@optional {carrier_code: str, tracking_number: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/tracking/start
+@optional {carrier_code: str, tracking_number: str, carrier_id: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /v1/tracking/stop
+@optional {carrier_code: str, tracking_number: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group warehouses
+@endpoint GET /v1/warehouses
+@returns(200) {warehouses: [any]}
+@errors {400, 404, 500}
+
+@endpoint POST /v1/warehouses
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /v1/warehouses/{warehouse_id}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/warehouses/{warehouse_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint DELETE /v1/warehouses/{warehouse_id}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint PUT /v1/warehouses/{warehouse_id}/settings
+@optional {is_default: bool}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@end

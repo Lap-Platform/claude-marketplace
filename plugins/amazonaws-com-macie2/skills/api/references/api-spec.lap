@@ -1,0 +1,544 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Macie 2
+@version 2020-01-01
+@auth AWS SigV4
+@endpoints 81
+@hint download_for_search
+@toc invitations(6), custom-data-identifiers(6), automated-discovery(4), allow-lists(5), jobs(4), findingsfilters(5), members(5), findings(6), datasources(3), admin(5), macie(5), administrator(2), master(2), classification-export-configuration(2), classification-scopes(3), findings-publication-configuration(2), resource-profiles(5), reveal-configuration(2), templates(3), usage(2), managed-data-identifiers(1), tags(3)
+
+@group invitations
+@endpoint POST /invitations/accept
+@required {invitationId: str}
+@optional {administratorAccountId: str, masterAccount: str}
+
+@endgroup
+
+@group custom-data-identifiers
+@endpoint POST /custom-data-identifiers/get
+@optional {ids: [str]}
+@returns(200) {customDataIdentifiers: [BatchGetCustomDataIdentifierSummary]?, notFoundIdentifierIds: [str]?}
+
+@endgroup
+
+@group automated-discovery
+@endpoint PATCH /automated-discovery/accounts
+@optional {accounts: [AutomatedDiscoveryAccountUpdate]}
+@returns(200) {errors: [AutomatedDiscoveryAccountUpdateError]?}
+
+@endgroup
+
+@group allow-lists
+@endpoint POST /allow-lists
+@required {clientToken: str, criteria: AllowListCriteria, name: str}
+@optional {description: str, tags: map<str,str>}
+@returns(200) {arn: str?, id: str?}
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs
+@required {clientToken: str, jobType: str, name: str, s3JobDefinition: S3JobDefinition}
+@optional {allowListIds: [str], customDataIdentifierIds: [str], description: str, initialRun: bool, managedDataIdentifierIds: [str], managedDataIdentifierSelector: str, samplingPercentage: int, scheduleFrequency: JobScheduleFrequency, tags: map<str,str>}
+@returns(200) {jobArn: str?, jobId: str?}
+
+@endgroup
+
+@group custom-data-identifiers
+@endpoint POST /custom-data-identifiers
+@required {name: str, regex: str}
+@optional {clientToken: str, description: str, ignoreWords: [str], keywords: [str], maximumMatchDistance: int, severityLevels: [SeverityLevel], tags: map<str,str>}
+@returns(200) {customDataIdentifierId: str?}
+
+@endgroup
+
+@group findingsfilters
+@endpoint POST /findingsfilters
+@required {action: str, findingCriteria: FindingCriteria, name: str}
+@optional {clientToken: str, description: str, position: int, tags: map<str,str>}
+@returns(200) {arn: str?, id: str?}
+
+@endgroup
+
+@group invitations
+@endpoint POST /invitations
+@required {accountIds: [str]}
+@optional {disableEmailNotification: bool, message: str}
+@returns(200) {unprocessedAccounts: [UnprocessedAccount]?}
+
+@endgroup
+
+@group members
+@endpoint POST /members
+@required {account: AccountDetail}
+@optional {tags: map<str,str>}
+@returns(200) {arn: str?}
+
+@endgroup
+
+@group findings
+@endpoint POST /findings/sample
+@optional {findingTypes: [str]}
+
+@endgroup
+
+@group invitations
+@endpoint POST /invitations/decline
+@required {accountIds: [str]}
+@returns(200) {unprocessedAccounts: [UnprocessedAccount]?}
+
+@endgroup
+
+@group allow-lists
+@endpoint DELETE /allow-lists/{id}
+@required {id: str}
+@optional {ignoreJobChecks: str}
+
+@endgroup
+
+@group custom-data-identifiers
+@endpoint DELETE /custom-data-identifiers/{id}
+@required {id: str}
+
+@endgroup
+
+@group findingsfilters
+@endpoint DELETE /findingsfilters/{id}
+@required {id: str}
+
+@endgroup
+
+@group invitations
+@endpoint POST /invitations/delete
+@required {accountIds: [str]}
+@returns(200) {unprocessedAccounts: [UnprocessedAccount]?}
+
+@endgroup
+
+@group members
+@endpoint DELETE /members/{id}
+@required {id: str}
+
+@endgroup
+
+@group datasources
+@endpoint POST /datasources/s3
+@optional {criteria: map<str,BucketCriteriaAdditionalProperties>, maxResults: int, nextToken: str, sortCriteria: BucketSortCriteria}
+@returns(200) {buckets: [BucketMetadata]?, nextToken: str?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /jobs/{jobId}
+@required {jobId: str}
+@returns(200) {allowListIds: [str]?, clientToken: str?, createdAt: str(timestamp)?, customDataIdentifierIds: [str]?, description: str?, initialRun: bool?, jobArn: str?, jobId: str?, jobStatus: str?, jobType: str?, lastRunErrorStatus: LastRunErrorStatus?{code: str?}, lastRunTime: str(timestamp)?, managedDataIdentifierIds: [str]?, managedDataIdentifierSelector: str?, name: str?, s3JobDefinition: S3JobDefinition?{bucketCriteria: S3BucketCriteriaForJob?{excludes: CriteriaBlockForJob?{and: [CriteriaForJob]?}, includes: CriteriaBlockForJob?{and: [CriteriaForJob]?}}, bucketDefinitions: [S3BucketDefinitionForJob]?, scoping: Scoping?{excludes: JobScopingBlock?{and: [JobScopeTerm]?}, includes: JobScopingBlock?{and: [JobScopeTerm]?}}}, samplingPercentage: int?, scheduleFrequency: JobScheduleFrequency?{dailySchedule: DailySchedule?, monthlySchedule: MonthlySchedule?{dayOfMonth: int?}, weeklySchedule: WeeklySchedule?{dayOfWeek: str?}}, statistics: Statistics?{approximateNumberOfObjectsToProcess: num(f64)?, numberOfRuns: num(f64)?}, tags: map<str,str>?, userPausedDetails: UserPausedDetails?{jobExpiresAt: str(timestamp)?, jobImminentExpirationHealthEventArn: str?, jobPausedAt: str(timestamp)?}}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin/configuration
+@returns(200) {autoEnable: bool?, maxAccountLimitReached: bool?}
+
+@endgroup
+
+@group macie
+@endpoint DELETE /macie
+
+@endgroup
+
+@group admin
+@endpoint DELETE /admin
+@required {adminAccountId: str}
+
+@endgroup
+
+@group administrator
+@endpoint POST /administrator/disassociate
+
+@endgroup
+
+@group master
+@endpoint POST /master/disassociate
+
+@endgroup
+
+@group members
+@endpoint POST /members/disassociate/{id}
+@required {id: str}
+
+@endgroup
+
+@group macie
+@endpoint POST /macie
+@optional {clientToken: str, findingPublishingFrequency: str, status: str}
+
+@endgroup
+
+@group admin
+@endpoint POST /admin
+@required {adminAccountId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group administrator
+@endpoint GET /administrator
+@returns(200) {administrator: Invitation?{accountId: str?, invitationId: str?, invitedAt: str(timestamp)?, relationshipStatus: str?}}
+
+@endgroup
+
+@group allow-lists
+@endpoint GET /allow-lists/{id}
+@required {id: str}
+@returns(200) {arn: str?, createdAt: str(timestamp)?, criteria: AllowListCriteria?{regex: str?, s3WordsList: S3WordsList?{bucketName: str, objectKey: str}}, description: str?, id: str?, name: str?, status: AllowListStatus?{code: str, description: str?}, tags: map<str,str>?, updatedAt: str(timestamp)?}
+
+@endgroup
+
+@group automated-discovery
+@endpoint GET /automated-discovery/configuration
+@returns(200) {autoEnableOrganizationMembers: str?, classificationScopeId: str?, disabledAt: str(timestamp)?, firstEnabledAt: str(timestamp)?, lastUpdatedAt: str(timestamp)?, sensitivityInspectionTemplateId: str?, status: str?}
+
+@endgroup
+
+@group datasources
+@endpoint POST /datasources/s3/statistics
+@optional {accountId: str}
+@returns(200) {bucketCount: int(i64)?, bucketCountByEffectivePermission: BucketCountByEffectivePermission?{publiclyAccessible: int(i64)?, publiclyReadable: int(i64)?, publiclyWritable: int(i64)?, unknown: int(i64)?}, bucketCountByEncryptionType: BucketCountByEncryptionType?{kmsManaged: int(i64)?, s3Managed: int(i64)?, unencrypted: int(i64)?, unknown: int(i64)?}, bucketCountByObjectEncryptionRequirement: BucketCountPolicyAllowsUnencryptedObjectUploads?{allowsUnencryptedObjectUploads: int(i64)?, deniesUnencryptedObjectUploads: int(i64)?, unknown: int(i64)?}, bucketCountBySharedAccessType: BucketCountBySharedAccessType?{external: int(i64)?, internal: int(i64)?, notShared: int(i64)?, unknown: int(i64)?}, bucketStatisticsBySensitivity: BucketStatisticsBySensitivity?{classificationError: SensitivityAggregations?{classifiableSizeInBytes: int(i64)?, publiclyAccessibleCount: int(i64)?, totalCount: int(i64)?, totalSizeInBytes: int(i64)?}, notClassified: SensitivityAggregations?{classifiableSizeInBytes: int(i64)?, publiclyAccessibleCount: int(i64)?, totalCount: int(i64)?, totalSizeInBytes: int(i64)?}, notSensitive: SensitivityAggregations?{classifiableSizeInBytes: int(i64)?, publiclyAccessibleCount: int(i64)?, totalCount: int(i64)?, totalSizeInBytes: int(i64)?}, sensitive: SensitivityAggregations?{classifiableSizeInBytes: int(i64)?, publiclyAccessibleCount: int(i64)?, totalCount: int(i64)?, totalSizeInBytes: int(i64)?}}, classifiableObjectCount: int(i64)?, classifiableSizeInBytes: int(i64)?, lastUpdated: str(timestamp)?, objectCount: int(i64)?, sizeInBytes: int(i64)?, sizeInBytesCompressed: int(i64)?, unclassifiableObjectCount: ObjectLevelStatistics?{fileType: int(i64)?, storageClass: int(i64)?, total: int(i64)?}, unclassifiableObjectSizeInBytes: ObjectLevelStatistics?{fileType: int(i64)?, storageClass: int(i64)?, total: int(i64)?}}
+
+@endgroup
+
+@group classification-export-configuration
+@endpoint GET /classification-export-configuration
+@returns(200) {configuration: ClassificationExportConfiguration?{s3Destination: S3Destination?{bucketName: str, keyPrefix: str?, kmsKeyArn: str}}}
+
+@endgroup
+
+@group classification-scopes
+@endpoint GET /classification-scopes/{id}
+@required {id: str}
+@returns(200) {id: str?, name: str?, s3: S3ClassificationScope?{excludes: S3ClassificationScopeExclusion{bucketNames: [str]}}}
+
+@endgroup
+
+@group custom-data-identifiers
+@endpoint GET /custom-data-identifiers/{id}
+@required {id: str}
+@returns(200) {arn: str?, createdAt: str(timestamp)?, deleted: bool?, description: str?, id: str?, ignoreWords: [str]?, keywords: [str]?, maximumMatchDistance: int?, name: str?, regex: str?, severityLevels: [SeverityLevel]?, tags: map<str,str>?}
+
+@endgroup
+
+@group findings
+@endpoint POST /findings/statistics
+@required {groupBy: str}
+@optional {findingCriteria: FindingCriteria, size: int, sortCriteria: FindingStatisticsSortCriteria}
+@returns(200) {countsByGroup: [GroupCount]?}
+
+@endpoint POST /findings/describe
+@required {findingIds: [str]}
+@optional {sortCriteria: SortCriteria}
+@returns(200) {findings: [Finding]?}
+
+@endgroup
+
+@group findingsfilters
+@endpoint GET /findingsfilters/{id}
+@required {id: str}
+@returns(200) {action: str?, arn: str?, description: str?, findingCriteria: FindingCriteria?{criterion: map<str,CriterionAdditionalProperties>?}, id: str?, name: str?, position: int?, tags: map<str,str>?}
+
+@endgroup
+
+@group findings-publication-configuration
+@endpoint GET /findings-publication-configuration
+@returns(200) {securityHubConfiguration: SecurityHubConfiguration?{publishClassificationFindings: bool, publishPolicyFindings: bool}}
+
+@endgroup
+
+@group invitations
+@endpoint GET /invitations/count
+@returns(200) {invitationsCount: int(i64)?}
+
+@endgroup
+
+@group macie
+@endpoint GET /macie
+@returns(200) {createdAt: str(timestamp)?, findingPublishingFrequency: str?, serviceRole: str?, status: str?, updatedAt: str(timestamp)?}
+
+@endgroup
+
+@group master
+@endpoint GET /master
+@returns(200) {master: Invitation?{accountId: str?, invitationId: str?, invitedAt: str(timestamp)?, relationshipStatus: str?}}
+
+@endgroup
+
+@group members
+@endpoint GET /members/{id}
+@required {id: str}
+@returns(200) {accountId: str?, administratorAccountId: str?, arn: str?, email: str?, invitedAt: str(timestamp)?, masterAccountId: str?, relationshipStatus: str?, tags: map<str,str>?, updatedAt: str(timestamp)?}
+
+@endgroup
+
+@group resource-profiles
+@endpoint GET /resource-profiles
+@required {resourceArn: str}
+@returns(200) {profileUpdatedAt: str(timestamp)?, sensitivityScore: int?, sensitivityScoreOverridden: bool?, statistics: ResourceStatistics?{totalBytesClassified: int(i64)?, totalDetections: int(i64)?, totalDetectionsSuppressed: int(i64)?, totalItemsClassified: int(i64)?, totalItemsSensitive: int(i64)?, totalItemsSkipped: int(i64)?, totalItemsSkippedInvalidEncryption: int(i64)?, totalItemsSkippedInvalidKms: int(i64)?, totalItemsSkippedPermissionDenied: int(i64)?}}
+
+@endgroup
+
+@group reveal-configuration
+@endpoint GET /reveal-configuration
+@returns(200) {configuration: RevealConfiguration?{kmsKeyId: str?, status: str}, retrievalConfiguration: RetrievalConfiguration?{externalId: str?, retrievalMode: str, roleName: str?}}
+
+@endgroup
+
+@group findings
+@endpoint GET /findings/{findingId}/reveal
+@required {findingId: str}
+@returns(200) {error: str?, sensitiveDataOccurrences: map<str,[DetectedDataDetails]>?, status: str?}
+
+@endpoint GET /findings/{findingId}/reveal/availability
+@required {findingId: str}
+@returns(200) {code: str?, reasons: [str]?}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates/sensitivity-inspections/{id}
+@required {id: str}
+@returns(200) {description: str?, excludes: SensitivityInspectionTemplateExcludes?{managedDataIdentifierIds: [str]?}, includes: SensitivityInspectionTemplateIncludes?{allowListIds: [str]?, customDataIdentifierIds: [str]?, managedDataIdentifierIds: [str]?}, name: str?, sensitivityInspectionTemplateId: str?}
+
+@endgroup
+
+@group usage
+@endpoint POST /usage/statistics
+@optional {filterBy: [UsageStatisticsFilter], maxResults: int, nextToken: str, sortBy: UsageStatisticsSortBy, timeRange: str}
+@returns(200) {nextToken: str?, records: [UsageRecord]?, timeRange: str?}
+
+@endpoint GET /usage
+@optional {timeRange: str}
+@returns(200) {timeRange: str?, usageTotals: [UsageTotal]?}
+
+@endgroup
+
+@group allow-lists
+@endpoint GET /allow-lists
+@optional {maxResults: int, nextToken: str}
+@returns(200) {allowLists: [AllowListSummary]?, nextToken: str?}
+
+@endgroup
+
+@group automated-discovery
+@endpoint GET /automated-discovery/accounts
+@optional {accountIds: [str], maxResults: int, nextToken: str}
+@returns(200) {items: [AutomatedDiscoveryAccount]?, nextToken: str?}
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs/list
+@optional {filterCriteria: ListJobsFilterCriteria, maxResults: int, nextToken: str, sortCriteria: ListJobsSortCriteria}
+@returns(200) {items: [JobSummary]?, nextToken: str?}
+
+@endgroup
+
+@group classification-scopes
+@endpoint GET /classification-scopes
+@optional {name: str, nextToken: str}
+@returns(200) {classificationScopes: [ClassificationScopeSummary]?, nextToken: str?}
+
+@endgroup
+
+@group custom-data-identifiers
+@endpoint POST /custom-data-identifiers/list
+@optional {maxResults: int, nextToken: str}
+@returns(200) {items: [CustomDataIdentifierSummary]?, nextToken: str?}
+
+@endgroup
+
+@group findings
+@endpoint POST /findings
+@optional {findingCriteria: FindingCriteria, maxResults: int, nextToken: str, sortCriteria: SortCriteria}
+@returns(200) {findingIds: [str]?, nextToken: str?}
+
+@endgroup
+
+@group findingsfilters
+@endpoint GET /findingsfilters
+@optional {maxResults: int, nextToken: str}
+@returns(200) {findingsFilterListItems: [FindingsFilterListItem]?, nextToken: str?}
+
+@endgroup
+
+@group invitations
+@endpoint GET /invitations
+@optional {maxResults: int, nextToken: str}
+@returns(200) {invitations: [Invitation]?, nextToken: str?}
+
+@endgroup
+
+@group managed-data-identifiers
+@endpoint POST /managed-data-identifiers/list
+@optional {nextToken: str}
+@returns(200) {items: [ManagedDataIdentifierSummary]?, nextToken: str?}
+
+@endgroup
+
+@group members
+@endpoint GET /members
+@optional {maxResults: int, nextToken: str, onlyAssociated: str}
+@returns(200) {members: [Member]?, nextToken: str?}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin
+@optional {maxResults: int, nextToken: str}
+@returns(200) {adminAccounts: [AdminAccount]?, nextToken: str?}
+
+@endgroup
+
+@group resource-profiles
+@endpoint GET /resource-profiles/artifacts
+@required {resourceArn: str}
+@optional {nextToken: str}
+@returns(200) {artifacts: [ResourceProfileArtifact]?, nextToken: str?}
+
+@endpoint GET /resource-profiles/detections
+@required {resourceArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {detections: [Detection]?, nextToken: str?}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates/sensitivity-inspections
+@optional {maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, sensitivityInspectionTemplates: [SensitivityInspectionTemplatesEntry]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group classification-export-configuration
+@endpoint PUT /classification-export-configuration
+@required {configuration: ClassificationExportConfiguration}
+@returns(200) {configuration: ClassificationExportConfiguration?{s3Destination: S3Destination?{bucketName: str, keyPrefix: str?, kmsKeyArn: str}}}
+
+@endgroup
+
+@group findings-publication-configuration
+@endpoint PUT /findings-publication-configuration
+@optional {clientToken: str, securityHubConfiguration: SecurityHubConfiguration}
+
+@endgroup
+
+@group datasources
+@endpoint POST /datasources/search-resources
+@optional {bucketCriteria: SearchResourcesBucketCriteria, maxResults: int, nextToken: str, sortCriteria: SearchResourcesSortCriteria}
+@returns(200) {matchingResources: [MatchingResource]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endgroup
+
+@group custom-data-identifiers
+@endpoint POST /custom-data-identifiers/test
+@required {regex: str, sampleText: str}
+@optional {ignoreWords: [str], keywords: [str], maximumMatchDistance: int}
+@returns(200) {matchCount: int?}
+
+@endgroup
+
+@group tags
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group allow-lists
+@endpoint PUT /allow-lists/{id}
+@required {id: str, criteria: AllowListCriteria, name: str}
+@optional {description: str}
+@returns(200) {arn: str?, id: str?}
+
+@endgroup
+
+@group automated-discovery
+@endpoint PUT /automated-discovery/configuration
+@required {status: str}
+@optional {autoEnableOrganizationMembers: str}
+
+@endgroup
+
+@group jobs
+@endpoint PATCH /jobs/{jobId}
+@required {jobId: str, jobStatus: str}
+
+@endgroup
+
+@group classification-scopes
+@endpoint PATCH /classification-scopes/{id}
+@required {id: str}
+@optional {s3: S3ClassificationScopeUpdate}
+
+@endgroup
+
+@group findingsfilters
+@endpoint PATCH /findingsfilters/{id}
+@required {id: str}
+@optional {action: str, clientToken: str, description: str, findingCriteria: FindingCriteria, name: str, position: int}
+@returns(200) {arn: str?, id: str?}
+
+@endgroup
+
+@group macie
+@endpoint PATCH /macie
+@optional {findingPublishingFrequency: str, status: str}
+
+@endpoint PATCH /macie/members/{id}
+@required {id: str, status: str}
+
+@endgroup
+
+@group admin
+@endpoint PATCH /admin/configuration
+@required {autoEnable: bool}
+
+@endgroup
+
+@group resource-profiles
+@endpoint PATCH /resource-profiles
+@required {resourceArn: str}
+@optional {sensitivityScoreOverride: int}
+
+@endpoint PATCH /resource-profiles/detections
+@required {resourceArn: str}
+@optional {suppressDataIdentifiers: [SuppressDataIdentifier]}
+
+@endgroup
+
+@group reveal-configuration
+@endpoint PUT /reveal-configuration
+@required {configuration: RevealConfiguration}
+@optional {retrievalConfiguration: UpdateRetrievalConfiguration}
+@returns(200) {configuration: RevealConfiguration?{kmsKeyId: str?, status: str}, retrievalConfiguration: RetrievalConfiguration?{externalId: str?, retrievalMode: str, roleName: str?}}
+
+@endgroup
+
+@group templates
+@endpoint PUT /templates/sensitivity-inspections/{id}
+@required {id: str}
+@optional {description: str, excludes: SensitivityInspectionTemplateExcludes, includes: SensitivityInspectionTemplateIncludes}
+
+@endgroup
+
+@end

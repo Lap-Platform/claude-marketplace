@@ -1,0 +1,238 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api FinSpace Public API
+@version 2020-07-13
+@auth AWS SigV4
+@endpoints 31
+@hint download_for_search
+@toc permission-group(8), datasets(8), datasetsv2(5), user(8), credentials(1), workingLocationV1(1)
+
+@group permission-group
+@endpoint POST /permission-group/{permissionGroupId}/users/{userId}
+@required {permissionGroupId: str, userId: str}
+@optional {clientToken: str}
+@returns(200) {statusCode: int?}
+
+@endgroup
+
+@group datasets
+@endpoint POST /datasets/{datasetId}/changesetsv2
+@required {datasetId: str, changeType: str, sourceParams: map<str,str>, formatParams: map<str,str>}
+@optional {clientToken: str}
+@returns(200) {datasetId: str?, changesetId: str?}
+
+@endpoint POST /datasets/{datasetId}/dataviewsv2
+@required {datasetId: str, destinationTypeParams: DataViewDestinationTypeParams}
+@optional {clientToken: str, autoUpdate: bool, sortColumns: [str], partitionColumns: [str], asOfTimestamp: int(i64)}
+@returns(200) {datasetId: str?, dataViewId: str?}
+
+@endgroup
+
+@group datasetsv2
+@endpoint POST /datasetsv2
+@required {datasetTitle: str, kind: str, permissionGroupParams: PermissionGroupParams}
+@optional {clientToken: str, datasetDescription: str, ownerInfo: DatasetOwnerInfo, alias: str, schemaDefinition: SchemaUnion}
+@returns(200) {datasetId: str?}
+
+@endgroup
+
+@group permission-group
+@endpoint POST /permission-group
+@required {name: str, applicationPermissions: [str]}
+@optional {description: str, clientToken: str}
+@returns(200) {permissionGroupId: str?}
+
+@endgroup
+
+@group user
+@endpoint POST /user
+@required {emailAddress: str, type: str}
+@optional {firstName: str, lastName: str, apiAccess: str, apiAccessPrincipalArn: str, clientToken: str}
+@returns(200) {userId: str?}
+
+@endgroup
+
+@group datasetsv2
+@endpoint DELETE /datasetsv2/{datasetId}
+@required {datasetId: str}
+@optional {clientToken: str}
+@returns(200) {datasetId: str?}
+
+@endgroup
+
+@group permission-group
+@endpoint DELETE /permission-group/{permissionGroupId}
+@required {permissionGroupId: str}
+@optional {clientToken: str}
+@returns(200) {permissionGroupId: str?}
+
+@endgroup
+
+@group user
+@endpoint POST /user/{userId}/disable
+@required {userId: str}
+@optional {clientToken: str}
+@returns(200) {userId: str?}
+
+@endgroup
+
+@group permission-group
+@endpoint DELETE /permission-group/{permissionGroupId}/users/{userId}
+@required {permissionGroupId: str, userId: str}
+@optional {clientToken: str}
+@returns(200) {statusCode: int?}
+
+@endgroup
+
+@group user
+@endpoint POST /user/{userId}/enable
+@required {userId: str}
+@optional {clientToken: str}
+@returns(200) {userId: str?}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets/{datasetId}/changesetsv2/{changesetId}
+@required {datasetId: str, changesetId: str}
+@returns(200) {changesetId: str?, changesetArn: str?, datasetId: str?, changeType: str?, sourceParams: map<str,str>?, formatParams: map<str,str>?, createTime: int(i64)?, status: str?, errorInfo: ChangesetErrorInfo?{errorMessage: str?, errorCategory: str?}, activeUntilTimestamp: int(i64)?, activeFromTimestamp: int(i64)?, updatesChangesetId: str?, updatedByChangesetId: str?}
+
+@endpoint GET /datasets/{datasetId}/dataviewsv2/{dataviewId}
+@required {dataViewId: str, datasetId: str}
+@returns(200) {autoUpdate: bool?, partitionColumns: [str]?, datasetId: str?, asOfTimestamp: int(i64)?, errorInfo: DataViewErrorInfo?{errorMessage: str?, errorCategory: str?}, lastModifiedTime: int(i64)?, createTime: int(i64)?, sortColumns: [str]?, dataViewId: str?, dataViewArn: str?, destinationTypeParams: DataViewDestinationTypeParams?{destinationType: str, s3DestinationExportFileFormat: str?, s3DestinationExportFileFormatOptions: map<str,str>?}, status: str?}
+
+@endgroup
+
+@group datasetsv2
+@endpoint GET /datasetsv2/{datasetId}
+@required {datasetId: str}
+@returns(200) {datasetId: str?, datasetArn: str?, datasetTitle: str?, kind: str?, datasetDescription: str?, createTime: int(i64)?, lastModifiedTime: int(i64)?, schemaDefinition: SchemaUnion?{tabularSchemaConfig: SchemaDefinition?{columns: [ColumnDefinition]?, primaryKeyColumns: [str]?}}, alias: str?, status: str?}
+
+@endgroup
+
+@group datasets
+@endpoint POST /datasets/{datasetId}/dataviewsv2/{dataviewId}/external-access-details
+@required {dataViewId: str, datasetId: str}
+@returns(200) {credentials: AwsCredentials?{accessKeyId: str?, secretAccessKey: str?, sessionToken: str?, expiration: int(i64)?}, s3Location: S3Location?{bucket: str, key: str}}
+
+@endgroup
+
+@group permission-group
+@endpoint GET /permission-group/{permissionGroupId}
+@required {permissionGroupId: str}
+@returns(200) {permissionGroup: PermissionGroup?{permissionGroupId: str?, name: str?, description: str?, applicationPermissions: [str]?, createTime: int(i64)?, lastModifiedTime: int(i64)?, membershipStatus: str?}}
+
+@endgroup
+
+@group credentials
+@endpoint GET /credentials/programmatic
+@required {environmentId: str}
+@optional {durationInMinutes: int(i64)}
+@returns(200) {credentials: Credentials?{accessKeyId: str?, secretAccessKey: str?, sessionToken: str?}, durationInMinutes: int(i64)?}
+
+@endgroup
+
+@group user
+@endpoint GET /user/{userId}
+@required {userId: str}
+@returns(200) {userId: str?, status: str?, firstName: str?, lastName: str?, emailAddress: str?, type: str?, apiAccess: str?, apiAccessPrincipalArn: str?, createTime: int(i64)?, lastEnabledTime: int(i64)?, lastDisabledTime: int(i64)?, lastModifiedTime: int(i64)?, lastLoginTime: int(i64)?}
+
+@endgroup
+
+@group workingLocationV1
+@endpoint POST /workingLocationV1
+@optional {locationType: str}
+@returns(200) {s3Uri: str?, s3Path: str?, s3Bucket: str?}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets/{datasetId}/changesetsv2
+@required {datasetId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {changesets: [ChangesetSummary]?, nextToken: str?}
+
+@endpoint GET /datasets/{datasetId}/dataviewsv2
+@required {datasetId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {nextToken: str?, dataViews: [DataViewSummary]?}
+
+@endgroup
+
+@group datasetsv2
+@endpoint GET /datasetsv2
+@optional {nextToken: str, maxResults: int}
+@returns(200) {datasets: [Dataset]?, nextToken: str?}
+
+@endgroup
+
+@group permission-group
+@endpoint GET /permission-group
+@required {maxResults: int}
+@optional {nextToken: str}
+@returns(200) {permissionGroups: [PermissionGroup]?, nextToken: str?}
+
+@endgroup
+
+@group user
+@endpoint GET /user/{userId}/permission-groups
+@required {userId: str, maxResults: int}
+@optional {nextToken: str}
+@returns(200) {permissionGroups: [PermissionGroupByUser]?, nextToken: str?}
+
+@endpoint GET /user
+@required {maxResults: int}
+@optional {nextToken: str}
+@returns(200) {users: [User]?, nextToken: str?}
+
+@endgroup
+
+@group permission-group
+@endpoint GET /permission-group/{permissionGroupId}/users
+@required {permissionGroupId: str, maxResults: int}
+@optional {nextToken: str}
+@returns(200) {users: [UserByPermissionGroup]?, nextToken: str?}
+
+@endgroup
+
+@group user
+@endpoint POST /user/{userId}/password
+@required {userId: str}
+@optional {clientToken: str}
+@returns(200) {userId: str?, temporaryPassword: str?}
+
+@endgroup
+
+@group datasets
+@endpoint PUT /datasets/{datasetId}/changesetsv2/{changesetId}
+@required {datasetId: str, changesetId: str, sourceParams: map<str,str>, formatParams: map<str,str>}
+@optional {clientToken: str}
+@returns(200) {changesetId: str?, datasetId: str?}
+
+@endgroup
+
+@group datasetsv2
+@endpoint PUT /datasetsv2/{datasetId}
+@required {datasetId: str, datasetTitle: str, kind: str}
+@optional {clientToken: str, datasetDescription: str, alias: str, schemaDefinition: SchemaUnion}
+@returns(200) {datasetId: str?}
+
+@endgroup
+
+@group permission-group
+@endpoint PUT /permission-group/{permissionGroupId}
+@required {permissionGroupId: str}
+@optional {name: str, description: str, applicationPermissions: [str], clientToken: str}
+@returns(200) {permissionGroupId: str?}
+
+@endgroup
+
+@group user
+@endpoint PUT /user/{userId}
+@required {userId: str}
+@optional {type: str, firstName: str, lastName: str, apiAccess: str, apiAccessPrincipalArn: str, clientToken: str}
+@returns(200) {userId: str?}
+
+@endgroup
+
+@end

@@ -1,0 +1,237 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS IoT Analytics
+@version 2017-11-27
+@auth AWS SigV4
+@endpoints 34
+@hint download_for_search
+@toc messages(1), pipelines(7), channels(6), datasets(9), datastores(5), logging(2), tags(3), pipelineactivities(1)
+
+@group messages
+@endpoint POST /messages/batch
+@required {channelName: str, messages: [Message]}
+@returns(200) {batchPutMessageErrorEntries: [BatchPutMessageErrorEntry]?}
+
+@endgroup
+
+@group pipelines
+@endpoint DELETE /pipelines/{pipelineName}/reprocessing/{reprocessingId}
+@required {pipelineName: str, reprocessingId: str}
+
+@endgroup
+
+@group channels
+@endpoint POST /channels
+@required {channelName: str}
+@optional {channelStorage: ChannelStorage, retentionPeriod: RetentionPeriod, tags: [Tag]}
+@returns(200) {channelName: str?, channelArn: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}}
+
+@endgroup
+
+@group datasets
+@endpoint POST /datasets
+@required {datasetName: str, actions: [DatasetAction]}
+@optional {triggers: [DatasetTrigger], contentDeliveryRules: [DatasetContentDeliveryRule], retentionPeriod: RetentionPeriod, versioningConfiguration: VersioningConfiguration, tags: [Tag], lateDataRules: [LateDataRule]}
+@returns(200) {datasetName: str?, datasetArn: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}}
+
+@endpoint POST /datasets/{datasetName}/content
+@required {datasetName: str}
+@optional {versionId: str}
+@returns(200) {versionId: str?}
+
+@endgroup
+
+@group datastores
+@endpoint POST /datastores
+@required {datastoreName: str}
+@optional {datastoreStorage: DatastoreStorage, retentionPeriod: RetentionPeriod, tags: [Tag], fileFormatConfiguration: FileFormatConfiguration, datastorePartitions: DatastorePartitions}
+@returns(200) {datastoreName: str?, datastoreArn: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}}
+
+@endgroup
+
+@group pipelines
+@endpoint POST /pipelines
+@required {pipelineName: str, pipelineActivities: [PipelineActivity]}
+@optional {tags: [Tag]}
+@returns(200) {pipelineName: str?, pipelineArn: str?}
+
+@endgroup
+
+@group channels
+@endpoint DELETE /channels/{channelName}
+@required {channelName: str}
+
+@endgroup
+
+@group datasets
+@endpoint DELETE /datasets/{datasetName}
+@required {datasetName: str}
+
+@endpoint DELETE /datasets/{datasetName}/content
+@required {datasetName: str}
+@optional {versionId: str}
+
+@endgroup
+
+@group datastores
+@endpoint DELETE /datastores/{datastoreName}
+@required {datastoreName: str}
+
+@endgroup
+
+@group pipelines
+@endpoint DELETE /pipelines/{pipelineName}
+@required {pipelineName: str}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/{channelName}
+@required {channelName: str}
+@optional {includeStatistics: bool}
+@returns(200) {channel: Channel?{name: str?, storage: ChannelStorage?{serviceManagedS3: ServiceManagedChannelS3Storage?, customerManagedS3: CustomerManagedChannelS3Storage?{bucket: str, keyPrefix: str?, roleArn: str}}, arn: str?, status: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, lastMessageArrivalTime: str(timestamp)?}, statistics: ChannelStatistics?{size: EstimatedResourceSize?{estimatedSizeInBytes: num(f64)?, estimatedOn: str(timestamp)?}}}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets/{datasetName}
+@required {datasetName: str}
+@returns(200) {dataset: Dataset?{name: str?, arn: str?, actions: [DatasetAction]?, triggers: [DatasetTrigger]?, contentDeliveryRules: [DatasetContentDeliveryRule]?, status: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}, versioningConfiguration: VersioningConfiguration?{unlimited: bool?, maxVersions: int?}, lateDataRules: [LateDataRule]?}}
+
+@endgroup
+
+@group datastores
+@endpoint GET /datastores/{datastoreName}
+@required {datastoreName: str}
+@optional {includeStatistics: bool}
+@returns(200) {datastore: Datastore?{name: str?, storage: DatastoreStorage?{serviceManagedS3: ServiceManagedDatastoreS3Storage?, customerManagedS3: CustomerManagedDatastoreS3Storage?{bucket: str, keyPrefix: str?, roleArn: str}, iotSiteWiseMultiLayerStorage: DatastoreIotSiteWiseMultiLayerStorage?{customerManagedS3Storage: IotSiteWiseCustomerManagedDatastoreS3Storage}}, arn: str?, status: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, lastMessageArrivalTime: str(timestamp)?, fileFormatConfiguration: FileFormatConfiguration?{jsonConfiguration: JsonConfiguration?, parquetConfiguration: ParquetConfiguration?{schemaDefinition: SchemaDefinition?}}, datastorePartitions: DatastorePartitions?{partitions: [DatastorePartition]?}}, statistics: DatastoreStatistics?{size: EstimatedResourceSize?{estimatedSizeInBytes: num(f64)?, estimatedOn: str(timestamp)?}}}
+
+@endgroup
+
+@group logging
+@endpoint GET /logging
+@returns(200) {loggingOptions: LoggingOptions?{roleArn: str, level: str, enabled: bool}}
+
+@endgroup
+
+@group pipelines
+@endpoint GET /pipelines/{pipelineName}
+@required {pipelineName: str}
+@returns(200) {pipeline: Pipeline?{name: str?, arn: str?, activities: [PipelineActivity]?, reprocessingSummaries: [ReprocessingSummary]?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?}}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets/{datasetName}/content
+@required {datasetName: str}
+@optional {versionId: str}
+@returns(200) {entries: [DatasetEntry]?, timestamp: str(timestamp)?, status: DatasetContentStatus?{state: str?, reason: str?}}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels
+@optional {nextToken: str, maxResults: int}
+@returns(200) {channelSummaries: [ChannelSummary]?, nextToken: str?}
+
+@endgroup
+
+@group datasets
+@endpoint GET /datasets/{datasetName}/contents
+@required {datasetName: str}
+@optional {nextToken: str, maxResults: int, scheduledOnOrAfter: str(timestamp), scheduledBefore: str(timestamp)}
+@returns(200) {datasetContentSummaries: [DatasetContentSummary]?, nextToken: str?}
+
+@endpoint GET /datasets
+@optional {nextToken: str, maxResults: int}
+@returns(200) {datasetSummaries: [DatasetSummary]?, nextToken: str?}
+
+@endgroup
+
+@group datastores
+@endpoint GET /datastores
+@optional {nextToken: str, maxResults: int}
+@returns(200) {datastoreSummaries: [DatastoreSummary]?, nextToken: str?}
+
+@endgroup
+
+@group pipelines
+@endpoint GET /pipelines
+@optional {nextToken: str, maxResults: int}
+@returns(200) {pipelineSummaries: [PipelineSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags
+@required {resourceArn: str}
+@returns(200) {tags: [Tag]?}
+
+@endgroup
+
+@group logging
+@endpoint PUT /logging
+@required {loggingOptions: LoggingOptions}
+
+@endgroup
+
+@group pipelineactivities
+@endpoint POST /pipelineactivities/run
+@required {pipelineActivity: PipelineActivity, payloads: [bytes]}
+@returns(200) {payloads: [bytes]?, logResult: str?}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels/{channelName}/sample
+@required {channelName: str}
+@optional {maxMessages: int, startTime: str(timestamp), endTime: str(timestamp)}
+@returns(200) {payloads: [bytes]?}
+
+@endgroup
+
+@group pipelines
+@endpoint POST /pipelines/{pipelineName}/reprocessing
+@required {pipelineName: str}
+@optional {startTime: str(timestamp), endTime: str(timestamp), channelMessages: ChannelMessages}
+@returns(200) {reprocessingId: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags
+@required {resourceArn: str, tags: [Tag]}
+
+@endpoint DELETE /tags
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group channels
+@endpoint PUT /channels/{channelName}
+@required {channelName: str}
+@optional {channelStorage: ChannelStorage, retentionPeriod: RetentionPeriod}
+
+@endgroup
+
+@group datasets
+@endpoint PUT /datasets/{datasetName}
+@required {datasetName: str, actions: [DatasetAction]}
+@optional {triggers: [DatasetTrigger], contentDeliveryRules: [DatasetContentDeliveryRule], retentionPeriod: RetentionPeriod, versioningConfiguration: VersioningConfiguration, lateDataRules: [LateDataRule]}
+
+@endgroup
+
+@group datastores
+@endpoint PUT /datastores/{datastoreName}
+@required {datastoreName: str}
+@optional {retentionPeriod: RetentionPeriod, datastoreStorage: DatastoreStorage, fileFormatConfiguration: FileFormatConfiguration}
+
+@endgroup
+
+@group pipelines
+@endpoint PUT /pipelines/{pipelineName}
+@required {pipelineName: str, pipelineActivities: [PipelineActivity]}
+
+@endgroup
+
+@end

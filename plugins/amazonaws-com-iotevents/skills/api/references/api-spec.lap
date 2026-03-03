@@ -1,0 +1,188 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS IoT Events
+@version 2018-07-27
+@auth AWS SigV4
+@endpoints 26
+@hint download_for_search
+@toc alarm-models(6), detector-models(6), inputs(5), analysis(3), logging(2), input-routings(1), tags(3)
+
+@group alarm-models
+@endpoint POST /alarm-models
+@required {alarmModelName: str, roleArn: str, alarmRule: AlarmRule}
+@optional {alarmModelDescription: str, tags: [Tag], key: str, severity: int, alarmNotification: AlarmNotification, alarmEventActions: AlarmEventActions, alarmCapabilities: AlarmCapabilities}
+@returns(200) {creationTime: str(timestamp)?, alarmModelArn: str?, alarmModelVersion: str?, lastUpdateTime: str(timestamp)?, status: str?}
+
+@endgroup
+
+@group detector-models
+@endpoint POST /detector-models
+@required {detectorModelName: str, detectorModelDefinition: DetectorModelDefinition, roleArn: str}
+@optional {detectorModelDescription: str, key: str, tags: [Tag], evaluationMethod: str}
+@returns(200) {detectorModelConfiguration: DetectorModelConfiguration?{detectorModelName: str?, detectorModelVersion: str?, detectorModelDescription: str?, detectorModelArn: str?, roleArn: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, status: str?, key: str?, evaluationMethod: str?}}
+
+@endgroup
+
+@group inputs
+@endpoint POST /inputs
+@required {inputName: str, inputDefinition: InputDefinition}
+@optional {inputDescription: str, tags: [Tag]}
+@returns(200) {inputConfiguration: InputConfiguration?{inputName: str, inputDescription: str?, inputArn: str, creationTime: str(timestamp), lastUpdateTime: str(timestamp), status: str}}
+
+@endgroup
+
+@group alarm-models
+@endpoint DELETE /alarm-models/{alarmModelName}
+@required {alarmModelName: str}
+
+@endgroup
+
+@group detector-models
+@endpoint DELETE /detector-models/{detectorModelName}
+@required {detectorModelName: str}
+
+@endgroup
+
+@group inputs
+@endpoint DELETE /inputs/{inputName}
+@required {inputName: str}
+
+@endgroup
+
+@group alarm-models
+@endpoint GET /alarm-models/{alarmModelName}
+@required {alarmModelName: str}
+@optional {version: str}
+@returns(200) {creationTime: str(timestamp)?, alarmModelArn: str?, alarmModelVersion: str?, lastUpdateTime: str(timestamp)?, status: str?, statusMessage: str?, alarmModelName: str?, alarmModelDescription: str?, roleArn: str?, key: str?, severity: int?, alarmRule: AlarmRule?{simpleRule: SimpleRule?{inputProperty: str, comparisonOperator: str, threshold: str}}, alarmNotification: AlarmNotification?{notificationActions: [NotificationAction]?}, alarmEventActions: AlarmEventActions?{alarmActions: [AlarmAction]?}, alarmCapabilities: AlarmCapabilities?{initializationConfiguration: InitializationConfiguration?{disabledOnInitialization: bool}, acknowledgeFlow: AcknowledgeFlow?{enabled: bool}}}
+
+@endgroup
+
+@group detector-models
+@endpoint GET /detector-models/{detectorModelName}
+@required {detectorModelName: str}
+@optional {version: str}
+@returns(200) {detectorModel: DetectorModel?{detectorModelDefinition: DetectorModelDefinition?{states: [State], initialStateName: str}, detectorModelConfiguration: DetectorModelConfiguration?{detectorModelName: str?, detectorModelVersion: str?, detectorModelDescription: str?, detectorModelArn: str?, roleArn: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, status: str?, key: str?, evaluationMethod: str?}}}
+
+@endgroup
+
+@group analysis
+@endpoint GET /analysis/detector-models/{analysisId}
+@required {analysisId: str}
+@returns(200) {status: str?}
+
+@endgroup
+
+@group inputs
+@endpoint GET /inputs/{inputName}
+@required {inputName: str}
+@returns(200) {input: Input?{inputConfiguration: InputConfiguration?{inputName: str, inputDescription: str?, inputArn: str, creationTime: str(timestamp), lastUpdateTime: str(timestamp), status: str}, inputDefinition: InputDefinition?{attributes: [Attribute]}}}
+
+@endgroup
+
+@group logging
+@endpoint GET /logging
+@returns(200) {loggingOptions: LoggingOptions?{roleArn: str, level: str, enabled: bool, detectorDebugOptions: [DetectorDebugOption]?}}
+
+@endgroup
+
+@group analysis
+@endpoint GET /analysis/detector-models/{analysisId}/results
+@required {analysisId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {analysisResults: [AnalysisResult]?, nextToken: str?}
+
+@endgroup
+
+@group alarm-models
+@endpoint GET /alarm-models/{alarmModelName}/versions
+@required {alarmModelName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {alarmModelVersionSummaries: [AlarmModelVersionSummary]?, nextToken: str?}
+
+@endpoint GET /alarm-models
+@optional {nextToken: str, maxResults: int}
+@returns(200) {alarmModelSummaries: [AlarmModelSummary]?, nextToken: str?}
+
+@endgroup
+
+@group detector-models
+@endpoint GET /detector-models/{detectorModelName}/versions
+@required {detectorModelName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {detectorModelVersionSummaries: [DetectorModelVersionSummary]?, nextToken: str?}
+
+@endpoint GET /detector-models
+@optional {nextToken: str, maxResults: int}
+@returns(200) {detectorModelSummaries: [DetectorModelSummary]?, nextToken: str?}
+
+@endgroup
+
+@group input-routings
+@endpoint POST /input-routings
+@required {inputIdentifier: InputIdentifier}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {routedResources: [RoutedResource]?, nextToken: str?}
+
+@endgroup
+
+@group inputs
+@endpoint GET /inputs
+@optional {nextToken: str, maxResults: int}
+@returns(200) {inputSummaries: [InputSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags
+@required {resourceArn: str}
+@returns(200) {tags: [Tag]?}
+
+@endgroup
+
+@group logging
+@endpoint PUT /logging
+@required {loggingOptions: LoggingOptions}
+
+@endgroup
+
+@group analysis
+@endpoint POST /analysis/detector-models/
+@required {detectorModelDefinition: DetectorModelDefinition}
+@returns(200) {analysisId: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags
+@required {resourceArn: str, tags: [Tag]}
+
+@endpoint DELETE /tags
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group alarm-models
+@endpoint POST /alarm-models/{alarmModelName}
+@required {alarmModelName: str, roleArn: str, alarmRule: AlarmRule}
+@optional {alarmModelDescription: str, severity: int, alarmNotification: AlarmNotification, alarmEventActions: AlarmEventActions, alarmCapabilities: AlarmCapabilities}
+@returns(200) {creationTime: str(timestamp)?, alarmModelArn: str?, alarmModelVersion: str?, lastUpdateTime: str(timestamp)?, status: str?}
+
+@endgroup
+
+@group detector-models
+@endpoint POST /detector-models/{detectorModelName}
+@required {detectorModelName: str, detectorModelDefinition: DetectorModelDefinition, roleArn: str}
+@optional {detectorModelDescription: str, evaluationMethod: str}
+@returns(200) {detectorModelConfiguration: DetectorModelConfiguration?{detectorModelName: str?, detectorModelVersion: str?, detectorModelDescription: str?, detectorModelArn: str?, roleArn: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, status: str?, key: str?, evaluationMethod: str?}}
+
+@endgroup
+
+@group inputs
+@endpoint PUT /inputs/{inputName}
+@required {inputName: str, inputDefinition: InputDefinition}
+@optional {inputDescription: str}
+@returns(200) {inputConfiguration: InputConfiguration?{inputName: str, inputDescription: str?, inputArn: str, creationTime: str(timestamp), lastUpdateTime: str(timestamp), status: str}}
+
+@endgroup
+
+@end

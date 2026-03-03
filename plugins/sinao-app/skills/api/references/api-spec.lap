@@ -1,0 +1,2133 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Sinao API
+@base https://api.sinao.app/v1
+@version 1.1.0
+@auth Bearer bearer | Bearer basic | Bearer basic
+@endpoints 383
+@hint download_for_search
+@toc login(2), sendpassword(1), changepassword(1), logout(1), refresh(1), me(2), register(1), apps(352), invoice(3), ping(1), services(2), partners(16)
+
+@group login
+@endpoint POST /login
+@required {email: str(email), password: str}
+@optional {code: str}
+@returns(200)
+@errors {401, 404, 422}
+
+@endgroup
+
+@group sendpassword
+@endpoint POST /sendpassword
+@required {email: str(email)}
+@optional {hostname_alias: str}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group changepassword
+@endpoint POST /changepassword
+@required {forgotten_password_token: str, password: str}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group logout
+@endpoint POST /logout
+@returns(200)
+
+@endgroup
+
+@group login
+@endpoint POST /login/send/2fa
+@required {email: str(email), password: str}
+@returns(200)
+
+@endgroup
+
+@group refresh
+@endpoint GET /refresh
+@returns(200) {access_token: str, token_type: str, expires_in: int}
+
+@endgroup
+
+@group me
+@endpoint GET /me
+@returns(200)
+
+@endpoint POST /me
+@optional {civility: str, firstname: str, lastname: str, password: str, email: str(email), image: str(binary), metadata: [str]}
+@returns(200)
+
+@endgroup
+
+@group register
+@endpoint POST /register
+@required {email: str(email), password: str, cgu: bool}
+@optional {firstname: str, lastname: str, metadata: [str]}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group apps
+@endpoint POST /apps
+@required {organization_name: str}
+@optional {organization_size: str(solo/small/medium)}
+@returns(200) {id: int, organization: any, admin: any, url: str(uri), hostname_alias: str(hostname)?, last_access_at: str(date-time), last_user: any, organization_size: str, config: [any], subscription: map{id: int, status: str, access_level: str, period_starting_date: str(date-time), period_ending_date: str(date-time), period_remaining_days: int, plan_name: str, plan_color: str, payment_card: str, payment_failed_count: int, stripe_customer_id: str, stripe_subscription_id: str, stripe_plan_id: str}, policies: [map]}
+@errors {422}
+
+@endpoint GET /apps
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400}
+
+@endpoint GET /apps/{appId}
+@required {appId: int}
+@returns(200) {id: int, organization: any, admin: any, url: str(uri), hostname_alias: str(hostname)?, last_access_at: str(date-time), last_user: any, organization_size: str, config: [any], subscription: map{id: int, status: str, access_level: str, period_starting_date: str(date-time), period_ending_date: str(date-time), period_remaining_days: int, plan_name: str, plan_color: str, payment_card: str, payment_failed_count: int, stripe_customer_id: str, stripe_subscription_id: str, stripe_plan_id: str}, policies: [map]}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/ping
+@required {appId: int}
+@returns(200)
+@errors {404, 405}
+
+@endpoint POST /apps/{appId}/reset
+@required {appId: int}
+@returns(200)
+@errors {404, 405}
+
+@endpoint GET /apps/{appId}/apikeys
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/apikeys
+@required {appId: int, name: str}
+@optional {api_partner_id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/apikeys/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/apipartners
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/settings
+@required {appId: int}
+@optional {key: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/settings
+@required {appId: int}
+@optional {settings: map, key: str, value: str}
+@returns(200) {code: int, type: str, message: str}
+@errors {404}
+
+@endpoint GET /apps/{appId}/jobs/{job}
+@required {appId: int}
+@optional {job: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/templates
+@required {appId: int}
+@returns(200)
+
+@endpoint POST /apps/{appId}/templates
+@required {appId: int}
+@returns(200)
+
+@endpoint GET /apps/{appId}/document-langs
+@required {appId: int}
+@optional {key: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/templates/batch
+@required {appId: int, data: [any]}
+@returns(200)
+
+@endpoint GET /apps/{appId}/templates/default
+@required {appId: int}
+@returns(200)
+
+@endpoint GET /apps/{appId}/templates/{id}
+@required {appId: int, id: int}
+@returns(200)
+
+@endpoint POST /apps/{appId}/templates/{id}
+@required {appId: int}
+@returns(200)
+
+@endpoint GET /apps/{appId}/subscription/plan/extra
+@required {appId: int, plan_nickname: str}
+@returns(200) {plans: [str], extras: [str]}
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/customer
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/customer
+@required {appId: int}
+@optional {name: str, email: str, phone: str, address[line1]: str, address[line2]: str, address[city]: str, address[state]: str, address[postal_code]: str, address[country]: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/plan
+@required {appId: int}
+@returns(200) {plans: [str], extras: [str]}
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/subscription/plan
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/plans
+@required {appId: int}
+@returns(200) {plans: [str], extras: [str]}
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/invoices
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/payment_methods
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/extra/count
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/extra/{stripe_plan}
+@required {appId: int, stripe_plan: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/plans/{stripe_plan}
+@required {appId: int, stripe_plan: str}
+@optional {stripe_coupon: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/plans/{stripe_plan}
+@required {appId: int, stripe_plan: str}
+@optional {stripe_source: str, stripe_coupon: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/plans/{stripe_plan}/checkout
+@required {appId: int, stripe_plan: str}
+@optional {stripe_coupon: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/checkout_session
+@required {appId: int}
+@optional {session_id: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/checkout_add_source
+@required {appId: int}
+@optional {redirect: str(app/account)=app}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/source
+@required {appId: int, stripe_source: str}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/subscription/source
+@required {appId: int, stripe_source: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/source/default
+@required {appId: int, stripe_source: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/pay_all
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/cancel
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/extend_trial
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/coupon
+@required {appId: int, code: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/subscription/coupon
+@required {appId: int, code: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/subscription/anchordate
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/access/profiles
+@required {appId: int}
+@returns(200)
+
+@endpoint POST /apps/{appId}/access/invite
+@required {appId: int, email: str, policy_profile_id: int}
+@optional {firstname: str, lastname: str, civility: str, password: str, additionalsAppId: [any]}
+@returns(200) {id: int, app: map{id: int, organization: any, admin: any, url: str(uri), hostname_alias: str(hostname)?, last_access_at: str(date-time), last_user: any, organization_size: str, config: [any], subscription: map{id: int, status: str, access_level: str, period_starting_date: str(date-time), period_ending_date: str(date-time), period_remaining_days: int, plan_name: str, plan_color: str, payment_card: str, payment_failed_count: int, stripe_customer_id: str, stripe_subscription_id: str, stripe_plan_id: str}, policies: [map]}, recipient_user: any, sender_user: any, profile: map{name: str, description: str, rights: [str], restricted: bool, homepage: str(uri), visible: int}, used_at: str(date-time), validity: str(date-time)}
+@errors {404, 403}
+
+@endpoint GET /apps/{appId}/access/invite
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/access/invite/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {404}
+
+@endpoint GET /apps/{appId}/pennylane/refresh-token
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/access/invite/{accessToken}/register
+@required {accessToken: str, password: str, cgu: bool}
+@optional {firstname: str, lastname: str}
+@returns(200)
+@errors {400, 404, 401}
+
+@endpoint GET /apps/access/invite/{accessToken}
+@required {accessToken: str}
+@returns(200) {id: int, app: map{id: int, organization: any, admin: any, url: str(uri), hostname_alias: str(hostname)?, last_access_at: str(date-time), last_user: any, organization_size: str, config: [any], subscription: map{id: int, status: str, access_level: str, period_starting_date: str(date-time), period_ending_date: str(date-time), period_remaining_days: int, plan_name: str, plan_color: str, payment_card: str, payment_failed_count: int, stripe_customer_id: str, stripe_subscription_id: str, stripe_plan_id: str}, policies: [map]}, recipient_user: any, sender_user: any, profile: map{name: str, description: str, rights: [str], restricted: bool, homepage: str(uri), visible: int}, used_at: str(date-time), validity: str(date-time)}
+@errors {404}
+
+@endpoint DELETE /apps/access/invite/{accessToken}
+@required {accessToken: str}
+@returns(200) {code: int, type: str, message: str}
+@errors {404, 401}
+
+@endpoint POST /apps/access/accounting/policies/accounting/batch
+@required {userId: int}
+@optional {appId: [int]}
+@returns(200)
+@errors {400}
+
+@endpoint GET /apps/{appId}/access
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/access/{userId}
+@required {appId: int, userId: str}
+@returns(200) {name: str, description: str, rights: [str], restricted: bool, homepage: str(uri), visible: int}
+@errors {404}
+
+@endpoint POST /apps/{appId}/access/{userId}
+@required {appId: int, userId: str, policy_profile_id: int}
+@returns(200) {name: str, description: str, rights: [str], restricted: bool, homepage: str(uri), visible: int}
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/access/{userId}
+@required {appId: int, userId: str}
+@returns(200) {code: int, type: str, message: str}
+@errors {404}
+
+@endpoint GET /apps/{appId}/organization
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/organization
+@required {appId: int}
+@optional {name: str, billing_name: str, logo: any, legal_form: str, country_iso2: str(ISO 3166-1 alpha-2), founding_date: str(date), founding_location: str, dissolution_date: str(date), closeaccounting_period: str, national_id: str, trade_directory_registration: str, vat_id: str, code_naf: str, number_of_employees: str, industry: str, slogan: str, rcs: str, greffe: str, sap_number_registration: str, sap_activities: str, sap_date_registration: str, capital: int, establishments: [map], establishments: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/organizations
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/organizations
+@required {appId: int, name: str}
+@optional {billing_name: str, logo: any, legal_form: str, country_iso2: str(ISO 3166-1 alpha-2), founding_date: str(date), founding_location: str, dissolution_date: str(date), vat_system: str, closeaccounting_period: str, national_id: str, vat_id: str, code_naf: str, number_of_employees: str, slogan: str, rcs: str, greffe: str, capital: int, metadata: [str], relationship: map, establishments: [map], establishments: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/organizations/batch
+@required {appId: int, data: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/organizations/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/organizations/chorus-search
+@required {appId: int, national_id: str}
+@optional {token: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/organizations/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/organizations/{id}
+@required {appId: int, id: int}
+@optional {name: str, billing_name: str, logo: any, legal_form: str, country_iso2: str(ISO 3166-1 alpha-2), founding_date: str(date), founding_location: str, dissolution_date: str(date), vat_system: str, closeaccounting_period: str, national_id: str, vat_id: str, code_naf: str, number_of_employees: str, slogan: str, rcs: str, greffe: str, capital: int, metadata: [str], relationship: map, establishments: [map], establishments: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/organizations/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/organizations/{id}/restore
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/organizations/{id}/sepa/mandate
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/organizations/delete/all
+@returns(200) {code: int, type: str, message: str}
+
+@endpoint GET /apps/{appId}/persons
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/persons
+@required {appId: int, lastname: str}
+@optional {civility: str, firstname: str, picture: any, metadata: [str], relationship: map, establishments: [map], establishments: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/persons/batch
+@required {appId: int, data: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/persons/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/persons/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/persons/{id}
+@required {appId: int, id: int}
+@optional {civility: str, lastname: str, firstname: str, picture: any, metadata: [str], relationship: map, establishments: [map], establishments: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/persons/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/persons/{id}/restore
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/persons/{id}/sepa/mandate
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/persons/delete/all
+@returns(200) {code: int, type: str, message: str}
+
+@endpoint GET /apps/{appId}/establishments/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int?, name: str, nic: str?, place: map{id: int, latitude: int, longitude: int, street_number: str, route: str, route2: str, locality: str, sublocality: str, administrative_area_level3: str, administrative_area_level2: str, administrative_area_level1: str, country: str, countryiso2: str, postal_code: str, formatted_address: str}, emails: [str(email)], phones: [str(phone)]}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/establishments/{id}
+@required {appId: int, id: int}
+@optional {name: str, phones: [str], emails: [str], nic: str, place: map}
+@returns(200) {id: int?, name: str, nic: str?, place: map{id: int, latitude: int, longitude: int, street_number: str, route: str, route2: str, locality: str, sublocality: str, administrative_area_level3: str, administrative_area_level2: str, administrative_area_level1: str, country: str, countryiso2: str, postal_code: str, formatted_address: str}, emails: [str(email)], phones: [str(phone)]}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/establishments/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/establishments/{establishment_id}/contact/{contact_id}
+@required {appId: int, establishment_id: int, contact_id: int}
+@optional {name: str, job: str, phone: str, email: str}
+@returns(200) {id: int, name: str, job: str, email: str, phone: str}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/establishments/{establishment_id}/contact/{contact_id}
+@required {appId: int, id: int, establishment_id: int, contact_id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/relationships
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/relationships/{id}/attach
+@required {appId: int, id: int}
+@optional {file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/relationships/{id}/attach
+@required {appId: int, id: int}
+@optional {file_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/relationships/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, is_customer: bool, is_supplier: bool, is_prospect: bool, importance_level: int?, rating: int?, is_notifying: bool, note: str?, accounting_infos: map{balance_initial_amount: int, reference: str?, customer_id: str, supplier_id: str}, metadata: [any]?}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/relationships/{id}
+@required {appId: int, id: int}
+@optional {is_customer: bool, is_supplier: bool, is_prospect: bool, importance_level: int, rating: int, balance_initial_amount: int, is_notifying: bool, note: str, reference: str, tags: str, discount: str, details: str, metadata: [str]}
+@returns(200) {id: int, is_customer: bool, is_supplier: bool, is_prospect: bool, importance_level: int?, rating: int?, is_notifying: bool, note: str?, accounting_infos: map{balance_initial_amount: int, reference: str?, customer_id: str, supplier_id: str}, metadata: [any]?}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/relationships/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/relationships/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/contacts/merge
+@required {appId: int, contacts: [any]}
+@optional {target_contact: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoices
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/invoices
+@required {appId: int}
+@optional {contact_infos: map, third_account: map, title: str, content: [map], columns: map, reference: str, discount: map, currency: str, legal_notice: str, bank_details_id: int, vat_exemption: map, tags: [any], metadata: [str], downpayments: [int], downpayment_cash: int, avoid_of: int, delivered_at: str(date-time), payment_period: int=30, expected_payment_deadline_at: str(date), payment_methods: str=virement bancaire, chèque, number_from_other_software: str, is_auto_finalize: bool, is_auto_send_email: bool}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/invoices/batch
+@required {appId: int, data: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/invoices/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoices/nextnumber
+@required {appId: int}
+@optional {written_at: str(date-time)}
+@returns(200)
+@errors {400}
+
+@endpoint GET /apps/{appId}/invoices/download
+@required {appId: int, ids: [int]}
+@optional {template: str(delivery/command)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoices/statistics
+@required {appId: int}
+@optional {search: str, filters: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/fresh
+@required {appId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/chorus-pro
+@required {appId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoices/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}
+@required {appId: int, id: int}
+@optional {contact_infos: map, third_account: map, title: str, content: [map], columns: map, reference: str, discount: map, currency: str, legal_notice: str, bank_details_id: int, vat_exemption: map, tags: [any], metadata: [str], downpayments: [int], downpayment_cash: int, avoid_of: int, delivered_at: str(date-time), payment_period: int=30, expected_payment_deadline_at: str(date), payment_methods: str=virement bancaire, chèque, author_user_id: int, details: str, is_auto_finalize: bool, is_auto_send_email: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/invoices/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}/duplicate
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}/avoid
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}/finalize
+@required {appId: int, id: int}
+@optional {force_date: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}/updatestatus
+@required {appId: int, id: int}
+@optional {status: str(draft/final/paid)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}/attach
+@required {appId: int, id: int}
+@optional {file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/invoices/{id}/attach
+@required {appId: int, id: int}
+@optional {file_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/invoices/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoices/{id}/pdf
+@required {appId: int, id: int}
+@optional {template: str(delivery/command)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoices/{id}/preview.jpg
+@required {appId: int, id: int}
+@optional {template: str, base64: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/invoice/{id}/link
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/invoices/batch/breakdown
+@required {appId: int}
+@optional {invoices: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group invoice
+@endpoint GET /invoice/token-validation/
+@required {token: str}
+@optional {format: str(jpg/pdf)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /invoice/download/fec/{token}
+@required {token: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /invoice/download/pdf/{token}
+@required {token: str}
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group apps
+@endpoint DELETE /apps/{appId}/invoices/delete/all
+@returns(200) {code: int, type: str, message: str}
+
+@endpoint GET /apps/{appId}/quotes
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/quotes
+@required {appId: int}
+@optional {contact_infos: map, third_account: map, title: str, content: [map], columns: map, reference: str, discount: map, currency: str, legal_notice: str, bank_details_id: int, vat_exemption: map, tags: [any], metadata: [str], downpayment_request: map, commercialvalidity_deadline: str(date-time), number_from_other_software: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/quotes/batch
+@required {appId: int, data: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/quotes/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/invoice
+@required {appId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/quotes/nextnumber
+@required {appId: int}
+@optional {written_at: str(date-time)}
+@returns(200)
+@errors {400}
+
+@endpoint GET /apps/{appId}/quotes/download
+@required {appId: int, ids: [int]}
+@optional {template: str(delivery/command)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/quotes/statistics
+@required {appId: int}
+@optional {search: str, filters: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/fresh
+@required {appId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/quotes/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}
+@required {appId: int, id: int}
+@optional {contact_infos: map, third_account: map, title: str, content: [map], columns: map, reference: str, discount: map, currency: str, legal_notice: str, bank_details_id: int, vat_exemption: map, tags: [any], metadata: [str], downpayment_request: map, commercialvalidity_deadline: str(date-time), author_user_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/quotes/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/finalize
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/duplicate
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/invoice
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/situation_invoice
+@required {appId: int, id: int, progress: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/downpayment
+@required {appId: int, id: int, percent: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/updatestatus
+@required {appId: int, id: int}
+@optional {status: str(waiting/goodforagreement/refused/transformed/deleted)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/attach
+@required {appId: int, id: int}
+@optional {file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/quotes/{id}/attach
+@required {appId: int, id: int}
+@optional {file_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/quotes/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/quotes/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/quotes/{id}/pdf
+@required {appId: int, id: int}
+@optional {template: str(delivery/command)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/quotes/{id}/preview.jpg
+@required {appId: int, id: int}
+@optional {template: str(delivery/command)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/quotes/{id}/yousign/preview.jpg
+@required {appId: int, id: int}
+@optional {template: str(delivery/command)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/quotes/delete/all
+@returns(200) {code: int, type: str, message: str}
+
+@endpoint POST /apps/{appId}/quotes/batch/breakdown
+@required {appId: int}
+@optional {quotes: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/salesdocumentmodels
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/salesdocumentmodels
+@required {appId: int}
+@optional {name: str, title: str, content: [map], columns: map}
+@returns(200) {id: int, name: str, title: str, json: [map]}
+@errors {404}
+
+@endpoint GET /apps/{appId}/salesdocumentmodels/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, name: str, title: str, json: [map]}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/salesdocumentmodels/{id}
+@required {appId: int, id: int}
+@optional {name: str, title: str, content: [map], columns: map}
+@returns(200) {id: int, name: str, title: str, json: [map]}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/salesdocumentmodels/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/recurringinvoices
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/recurringinvoices
+@required {appId: int, frequency_count: int, frequency_duration: str(day/week/month/trimester/semester/year)}
+@optional {contact_infos: map, title: str, content: [map], columns: map, currency: str, legal_notice: str, bank_details_id: int, vat_exemption: map, tags: [any], metadata: [str], payment_period: int=30, next_invoice_at: str(date-time), end_at: str(date-time), discount: int, discount_mode: str, discount_start_at: str(date-time), discount_end_at: str(date-time), details: str, orders_plan: [map], recipient_emails: [str(email)], need_copy_bcc: bool(0/1)}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/recurringinvoices/batch
+@required {appId: int, data: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/recurringinvoices/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/recurringinvoices/periods
+@required {appId: int}
+@optional {date: str(date-time)}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/recurringinvoices/{id}
+@required {appId: int, id: int(RecurringInvoice)}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/recurringinvoices/{id}
+@required {appId: int, id: int}
+@optional {contact_infos: map, title: str, content: [map], columns: map, currency: str, legal_notice: str, bank_details_id: int, vat_exemption: map, tags: [any], metadata: [str], payment_period: int=30, next_invoice_at: str(date-time), end_at: str(date-time), frequency_count: int, frequency_duration: str(day/week/month/trimester/semester/year), discount: int, discount_mode: str, discount_start_at: str(date-time), discount_end_at: str(date-time), details: str, orders_plan: [map], recipient_emails: [str(email)], need_copy_bcc: bool(0/1)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/recurringinvoices/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/recurringinvoices/{id}/plan
+@required {appId: int, id: int, until: str(date-time)}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/bankdetails
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/bankdetails
+@required {appId: int}
+@optional {name: str, iban: str, bic: str}
+@returns(200) {id: int, name: str, iban: str, bic: str}
+@errors {404}
+
+@endpoint GET /apps/{appId}/bankdetails/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, name: str, iban: str, bic: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/bankdetails/{id}
+@required {appId: int, id: int}
+@optional {name: str, iban: str, bic: str}
+@returns(200) {id: int, name: str, iban: str, bic: str}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/bankdetails/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/email/document
+@required {appId: int, recipients: [str(email)], documents: [map]}
+@optional {from: str(email), recipients_cc: [str(email)], recipients_bcc: [str(email)], title: str, body: str, need_copy_bcc: bool=False, attach_invoice: bool=False}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/email/batch
+@required {appId: int}
+@optional {from: str(email), messages: [map], need_copy_bcc: bool=False, attach_invoice: bool=False, request_signature: bool=False}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/email/document/{id}
+@required {appId: int, id: int, type: str(invoice/quote/attachment)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map], expand: [str]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/purchases
+@required {appId: int}
+@optional {invoice: str(binary), account_id: int, supplier_organization_id: int, title: str, supplier_name: str, amount: int, amount_tax: int, amount_reverse_tax: int, currency: str, vat_detail: map, billed_at: str(date), comment: int, tags: [any], vat_repayment: str(payment/billing), payment_deadline_at: str(date), expected_payment_deadline_at: str(date), payment_account_number: str, payment_routing_number: str, payment_swift: str, payment_iban: str, amortization_period: int, author_user_id: int, completed_at: str(date), employee_id: int, employee_name: str, mileage_allowance_id: int, is_expense_report: bool=False}
+@returns(200) {id: int, status: str, title: str, supplier_name: str, amount: int, amount_tax: int, amount_reverse_tax: int, amount_net_foreign_currency: int, foreign_currency: str, vat_detail: map, comment: str, picture: str, tags: [str], vat_repayment: str, md5: str, billed_at: str(date-time), completed_at: str(date-time), accounted_at: str(date-time), paid_at: str(date-time), payment_deadline_at: str(date-time), expected_payment_deadline_at: str(date-time), payment_account_number: str, payment_routing_number: str, payment_swift: str, payment_iban: str, is_late: bool, will_be_late_at: str(date-time), account: any, supplier: any, balance: any}
+@errors {404}
+
+@endpoint GET /apps/{appId}/purchases/statistics
+@required {appId: int}
+@optional {search: str, filters: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/batch
+@required {appId: int, data: [any]}
+@returns(200) {id: int, status: str, title: str, supplier_name: str, amount: int, amount_tax: int, amount_reverse_tax: int, amount_net_foreign_currency: int, foreign_currency: str, vat_detail: map, comment: str, picture: str, tags: [str], vat_repayment: str, md5: str, billed_at: str(date-time), completed_at: str(date-time), accounted_at: str(date-time), paid_at: str(date-time), payment_deadline_at: str(date-time), expected_payment_deadline_at: str(date-time), payment_account_number: str, payment_routing_number: str, payment_swift: str, payment_iban: str, is_late: bool, will_be_late_at: str(date-time), account: any, supplier: any, balance: any}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/purchases/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases/download
+@required {appId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, status: str, title: str, supplier_name: str, amount: int, amount_tax: int, amount_reverse_tax: int, amount_net_foreign_currency: int, foreign_currency: str, vat_detail: map, comment: str, picture: str, tags: [str], vat_repayment: str, md5: str, billed_at: str(date-time), completed_at: str(date-time), accounted_at: str(date-time), paid_at: str(date-time), payment_deadline_at: str(date-time), expected_payment_deadline_at: str(date-time), payment_account_number: str, payment_routing_number: str, payment_swift: str, payment_iban: str, is_late: bool, will_be_late_at: str(date-time), account: any, supplier: any, balance: any}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/{id}
+@required {appId: int, id: int}
+@optional {account_id: int, supplier_organization_id: int, title: str, supplier_name: str, amount: int, amount_tax: int, amount_reverse_tax: int, currency: str, vat_detail: map, billed_at: str(date), comment: str, tags: [any], vat_repayment: str(payment/billing), payment_deadline_at: str(date), expected_payment_deadline_at: str(date), payment_account_number: str, payment_routing_number: str, payment_swift: str, payment_iban: str, amortization_period: int, purchase_lines: [any], author_user_id: int, employee_user_id: int, employee_name: str, mileage_allowance_id: int, is_expense_report: bool=False}
+@returns(200) {id: int, status: str, title: str, supplier_name: str, amount: int, amount_tax: int, amount_reverse_tax: int, amount_net_foreign_currency: int, foreign_currency: str, vat_detail: map, comment: str, picture: str, tags: [str], vat_repayment: str, md5: str, billed_at: str(date-time), completed_at: str(date-time), accounted_at: str(date-time), paid_at: str(date-time), payment_deadline_at: str(date-time), expected_payment_deadline_at: str(date-time), payment_account_number: str, payment_routing_number: str, payment_swift: str, payment_iban: str, is_late: bool, will_be_late_at: str(date-time), account: any, supplier: any, balance: any}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/purchases/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/{id}/updatestatus
+@required {appId: int, id: int}
+@optional {status: str(completed/paid)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/{id}/attach
+@required {appId: int, id: int}
+@optional {file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/purchases/{id}/attach
+@required {appId: int, id: int}
+@optional {file_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/purchases/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases/{id}/original
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases/{id}/preview.jpg
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases/{id}/thumbnail.jpg
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/purchases/delete/all
+@returns(200) {code: int, type: str, message: str}
+
+@endpoint POST /apps/{appId}/purchases/mileage_allowances/create
+@required {appId: int}
+@optional {start_address: str, arrived_address: str, kilometers_count: int, fiscal_power: int(3/4/5/6/7/1/50)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/mileage_allowances/{id}/duplicate
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/purchases/mileage_allowances/resume
+@required {appId: int}
+@optional {employee_id: int, year: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/mileage_allowances/{id}
+@required {appId: int, id: int}
+@optional {start_address: str, arrived_address: str, kilometers_count: int, fiscal_power: int(3/4/5/6/7/1/50)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/purchases/create/demo
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/accounts/employees
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/accounts/employees
+@required {appId: int, fiscal_power: int(3/4/5/6/7/1/50)}
+@optional {user_id: int, user_name: str, account_id: str, vehicle_type: str(car/motorcycle/electric_car)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/accounts/employees/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/accounts/employees/{id}
+@required {appId: int, id: int}
+@optional {user_name: str, fiscal_power: int(3/4/5/6/7/1/50), vehicle_type: str(car/motorcycle/electric_car)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/accounts/employees/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/attachments
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/attachments
+@required {appId: int, type: str(none/purchase/invoice/quote/transaction/relationship)}
+@optional {attachable_id: int, file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint PUT /apps/{appId}/attachments
+@required {appId: int}
+@optional {year: int}
+@returns(200)
+@errors {422, 400, 404}
+
+@endpoint GET /apps/{appId}/attachments/download
+@required {appId: int, ids: str, type: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/attachments/sap-download
+@required {appId: int, ids: str, type: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/attachments/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/attachments/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/attachments/{id}/pdf
+@required {appId: int, id: int, random: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/products
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/products
+@required {appId: int, name: str}
+@optional {amount: int, amount_accurately: int, vat_percent: int, image: any, lifetime: int, description: str, type: str(product/service), quantity_name: str, reference: str, account_id: str, tags: [any], category_id: int, metadata: [str]}
+@returns(200) {id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, metadata: [any]?}
+@errors {404}
+
+@endpoint POST /apps/{appId}/products/batch
+@required {appId: int, data: [map]}
+@returns(200) {id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, metadata: [any]?}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/products/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/products/{id}/attach
+@required {appId: int, id: int}
+@optional {file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/products/{id}/attach
+@required {appId: int, id: int}
+@optional {file_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/products/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, metadata: [any]?}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/products/{id}
+@required {appId: int, id: int}
+@optional {name: str, amount: int, amount_accurately: int, vat_percent: int, image: any, lifetime: int, description: str, type: str(product/service), quantity_name: str, reference: str, account_id: str, tags: [any], category_id: int, metadata: [str]}
+@returns(200) {id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, metadata: [any]?}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/products/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/products/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/products/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/products/delete/all
+@returns(200) {code: int, type: str, message: str}
+
+@endpoint GET /apps/{appId}/productstocks
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/productstocks
+@required {appId: int, product_id: int}
+@optional {purchase_id: int, quantity: int, bar_code: str, location: str, entered_at: str(date-time), expired_at: str(date-time), cost_amount: int, use_duration: int}
+@returns(200) {id: int, quantity_in: int, quantity_out: int, bar_code: int, location: int, entered_at: int, expired_at: int, cost_amount: int, initial_quantity: int, use_duration: int, purchase: any, product: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}, product_stocks_movements: [map], sales_lines: [map]}
+@errors {404}
+
+@endpoint GET /apps/{appId}/productstocks/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, quantity_in: int, quantity_out: int, bar_code: int, location: int, entered_at: int, expired_at: int, cost_amount: int, initial_quantity: int, use_duration: int, purchase: any, product: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}, product_stocks_movements: [map], sales_lines: [map]}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/productstocks/{id}
+@required {appId: int, id: int}
+@optional {purchase_id: int, bar_code: str, location: str, entered_at: str(date-time), expired_at: str(date-time), cost_amount: int, use_duration: int}
+@returns(200) {id: int, quantity_in: int, quantity_out: int, bar_code: int, location: int, entered_at: int, expired_at: int, cost_amount: int, initial_quantity: int, use_duration: int, purchase: any, product: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}, product_stocks_movements: [map], sales_lines: [map]}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/productstocks/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/productstocks/{id}/destruct
+@required {appId: int, id: int}
+@optional {quantity: int, comment: str}
+@returns(200) {id: int, quantity_in: int, quantity_out: int, bar_code: int, location: int, entered_at: int, expired_at: int, cost_amount: int, initial_quantity: int, use_duration: int, purchase: any, product: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}, product_stocks_movements: [map], sales_lines: [map]}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/productstocks/{id}/rental/exit
+@required {appId: int, id: int}
+@optional {quantity: int, future_return_date: str(date-time), comment: str}
+@returns(200) {id: int, quantity_in: int, quantity_out: int, bar_code: int, location: int, entered_at: int, expired_at: int, cost_amount: int, initial_quantity: int, use_duration: int, purchase: any, product: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}, product_stocks_movements: [map], sales_lines: [map]}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/productstocks/{id}/rental/back
+@required {appId: int, id: int, quantity: int}
+@optional {current_return_date: str(date-time)=now, use_duration: int=0, comment: str}
+@returns(200) {id: int, quantity_in: int, quantity_out: int, bar_code: int, location: int, entered_at: int, expired_at: int, cost_amount: int, initial_quantity: int, use_duration: int, purchase: any, product: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}, product_stocks_movements: [map], sales_lines: [map]}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/productcategory
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/productcategory
+@required {appId: int, name: str}
+@optional {image: any, parent_category_id: int}
+@returns(200) {id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}}
+@errors {404}
+
+@endpoint GET /apps/{appId}/productcategory/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/productcategory/{id}
+@required {appId: int, id: int, name: str}
+@optional {image: any, parent_category_id: int}
+@returns(200) {id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map, products: map}, metadata: [any]?}}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map{id: int, name: str, image: any, parent: map{id: int, name: str, image: any, parent: map, products: map}, products: map{id: int, name: str, amount_accurately: int, vat_percent: int, currency: str, image: any, lifetime: int, description: str, unity: str, intangible: bool, quantity_name: str, reference: str, accounting_number: str, tags: [str], category: map, metadata: [any]?}}, metadata: [any]?}}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/productcategory/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/reconcile
+@required {appId: int, type: str(transaction/sales/purchase), id: int, movements: map}
+@optional {replace_all: bool=False, paid_at: str(date-time), rule: map}
+@returns(200) {id: int, source: str, transaction: any, amount: int, date: str(date-time), document: any, document_type: str}
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/reconcile
+@required {appId: int, type: str(transaction/sales/purchase), id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/reconcile/batch
+@required {appId: int, data: [any]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/payments
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/payments/recipe_book
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/payments/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, source: str, transaction: any, amount: int, date: str(date-time), document: any, document_type: str}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/payments/{id}
+@required {appId: int, id: int}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/sepamandates/directdebit
+@required {appId: int, invoices_ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/sepamandates/directdebit
+@required {appId: int, invoices_ids: [int]}
+@optional {amounts: [int], creditor_name: str, creditor_iban: str, creditor_bic: str, creditor_ics: str, date: str(date-time)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/sepamandates/credittransfer
+@required {appId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/sepamandates/credittransfer
+@required {appId: int, ids: [int]}
+@optional {amounts: [int], debtor_name: str, debtor_iban: str, debtor_bic: str, btchBookg: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/sepamandates/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/sepamandates/
+@required {appId: int, mandate_id: str, signed_at: str(date-time), iban: str, bic: str}
+@optional {customer_organization_id: int, customer_person_id: int, old_mandate_id: int, electronic_signature: str, customer_name: str, is_first: bool}
+@returns(200) {id: int, customer: any, author: any, mandate_id: int, signed_at: str(date-time), electronic_signature: str, customer_name: str, iban: str, bic: str, is_first: int, logs_sepa_direct_debits: str, last_debit_at: str(date-time), last_debit_amount: int, last_debit_id: int, old_mandate_id: int, created_at: str(date-time), updated_at: str(date-time)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/sepamandates/{id}
+@required {appId: int, id: int}
+@returns(200) {id: int, customer: any, author: any, mandate_id: int, signed_at: str(date-time), electronic_signature: str, customer_name: str, iban: str, bic: str, is_first: int, logs_sepa_direct_debits: str, last_debit_at: str(date-time), last_debit_amount: int, last_debit_id: int, old_mandate_id: int, created_at: str(date-time), updated_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/sepamandates/{id}
+@required {appId: int, id: int}
+@optional {customer_organization_id: int, customer_person_id: int, old_mandate_id: int, mandate_id: str, signed_at: str(date-time), electronic_signature: str, customer_name: str, iban: str, bic: str, is_first: bool}
+@returns(200) {id: int, customer: any, author: any, mandate_id: int, signed_at: str(date-time), electronic_signature: str, customer_name: str, iban: str, bic: str, is_first: int, logs_sepa_direct_debits: str, last_debit_at: str(date-time), last_debit_amount: int, last_debit_id: int, old_mandate_id: int, created_at: str(date-time), updated_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/sepamandates/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/urssaf/preview
+@required {appId: int, type: str(invoice/quote/contact), ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/urssaf/auth
+@required {appId: int, client_id: str, client_secret: str}
+@returns(200)
+@errors {400, 404, 422, 401}
+
+@endpoint POST /apps/{appId}/urssaf/register_customer
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/urssaf/customer
+@required {appId: int}
+@optional {contact_person_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/urssaf/payment
+@required {appId: int, invoices_ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/urssaf/payment
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/banks/
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/banks/
+@required {appId: int, item_id: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/banks/connect
+@required {appId: int}
+@returns(200) {url: str(uri)}
+@errors {404}
+
+@endpoint POST /apps/{appId}/banks/synchronize
+@required {appId: int}
+@optional {id: int, is_incremential: bool}
+@returns(200) {id: int, parent_cashflow_source: any, name: str, identifiant: str, account_type: str, disabled: bool, balance_amount: int, type: str, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/banks/{id}/funnel/sync
+@required {appId: int, id: int}
+@returns(200) {url: str(uri)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/banks/{id}/funnel/edit
+@required {appId: int, id: int}
+@returns(200) {url: str(uri)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/banks/{id}/funnel/validate
+@required {appId: int, id: int}
+@returns(200) {url: str(uri)}
+@errors {404}
+
+@endpoint POST /apps/{appId}/banks/{id}/select_accounts
+@required {appId: int, id: int}
+@optional {bank_account_ids: [int]}
+@returns(200) {id: int, parent_cashflow_source: any, name: str, identifiant: str, account_type: str, disabled: bool, balance_amount: int, type: str, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/cashflowsources/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/cashflowsources/
+@required {appId: int}
+@optional {name: str, identifiant: str, type: str(bank/cashdesk/waiting), balance_amount: int, account_type: str(checking/card/savings/special/securities/loan/life_insurance/unknown/pending/share_savings_plan), parent_cashflow_source_id: int, disabled: bool, currency_iso: str}
+@returns(200) {id: int, parent_cashflow_source: any, name: str, identifiant: str, account_type: str, disabled: bool, balance_amount: int, type: str, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/cashflowsources/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, parent_cashflow_source: any, name: str, identifiant: str, account_type: str, disabled: bool, balance_amount: int, type: str, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/cashflowsources/{id}
+@required {appId: int, id: int}
+@optional {name: str, identifiant: str, type: str(bank/cashdesk/waiting), balance_amount: int, account_type: str(checking/card/savings/special/securities/loan/life_insurance/unknown/pending/share_savings_plan), parent_cashflow_source_id: int, disabled: bool}
+@returns(200) {id: int, parent_cashflow_source: any, name: str, identifiant: str, account_type: str, disabled: bool, balance_amount: int, type: str, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/cashflowsources/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/logs/autoreconcile/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/logs/autoreconcile/
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /apps/{appId}/logs/autoreconcile/
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/transactions/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/transactions/
+@required {appId: int, cashflow_source_id: int, received_at: str(date-time)}
+@optional {contact_organization_id: int, contact_person_id: int, account_id: int, contact_name: str, amount: int, original_amount: int, foreign_currency: str, method: str(check/transfer/cash/creditcard/automatic_debit/creditnote), label: str, details: str, tags: str, metadata: [str]}
+@returns(200) {id: int?, contact_organization_id: int?, contact_person_id: int?, author_user_id: int, cashflow_source_id: int, amount: int, credit: int?, debit: int?, method: int?, received_at: str(date-time), label: int, details: int?, lettered_at: str(date-time)?, metadata: [any]?, tags: str?, created_at: str(date-time), updated_at: str(date-time), deleted_at: str(date-time)}
+@errors {404}
+
+@endpoint POST /apps/{appId}/transactions/batch
+@required {appId: int, data: [any]}
+@returns(200) {id: int?, contact_organization_id: int?, contact_person_id: int?, author_user_id: int, cashflow_source_id: int, amount: int, credit: int?, debit: int?, method: int?, received_at: str(date-time), label: int, details: int?, lettered_at: str(date-time)?, metadata: [any]?, tags: str?, created_at: str(date-time), updated_at: str(date-time), deleted_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/transactions/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/transactions/{id}/attach
+@required {appId: int, id: int}
+@optional {file: str(binary)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/transactions/{id}/attach
+@required {appId: int, id: int}
+@optional {file_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/transactions/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int?, contact_organization_id: int?, contact_person_id: int?, author_user_id: int, cashflow_source_id: int, amount: int, credit: int?, debit: int?, method: int?, received_at: str(date-time), label: int, details: int?, lettered_at: str(date-time)?, metadata: [any]?, tags: str?, created_at: str(date-time), updated_at: str(date-time), deleted_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/transactions/{id}
+@required {appId: int, id: int}
+@optional {contact_organization_id: int, contact_person_id: int, account_id: int, cashflow_source_id: int, contact_name: str, amount: int, method: str(check/transfer/cash/creditcard/automatic_debit/creditnote), received_at: str(date-time), label: str, details: str, tags: str, metadata: [str]}
+@returns(200) {id: int?, contact_organization_id: int?, contact_person_id: int?, author_user_id: int, cashflow_source_id: int, amount: int, credit: int?, debit: int?, method: int?, received_at: str(date-time), label: int, details: int?, lettered_at: str(date-time)?, metadata: [any]?, tags: str?, created_at: str(date-time), updated_at: str(date-time), deleted_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/transactions/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/transactions/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/transactions/{id}/tag
+@required {appId: int, id: int}
+@optional {tag: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/rules/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/rules/
+@required {appId: int}
+@optional {conditions: [[str]], on_event: str, parameter: str, value: str, priority: int}
+@returns(200) {id: int, conditions: [[str]], on_event: str, parameter: str, value: str, priority: int}
+@errors {404}
+
+@endpoint POST /apps/{appId}/rules/execute_on
+@required {appId: int}
+@optional {model: str}
+@returns(200) {id: int, conditions: [[str]], on_event: str, parameter: str, value: str, priority: int}
+@errors {404}
+
+@endpoint GET /apps/{appId}/rules/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, conditions: [[str]], on_event: str, parameter: str, value: str, priority: int}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/rules/{id}
+@required {appId: int, id: int}
+@optional {conditions: [[str]], on_event: str, parameter: str, value: str, priority: int}
+@returns(200) {id: int, conditions: [[str]], on_event: str, parameter: str, value: str, priority: int}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/rules/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/accounts/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/accounts/
+@required {appId: int}
+@optional {journalcode: str, name: str, description: str, keywords: str, accounting_number: str, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool, is_associate: bool, initiale_balance: num}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {404}
+
+@endpoint POST /apps/{appId}/accounts/batch
+@required {appId: int, data: [any]}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/accounts/batch
+@required {appId: int, ids: [int]}
+@returns(200) {code: int, type: str, message: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/accounts/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/accounts/{id}
+@required {appId: int, id: int}
+@optional {journalcode: str, name: str, description: str, keywords: str, accounting_number: str, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool, initiale_balance: num}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/accounts/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/accounts/{delete_account_id}/replace
+@required {appId: int, delete_account_id: int, replacement_account_id: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/elements
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {404}
+
+@endpoint POST /apps/{appId}/forecast/elements
+@required {appId: int}
+@optional {name: str, amount: int, category_id: int, deducted_budget: int, date: str(date-time)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/forecast/elements
+@required {appId: int}
+@optional {name: str, category_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/forecast/elements/{id}
+@required {appId: int}
+@optional {name: str, amount: int, category_id: int, deducted_budget: int, date: str(date-time)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/forecast/elements/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/turnover
+@required {appId: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/expenditures
+@required {appId: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/payments
+@required {appId: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/average/payment
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/transactions
+@required {appId: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/pourcentages/budgets
+@required {appId: int}
+@optional {id: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/invoices/unpaid
+@required {appId: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/forecast/purchases/unpaid
+@required {appId: int}
+@returns(200) {id: int, journalcode: str, technical_name: str, editable: bool, name: str, description: str, keywords: str, accounting_number: str, need_invoice: bool, need_charge: bool, need_employee: bool, is_associate: bool, is_cashflow: bool, is_sales: bool, is_purchase: bool, is_various: bool}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/accountcategories/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/accountcategories/
+@required {appId: int}
+@optional {name: str, description: str, type: str}
+@returns(200) {id: int, name: str, description: str, type: str}
+@errors {404}
+
+@endpoint GET /apps/{appId}/accountcategories/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, name: str, description: str, type: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/accountcategories/{id}
+@required {appId: int, id: int}
+@optional {name: str, description: str, type: str}
+@returns(200) {id: int, name: str, description: str, type: str}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/accountcategories/{id}
+@required {appId: int, id: int}
+@optional {replacement_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/exports
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/exports
+@required {appId: int, until: str(date-time)}
+@returns(200) {id: int, period_start: str(date-time), period_end: str(date-time), entries_count: int, total_debit: int, total_credit: int, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {404}
+
+@endpoint GET /apps/{appId}/exports/months
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/exports/acd_compta
+@required {appId: int}
+@returns(200) {uuid: str, validity: str, login: str, base: str, cnx: str, password: str, uuid_validity: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/exports/acd_compta
+@required {appId: int, login: str, password: str, base: str, cnx: str, accounting_office_uri: str}
+@returns(200) {uuid: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/exports/acd_compta/filenumber
+@required {appId: int, base: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/exports/agiris
+@required {appId: int}
+@returns(200) {file_code: str}
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/exports/agiris
+@required {appId: int, file_code: str}
+@returns(200) {file_code: str}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/exports/download
+@required {appId: int}
+@optional {format: str(universal/quadra/fiducial/acd/agiris/pennylane/cegid/xls), export_entities_ids: [int], start_at: str(date-time), end_at: str(date-time), since: str(date-time), since_last: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/exports/download/{export_id}
+@required {appId: int, export_id: int}
+@returns(200) {id: int, period_start: str(date-time), period_end: str(date-time), file_url: str, file_size: int, format: str, entries_count: int, status: str, downloaded_at: str(date-time), created_at: str(date-time), updated_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/exports/{id}
+@required {appId: int, id: int}
+@optional {with_trashed: bool}
+@returns(200) {id: int, period_start: str(date-time), period_end: str(date-time), entries_count: int, total_debit: int, total_credit: int, status: str, created_at: str(date-time), updated_at: str(date-time)}
+@errors {400, 404}
+
+@endpoint DELETE /apps/{appId}/exports/{id}
+@required {appId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/accounting_entries/
+@required {appId: int}
+@optional {offset: int, limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/statistics/vat
+@required {appId: int}
+@optional {detailed: bool=False, start_at: str(date-time)=now, period: str(monthly/quarterly/half-yearly/yearly), end_at: str(date-time)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/statistics/timetable/sales
+@required {appId: int}
+@optional {detailed: bool=False, groups: [[int]]=[ [-730, -30], [-30, -1], [-1, 7], [7, 15], [15, 30], [30, 730] ]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/statistics/timetable/purchases
+@required {appId: int}
+@optional {detailed: bool=False, groups: [[int]]=[ [-730, -30], [-30, -1], [-1, 7], [7, 15], [15, 30], [30, 730] ]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/statistics/charts/{type}
+@required {appId: int, type: str}
+@optional {count: int, period: str(hourly/daily/weekly/monthly/quarterly/yearly), start_at: str(date-time), object: str(invoice/quote/purchase/transaction/payment/relationship), object_property: str, calcul: str(sum/avg/count), methods: [[str]], object_date_property: str, group_by: [str], group_by_object_name: str, exclude_keys: [int], search: str, filters: map, show_details: bool}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/declare/vat
+@required {appId: int, start_at: str(date-time)=now, period: str(monthly/quarterly/half-yearly/yearly)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/declare/vat
+@required {appId: int}
+@optional {key: str, settings: map}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/tags
+@required {appId: int}
+@optional {object: str(invoice/quote/purchase/product/transaction/relationship)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/supplier/accepted
+@required {appId: int, token: str, email: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/supplier/accepted/invoice
+@required {appId: int, token: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/signature
+@required {appId: int, documentId: int, email: str, firstname: str, lastname: str, phone: str}
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group ping
+@endpoint GET /ping
+@returns(200)
+@errors {405}
+
+@endgroup
+
+@group apps
+@endpoint GET /apps/{appId}/services/stripe/webhook
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/services/stripe/webhook
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group services
+@endpoint POST /services/collector
+@required {app_identifiant: str, collector_key: str, invoice: str(binary)}
+@returns(200)
+
+@endpoint GET /services/vies/{siren}
+@required {siren: str}
+@returns(200)
+
+@endgroup
+
+@group apps
+@endpoint POST /apps/{appId}/services/yousign/webhook
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/sponsorship/invite
+@required {appId: int, from: str(email), recipient: str(email), referrer_name: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/sponsorship/activate
+@required {appId: int, referrer_app_id: str, recipient: str(email)}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/sponsorship/list/referrals
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/sponsorship/referrer
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/sponsorship/referrer/url
+@required {appId: int, referrer_name: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/sponsorship/accept/referrer
+@required {appId: int, referrer_code: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /apps/{appId}/sponsorship/credit
+@required {appId: int}
+@returns(200)
+@errors {404}
+
+@endpoint POST /apps/{appId}/stripe/import/launch
+@required {appId: int, public_key: str, secret_key: str, private_webhook: str, start_at: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/stripe/import/status
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/stripe/import/state
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/openai/billing/estimate
+@required {appId: int, description: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/openai/billing/reformulate
+@required {appId: int, description: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/openai/billing/corrector
+@required {appId: int, description: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /apps/{appId}/openai/accounting/suggest
+@required {appId: int, description: str}
+@returns(200)
+@errors {400, 500}
+
+@endpoint POST /apps/{appId}/paypal/connect/{clientId}
+@required {appId: int, clientId: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/paypal/connect/state
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/paypal/connect/delete
+@required {appId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /apps/{appId}/webhooks/events
+@required {appId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map], type: str}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group partners
+@endpoint POST /partners/{partnerId}/clients/login
+@required {partnerId: int, email: str, hostname_alias: str, client_secret: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /partners/{partnerId}
+@required {partnerId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /partners/{partnerId}/cases
+@required {partnerId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /partners/{partnerId}/apps/{app_id}/apikey
+@required {partnerId: int, app_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /partners/{partnerId}/plans
+@required {partnerId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/subscriptions/{app_id}/update
+@required {partnerId: int, app_id: int, plan_nickname: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/subscriptions/{app_id}/cancel
+@required {partnerId: int, app_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /partners/{partnerId}/delete/cases
+@required {partnerId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/dissociate/cases
+@required {partnerId: int, ids: [int]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/add/collaborator
+@required {partnerId: int, email: str, firstname: str, lastname: str, policy_profile_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint GET /partners/{partnerId}/collaborators
+@required {partnerId: int}
+@optional {limit: int=10, search: str, filters: [map], order: [map]}
+@returns(200)
+@errors {400, 404}
+
+@endpoint DELETE /partners/{partnerId}/collaborators/{id}
+@required {partnerId: int, id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/assign/collaborators/{id}
+@required {partnerId: int, id: int, appId: int}
+@optional {userId: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/collaborators/{id}/update
+@required {partnerId: int, id: int, policy_profile_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/user/accept/invite
+@required {partnerId: int, appId: int, email: str, token: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint POST /partners/{partnerId}/add/policy
+@required {partnerId: int, app_id: int, user_id: int, policy_profile_id: int}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@end

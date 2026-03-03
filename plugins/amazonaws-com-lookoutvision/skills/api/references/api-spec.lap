@@ -1,0 +1,108 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Lookout for Vision
+@version 2020-11-20
+@auth AWS SigV4
+@endpoints 22
+@hint download_for_search
+@toc 2020-11-20(22)
+
+@endpoint POST /2020-11-20/projects/{projectName}/datasets
+@required {ProjectName: str, DatasetType: str}
+@optional {X-Amzn-Client-Token: str, DatasetSource: DatasetSource}
+@returns(200) {DatasetMetadata: DatasetMetadata?{DatasetType: str?, CreationTimestamp: str(timestamp)?, Status: str?, StatusMessage: str?}}
+
+@endpoint POST /2020-11-20/projects/{projectName}/models
+@required {ProjectName: str, OutputConfig: OutputConfig}
+@optional {X-Amzn-Client-Token: str, Description: str, KmsKeyId: str, Tags: [Tag]}
+@returns(200) {ModelMetadata: ModelMetadata?{CreationTimestamp: str(timestamp)?, ModelVersion: str?, ModelArn: str?, Description: str?, Status: str?, StatusMessage: str?, Performance: ModelPerformance?{F1Score: num(f32)?, Recall: num(f32)?, Precision: num(f32)?}}}
+
+@endpoint POST /2020-11-20/projects
+@required {ProjectName: str}
+@optional {X-Amzn-Client-Token: str}
+@returns(200) {ProjectMetadata: ProjectMetadata?{ProjectArn: str?, ProjectName: str?, CreationTimestamp: str(timestamp)?}}
+
+@endpoint DELETE /2020-11-20/projects/{projectName}/datasets/{datasetType}
+@required {ProjectName: str, DatasetType: str}
+@optional {X-Amzn-Client-Token: str}
+
+@endpoint DELETE /2020-11-20/projects/{projectName}/models/{modelVersion}
+@required {ProjectName: str, ModelVersion: str}
+@optional {X-Amzn-Client-Token: str}
+@returns(200) {ModelArn: str?}
+
+@endpoint DELETE /2020-11-20/projects/{projectName}
+@required {ProjectName: str}
+@optional {X-Amzn-Client-Token: str}
+@returns(200) {ProjectArn: str?}
+
+@endpoint GET /2020-11-20/projects/{projectName}/datasets/{datasetType}
+@required {ProjectName: str, DatasetType: str}
+@returns(200) {DatasetDescription: DatasetDescription?{ProjectName: str?, DatasetType: str?, CreationTimestamp: str(timestamp)?, LastUpdatedTimestamp: str(timestamp)?, Status: str?, StatusMessage: str?, ImageStats: DatasetImageStats?{Total: int?, Labeled: int?, Normal: int?, Anomaly: int?}}}
+
+@endpoint GET /2020-11-20/projects/{projectName}/models/{modelVersion}
+@required {ProjectName: str, ModelVersion: str}
+@returns(200) {ModelDescription: ModelDescription?{ModelVersion: str?, ModelArn: str?, CreationTimestamp: str(timestamp)?, Description: str?, Status: str?, StatusMessage: str?, Performance: ModelPerformance?{F1Score: num(f32)?, Recall: num(f32)?, Precision: num(f32)?}, OutputConfig: OutputConfig?{S3Location: S3Location{Bucket: str, Prefix: str?}}, EvaluationManifest: OutputS3Object?{Bucket: str, Key: str}, EvaluationResult: OutputS3Object?{Bucket: str, Key: str}, EvaluationEndTimestamp: str(timestamp)?, KmsKeyId: str?, MinInferenceUnits: int?, MaxInferenceUnits: int?}}
+
+@endpoint GET /2020-11-20/projects/{projectName}/modelpackagingjobs/{jobName}
+@required {ProjectName: str, JobName: str}
+@returns(200) {ModelPackagingDescription: ModelPackagingDescription?{JobName: str?, ProjectName: str?, ModelVersion: str?, ModelPackagingConfiguration: ModelPackagingConfiguration?{Greengrass: GreengrassConfiguration{CompilerOptions: str?, TargetDevice: str?, TargetPlatform: TargetPlatform?, S3OutputLocation: S3Location, ComponentName: str, ComponentVersion: str?, ComponentDescription: str?, Tags: [Tag]?}}, ModelPackagingJobDescription: str?, ModelPackagingMethod: str?, ModelPackagingOutputDetails: ModelPackagingOutputDetails?{Greengrass: GreengrassOutputDetails?{ComponentVersionArn: str?, ComponentName: str?, ComponentVersion: str?}}, Status: str?, StatusMessage: str?, CreationTimestamp: str(timestamp)?, LastUpdatedTimestamp: str(timestamp)?}}
+
+@endpoint GET /2020-11-20/projects/{projectName}
+@required {ProjectName: str}
+@returns(200) {ProjectDescription: ProjectDescription?{ProjectArn: str?, ProjectName: str?, CreationTimestamp: str(timestamp)?, Datasets: [DatasetMetadata]?}}
+
+@endpoint POST /2020-11-20/projects/{projectName}/models/{modelVersion}/detect
+@required {ProjectName: str, ModelVersion: str, Content-Type: str, Body: bytes}
+@returns(200) {DetectAnomalyResult: DetectAnomalyResult?{Source: ImageSource?{Type: str?}, IsAnomalous: bool?, Confidence: num(f32)?, Anomalies: [Anomaly]?, AnomalyMask: bytes?}}
+
+@endpoint GET /2020-11-20/projects/{projectName}/datasets/{datasetType}/entries
+@required {ProjectName: str, DatasetType: str}
+@optional {labeled: bool, anomalyClass: str, createdBefore: str(timestamp), createdAfter: str(timestamp), nextToken: str, maxResults: int, sourceRefContains: str}
+@returns(200) {DatasetEntries: [str]?, NextToken: str?}
+
+@endpoint GET /2020-11-20/projects/{projectName}/modelpackagingjobs
+@required {ProjectName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {ModelPackagingJobs: [ModelPackagingJobMetadata]?, NextToken: str?}
+
+@endpoint GET /2020-11-20/projects/{projectName}/models
+@required {ProjectName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {Models: [ModelMetadata]?, NextToken: str?}
+
+@endpoint GET /2020-11-20/projects
+@optional {nextToken: str, maxResults: int}
+@returns(200) {Projects: [ProjectMetadata]?, NextToken: str?}
+
+@endpoint GET /2020-11-20/tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: [Tag]?}
+
+@endpoint POST /2020-11-20/projects/{projectName}/models/{modelVersion}/start
+@required {ProjectName: str, ModelVersion: str, MinInferenceUnits: int}
+@optional {X-Amzn-Client-Token: str, MaxInferenceUnits: int}
+@returns(200) {Status: str?}
+
+@endpoint POST /2020-11-20/projects/{projectName}/modelpackagingjobs
+@required {ProjectName: str, ModelVersion: str, Configuration: ModelPackagingConfiguration}
+@optional {X-Amzn-Client-Token: str, JobName: str, Description: str}
+@returns(200) {JobName: str?}
+
+@endpoint POST /2020-11-20/projects/{projectName}/models/{modelVersion}/stop
+@required {ProjectName: str, ModelVersion: str}
+@optional {X-Amzn-Client-Token: str}
+@returns(200) {Status: str?}
+
+@endpoint POST /2020-11-20/tags/{resourceArn}
+@required {ResourceArn: str, Tags: [Tag]}
+
+@endpoint DELETE /2020-11-20/tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endpoint PATCH /2020-11-20/projects/{projectName}/datasets/{datasetType}/entries
+@required {ProjectName: str, DatasetType: str, Changes: bytes}
+@optional {X-Amzn-Client-Token: str}
+@returns(200) {Status: str?}
+
+@end

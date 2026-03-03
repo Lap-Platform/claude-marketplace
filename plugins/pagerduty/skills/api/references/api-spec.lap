@@ -1,0 +1,2197 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api PagerDuty API
+@base https://api.pagerduty.com
+@version 2.0.0
+@auth ApiKey Authorization in header
+@common_fields {Accept: str=application/vnd.pagerduty+json;version=2}
+@endpoints 391
+@hint download_for_search
+@toc {entity_type}(2), abilities(2), addons(5), alert_grouping_settings(5), analytics(16), audit(1), automation_actions(25), business_services(16), change_events(4), escalation_policies(6), event_orchestrations(39), extension_schemas(2), extensions(6), incident_workflows(15), incidents(53), license_allocations(1), licenses(1), log_entries(3), maintenance_windows(5), notifications(1), oauth_delegations(2), oncalls(1), paused_incident_reports(2), priorities(1), rulesets(10), schedules(11), service_dependencies(4), services(30), session_configurations(3), standards(4), status_dashboards(5), status_pages(27), tags(5), teams(14), templates(7), users(35), vendors(2), webhook_subscriptions(12), workflows(8)
+
+@group {entity_type}
+@endpoint POST /{entity_type}/{id}/change_tags
+@required {Content-Type: str=application/json, entity_type: str(users/teams/escalation_policies), id: str}
+@optional {add: [map{type!: str, label: str, id: str}], remove: [map{type!: str, id!: str}]}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint GET /{entity_type}/{id}/tags
+@required {Content-Type: str=application/json, entity_type: str(users/teams/escalation_policies), id: str}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {401, 403, 429}
+
+@endgroup
+
+@group abilities
+@endpoint GET /abilities
+@required {Content-Type: str=application/json}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint GET /abilities/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 402, 403, 404, 429}
+
+@endgroup
+
+@group addons
+@endpoint GET /addons
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, include[]: str, service_ids[]: [str], filter: str(full_page_addon/incident_show_addon)}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint POST /addons
+@required {Content-Type: str=application/json, addon: any}
+@returns(201) {addon: any}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /addons/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {addon: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /addons/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /addons/{id}
+@required {Content-Type: str=application/json, id: str, addon: any}
+@returns(200) {addon: any}
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group alert_grouping_settings
+@endpoint GET /alert_grouping_settings
+@required {Content-Type: str=application/json}
+@optional {after: str, before: str, total: bool=False, limit: int, service_ids[]: [str]}
+@returns(200)
+@errors {401}
+
+@endpoint POST /alert_grouping_settings
+@required {Content-Type: str=application/json, alert_grouping_setting: map{id: str, name: str, description: str, type: str, config: any, services: [any], created_at: str(date-time), updated_at: str(date-time)}}
+@returns(201) {alert_grouping_setting: map{id: str, name: str?, description: str?, type: str, config: any, services: [any], created_at: str(date-time), updated_at: str(date-time)}}
+@errors {400, 401, 403}
+
+@endpoint GET /alert_grouping_settings/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {alert_grouping_setting: map{id: str, name: str?, description: str?, type: str, config: any, services: [any], created_at: str(date-time), updated_at: str(date-time)}}
+@errors {401, 404}
+
+@endpoint DELETE /alert_grouping_settings/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 404}
+
+@endpoint PUT /alert_grouping_settings/{id}
+@required {Content-Type: str=application/json, id: str, alert_grouping_setting: map{id: str, name: str, description: str, type: str, config: any, services: [any], created_at: str(date-time), updated_at: str(date-time)}}
+@returns(200) {alert_grouping_setting: map{id: str, name: str?, description: str?, type: str, config: any, services: [any], created_at: str(date-time), updated_at: str(date-time)}}
+@errors {400, 401, 404}
+
+@endgroup
+
+@group analytics
+@endpoint POST /analytics/metrics/incidents/all
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/incidents/escalation_policies
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/incidents/escalation_policies/all
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/incidents/services
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/incidents/services/all
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/incidents/teams
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/incidents/teams/all
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str], pd_advance_used: bool}, time_zone: str, order: str(asc/desc), order_by: str, aggregate_unit: str(day/week/month)}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/pd_advance_usage/features
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, incident_created_at_start: str, incident_created_at_end: str, urgency: str, major: bool, min_ackowledgements: int, min_timeout_escalations: int, min_manual_escalations: int, team_ids: [str], service_ids: [str], escalation_policy_ids: [str], priority_ids: [str], priority_names: [str]}, time_zone: str}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/responders/all
+@required {Content-Type: str=application/json}
+@optional {filters: map{date_range_start: str, date_range_end: str, urgency: str, team_ids: [str], responder_ids: [str], priority_ids: [str], priority_names: [str]}, time_zone: str, order: str(asc/desc), order_by: str}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/responders/teams
+@required {Content-Type: str=application/json}
+@optional {filters: map{date_range_start: str, date_range_end: str, urgency: str, team_ids: [str], responder_ids: [str], priority_ids: [str], priority_names: [str]}, time_zone: str, order: str(asc/desc), order_by: str}
+@returns(200)
+@errors {400, 429}
+
+@endpoint POST /analytics/metrics/users/all
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str(date-time), created_at_end: str(date-time), team_ids: [str], user_ids: [str], role_ids: [str]}, time_zone: str, order: str(asc/desc)=desc, order_by: str=user_id, aggregate_unit: str(day/week/month), limit: int=1000, starting_after: str, ending_before: str}
+@returns(200) {data: [map], filters: map{created_at_start: str(date-time), created_at_end: str(date-time), team_ids: [str]}, time_zone: str}
+@errors {400, 429}
+
+@endpoint POST /analytics/raw/incidents
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, updated_after: str, urgency: str, major: bool, team_ids: [str], service_ids: [str], priority_ids: [str], priority_names: [str], incident_type_ids: [str]}, starting_after: str, ending_before: str, order: str(asc/desc), order_by: str(created_at/seconds_to_resolve), limit: int, time_zone: str}
+@returns(200) {first: str, last: str, limit: int, more: bool, order: str, order_by: str, filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, team_ids: [str], service_ids: [str], priority_ids: [str], priority_names: [str], incident_type_ids: [str]}, time_zone: str, data: [map]}
+@errors {400, 429}
+
+@endpoint GET /analytics/raw/incidents/{id}
+@required {Content-Type: str=application/json}
+@returns(200) {acknowledged_user_ids: [str], acknowledged_user_names: [str], acknowledgement_count: int, active_user_count: int, assigned_user_ids: [str], assigned_user_names: [str], assignment_count: int, auto_resolved: bool, business_hour_interruptions: int, created_at: str, updated_at: str, description: str, engaged_seconds: int, engaged_user_count: int, escalation_count: int, escalation_policy_id: str, escalation_policy_name: str, id: str, incident_number: int, incident_type_id: str, incident_type_name: str, joined_user_ids: [str], joined_user_names: [str], major: bool, manual_escalation_count: int, off_hour_interruptions: int, priority_id: str?, priority_name: str?, priority_order: int?, reassignment_count: int, resolved_at: str, resolved_by_user_id: str, resolved_by_user_name: str, seconds_to_engage: int, seconds_to_first_ack: int, seconds_to_mobilize: int, seconds_to_resolve: int, service_id: str, service_name: str, sleep_hour_interruptions: int, snoozed_seconds: int, status: str, team_id: str?, team_name: str?, timeout_escalation_count: int, total_interruptions: int, total_notifications: int, urgency: str, user_defined_effort_seconds: int?}
+@errors {404, 429}
+
+@endpoint GET /analytics/raw/incidents/{id}/responses
+@required {Content-Type: str=application/json}
+@optional {limit: int, order: str(asc/desc), order_by: str, time_zone: str}
+@returns(200) {incident_id: str, limit: int, order: str, order_by: str, time_zone: str, responses: [map]}
+@errors {404, 429}
+
+@endpoint POST /analytics/raw/responders/{responder_id}/incidents
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, team_ids: [str], service_ids: [str], priority_ids: [str], priority_names: [str], incident_type_ids: [str]}, starting_after: str, ending_before: str, order: str(asc/desc), order_by: str, limit: int, time_zone: str}
+@returns(200) {first: str, last: str, responder_id: str, limit: int, order: str, order_by: str, time_zone: str, filters: map{created_at_start: str, created_at_end: str, urgency: str, major: bool, team_ids: [str], service_ids: [str], priority_ids: [str], priority_names: [str], incident_type_ids: [str]}, data: [map]}
+@errors {404, 429}
+
+@endpoint POST /analytics/raw/users
+@required {Content-Type: str=application/json}
+@optional {filters: map{created_at_start: str(date-time), created_at_end: str(date-time), team_ids: [str], user_ids: [str], role_ids: [str]}, time_zone: str, order: str(asc/desc)=desc, order_by: str=user_id, aggregate_unit: str(day/week/month), limit: int=1000, starting_after: str, ending_before: str}
+@returns(200) {first: str, last: str, limit: int, more: bool, order: str, order_by: str, filters: map{created_at_start: str, created_at_end: str, team_ids: [str], roles: [str]}, time_zone: str, data: [map]}
+@errors {400, 429}
+
+@endgroup
+
+@group audit
+@endpoint GET /audit/records
+@required {Content-Type: str=application/json}
+@optional {limit: int, cursor: str, since: str(date-time), until: str(date-time), root_resource_types[]: str(users/teams/schedules/escalation_policies/services), actor_type: str(user_reference/api_key_reference/app_reference), actor_id: str, method_type: str(browser/oauth/api_token/identity_provider/other), method_truncated_token: str, actions[]: str(create/update/delete)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endgroup
+
+@group automation_actions
+@endpoint POST /automation_actions/actions
+@required {Content-Type: str=application/json, action: any}
+@returns(201) {action: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/actions
+@required {Content-Type: str=application/json}
+@optional {limit: int, cursor: str, name: str, runner_id: str, classification: str, team_id: str, service_id: str, action_type: str(script/process_automation)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/actions/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {action: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint DELETE /automation_actions/actions/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint PUT /automation_actions/actions/{id}
+@required {Content-Type: str=application/json, id: str, action: any}
+@returns(200) {action: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint POST /automation_actions/actions/{id}/invocations
+@required {Content-Type: str=application/json, id: str, invocation: map{metadata!: map{incident_id!: str, alert_id: str}}}
+@returns(201) {invocation: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/actions/{id}/services
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {services: [any]}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint POST /automation_actions/actions/{id}/services
+@required {Content-Type: str=application/json, id: str, service: any}
+@returns(201) {service: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/actions/{id}/services/{service_id}
+@required {Content-Type: str=application/json, id: str, service_id: str}
+@returns(200) {service: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint DELETE /automation_actions/actions/{id}/services/{service_id}
+@required {Content-Type: str=application/json, id: str, service_id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint POST /automation_actions/actions/{id}/teams
+@required {Content-Type: str=application/json, id: str, team: any}
+@returns(201) {team: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/actions/{id}/teams
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {teams: [any]}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint DELETE /automation_actions/actions/{id}/teams/{team_id}
+@required {Content-Type: str=application/json, id: str, team_id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/actions/{id}/teams/{team_id}
+@required {Content-Type: str=application/json, id: str, team_id: str}
+@returns(200) {team: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/invocations
+@required {Content-Type: str=application/json}
+@optional {invocation_state: str(prepared/created/sent/queued/running/aborted/completed/error/unknown), not_invocation_state: str, incident_id: str, action_id: str}
+@returns(200)
+@errors {400, 401, 402, 403, 429, 500}
+
+@endpoint GET /automation_actions/invocations/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {invocation: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint POST /automation_actions/runners
+@required {Content-Type: str=application/json, runner: any}
+@returns(201) {runner: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/runners
+@required {Content-Type: str=application/json}
+@optional {limit: int, cursor: str, name: str, include[]: [str]}
+@returns(200)
+@errors {401, 402, 429, 500}
+
+@endpoint GET /automation_actions/runners/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {runner: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint PUT /automation_actions/runners/{id}
+@required {Content-Type: str=application/json, id: str, runner: any}
+@returns(200) {runner: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint DELETE /automation_actions/runners/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint POST /automation_actions/runners/{id}/teams
+@required {Content-Type: str=application/json, id: str, team: any}
+@returns(201) {team: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/runners/{id}/teams
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {teams: [any]}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint DELETE /automation_actions/runners/{id}/teams/{team_id}
+@required {Content-Type: str=application/json, id: str, team_id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /automation_actions/runners/{id}/teams/{team_id}
+@required {Content-Type: str=application/json, id: str, team_id: str}
+@returns(200) {team: any}
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endgroup
+
+@group business_services
+@endpoint GET /business_services
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint POST /business_services
+@required {Content-Type: str=application/json}
+@optional {business_service: map{name: str, description: str, point_of_contact: str, team: map{id: str}}}
+@returns(200) {business_service: any}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /business_services/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {business_service: any}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /business_services/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint PUT /business_services/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {business_service: map{name: str, description: str, point_of_contact: str, team: map{id: str}}}
+@returns(200) {business_service: any}
+@errors {400, 403, 404}
+
+@endpoint POST /business_services/{id}/account_subscription
+@required {id: str}
+@returns(200) {account_is_subscribed: bool}
+@errors {401, 403, 404, 422}
+
+@endpoint DELETE /business_services/{id}/account_subscription
+@required {id: str}
+@returns(204)
+@errors {401, 403, 404, 422}
+
+@endpoint GET /business_services/{id}/subscribers
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint POST /business_services/{id}/subscribers
+@required {id: str, subscribers: [map{subscriber_id: str, subscriber_type: str}]}
+@returns(200) {subscriptions: [map]}
+@errors {400, 401, 403, 422}
+
+@endpoint GET /business_services/{id}/supporting_services/impacts
+@required {id: str}
+@optional {additional_fields[]: str(services.highest_impacting_priority/total_impacted_count), ids[]: str}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint POST /business_services/{id}/unsubscribe
+@required {id: str, subscribers: [map{subscriber_id: str, subscriber_type: str}]}
+@returns(200) {deleted_count: num, unauthorized_count: num, non_existent_count: num}
+@errors {401, 403, 404, 422}
+
+@endpoint GET /business_services/impactors
+@optional {ids[]: str}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /business_services/impacts
+@optional {additional_fields[]: str(services.highest_impacting_priority/total_impacted_count), ids[]: str}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /business_services/priority_thresholds
+@returns(200) {global_threshold: map?{id: str, order: int}}
+@errors {400, 401, 403, 422, 429}
+
+@endpoint DELETE /business_services/priority_thresholds
+@returns(204)
+@errors {401, 403, 429}
+
+@endpoint PUT /business_services/priority_thresholds
+@required {global_threshold: map{id!: str, order!: num}}
+@returns(200) {global_threshold: map{id: str, order: num}}
+@errors {400, 401, 403, 422, 429, 500}
+
+@endgroup
+
+@group change_events
+@endpoint GET /change_events
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, team_ids[]: [str], integration_ids[]: [str], since: str(date-time), until: str(date-time)}
+@returns(200) {change_events: [any]}
+@errors {400, 401, 403}
+
+@endpoint POST /change_events
+@required {Content-Type: str=application/json}
+@returns(202)
+
+@endpoint GET /change_events/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {change_event: any}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /change_events/{id}
+@required {Content-Type: str=application/json, id: str, change_event: any}
+@returns(200) {change_event: any}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group escalation_policies
+@endpoint GET /escalation_policies
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, query: str, user_ids[]: [str], team_ids[]: [str], include[]: str(services/teams/targets), sort_by: str(name/name:asc/name:desc)=name}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint POST /escalation_policies
+@required {Content-Type: str=application/json, escalation_policy: any}
+@optional {From: str(email)}
+@returns(201) {escalation_policy: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /escalation_policies/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str(services/teams/targets)}
+@returns(200) {escalation_policy: any}
+@errors {401, 403, 404}
+
+@endpoint DELETE /escalation_policies/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /escalation_policies/{id}
+@required {Content-Type: str=application/json, id: str, escalation_policy: any}
+@returns(200) {escalation_policy: any}
+@errors {401, 402, 403, 404, 429}
+
+@endpoint GET /escalation_policies/{id}/audit/records
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, cursor: str, since: str(date-time), until: str(date-time)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endgroup
+
+@group event_orchestrations
+@endpoint GET /event_orchestrations
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, sort_by: str(name:asc/name:desc/routes:asc/routes:desc/created_at:asc/created_at:desc)=name:asc}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint POST /event_orchestrations
+@required {Content-Type: str=application/json, orchestration: map{id: str, self: str(url), name: str, description: str, team: map{id: str, type: str, self: str(url)}, integrations: [map{id: str, label: str, parameters: map}], routes: int, created_at: str(date-time), created_by: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updated_by: map{id: str, type: str, self: str(url)}, version: str}}
+@returns(201) {orchestration: map{id: str, self: str(url), name: str, description: str, team: map{id: str, type: str, self: str(url)}, integrations: [map], routes: int, created_at: str(date-time), created_by: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updated_by: map{id: str, type: str, self: str(url)}, version: str}}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {orchestration: map{id: str, self: str(url), name: str, description: str, team: map{id: str, type: str, self: str(url)}, integrations: [map], routes: int, created_at: str(date-time), created_by: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updated_by: map{id: str, type: str, self: str(url)}, version: str}}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/{id}
+@required {Content-Type: str=application/json, id: str, orchestration: map{id: str, self: str(url), name: str, description: str, team: map{id: str, type: str, self: str(url)}, integrations: [map{id: str, label: str, parameters: map}], routes: int, created_at: str(date-time), created_by: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updated_by: map{id: str, type: str, self: str(url)}, version: str}}
+@returns(200) {orchestration: map{id: str, self: str(url), name: str, description: str, team: map{id: str, type: str, self: str(url)}, integrations: [map], routes: int, created_at: str(date-time), created_by: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updated_by: map{id: str, type: str, self: str(url)}, version: str}}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint DELETE /event_orchestrations/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}/integrations
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {integrations: [map], total: int?}
+@errors {400, 401, 403, 405}
+
+@endpoint POST /event_orchestrations/{id}/integrations
+@required {Content-Type: str=application/json, id: str, integration: map{label!: str}}
+@returns(201) {integration: map{id: str, label: str, parameters: map{routing_key: str, type: str}}}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}/integrations/{integration_id}
+@required {Content-Type: str=application/json, id: str, integration_id: str}
+@returns(200) {integration: map{id: str, label: str, parameters: map{routing_key: str, type: str}}}
+@errors {400, 401, 403, 405}
+
+@endpoint PUT /event_orchestrations/{id}/integrations/{integration_id}
+@required {Content-Type: str=application/json, id: str, integration_id: str, integration: map{label!: str}}
+@returns(200) {integration: map{id: str, label: str, parameters: map{routing_key: str, type: str}}}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint DELETE /event_orchestrations/{id}/integrations/{integration_id}
+@required {Content-Type: str=application/json, id: str, integration_id: str}
+@returns(204)
+@errors {401, 403, 404, 405, 409}
+
+@endpoint POST /event_orchestrations/{id}/integrations/migration
+@required {Content-Type: str=application/json, id: str, source_id: str, source_type: str, integration_id: str}
+@returns(200) {integrations: [map], total: int?}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}/global
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/{id}/global
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}/router
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/{id}/router
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}/unrouted
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/{id}/unrouted
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/services/{service_id}
+@required {Content-Type: str=application/json, service_id: str}
+@optional {include[]: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/services/{service_id}
+@required {Content-Type: str=application/json, service_id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/services/{service_id}/active
+@required {Content-Type: str=application/json, service_id: str}
+@returns(200) {active: bool}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/services/{service_id}/active
+@required {Content-Type: str=application/json, service_id: str}
+@returns(200) {active: bool}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /event_orchestrations/{id}/cache_variables
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {cache_variables: [any]}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /event_orchestrations/{id}/cache_variables
+@required {Content-Type: str=application/json, id: str, cache_variable: any}
+@returns(200) {cache_variable: any}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /event_orchestrations/{id}/cache_variables/{cache_variable_id}
+@required {Content-Type: str=application/json, id: str, cache_variable_id: str}
+@returns(200) {cache_variable: any}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/{id}/cache_variables/{cache_variable_id}
+@required {Content-Type: str=application/json, id: str, cache_variable_id: str, cache_variable: any}
+@returns(200) {cache_variable: any}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /event_orchestrations/{id}/cache_variables/{cache_variable_id}
+@required {Content-Type: str=application/json, id: str, cache_variable_id: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /event_orchestrations/{id}/cache_variables/{cache_variable_id}/data
+@required {Content-Type: str=application/json, id: str, cache_variable_id: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/{id}/cache_variables/{cache_variable_id}/data
+@required {Content-Type: str=application/json, id: str, cache_variable_id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /event_orchestrations/{id}/cache_variables/{cache_variable_id}/data
+@required {Content-Type: str=application/json, id: str, cache_variable_id: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /event_orchestrations/services/{service_id}/cache_variables
+@required {Content-Type: str=application/json, service_id: str}
+@returns(200) {cache_variables: [any]}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /event_orchestrations/services/{service_id}/cache_variables
+@required {Content-Type: str=application/json, service_id: str, cache_variable: any}
+@returns(200) {cache_variable: any}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /event_orchestrations/services/{service_id}/cache_variables/{cache_variable_id}
+@required {Content-Type: str=application/json, service_id: str, cache_variable_id: str}
+@returns(200) {cache_variable: any}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/services/{service_id}/cache_variables/{cache_variable_id}
+@required {Content-Type: str=application/json, service_id: str, cache_variable_id: str, cache_variable: any}
+@returns(200) {cache_variable: any}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /event_orchestrations/services/{service_id}/cache_variables/{cache_variable_id}
+@required {Content-Type: str=application/json, service_id: str, cache_variable_id: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /event_orchestrations/services/{service_id}/cache_variables/{cache_variable_id}/data
+@required {Content-Type: str=application/json, service_id: str, cache_variable_id: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /event_orchestrations/services/{service_id}/cache_variables/{cache_variable_id}/data
+@required {Content-Type: str=application/json, service_id: str, cache_variable_id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /event_orchestrations/services/{service_id}/cache_variables/{cache_variable_id}/data
+@required {Content-Type: str=application/json, service_id: str, cache_variable_id: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /event_orchestrations/{id}/enablements
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {enablements: [map]}
+@errors {403, 404, 500}
+
+@endpoint PUT /event_orchestrations/{id}/enablements/{feature_name}
+@required {Content-Type: str=application/json, id: str, feature_name: str, enablement: map{feature: str, enabled!: bool, updated_at: str(date-time), warnings: [map{message: str}]}}
+@returns(200) {enablement: map{feature: str, enabled: bool, updated_at: str(date-time), warnings: [map]}}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group extension_schemas
+@endpoint GET /extension_schemas
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint GET /extension_schemas/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {extension_schema: map{icon_url: str(url), logo_url: str(url), label: str, key: str, description: str, guide_url: str(url), send_types: [str], url: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group extensions
+@endpoint GET /extensions
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, query: str, extension_object_id: str, extension_schema_id: str, include[]: str(extension_objects/extension_schemas)}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint POST /extensions
+@required {Content-Type: str=application/json, extension: any}
+@returns(201) {extension: any}
+@errors {400, 401, 402, 403}
+
+@endpoint GET /extensions/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str(extension_schemas/extension_objects/temporarily_disabled)}
+@returns(200) {extension: any}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /extensions/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint PUT /extensions/{id}
+@required {Content-Type: str=application/json, id: str, extension: any}
+@returns(200) {extension: any}
+@errors {401, 402, 403, 404}
+
+@endpoint POST /extensions/{id}/enable
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {extension: any}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group incident_workflows
+@endpoint GET /incident_workflows
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, query: str, include[]: str(steps/team)}
+@returns(200)
+@errors {400, 401, 402, 403, 429}
+
+@endpoint POST /incident_workflows
+@required {Content-Type: str=application/json, incident_workflow: any}
+@returns(201) {incident_workflow: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /incident_workflows/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(201) {incident_workflow: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint DELETE /incident_workflows/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint PUT /incident_workflows/{id}
+@required {Content-Type: str=application/json, id: str, incident_workflow: any}
+@returns(200) {incident_workflow: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint POST /incident_workflows/{id}/instances
+@required {Content-Type: str=application/json, id: str, incident_workflow_instance: map{id: str, incident: map{id!: str, type: str}}}
+@returns(201) {incident_workflow_instance: map{id: str, type: str, incident: any}}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /incident_workflows/actions
+@required {Content-Type: str=application/json}
+@optional {limit: int, cursor: str, keyword: str}
+@returns(200)
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /incident_workflows/actions/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {action: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /incident_workflows/triggers
+@required {Content-Type: str=application/json}
+@optional {workflow_id: str, incident_id: str, service_id: str, trigger_type: str(manual/conditional/incident_type), workflow_name_contains: str, is_disabled: bool, sort_by: str(workflow_id/workflow_id asc/workflow_id desc/workflow_name/workflow_name asc/workflow_name desc), limit: int, cursor: str}
+@returns(200)
+@errors {400, 401, 402, 403, 429}
+
+@endpoint POST /incident_workflows/triggers
+@required {Content-Type: str=application/json, trigger: any}
+@returns(201) {trigger: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /incident_workflows/triggers/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {trigger: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint PUT /incident_workflows/triggers/{id}
+@required {Content-Type: str=application/json, id: str, trigger: any}
+@returns(200) {trigger: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint DELETE /incident_workflows/triggers/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint POST /incident_workflows/triggers/{id}/services
+@required {Content-Type: str=application/json, id: str, service: map{id: str}}
+@returns(201) {trigger: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint DELETE /incident_workflows/triggers/{trigger_id}/services/{service_id}
+@required {Content-Type: str=application/json, trigger_id: str, service_id: str}
+@returns(201) {trigger: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endgroup
+
+@group incidents
+@endpoint GET /incidents
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, date_range: str, incident_key: str, service_ids[]: [str], team_ids[]: [str], user_ids[]: [str], urgencies[]: str(high/low), time_zone: str(tzinfo), statuses[]: str(triggered/acknowledged/resolved), sort_by: [str], include[]: str(acknowledgers/agents/assignees/conference_bridge/escalation_policies/first_trigger_log_entries/priorities/services/teams/users), since: str, until: str}
+@returns(200)
+@errors {400, 401, 402, 403, 429}
+
+@endpoint PUT /incidents
+@required {Content-Type: str=application/json, From: str(email), incidents: [any]}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {400, 401, 403, 413, 429}
+
+@endpoint POST /incidents
+@required {Content-Type: str=application/json, From: str(email), incident: map{type!: str, title!: str, service!: any, priority: any, urgency: str, body: map{details: map}, incident_key: str, assignments: [any], incident_type: map{id: str, name: str}, escalation_policy: any, conference_bridge: map{conference_number: str, conference_url: str(url)}}}
+@returns(201) {incident: any}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /incidents/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str(acknowledgers/agents/assignees/conference_bridge/custom_fields/escalation_policies/first_trigger_log_entries/priorities/services/teams/users)}
+@returns(200) {incident: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /incidents/{id}
+@required {Content-Type: str=application/json, id: str, From: str(email), incident: map{type!: str, status: str, priority: any, resolution: str, title: str, escalation_level: int, assignments: [any], incident_type: map{id: str, name: str}, escalation_policy: any, urgency: str, conference_bridge: map{conference_number: str, conference_url: str(url)}, service: map{id!: str, type!: str}}}
+@returns(200)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /incidents/{id}/alerts
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, offset: int, total: bool=False, alert_key: str, statuses[]: str(triggered/resolved), sort_by: str(created_at/resolved_at/created_at:asc/created_at:desc/resolved_at:asc/resolved_at:desc), include[]: str(services/first_trigger_log_entries/incidents)}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint PUT /incidents/{id}/alerts
+@required {Content-Type: str=application/json, id: str, From: str(email), alerts: [map{status: str, incident: map{id!: str, type: str}}]}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {400, 401, 403, 413, 429}
+
+@endpoint GET /incidents/{id}/alerts/{alert_id}
+@required {Content-Type: str=application/json, id: str, alert_id: str}
+@returns(200) {alert: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /incidents/{id}/alerts/{alert_id}
+@required {Content-Type: str=application/json, id: str, alert_id: str, From: str(email), alert: map{status: str, incident: map{id!: str, type: str}}}
+@returns(200) {alert: any}
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /incidents/{id}/business_services/{business_service_id}/impacts
+@required {id: str, business_service_id: str, relation: str(impacted/not_impacted)}
+@returns(200) {relation: str}
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /incidents/{id}/business_services/impacts
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /incidents/{id}/custom_fields/values
+@required {id: str}
+@returns(200) {custom_fields: [map]}
+@errors {403, 404, 500}
+
+@endpoint PUT /incidents/{id}/custom_fields/values
+@required {id: str, custom_fields: [any]}
+@returns(201) {custom_fields: [map]}
+@errors {403, 404, 500}
+
+@endpoint GET /incidents/{id}/log_entries
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, offset: int, total: bool=False, time_zone: str(tzinfo), since: str(date-time), until: str(date-time), is_overview: bool=False, include[]: str(incidents/services/channels/teams)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /incidents/{id}/merge
+@required {Content-Type: str=application/json, id: str, From: str(email), source_incidents: [any]}
+@returns(200) {incident: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /incidents/{id}/notes
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {notes: [map]}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /incidents/{id}/notes
+@required {Content-Type: str=application/json, id: str, From: str(email), note: map{content!: str}}
+@returns(200) {note: map{id: str, user: any, channel: map{summary: str, id: str, type: str, self: str(url), html_url: str(url)}, content: str, created_at: str(date-time), updated_at: str(date-time)}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /incidents/{id}/notes/{note_id}
+@required {Content-Type: str=application/json, id: str, note_id: str, From: str(email), note: map{content!: str}}
+@returns(200) {note: map{id: str, user: any, channel: map{summary: str, id: str, type: str, self: str(url), html_url: str(url)}, content: str, created_at: str(date-time), updated_at: str(date-time)}}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /incidents/{id}/notes/{note_id}
+@required {Content-Type: str=application/json, id: str, note_id: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /incidents/{id}/outlier_incident
+@required {Content-Type: str=application/json, id: str}
+@optional {since: str(date-time), additional_details[]: str}
+@returns(200) {outlier_incident: map{incident: any, incident_template: map{id: str, cluster_id: str, mined_text: str}}}
+@errors {400, 403, 404, 429, 500}
+
+@endpoint GET /incidents/{id}/past_incidents
+@optional {limit: int=5, total: bool=False}
+@returns(200) {past_incidents: [map], total: num, limit: num}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /incidents/{id}/related_change_events
+@required {id: str, Content-Type: str=application/json}
+@optional {limit: int}
+@returns(200) {change_events: [any]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /incidents/{id}/related_incidents
+@required {Content-Type: str=application/json, id: str}
+@optional {additional_details[]: str}
+@returns(200) {related_incidents: [any]}
+@errors {400, 403, 404, 429, 500}
+
+@endpoint POST /incidents/{id}/responder_requests
+@required {Content-Type: str=application/json, id: str, requester_id: str, message: str, responder_request_targets: any}
+@returns(200) {responder_request: map{id: str, incident: any, requester: any, requested_at: str, message: str, responder_request_targets: [map]}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /incidents/{id}/responder_requests/cancel
+@required {Content-Type: str=application/json, id: str, requester_id: str, responder_request_targets: [map{type!: str, id!: str}]}
+@returns(200) {responder_request_targets: [map]}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint POST /incidents/{id}/snooze
+@required {Content-Type: str=application/json, id: str, From: str(email), duration: int}
+@returns(201) {incident: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /incidents/{id}/status_updates
+@required {Content-Type: str=application/json, id: str, From: str(email), message: str}
+@optional {subject: str, html_message: str}
+@returns(200) {status_update: map{id: str, message: str, created_at: str, sender: any, subject: str, html_message: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /incidents/{id}/status_updates/subscribers
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint POST /incidents/{id}/status_updates/subscribers
+@required {id: str, subscribers: [map{subscriber_id: str, subscriber_type: str}]}
+@returns(200) {subscriptions: [map]}
+@errors {400, 401, 403, 422}
+
+@endpoint POST /incidents/{id}/status_updates/unsubscribe
+@required {id: str, subscribers: [map{subscriber_id: str, subscriber_type: str}]}
+@returns(200) {deleted_count: num, unauthorized_count: num, non_existent_count: num}
+@errors {401, 403, 404, 422}
+
+@endpoint GET /incidents/types
+@required {Content-Type: str=application/json}
+@optional {filter: str(enabled/disabled/all)=enabled}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 500}
+
+@endpoint POST /incidents/types
+@required {Content-Type: str=application/json, incident_type: map{name!: str, display_name!: str, parent_type!: str, enabled: bool, description: str}}
+@returns(201) {incident_type: map{enabled: bool, id: str, name: str, parent: map{id: str, type: str}, type: str, description: str, created_at: str(date-time), updated_at: str(date-time), display_name: str}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /incidents/types/{type_id_or_name}
+@required {Content-Type: str=application/json, type_id_or_name: str}
+@returns(200) {incident_type: map{enabled: bool, id: str, name: str, parent: map{id: str, type: str}, type: str, description: str, created_at: str(date-time), updated_at: str(date-time), display_name: str}}
+@errors {400, 401, 402, 403, 404, 500}
+
+@endpoint PUT /incidents/types/{type_id_or_name}
+@required {Content-Type: str=application/json, type_id_or_name: str, incident_type: map{display_name: str, enabled: bool, description: str}}
+@returns(200) {incident_type: map{enabled: bool, id: str, name: str, parent: map{id: str, type: str}, type: str, description: str, created_at: str(date-time), updated_at: str(date-time), display_name: str}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /incidents/types/{type_id_or_name}/custom_fields
+@required {Content-Type: str=application/json, type_id_or_name: str}
+@optional {include[]: str}
+@returns(200) {fields: [map]}
+@errors {400, 401, 402, 403, 404, 500}
+
+@endpoint POST /incidents/types/{type_id_or_name}/custom_fields
+@required {Content-Type: str=application/json, type_id_or_name: str, field: map{name!: str, display_name!: str, data_type!: str, field_type!: str, description: str, enabled: bool, default_value: str, field_options: [any]}}
+@returns(201) {field: map{enabled: bool, id: str, name: str, type: str, self: str(url)?, description: str?, field_type: str, data_type: str, updated_at: str(date-time), created_at: str(date-time), display_name: str, default_value: any?, incident_type: str, summary: str?, field_options: [map]}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /incidents/types/{type_id_or_name}/custom_fields/{field_id}
+@required {Content-Type: str=application/json, type_id_or_name: str, field_id: str}
+@optional {include[]: str}
+@returns(200) {field: map{enabled: bool, id: str, name: str, type: str, self: str(url)?, description: str?, field_type: str, data_type: str, updated_at: str(date-time), created_at: str(date-time), display_name: str, default_value: any?, incident_type: str, summary: str?, field_options: [map]}}
+@errors {400, 401, 402, 403, 404, 500}
+
+@endpoint PUT /incidents/types/{type_id_or_name}/custom_fields/{field_id}
+@required {Content-Type: str=application/json, type_id_or_name: str, field_id: str, field: map{display_name: str, enabled: bool, default_value: str, description: str, field_options: [any]}}
+@returns(200) {field: map{enabled: bool, id: str, name: str, type: str, self: str(url)?, description: str?, field_type: str, data_type: str, updated_at: str(date-time), created_at: str(date-time), display_name: str, default_value: any?, incident_type: str, summary: str?, field_options: [map]}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint DELETE /incidents/types/{type_id_or_name}/custom_fields/{field_id}
+@required {Content-Type: str=application/json, type_id_or_name: str, field_id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /incidents/types/{type_id_or_name}/custom_fields/{field_id}/field_options
+@required {Content-Type: str=application/json, type_id_or_name: str, field_id: str}
+@returns(200) {field_options: [any]}
+@errors {401, 403, 404, 500}
+
+@endpoint POST /incidents/types/{type_id_or_name}/custom_fields/{field_id}/field_options
+@required {Content-Type: str=application/json, type_id_or_name: str, field_id: str, field_option: map{data!: map{data_type!: str, value!: str}}}
+@returns(201) {field_option: map{data: any, id: str, type: str, updated_at: str(date-time), created_at: str(date-time)}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint GET /incidents/types/{type_id_or_name}/custom_fields/{field_id}/field_options/{field_option_id}
+@required {Content-Type: str=application/json, type_id_or_name: str, field_option_id: str, field_id: str}
+@returns(200) {field_option: map{data: any, id: str, type: str, updated_at: str(date-time), created_at: str(date-time)}}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /incidents/types/{type_id_or_name}/custom_fields/{field_id}/field_options/{field_option_id}
+@required {Content-Type: str=application/json, type_id_or_name: str, field_option_id: str, field_id: str, field_option: map{data!: map{data_type!: str, value!: str}}}
+@returns(200) {field_option: map{data: any, id: str, type: str, updated_at: str(date-time), created_at: str(date-time)}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint DELETE /incidents/types/{type_id_or_name}/custom_fields/{field_id}/field_options/{field_option_id}
+@required {Content-Type: str=application/json, type_id_or_name: str, field_option_id: str, field_id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 500}
+
+@endpoint POST /incidents/custom_fields
+@required {field: any}
+@returns(201) {field: any}
+@errors {400, 403, 500}
+
+@endpoint GET /incidents/custom_fields
+@optional {include[]: str}
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /incidents/custom_fields/{field_id}
+@required {field_id: str}
+@optional {include[]: str}
+@returns(200) {field: any}
+@errors {403, 404, 500}
+
+@endpoint PUT /incidents/custom_fields/{field_id}
+@required {field_id: str, field: map{display_name: str, description: str, default_value: any, enabled: bool}}
+@returns(200) {field: any}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /incidents/custom_fields/{field_id}
+@required {field_id: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /incidents/custom_fields/{field_id}/field_options
+@required {field_id: str, field_option: any}
+@returns(201) {field_option: any}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /incidents/custom_fields/{field_id}/field_options
+@required {field_id: str}
+@returns(200) {field_options: [any]}
+@errors {404, 500}
+
+@endpoint PUT /incidents/custom_fields/{field_id}/field_options/{field_option_id}
+@required {field_id: str, field_option_id: str, field_option: map{data: any, id!: str, type!: str, updated_at!: str(date-time), created_at!: str(date-time)}}
+@returns(200) {field_option: any}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /incidents/custom_fields/{field_id}/field_options/{field_option_id}
+@required {field_id: str, field_option_id: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group license_allocations
+@endpoint GET /license_allocations
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int}
+@returns(200)
+@errors {401, 403, 404}
+
+@endgroup
+
+@group licenses
+@endpoint GET /licenses
+@required {Content-Type: str=application/json}
+@returns(200) {licenses: [any]}
+@errors {401, 403, 404}
+
+@endgroup
+
+@group log_entries
+@endpoint GET /log_entries
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, time_zone: str(tzinfo), since: str(date-time), until: str(date-time), is_overview: bool=False, include[]: str(incidents/services/channels/teams), team_ids[]: [str]}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint GET /log_entries/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {time_zone: str(tzinfo), include[]: str(incidents/services/channels/teams)}
+@returns(200) {log_entry: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /log_entries/{id}/channel
+@required {Content-Type: str=application/json, id: str, From: str(email), channel: map{details!: str, type!: str}}
+@returns(202)
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group maintenance_windows
+@endpoint GET /maintenance_windows
+@required {Content-Type: str=application/json}
+@optional {query: str, limit: int, offset: int, total: bool=False, team_ids[]: [str], service_ids[]: [str], include[]: str(teams/services/users), filter: str(past/future/ongoing/open/all)}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint POST /maintenance_windows
+@required {Content-Type: str=application/json, From: str(email), maintenance_window: any}
+@returns(201) {maintenance_window: any}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /maintenance_windows/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str(teams/services/users)}
+@returns(200) {maintenance_window: any}
+@errors {401, 403, 404, 429}
+
+@endpoint DELETE /maintenance_windows/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404, 405, 429}
+
+@endpoint PUT /maintenance_windows/{id}
+@required {Content-Type: str=application/json, id: str, maintenance_window: any}
+@returns(200) {maintenance_window: any}
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group notifications
+@endpoint GET /notifications
+@required {Content-Type: str=application/json, since: str(date-time), until: str(date-time)}
+@optional {limit: int, offset: int, total: bool=False, time_zone: str(tzinfo), filter: str(sms_notification/email_notification/phone_notification/push_notification), include[]: str}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endgroup
+
+@group oauth_delegations
+@endpoint DELETE /oauth_delegations
+@required {Content-Type: str=application/json, user_id: str, type: str(mobile/web)}
+@returns(200) {status: str}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /oauth_delegations/revocation_requests/status
+@required {Content-Type: str=application/json}
+@optional {requested_at_end: str(date-time)}
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group oncalls
+@endpoint GET /oncalls
+@required {Content-Type: str=application/json}
+@optional {time_zone: str(tzinfo), limit: int, offset: int, total: bool=False, include[]: str(escalation_policies/users/schedules), user_ids[]: [str], escalation_policy_ids[]: [str], schedule_ids[]: [str], since: str(date-time), until: str(date-time), earliest: bool}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endgroup
+
+@group paused_incident_reports
+@endpoint GET /paused_incident_reports/alerts
+@required {Content-Type: str=application/json}
+@optional {since: str(date-time), until: str(date-time), service_id: str, suspended_by: any(auto_pause/rules)}
+@returns(200) {paused_incident_reporting_alerts: map{since: str, until: str, triggered_after_pause_alerts: [any], resolved_after_pause_alerts: [any]}}
+@errors {400, 403, 404, 429, 500}
+
+@endpoint GET /paused_incident_reports/counts
+@required {Content-Type: str=application/json}
+@optional {since: str(date-time), until: str(date-time), service_id: str, suspended_by: any(auto_pause/rules)}
+@returns(200) {paused_incident_reporting_counts: map{since: str, until: str, paused_count: num, triggered_after_pause_count: num, resolved_after_pause_count: num}}
+@errors {400, 403, 404, 429, 500}
+
+@endgroup
+
+@group priorities
+@endpoint GET /priorities
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {400, 401, 402, 403, 429}
+
+@endgroup
+
+@group rulesets
+@endpoint GET /rulesets
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint POST /rulesets
+@required {Content-Type: str=application/json, ruleset: any}
+@returns(201) {ruleset: map{id: str, self: str(url), type: str, name: str, routing_keys: [str], created_at: str(date-time), creator: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updater: map{id: str, type: str, self: str(url)}, team: map{id: str, type: str, self: str(url)}}}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /rulesets/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {ruleset: map{id: str, self: str(url), type: str, name: str, routing_keys: [str], created_at: str(date-time), creator: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updater: map{id: str, type: str, self: str(url)}, team: map{id: str, type: str, self: str(url)}}}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /rulesets/{id}
+@required {Content-Type: str=application/json, id: str, ruleset: map{id: str, self: str(url), type: str, name: str, routing_keys: [str], created_at: str(date-time), creator: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updater: map{id: str, type: str, self: str(url)}, team: map{id!: str, type!: str, self: str(url)}}}
+@returns(200) {ruleset: map{id: str, self: str(url), type: str, name: str, routing_keys: [str], created_at: str(date-time), creator: map{id: str, type: str, self: str(url)}, updated_at: str(date-time), updater: map{id: str, type: str, self: str(url)}, team: map{id: str, type: str, self: str(url)}}}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint DELETE /rulesets/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /rulesets/{id}/rules
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint POST /rulesets/{id}/rules
+@required {Content-Type: str=application/json, id: str, rule: any}
+@returns(201) {rule: any}
+@errors {400, 401, 403, 404, 409}
+
+@endpoint GET /rulesets/{id}/rules/{rule_id}
+@required {Content-Type: str=application/json, id: str, rule_id: str}
+@returns(200) {rule: any}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /rulesets/{id}/rules/{rule_id}
+@required {Content-Type: str=application/json, id: str, rule_id: str, rule_id: str}
+@optional {rule: any}
+@returns(200) {rule: any}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint DELETE /rulesets/{id}/rules/{rule_id}
+@required {Content-Type: str=application/json, id: str, rule_id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endgroup
+
+@group schedules
+@endpoint GET /schedules
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, query: str, include[]: str(schedule_layers/overrides_subschedule/final_schedule), time_zone: str(tzinfo), include_next_oncall_for_user: str, since: str(date-time), until: str(date-time)}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint POST /schedules
+@required {Content-Type: str=application/json, schedule: any}
+@optional {overflow: bool=False}
+@returns(201) {schedule: any}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /schedules/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {time_zone: str(tzinfo), since: str(date-time), until: str(date-time), overflow: bool=False, include_next_oncall_for_user: str}
+@returns(200) {schedule: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /schedules/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /schedules/{id}
+@required {Content-Type: str=application/json, id: str, schedule: any}
+@optional {overflow: bool=False}
+@returns(200) {schedule: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /schedules/{id}/audit/records
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, cursor: str, since: str(date-time), until: str(date-time)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /schedules/{id}/overrides
+@required {Content-Type: str=application/json, id: str, since: str(date-time), until: str(date-time)}
+@optional {editable: bool, overflow: bool}
+@returns(201) {overrides: [any]}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /schedules/{id}/overrides
+@required {Content-Type: str=application/json, id: str}
+@optional {overrides: [any]}
+@returns(201)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /schedules/{id}/overrides/{override_id}
+@required {Content-Type: str=application/json, id: str, override_id: str}
+@returns(200)
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /schedules/{id}/users
+@required {Content-Type: str=application/json, id: str}
+@optional {since: str(date-time), until: str(date-time)}
+@returns(200) {users: [any]}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /schedules/preview
+@required {Content-Type: str=application/json, schedule: any}
+@optional {since: str(date-time), until: str(date-time), overflow: bool=False}
+@returns(200) {schedule: any}
+@errors {400, 401, 403, 429}
+
+@endgroup
+
+@group service_dependencies
+@endpoint POST /service_dependencies/associate
+@required {Content-Type: str=application/json}
+@optional {relationships: [map{supporting_service: map{id: str, type: str}, dependent_service: map{id: str, type: str}}]}
+@returns(200) {relationships: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /service_dependencies/business_services/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {relationships: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /service_dependencies/disassociate
+@required {Content-Type: str=application/json}
+@optional {relationships: [map{supporting_service: map{id: str, type: str}, dependent_service: map{id: str, type: str}}]}
+@returns(200) {relationships: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /service_dependencies/technical_services/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {relationships: [map]}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group services
+@endpoint GET /services
+@required {Content-Type: str=application/json}
+@optional {query: str, limit: int, offset: int, total: bool=False, team_ids[]: [str], time_zone: str(tzinfo), sort_by: str(name/name:asc/name:desc)=name, include[]: str(escalation_policies/teams/integrations/auto_pause_notifications_parameters), name: str}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint POST /services
+@required {Content-Type: str=application/json, service: any}
+@returns(201) {service: any}
+@errors {400, 401, 402, 403}
+
+@endpoint GET /services/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str(escalation_policies/teams/auto_pause_notifications_parameters/integrations)}
+@returns(200) {service: any}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /services/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403}
+
+@endpoint PUT /services/{id}
+@required {Content-Type: str=application/json, id: str, service: any}
+@returns(200) {service: any}
+@errors {401, 402, 403, 404}
+
+@endpoint GET /services/{id}/audit/records
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, cursor: str, since: str(date-time), until: str(date-time)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /services/{id}/change_events
+@required {id: str, Content-Type: str=application/json}
+@optional {since: str(date-time), until: str(date-time), limit: int, offset: int, total: bool=False, team_ids[]: [str], integration_ids[]: [str]}
+@returns(200) {change_events: [any]}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /services/{id}/integrations
+@required {Content-Type: str=application/json, id: str, integration: any}
+@returns(201) {integration: any}
+@errors {400, 401, 403, 429}
+
+@endpoint PUT /services/{id}/integrations/{integration_id}
+@required {Content-Type: str=application/json, id: str, integration_id: str, integration: any}
+@returns(200) {integration: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /services/{id}/integrations/{integration_id}
+@required {Content-Type: str=application/json, id: str, integration_id: str}
+@optional {include[]: str(services/vendors)}
+@returns(200) {integration: any}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /services/{id}/rules
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, offset: int, total: bool=False, include[]: str}
+@returns(200)
+@errors {401, 403, 404}
+
+@endpoint POST /services/{id}/rules
+@required {Content-Type: str=application/json, id: str, rule: any}
+@returns(201) {rule: any}
+@errors {400, 401, 403, 404, 409}
+
+@endpoint POST /services/{id}/rules/convert
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {convert_status: str, converted_to: str(url)}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint GET /services/{id}/rules/{rule_id}
+@required {Content-Type: str=application/json, id: str, rule_id: str}
+@returns(200) {rule: any}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /services/{id}/rules/{rule_id}
+@required {Content-Type: str=application/json, id: str, rule_id: str, rule_id: str}
+@optional {rule: any}
+@returns(200) {rule: any}
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint DELETE /services/{id}/rules/{rule_id}
+@required {Content-Type: str=application/json, id: str, rule_id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405, 409}
+
+@endpoint POST /services/custom_fields
+@required {Content-Type: str=application/json, field: map{data_type!: str, description: str, display_name!: str, enabled: bool, field_options: [map{data!: map}], field_type!: str, name!: str}}
+@returns(201) {field: map{created_at: str(date-time), data_type: str, description: str?, display_name: str, enabled: bool, field_options: [map], field_type: str, id: str, name: str, self: str(url)?, summary: str?, type: str, updated_at: str(date-time)}}
+@errors {400, 403, 500}
+
+@endpoint GET /services/custom_fields
+@required {Content-Type: str=application/json}
+@optional {include[]: str}
+@returns(200) {fields: [map]}
+@errors {400, 500}
+
+@endpoint GET /services/custom_fields/{field_id}
+@required {field_id: str, Content-Type: str=application/json}
+@optional {include[]: str}
+@returns(200) {field: map{created_at: str(date-time), data_type: str, description: str?, display_name: str, enabled: bool, field_options: [map], field_type: str, id: str, name: str, self: str(url)?, summary: str?, type: str, updated_at: str(date-time)}}
+@errors {403, 404, 500}
+
+@endpoint PUT /services/custom_fields/{field_id}
+@required {field_id: str, Content-Type: str=application/json, field: map{description: str, display_name: str, enabled: bool, field_options: [any]}}
+@returns(200) {field: map{created_at: str(date-time), data_type: str, description: str?, display_name: str, enabled: bool, field_options: [map], field_type: str, id: str, name: str, self: str(url)?, summary: str?, type: str, updated_at: str(date-time)}}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /services/custom_fields/{field_id}
+@required {field_id: str, Content-Type: str=application/json}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /services/custom_fields/{field_id}/field_options
+@required {field_id: str, Content-Type: str=application/json}
+@returns(200) {field_options: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint POST /services/custom_fields/{field_id}/field_options
+@required {field_id: str, Content-Type: str=application/json, field_option: map{data!: map{data_type!: str, value!: str}}}
+@returns(201) {field_option: map{created_at: str(date-time), data: map{data_type: str, value: str}, id: str, type: str, updated_at: str(date-time)}}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /services/custom_fields/{field_id}/field_options/{field_option_id}
+@required {field_id: str, field_option_id: str, Content-Type: str=application/json}
+@returns(200) {field_option: map{created_at: str(date-time), data: map{data_type: str, value: str}, id: str, type: str, updated_at: str(date-time)}}
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /services/custom_fields/{field_id}/field_options/{field_option_id}
+@required {field_id: str, field_option_id: str, Content-Type: str=application/json, field_option: map{data!: map{data_type!: str, value!: str}}}
+@returns(200) {field_option: map{created_at: str(date-time), data: map{data_type: str, value: str}, id: str, type: str, updated_at: str(date-time)}}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /services/custom_fields/{field_id}/field_options/{field_option_id}
+@required {field_id: str, field_option_id: str, Content-Type: str=application/json}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /services/{id}/custom_fields/values
+@required {id: str, Content-Type: str=application/json}
+@returns(200) {custom_fields: [map]}
+@errors {403, 404, 500}
+
+@endpoint PUT /services/{id}/custom_fields/values
+@required {id: str, Content-Type: str=application/json, custom_fields: [any]}
+@returns(201) {custom_fields: [map]}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /services/{id}/enablements
+@required {id: str, Content-Type: str=application/json}
+@returns(200) {enablements: [map]}
+@errors {403, 404, 500}
+
+@endpoint PUT /services/{id}/enablements/{feature_name}
+@required {id: str, feature_name: str, Content-Type: str=application/json, enablement: map{feature: str, enabled!: bool, updated_at: str(date-time), warnings: [map{message: str}]}}
+@returns(200) {enablement: map{feature: str, enabled: bool, updated_at: str(date-time), warnings: [map]}}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group session_configurations
+@endpoint GET /session_configurations
+@required {Content-Type: str=application/json}
+@optional {type: str(mobile/web)}
+@returns(200) {session_configurations: [map]}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /session_configurations
+@required {Content-Type: str=application/json, type: str(mobile/web), session_configuration: map{absolute_session_ttl!: int, idle_session_ttl!: int}}
+@returns(200) {session_configurations: [map]}
+@errors {400, 401, 403, 429}
+
+@endpoint DELETE /session_configurations
+@required {Content-Type: str=application/json, type: str(mobile/web)}
+@returns(204)
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group standards
+@endpoint GET /standards
+@optional {active: bool, resource_type: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint PUT /standards/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {active: bool, description: str, id: str, name: str, type: str, resource_type: str, exclusions: [map], inclusions: [map]}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /standards/scores/{resource_type}
+@required {ids: [str], resource_type: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint GET /standards/scores/{resource_type}/{id}
+@required {id: str, resource_type: str}
+@returns(200) {resource_id: str, resource_type: str, score: map{passing: int, total: int}, standards: [map]}
+@errors {401, 403, 429}
+
+@endgroup
+
+@group status_dashboards
+@endpoint GET /status_dashboards
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint GET /status_dashboards/{id}
+@required {id: str}
+@returns(200) {status_dashboard: map{id: str, url_slug: str, name: str}}
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /status_dashboards/{id}/service_impacts
+@required {id: str}
+@optional {additional_fields[]: str(services.highest_impacting_priority/total_impacted_count)}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /status_dashboards/url_slugs/{url_slug}
+@required {url_slug: str}
+@returns(200) {status_dashboard: map{id: str, url_slug: str, name: str}}
+@errors {400, 401, 403, 422, 429}
+
+@endpoint GET /status_dashboards/url_slugs/{url_slug}/service_impacts
+@required {url_slug: str}
+@optional {additional_fields[]: str(services.highest_impacting_priority/total_impacted_count)}
+@returns(200)
+@errors {400, 401, 403, 422, 429}
+
+@endgroup
+
+@group status_pages
+@endpoint GET /status_pages
+@optional {status_page_type: str(public/private)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/impacts
+@required {id: str}
+@optional {post_type: str(incident/maintenance)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/impacts/{impact_id}
+@required {id: str, impact_id: str}
+@returns(200) {impact: map{id: str, self: str, description: str, post_type: str, status_page: map{id: str, type: str}, type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/services
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/services/{service_id}
+@required {id: str, service_id: str}
+@returns(200) {service: map{id: str, self: str, name: str, status_page: map{id: str, type: str}, business_service: any, type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/severities
+@required {id: str}
+@optional {post_type: str(incident/maintenance)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/severities/{severity_id}
+@required {id: str, severity_id: str}
+@returns(200) {severity: map{id: str, self: str, description: str, post_type: str, status_page: map{id: str, type: str}, type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/statuses
+@required {id: str}
+@optional {post_type: str(incident/maintenance)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/statuses/{status_id}
+@required {id: str, status_id: str}
+@returns(200) {status: map{id: str, self: str, description: str, post_type: str, status_page: map{id: str, type: str}, type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/posts
+@required {id: str}
+@optional {post_type: str(incident/maintenance), reviewed_status: str(approved/not_reviewed), status[]: [str]}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /status_pages/{id}/posts
+@required {id: str, post: map{type!: str, title!: str, post_type!: str, starts_at!: str(date-time), ends_at!: str(date-time), updates!: [map{self: str, post!: map, message!: str, status!: map, severity!: map, impacted_services!: [map], update_frequency_ms!: int, notify_subscribers!: bool, reported_at: str(date-time), type!: str}], status_page!: map{id!: str, type: str}}}
+@returns(201) {post: map{id: str, self: str, type: str, post_type: str, status_page: map{id: str, type: str}, linked_resource: map{id: str, type: str}, postmortem: map{id: str, type: str}, title: str, starts_at: str(date-time)?, ends_at: str(date-time)?, updates: [map]}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/posts/{post_id}
+@required {id: str, post_id: str}
+@optional {include[]: [str]}
+@returns(200) {post: map{id: str, self: str, type: str, post_type: str, status_page: map{id: str, type: str}, linked_resource: map{id: str, type: str}, postmortem: map{id: str, type: str}, title: str, starts_at: str(date-time)?, ends_at: str(date-time)?, updates: [map]}}
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /status_pages/{id}/posts/{post_id}
+@required {id: str, post_id: str, post: map{type!: str, title!: str, post_type!: str, starts_at!: str(date-time), ends_at!: str(date-time), status_page!: map{id!: str, type: str}}}
+@returns(200) {post: map{id: str, self: str, type: str, post_type: str, status_page: map{id: str, type: str}, linked_resource: map{id: str, type: str}, postmortem: map{id: str, type: str}, title: str, starts_at: str(date-time)?, ends_at: str(date-time)?, updates: [map]}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /status_pages/{id}/posts/{post_id}
+@required {id: str, post_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/posts/{post_id}/post_updates
+@required {id: str, post_id: str}
+@optional {reviewed_status: str(approved/not_reviewed)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /status_pages/{id}/posts/{post_id}/post_updates
+@required {id: str, post_id: str, post_update: map{self: str, post!: map{id!: str, type: str}, message!: str, status!: map{id!: str, type: str}, severity!: map{id!: str, type: str}, impacted_services!: [map{service: any, impact: any}], update_frequency_ms!: int, notify_subscribers!: bool, reported_at: str(date-time), type!: str}}
+@returns(201) {post_update: map{id: str, self: str, post: map{id: str, type: str}, message: str, reviewed_status: str, status: map{id: str, type: str}, severity: map{id: str, type: str}, impacted_services: [map], update_frequency_ms: int?, notify_subscribers: bool, reported_at: str(date-time)?, type: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/posts/{post_id}/post_updates/{post_update_id}
+@required {id: str, post_id: str, post_update_id: str}
+@returns(200) {post_update: map{id: str, self: str, post: map{id: str, type: str}, message: str, reviewed_status: str, status: map{id: str, type: str}, severity: map{id: str, type: str}, impacted_services: [map], update_frequency_ms: int?, notify_subscribers: bool, reported_at: str(date-time)?, type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /status_pages/{id}/posts/{post_id}/post_updates/{post_update_id}
+@required {id: str, post_id: str, post_update_id: str, post_update: map{self: str, post!: map{id!: str, type: str}, message!: str, status!: map{id!: str, type: str}, severity!: map{id!: str, type: str}, impacted_services!: [map{service: any, impact: any}], update_frequency_ms!: int, notify_subscribers!: bool, reported_at: str(date-time), type!: str}}
+@returns(200) {post_update: map{id: str, self: str, post: map{id: str, type: str}, message: str, reviewed_status: str, status: map{id: str, type: str}, severity: map{id: str, type: str}, impacted_services: [map], update_frequency_ms: int?, notify_subscribers: bool, reported_at: str(date-time)?, type: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /status_pages/{id}/posts/{post_id}/post_updates/{post_update_id}
+@required {id: str, post_id: str, post_update_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/posts/{post_id}/postmortem
+@required {id: str, post_id: str}
+@returns(200) {postmortem: map{id: str, self: str, post: map{id: str, type: str}, message: str, notify_subscribers: bool, reported_at: str(date-time), type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint POST /status_pages/{id}/posts/{post_id}/postmortem
+@required {id: str, post_id: str}
+@optional {postmortem: map{type!: str, post!: map{id!: str, type: str}, message!: str, notify_subscribers!: bool}}
+@returns(201) {postmortem: map{id: str, self: str, post: map{id: str, type: str}, message: str, notify_subscribers: bool, reported_at: str(date-time), type: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PUT /status_pages/{id}/posts/{post_id}/postmortem
+@required {id: str, post_id: str, postmortem: map{type!: str, post!: map{id!: str, type: str}, message!: str, notify_subscribers!: bool}}
+@returns(200) {postmortem: map{id: str, self: str, post: map{id: str, type: str}, message: str, notify_subscribers: bool, reported_at: str(date-time), type: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /status_pages/{id}/posts/{post_id}/postmortem
+@required {id: str, post_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/subscriptions
+@required {id: str}
+@optional {status: str(active/pending), channel: str(webhook/email/slack)}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /status_pages/{id}/subscriptions
+@required {id: str, subscription: map{channel!: str, contact!: str, status_page!: map{id!: str, type: str}, subscribable_object!: map{id: str, type: str}, type!: str}}
+@returns(201) {subscription: map{channel: str, contact: str, id: str, self: str, status: str, status_page: map{id: str, type: str}, subscribable_object: map{id: str, type: str}, type: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /status_pages/{id}/subscriptions/{subscription_id}
+@required {id: str, subscription_id: str}
+@returns(200) {subscription: map{channel: str, contact: str, id: str, self: str, status: str, status_page: map{id: str, type: str}, subscribable_object: map{id: str, type: str}, type: str}}
+@errors {401, 403, 404, 429}
+
+@endpoint DELETE /status_pages/{id}/subscriptions/{subscription_id}
+@required {id: str, subscription_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, query: str}
+@returns(200)
+@errors {401, 403, 429}
+
+@endpoint POST /tags
+@required {Content-Type: str=application/json, tag: any}
+@returns(201) {tag: any}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /tags/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {tag: any}
+@errors {401, 403, 404, 429}
+
+@endpoint DELETE /tags/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 429}
+
+@endpoint GET /tags/{id}/{entity_type}
+@required {Content-Type: str=application/json, id: str, entity_type: str(users/teams/escalation_policies)}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {401, 403, 429}
+
+@endgroup
+
+@group teams
+@endpoint POST /teams
+@required {Content-Type: str=application/json, team: any}
+@returns(201) {team: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /teams
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False, query: str}
+@returns(200)
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /teams/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str}
+@returns(200) {team: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint DELETE /teams/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {reassignment_team: str}
+@returns(204)
+@errors {401, 402, 403, 429}
+
+@endpoint PUT /teams/{id}
+@required {Content-Type: str=application/json, id: str, team: any}
+@returns(200) {team: any}
+@errors {401, 402, 403, 404, 429}
+
+@endpoint GET /teams/{id}/audit/records
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, cursor: str, since: str(date-time), until: str(date-time)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint DELETE /teams/{id}/escalation_policies/{escalation_policy_id}
+@required {Content-Type: str=application/json, id: str, escalation_policy_id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint PUT /teams/{id}/escalation_policies/{escalation_policy_id}
+@required {Content-Type: str=application/json, id: str, escalation_policy_id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /teams/{id}/members
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, offset: int, total: bool=False, include[]: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /teams/{id}/notification_subscriptions
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /teams/{id}/notification_subscriptions
+@required {id: str, subscribables: [map{subscribable_id: str, subscribable_type: str}]}
+@returns(200) {subscriptions: [map]}
+@errors {400, 401, 403, 422}
+
+@endpoint POST /teams/{id}/notification_subscriptions/unsubscribe
+@required {id: str, subscribables: [map{subscribable_id: str, subscribable_type: str}]}
+@returns(200) {deleted_count: num, unauthorized_count: num, non_existent_count: num}
+@errors {401, 403, 404, 422}
+
+@endpoint DELETE /teams/{id}/users/{user_id}
+@required {Content-Type: str=application/json, id: str, user_id: str}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint PUT /teams/{id}/users/{user_id}
+@required {Content-Type: str=application/json, id: str, user_id: str}
+@optional {role: str(observer/responder/manager)}
+@returns(204)
+@errors {400, 401, 402, 403, 404, 429}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates
+@optional {limit: int, offset: int, total: bool=False, query: str, template_type: str=status_update, sort_by: str(name/name:asc/name:desc/created_at/created_at:asc/created_at:desc)=created_at:asc}
+@returns(200)
+@errors {400, 402, 403, 500}
+
+@endpoint POST /templates
+@required {template: map{template_type: str, name: str, description: str, templated_fields: map{email_subject: str, email_body: str, message: str}}}
+@returns(201) {template: any}
+@errors {400, 402, 403, 500}
+
+@endpoint GET /templates/{id}
+@required {id: str}
+@returns(200) {template: any}
+@errors {400, 402, 403, 404, 500}
+
+@endpoint PUT /templates/{id}
+@required {id: str, template: map{template_type: str, name: str, description: str, templated_fields: map{email_subject: str, email_body: str, message: str}}}
+@returns(200) {template: any}
+@errors {400, 402, 403, 404, 500}
+
+@endpoint DELETE /templates/{id}
+@required {id: str}
+@returns(204)
+@errors {400, 402, 403, 404, 500}
+
+@endpoint POST /templates/{id}/render
+@required {id: str}
+@returns(200) {templated_fields: map{email_subject: str, email_body: str, message: str}, warnings: map{email_subject: [str], email_body: [str], message: [str]}, errors: [str]}
+@errors {400, 402, 403, 404, 500}
+
+@endpoint GET /templates/fields
+@required {Content-Type: str=application/json}
+@returns(200) {fields: [map]}
+@errors {400, 402, 403, 500}
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@required {Content-Type: str=application/json}
+@optional {query: str, team_ids[]: [str], limit: int, offset: int, total: bool=False, include[]: str(contact_methods/notification_rules/teams/subdomains)}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint POST /users
+@required {Content-Type: str=application/json, From: str(email), user: any}
+@returns(201) {user: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /users/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str(contact_methods/notification_rules/teams/subdomains)}
+@returns(200) {user: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /users/{id}
+@required {Content-Type: str=application/json, id: str, user: any}
+@returns(200) {user: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /users/{id}/audit/records
+@required {Content-Type: str=application/json, id: str}
+@optional {limit: int, cursor: str, since: str(date-time), until: str(date-time)}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 429, 500}
+
+@endpoint GET /users/{id}/contact_methods
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {contact_methods: [any]}
+@errors {400, 401, 403, 429}
+
+@endpoint POST /users/{id}/contact_methods
+@required {Content-Type: str=application/json, id: str, contact_method: any}
+@returns(201) {contact_method: any}
+@errors {400, 401, 403, 429}
+
+@endpoint GET /users/{id}/contact_methods/{contact_method_id}
+@required {Content-Type: str=application/json, id: str, contact_method_id: str}
+@returns(200) {contact_method: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}/contact_methods/{contact_method_id}
+@required {Content-Type: str=application/json, id: str, contact_method_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /users/{id}/contact_methods/{contact_method_id}
+@required {Content-Type: str=application/json, id: str, contact_method_id: str, contact_method: any}
+@returns(200) {contact_method: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /users/{id}/license
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {license: map{id: str, description: str, name: str, valid_roles: [str], role_group: str, type: str, self: str, html_url: str, summary: str}}
+@errors {401, 403, 404}
+
+@endpoint GET /users/{id}/notification_rules
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str, urgency: str(high/low/all)}
+@returns(200) {notification_rules: [any]}
+@errors {400, 401, 403, 429}
+
+@endpoint POST /users/{id}/notification_rules
+@required {Content-Type: str=application/json, id: str, notification_rule: any}
+@returns(201) {notification_rule: any}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /users/{id}/notification_rules/{notification_rule_id}
+@required {Content-Type: str=application/json, id: str, notification_rule_id: str}
+@optional {include[]: str}
+@returns(200) {notification_rule: any}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}/notification_rules/{notification_rule_id}
+@required {Content-Type: str=application/json, id: str, notification_rule_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /users/{id}/notification_rules/{notification_rule_id}
+@required {Content-Type: str=application/json, id: str, notification_rule_id: str, notification_rule: any}
+@returns(200) {notification_rule: any}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /users/{id}/notification_subscriptions
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /users/{id}/notification_subscriptions
+@required {id: str, subscribables: [map{subscribable_id: str, subscribable_type: str}]}
+@returns(200) {subscriptions: [map]}
+@errors {400, 401, 403, 422}
+
+@endpoint POST /users/{id}/notification_subscriptions/unsubscribe
+@required {id: str, subscribables: [map{subscribable_id: str, subscribable_type: str}]}
+@returns(200) {deleted_count: num, unauthorized_count: num, non_existent_count: num}
+@errors {401, 403, 404, 422}
+
+@endpoint GET /users/{id}/oncall_handoff_notification_rules
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {oncall_handoff_notification_rules: [map]}
+@errors {400, 401, 403, 429}
+
+@endpoint POST /users/{id}/oncall_handoff_notification_rules
+@required {Content-Type: str=application/json, id: str, oncall_handoff_notification_rule: map{id!: str, notify_advance_in_minutes: int, handoff_type!: str, contact_method!: any}}
+@returns(201) {oncall_handoff_notification_rule: map{id: str, notify_advance_in_minutes: int, handoff_type: str, contact_method: any}}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /users/{id}/oncall_handoff_notification_rules/{oncall_handoff_notification_rule_id}
+@required {Content-Type: str=application/json, id: str, oncall_handoff_notification_rule_id: str}
+@returns(200) {oncall_handoff_notification_rule: map{id: str, notify_advance_in_minutes: int, handoff_type: str, contact_method: any}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}/oncall_handoff_notification_rules/{oncall_handoff_notification_rule_id}
+@required {Content-Type: str=application/json, id: str, oncall_handoff_notification_rule_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /users/{id}/oncall_handoff_notification_rules/{oncall_handoff_notification_rule_id}
+@required {Content-Type: str=application/json, id: str, oncall_handoff_notification_rule_id: str, oncall_handoff_notification_rule: map{id!: str, notify_advance_in_minutes: int, handoff_type!: str, contact_method!: any}}
+@returns(200) {oncall_handoff_notification_rule: map{id: str, notify_advance_in_minutes: int, handoff_type: str, contact_method: any}}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /users/{id}/sessions
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {user_sessions: [map]}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}/sessions
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /users/{id}/sessions/{type}/{session_id}
+@required {Content-Type: str=application/json, id: str, type: str, session_id: str}
+@returns(200) {user_session: map{id: str, user_id: str, created_at: str(date-time), type: str, summary: str}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}/sessions/{type}/{session_id}
+@required {Content-Type: str=application/json, id: str, type: str, session_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint GET /users/{id}/status_update_notification_rules
+@required {Content-Type: str=application/json, id: str}
+@optional {include[]: str}
+@returns(200) {status_update_notification_rules: [map]}
+@errors {400, 401, 403, 429}
+
+@endpoint POST /users/{id}/status_update_notification_rules
+@required {Content-Type: str=application/json, id: str, status_update_notification_rule: map{contact_method!: any}}
+@returns(201) {status_update_notification_rule: map{contact_method: any}}
+@errors {400, 401, 402, 403, 429}
+
+@endpoint GET /users/{id}/status_update_notification_rules/{status_update_notification_rule_id}
+@required {Content-Type: str=application/json, id: str, status_update_notification_rule_id: str}
+@optional {include[]: str}
+@returns(200) {notification_rule: map{contact_method: any}}
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /users/{id}/status_update_notification_rules/{status_update_notification_rule_id}
+@required {Content-Type: str=application/json, id: str, status_update_notification_rule_id: str}
+@returns(204)
+@errors {401, 403, 404, 429}
+
+@endpoint PUT /users/{id}/status_update_notification_rules/{status_update_notification_rule_id}
+@required {Content-Type: str=application/json, id: str, status_update_notification_rule_id: str, status_update_notification_rule: map{contact_method!: any}}
+@returns(200) {notification_rule: map{contact_method: any}}
+@errors {400, 401, 402, 403, 404, 429}
+
+@endpoint GET /users/me
+@required {Content-Type: str=application/json}
+@optional {include[]: str(contact_methods/notification_rules/teams/subdomains)}
+@returns(200) {user: any}
+@errors {400, 429}
+
+@endgroup
+
+@group vendors
+@endpoint GET /vendors
+@required {Content-Type: str=application/json}
+@optional {limit: int, offset: int, total: bool=False}
+@returns(200)
+@errors {400, 401, 403, 429}
+
+@endpoint GET /vendors/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {vendor: [any]}
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@group webhook_subscriptions
+@endpoint GET /webhook_subscriptions
+@optional {limit: int, offset: int, total: bool=False, filter_type: str(account/service/team), filter_id: str}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint POST /webhook_subscriptions
+@required {Content-Type: str=application/json, webhook_subscription: map{id: str, type!: str, active: bool, delivery_method!: map{id: str, secret: str, temporarily_disabled: bool, type!: str, url!: str(url), custom_headers: [map]}, description: str, events!: [str], filter!: map{id: str, type!: str}, oauth_client: map{id!: str, type!: str, summary: str}}}
+@returns(200) {webhook_subscription: map{id: str, type: str, active: bool, delivery_method: map{id: str, secret: str?, temporarily_disabled: bool, type: str, url: str(url), custom_headers: [map]}, description: str, events: [str], filter: map{id: str, type: str}, oauth_client: map{id: str, type: str, summary: str}}}
+@errors {400, 401, 403}
+
+@endpoint GET /webhook_subscriptions/{id}
+@required {id: str}
+@returns(200) {webhook_subscription: map{id: str, type: str, active: bool, delivery_method: map{id: str, secret: str?, temporarily_disabled: bool, type: str, url: str(url), custom_headers: [map]}, description: str, events: [str], filter: map{id: str, type: str}, oauth_client: map{id: str, type: str, summary: str}}}
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /webhook_subscriptions/{id}
+@required {Content-Type: str=application/json, id: str}
+@optional {webhook_subscription: map{description: str, events: [str], filter: map{id: str, type: str}, active: bool, oauth_client_id: str}}
+@returns(200) {webhook_subscription: map{id: str, type: str, active: bool, delivery_method: map{id: str, secret: str?, temporarily_disabled: bool, type: str, url: str(url), custom_headers: [map]}, description: str, events: [str], filter: map{id: str, type: str}, oauth_client: map{id: str, type: str, summary: str}}}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /webhook_subscriptions/{id}
+@required {id: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /webhook_subscriptions/{id}/enable
+@required {id: str}
+@returns(200) {webhook_subscription: map{id: str, type: str, active: bool, delivery_method: map{id: str, secret: str?, temporarily_disabled: bool, type: str, url: str(url), custom_headers: [map]}, description: str, events: [str], filter: map{id: str, type: str}, oauth_client: map{id: str, type: str, summary: str}}}
+@errors {401, 403, 404}
+
+@endpoint POST /webhook_subscriptions/{id}/ping
+@required {id: str}
+@returns(202)
+@errors {401, 403, 404}
+
+@endpoint GET /webhook_subscriptions/oauth_clients
+@required {Content-Type: str=application/json}
+@returns(200) {oauth_clients: [map]}
+@errors {401, 403}
+
+@endpoint POST /webhook_subscriptions/oauth_clients
+@required {Content-Type: str=application/json, oauth_client: map{name!: str, client_id!: str, client_secret!: str, scope: str, token_url!: str(uri), grant_type!: str}}
+@returns(201) {oauth_client: map{id: str, type: str, name: str, client_id: str, scope: str?, token_url: str(uri), grant_type: str, status: str}}
+@errors {400, 401, 403}
+
+@endpoint GET /webhook_subscriptions/oauth_clients/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(200) {oauth_client: map{id: str, type: str, name: str, client_id: str, scope: str?, token_url: str(uri), grant_type: str, status: str}}
+@errors {401, 403, 404}
+
+@endpoint PUT /webhook_subscriptions/oauth_clients/{id}
+@required {Content-Type: str=application/json, id: str, oauth_client: map{name: str, client_id: str, client_secret: str, scope: str, token_url: str(uri), grant_type: str}}
+@returns(200) {oauth_client: map{id: str, type: str, name: str, client_id: str, scope: str?, token_url: str(uri), grant_type: str, status: str}}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /webhook_subscriptions/oauth_clients/{id}
+@required {Content-Type: str=application/json, id: str}
+@returns(204)
+@errors {401, 403, 404}
+
+@endgroup
+
+@group workflows
+@endpoint GET /workflows/integrations
+@optional {limit: int, cursor: str, include_deprecated: bool=False}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /workflows/integrations/{id}
+@required {id: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /workflows/integrations/connections
+@optional {limit: int, cursor: str, name: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /workflows/integrations/{integration_id}/connections
+@optional {limit: int, cursor: str, name: str}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint POST /workflows/integrations/{integration_id}/connections
+@required {Content-Type: str=application/json, name: str, secrets: map}
+@optional {id: str, type: str, integration_id: str, service_url: str, external_id: str, external_id_label: str, scopes: [str], is_default: bool, health: map{is_healthy: bool, health_message: str, last_checked_at: str(date-time)}, configuration: map, teams: [map{team_id: str, type: str}], apps: [map{app_id: str, type: str}]}
+@returns(201)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint GET /workflows/integrations/{integration_id}/connections/{id}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint PATCH /workflows/integrations/{integration_id}/connections/{id}
+@required {Content-Type: str=application/json, name: str, secrets: map}
+@optional {id: str, type: str, integration_id: str, service_url: str, external_id: str, external_id_label: str, scopes: [str], is_default: bool, health: map{is_healthy: bool, health_message: str, last_checked_at: str(date-time)}, configuration: map, teams: [map{team_id: str, type: str}], apps: [map{app_id: str, type: str}]}
+@returns(200)
+@errors {400, 401, 403, 404, 429}
+
+@endpoint DELETE /workflows/integrations/{integration_id}/connections/{id}
+@returns(204)
+@errors {400, 401, 403, 404, 429}
+
+@endgroup
+
+@end

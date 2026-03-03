@@ -1,0 +1,260 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api FinSpace User Environment Management service
+@version 2021-03-12
+@auth AWS SigV4
+@endpoints 50
+@hint download_for_search
+@toc environment(5), kx(42), tags(3)
+
+@group environment
+@endpoint POST /environment
+@required {name: str}
+@optional {description: str, kmsKeyId: str, tags: map<str,str>, federationMode: str, federationParameters: FederationParameters, superuserParameters: SuperuserParameters, dataBundles: [str]}
+@returns(200) {environmentId: str?, environmentArn: str?, environmentUrl: str?}
+
+@endgroup
+
+@group kx
+@endpoint POST /kx/environments/{environmentId}/databases/{databaseName}/changesets
+@required {environmentId: str, databaseName: str, changeRequests: [ChangeRequest], clientToken: str}
+@returns(200) {changesetId: str?, databaseName: str?, environmentId: str?, changeRequests: [ChangeRequest]?, createdTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?, status: str?, errorInfo: ErrorInfo?{errorMessage: str?, errorType: str?}}
+
+@endpoint POST /kx/environments/{environmentId}/clusters
+@required {environmentId: str, clusterName: str, clusterType: str, releaseLabel: str, vpcConfiguration: VpcConfiguration, azMode: str}
+@optional {clientToken: str, tickerplantLogConfiguration: TickerplantLogConfiguration, databases: [KxDatabaseConfiguration], cacheStorageConfigurations: [KxCacheStorageConfiguration], autoScalingConfiguration: AutoScalingConfiguration, clusterDescription: str, capacityConfiguration: CapacityConfiguration, initializationScript: str, commandLineArguments: [KxCommandLineArgument], code: CodeConfiguration, executionRole: str, savedownStorageConfiguration: KxSavedownStorageConfiguration, availabilityZoneId: str, tags: map<str,str>, scalingGroupConfiguration: KxScalingGroupConfiguration}
+@returns(200) {environmentId: str?, status: str?, statusReason: str?, clusterName: str?, clusterType: str?, tickerplantLogConfiguration: TickerplantLogConfiguration?{tickerplantLogVolumes: [str]?}, volumes: [Volume]?, databases: [KxDatabaseConfiguration]?, cacheStorageConfigurations: [KxCacheStorageConfiguration]?, autoScalingConfiguration: AutoScalingConfiguration?{minNodeCount: int?, maxNodeCount: int?, autoScalingMetric: str?, metricTarget: num(f64)?, scaleInCooldownSeconds: num(f64)?, scaleOutCooldownSeconds: num(f64)?}, clusterDescription: str?, capacityConfiguration: CapacityConfiguration?{nodeType: str?, nodeCount: int?}, releaseLabel: str?, vpcConfiguration: VpcConfiguration?{vpcId: str?, securityGroupIds: [str]?, subnetIds: [str]?, ipAddressType: str?}, initializationScript: str?, commandLineArguments: [KxCommandLineArgument]?, code: CodeConfiguration?{s3Bucket: str?, s3Key: str?, s3ObjectVersion: str?}, executionRole: str?, lastModifiedTimestamp: str(timestamp)?, savedownStorageConfiguration: KxSavedownStorageConfiguration?{type: str?, size: int?, volumeName: str?}, azMode: str?, availabilityZoneId: str?, createdTimestamp: str(timestamp)?, scalingGroupConfiguration: KxScalingGroupConfiguration?{scalingGroupName: str, memoryLimit: int?, memoryReservation: int, nodeCount: int, cpu: num(f64)?}}
+
+@endpoint POST /kx/environments/{environmentId}/databases
+@required {environmentId: str, databaseName: str, clientToken: str}
+@optional {description: str, tags: map<str,str>}
+@returns(200) {databaseName: str?, databaseArn: str?, environmentId: str?, description: str?, createdTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?}
+
+@endpoint POST /kx/environments/{environmentId}/databases/{databaseName}/dataviews
+@required {environmentId: str, databaseName: str, dataviewName: str, azMode: str, clientToken: str}
+@optional {availabilityZoneId: str, changesetId: str, segmentConfigurations: [KxDataviewSegmentConfiguration], autoUpdate: bool, readWrite: bool, description: str, tags: map<str,str>}
+@returns(200) {dataviewName: str?, databaseName: str?, environmentId: str?, azMode: str?, availabilityZoneId: str?, changesetId: str?, segmentConfigurations: [KxDataviewSegmentConfiguration]?, description: str?, autoUpdate: bool?, readWrite: bool?, createdTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?, status: str?}
+
+@endpoint POST /kx/environments
+@required {name: str, kmsKeyId: str}
+@optional {description: str, tags: map<str,str>, clientToken: str}
+@returns(200) {name: str?, status: str?, environmentId: str?, description: str?, environmentArn: str?, kmsKeyId: str?, creationTimestamp: str(timestamp)?}
+
+@endpoint POST /kx/environments/{environmentId}/scalingGroups
+@required {environmentId: str, clientToken: str, scalingGroupName: str, hostType: str, availabilityZoneId: str}
+@optional {tags: map<str,str>}
+@returns(200) {environmentId: str?, scalingGroupName: str?, hostType: str?, availabilityZoneId: str?, status: str?, lastModifiedTimestamp: str(timestamp)?, createdTimestamp: str(timestamp)?}
+
+@endpoint POST /kx/environments/{environmentId}/users
+@required {environmentId: str, userName: str, iamRole: str}
+@optional {tags: map<str,str>, clientToken: str}
+@returns(200) {userName: str?, userArn: str?, environmentId: str?, iamRole: str?}
+
+@endpoint POST /kx/environments/{environmentId}/kxvolumes
+@required {environmentId: str, volumeType: str, volumeName: str, azMode: str, availabilityZoneIds: [str]}
+@optional {clientToken: str, description: str, nas1Configuration: KxNAS1Configuration, tags: map<str,str>}
+@returns(200) {environmentId: str?, volumeName: str?, volumeType: str?, volumeArn: str?, nas1Configuration: KxNAS1Configuration?{type: str?, size: int?}, status: str?, statusReason: str?, azMode: str?, description: str?, availabilityZoneIds: [str]?, createdTimestamp: str(timestamp)?}
+
+@endgroup
+
+@group environment
+@endpoint DELETE /environment/{environmentId}
+@required {environmentId: str}
+
+@endgroup
+
+@group kx
+@endpoint DELETE /kx/environments/{environmentId}/clusters/{clusterName}
+@required {environmentId: str, clusterName: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /kx/environments/{environmentId}/clusters/{clusterName}/nodes/{nodeId}
+@required {environmentId: str, clusterName: str, nodeId: str}
+
+@endpoint DELETE /kx/environments/{environmentId}/databases/{databaseName}
+@required {environmentId: str, databaseName: str, clientToken: str}
+
+@endpoint DELETE /kx/environments/{environmentId}/databases/{databaseName}/dataviews/{dataviewName}
+@required {environmentId: str, databaseName: str, dataviewName: str, clientToken: str}
+
+@endpoint DELETE /kx/environments/{environmentId}
+@required {environmentId: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /kx/environments/{environmentId}/scalingGroups/{scalingGroupName}
+@required {environmentId: str, scalingGroupName: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /kx/environments/{environmentId}/users/{userName}
+@required {userName: str, environmentId: str}
+@optional {clientToken: str}
+
+@endpoint DELETE /kx/environments/{environmentId}/kxvolumes/{volumeName}
+@required {environmentId: str, volumeName: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group environment
+@endpoint GET /environment/{environmentId}
+@required {environmentId: str}
+@returns(200) {environment: Environment?{name: str?, environmentId: str?, awsAccountId: str?, status: str?, environmentUrl: str?, description: str?, environmentArn: str?, sageMakerStudioDomainUrl: str?, kmsKeyId: str?, dedicatedServiceAccountId: str?, federationMode: str?, federationParameters: FederationParameters?{samlMetadataDocument: str?, samlMetadataURL: str?, applicationCallBackURL: str?, federationURN: str?, federationProviderName: str?, attributeMap: map<str,str>?}}}
+
+@endgroup
+
+@group kx
+@endpoint GET /kx/environments/{environmentId}/databases/{databaseName}/changesets/{changesetId}
+@required {environmentId: str, databaseName: str, changesetId: str}
+@returns(200) {changesetId: str?, databaseName: str?, environmentId: str?, changeRequests: [ChangeRequest]?, createdTimestamp: str(timestamp)?, activeFromTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?, status: str?, errorInfo: ErrorInfo?{errorMessage: str?, errorType: str?}}
+
+@endpoint GET /kx/environments/{environmentId}/clusters/{clusterName}
+@required {environmentId: str, clusterName: str}
+@returns(200) {status: str?, statusReason: str?, clusterName: str?, clusterType: str?, tickerplantLogConfiguration: TickerplantLogConfiguration?{tickerplantLogVolumes: [str]?}, volumes: [Volume]?, databases: [KxDatabaseConfiguration]?, cacheStorageConfigurations: [KxCacheStorageConfiguration]?, autoScalingConfiguration: AutoScalingConfiguration?{minNodeCount: int?, maxNodeCount: int?, autoScalingMetric: str?, metricTarget: num(f64)?, scaleInCooldownSeconds: num(f64)?, scaleOutCooldownSeconds: num(f64)?}, clusterDescription: str?, capacityConfiguration: CapacityConfiguration?{nodeType: str?, nodeCount: int?}, releaseLabel: str?, vpcConfiguration: VpcConfiguration?{vpcId: str?, securityGroupIds: [str]?, subnetIds: [str]?, ipAddressType: str?}, initializationScript: str?, commandLineArguments: [KxCommandLineArgument]?, code: CodeConfiguration?{s3Bucket: str?, s3Key: str?, s3ObjectVersion: str?}, executionRole: str?, lastModifiedTimestamp: str(timestamp)?, savedownStorageConfiguration: KxSavedownStorageConfiguration?{type: str?, size: int?, volumeName: str?}, azMode: str?, availabilityZoneId: str?, createdTimestamp: str(timestamp)?, scalingGroupConfiguration: KxScalingGroupConfiguration?{scalingGroupName: str, memoryLimit: int?, memoryReservation: int, nodeCount: int, cpu: num(f64)?}}
+
+@endpoint GET /kx/environments/{environmentId}/connectionString
+@required {userArn: str, environmentId: str, clusterName: str}
+@returns(200) {signedConnectionString: str?}
+
+@endpoint GET /kx/environments/{environmentId}/databases/{databaseName}
+@required {environmentId: str, databaseName: str}
+@returns(200) {databaseName: str?, databaseArn: str?, environmentId: str?, description: str?, createdTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?, lastCompletedChangesetId: str?, numBytes: int(i64)?, numChangesets: int?, numFiles: int?}
+
+@endpoint GET /kx/environments/{environmentId}/databases/{databaseName}/dataviews/{dataviewName}
+@required {environmentId: str, databaseName: str, dataviewName: str}
+@returns(200) {databaseName: str?, dataviewName: str?, azMode: str?, availabilityZoneId: str?, changesetId: str?, segmentConfigurations: [KxDataviewSegmentConfiguration]?, activeVersions: [KxDataviewActiveVersion]?, description: str?, autoUpdate: bool?, readWrite: bool?, environmentId: str?, createdTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?, status: str?, statusReason: str?}
+
+@endpoint GET /kx/environments/{environmentId}
+@required {environmentId: str}
+@returns(200) {name: str?, environmentId: str?, awsAccountId: str?, status: str?, tgwStatus: str?, dnsStatus: str?, errorMessage: str?, description: str?, environmentArn: str?, kmsKeyId: str?, dedicatedServiceAccountId: str?, transitGatewayConfiguration: TransitGatewayConfiguration?{transitGatewayID: str, routableCIDRSpace: str, attachmentNetworkAclConfiguration: [NetworkACLEntry]?}, customDNSConfiguration: [CustomDNSServer]?, creationTimestamp: str(timestamp)?, updateTimestamp: str(timestamp)?, availabilityZoneIds: [str]?, certificateAuthorityArn: str?}
+
+@endpoint GET /kx/environments/{environmentId}/scalingGroups/{scalingGroupName}
+@required {environmentId: str, scalingGroupName: str}
+@returns(200) {scalingGroupName: str?, scalingGroupArn: str?, hostType: str?, clusters: [str]?, availabilityZoneId: str?, status: str?, statusReason: str?, lastModifiedTimestamp: str(timestamp)?, createdTimestamp: str(timestamp)?}
+
+@endpoint GET /kx/environments/{environmentId}/users/{userName}
+@required {userName: str, environmentId: str}
+@returns(200) {userName: str?, userArn: str?, environmentId: str?, iamRole: str?}
+
+@endpoint GET /kx/environments/{environmentId}/kxvolumes/{volumeName}
+@required {environmentId: str, volumeName: str}
+@returns(200) {environmentId: str?, volumeName: str?, volumeType: str?, volumeArn: str?, nas1Configuration: KxNAS1Configuration?{type: str?, size: int?}, status: str?, statusReason: str?, createdTimestamp: str(timestamp)?, description: str?, azMode: str?, availabilityZoneIds: [str]?, lastModifiedTimestamp: str(timestamp)?, attachedClusters: [KxAttachedCluster]?}
+
+@endgroup
+
+@group environment
+@endpoint GET /environment
+@optional {nextToken: str, maxResults: int}
+@returns(200) {environments: [Environment]?, nextToken: str?}
+
+@endgroup
+
+@group kx
+@endpoint GET /kx/environments/{environmentId}/databases/{databaseName}/changesets
+@required {environmentId: str, databaseName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {kxChangesets: [KxChangesetListEntry]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/clusters/{clusterName}/nodes
+@required {environmentId: str, clusterName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {nodes: [KxNode]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/clusters
+@required {environmentId: str}
+@optional {clusterType: str, maxResults: int, nextToken: str}
+@returns(200) {kxClusterSummaries: [KxCluster]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/databases
+@required {environmentId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {kxDatabases: [KxDatabaseListEntry]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/databases/{databaseName}/dataviews
+@required {environmentId: str, databaseName: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {kxDataviews: [KxDataviewListEntry]?, nextToken: str?}
+
+@endpoint GET /kx/environments
+@optional {nextToken: str, maxResults: int}
+@returns(200) {environments: [KxEnvironment]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/scalingGroups
+@required {environmentId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {scalingGroups: [KxScalingGroup]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/users
+@required {environmentId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {users: [KxUser]?, nextToken: str?}
+
+@endpoint GET /kx/environments/{environmentId}/kxvolumes
+@required {environmentId: str}
+@optional {maxResults: int, nextToken: str, volumeType: str}
+@returns(200) {kxVolumeSummaries: [KxVolume]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group environment
+@endpoint PUT /environment/{environmentId}
+@required {environmentId: str}
+@optional {name: str, description: str, federationMode: str, federationParameters: FederationParameters}
+@returns(200) {environment: Environment?{name: str?, environmentId: str?, awsAccountId: str?, status: str?, environmentUrl: str?, description: str?, environmentArn: str?, sageMakerStudioDomainUrl: str?, kmsKeyId: str?, dedicatedServiceAccountId: str?, federationMode: str?, federationParameters: FederationParameters?{samlMetadataDocument: str?, samlMetadataURL: str?, applicationCallBackURL: str?, federationURN: str?, federationProviderName: str?, attributeMap: map<str,str>?}}}
+
+@endgroup
+
+@group kx
+@endpoint PUT /kx/environments/{environmentId}/clusters/{clusterName}/configuration/code
+@required {environmentId: str, clusterName: str, code: CodeConfiguration}
+@optional {clientToken: str, initializationScript: str, commandLineArguments: [KxCommandLineArgument], deploymentConfiguration: KxClusterCodeDeploymentConfiguration}
+
+@endpoint PUT /kx/environments/{environmentId}/clusters/{clusterName}/configuration/databases
+@required {environmentId: str, clusterName: str, databases: [KxDatabaseConfiguration]}
+@optional {clientToken: str, deploymentConfiguration: KxDeploymentConfiguration}
+
+@endpoint PUT /kx/environments/{environmentId}/databases/{databaseName}
+@required {environmentId: str, databaseName: str, clientToken: str}
+@optional {description: str}
+@returns(200) {databaseName: str?, environmentId: str?, description: str?, lastModifiedTimestamp: str(timestamp)?}
+
+@endpoint PUT /kx/environments/{environmentId}/databases/{databaseName}/dataviews/{dataviewName}
+@required {environmentId: str, databaseName: str, dataviewName: str, clientToken: str}
+@optional {description: str, changesetId: str, segmentConfigurations: [KxDataviewSegmentConfiguration]}
+@returns(200) {environmentId: str?, databaseName: str?, dataviewName: str?, azMode: str?, availabilityZoneId: str?, changesetId: str?, segmentConfigurations: [KxDataviewSegmentConfiguration]?, activeVersions: [KxDataviewActiveVersion]?, status: str?, autoUpdate: bool?, readWrite: bool?, description: str?, createdTimestamp: str(timestamp)?, lastModifiedTimestamp: str(timestamp)?}
+
+@endpoint PUT /kx/environments/{environmentId}
+@required {environmentId: str}
+@optional {name: str, description: str, clientToken: str}
+@returns(200) {name: str?, environmentId: str?, awsAccountId: str?, status: str?, tgwStatus: str?, dnsStatus: str?, errorMessage: str?, description: str?, environmentArn: str?, kmsKeyId: str?, dedicatedServiceAccountId: str?, transitGatewayConfiguration: TransitGatewayConfiguration?{transitGatewayID: str, routableCIDRSpace: str, attachmentNetworkAclConfiguration: [NetworkACLEntry]?}, customDNSConfiguration: [CustomDNSServer]?, creationTimestamp: str(timestamp)?, updateTimestamp: str(timestamp)?, availabilityZoneIds: [str]?}
+
+@endpoint PUT /kx/environments/{environmentId}/network
+@required {environmentId: str}
+@optional {transitGatewayConfiguration: TransitGatewayConfiguration, customDNSConfiguration: [CustomDNSServer], clientToken: str}
+@returns(200) {name: str?, environmentId: str?, awsAccountId: str?, status: str?, tgwStatus: str?, dnsStatus: str?, errorMessage: str?, description: str?, environmentArn: str?, kmsKeyId: str?, dedicatedServiceAccountId: str?, transitGatewayConfiguration: TransitGatewayConfiguration?{transitGatewayID: str, routableCIDRSpace: str, attachmentNetworkAclConfiguration: [NetworkACLEntry]?}, customDNSConfiguration: [CustomDNSServer]?, creationTimestamp: str(timestamp)?, updateTimestamp: str(timestamp)?, availabilityZoneIds: [str]?}
+
+@endpoint PUT /kx/environments/{environmentId}/users/{userName}
+@required {environmentId: str, userName: str, iamRole: str}
+@optional {clientToken: str}
+@returns(200) {userName: str?, userArn: str?, environmentId: str?, iamRole: str?}
+
+@endpoint PATCH /kx/environments/{environmentId}/kxvolumes/{volumeName}
+@required {environmentId: str, volumeName: str}
+@optional {description: str, clientToken: str, nas1Configuration: KxNAS1Configuration}
+@returns(200) {environmentId: str?, volumeName: str?, volumeType: str?, volumeArn: str?, nas1Configuration: KxNAS1Configuration?{type: str?, size: int?}, status: str?, description: str?, statusReason: str?, createdTimestamp: str(timestamp)?, azMode: str?, availabilityZoneIds: [str]?, lastModifiedTimestamp: str(timestamp)?, attachedClusters: [KxAttachedCluster]?}
+
+@endgroup
+
+@end

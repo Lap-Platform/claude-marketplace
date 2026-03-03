@@ -1,0 +1,539 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Network Manager
+@version 2019-07-05
+@auth AWS SigV4
+@endpoints 85
+@hint download_for_search
+@toc attachments(4), global-networks(43), connect-attachments(2), connect-peers(4), core-networks(13), site-to-site-vpn-attachments(2), transit-gateway-peerings(2), transit-gateway-route-table-attachments(2), vpc-attachments(3), peerings(2), resource-policy(3), organizations(2), tags(3)
+
+@group attachments
+@endpoint POST /attachments/{attachmentId}/accept
+@required {AttachmentId: str}
+@returns(200) {Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint POST /global-networks/{globalNetworkId}/connect-peer-associations
+@required {GlobalNetworkId: str, ConnectPeerId: str, DeviceId: str}
+@optional {LinkId: str}
+@returns(200) {ConnectPeerAssociation: ConnectPeerAssociation?{ConnectPeerId: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
+
+@endpoint POST /global-networks/{globalNetworkId}/customer-gateway-associations
+@required {GlobalNetworkId: str, CustomerGatewayArn: str, DeviceId: str}
+@optional {LinkId: str}
+@returns(200) {CustomerGatewayAssociation: CustomerGatewayAssociation?{CustomerGatewayArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
+
+@endpoint POST /global-networks/{globalNetworkId}/link-associations
+@required {GlobalNetworkId: str, DeviceId: str, LinkId: str}
+@returns(200) {LinkAssociation: LinkAssociation?{GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, LinkAssociationState: str?}}
+
+@endpoint POST /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations
+@required {GlobalNetworkId: str, TransitGatewayConnectPeerArn: str, DeviceId: str}
+@optional {LinkId: str}
+@returns(200) {TransitGatewayConnectPeerAssociation: TransitGatewayConnectPeerAssociation?{TransitGatewayConnectPeerArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
+
+@endgroup
+
+@group connect-attachments
+@endpoint POST /connect-attachments
+@required {CoreNetworkId: str, EdgeLocation: str, TransportAttachmentId: str, Options: ConnectAttachmentOptions}
+@optional {Tags: [Tag], ClientToken: str}
+@returns(200) {ConnectAttachment: ConnectAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, TransportAttachmentId: str?, Options: ConnectAttachmentOptions?{Protocol: str?}}}
+
+@endgroup
+
+@group connect-peers
+@endpoint POST /connect-peers
+@required {ConnectAttachmentId: str, PeerAddress: str}
+@optional {CoreNetworkAddress: str, BgpOptions: BgpOptions, InsideCidrBlocks: [str], Tags: [Tag], ClientToken: str, SubnetArn: str}
+@returns(200) {ConnectPeer: ConnectPeer?{CoreNetworkId: str?, ConnectAttachmentId: str?, ConnectPeerId: str?, EdgeLocation: str?, State: str?, CreatedAt: str(timestamp)?, Configuration: ConnectPeerConfiguration?{CoreNetworkAddress: str?, PeerAddress: str?, InsideCidrBlocks: [str]?, Protocol: str?, BgpConfigurations: [ConnectPeerBgpConfiguration]?}, Tags: [Tag]?, SubnetArn: str?, LastModificationErrors: [ConnectPeerError]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint POST /global-networks/{globalNetworkId}/connections
+@required {GlobalNetworkId: str, DeviceId: str, ConnectedDeviceId: str}
+@optional {LinkId: str, ConnectedLinkId: str, Description: str, Tags: [Tag]}
+@returns(200) {Connection: Connection?{ConnectionId: str?, ConnectionArn: str?, GlobalNetworkId: str?, DeviceId: str?, ConnectedDeviceId: str?, LinkId: str?, ConnectedLinkId: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endgroup
+
+@group core-networks
+@endpoint POST /core-networks
+@required {GlobalNetworkId: str}
+@optional {Description: str, Tags: [Tag], PolicyDocument: str, ClientToken: str}
+@returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint POST /global-networks/{globalNetworkId}/devices
+@required {GlobalNetworkId: str}
+@optional {AWSLocation: AWSLocation, Description: str, Type: str, Vendor: str, Model: str, SerialNumber: str, Location: Location, SiteId: str, Tags: [Tag]}
+@returns(200) {Device: Device?{DeviceId: str?, DeviceArn: str?, GlobalNetworkId: str?, AWSLocation: AWSLocation?{Zone: str?, SubnetArn: str?}, Description: str?, Type: str?, Vendor: str?, Model: str?, SerialNumber: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, SiteId: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint POST /global-networks
+@optional {Description: str, Tags: [Tag]}
+@returns(200) {GlobalNetwork: GlobalNetwork?{GlobalNetworkId: str?, GlobalNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint POST /global-networks/{globalNetworkId}/links
+@required {GlobalNetworkId: str, Bandwidth: Bandwidth, SiteId: str}
+@optional {Description: str, Type: str, Provider: str, Tags: [Tag]}
+@returns(200) {Link: Link?{LinkId: str?, LinkArn: str?, GlobalNetworkId: str?, SiteId: str?, Description: str?, Type: str?, Bandwidth: Bandwidth?{UploadSpeed: int?, DownloadSpeed: int?}, Provider: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint POST /global-networks/{globalNetworkId}/sites
+@required {GlobalNetworkId: str}
+@optional {Description: str, Location: Location, Tags: [Tag]}
+@returns(200) {Site: Site?{SiteId: str?, SiteArn: str?, GlobalNetworkId: str?, Description: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endgroup
+
+@group site-to-site-vpn-attachments
+@endpoint POST /site-to-site-vpn-attachments
+@required {CoreNetworkId: str, VpnConnectionArn: str}
+@optional {Tags: [Tag], ClientToken: str}
+@returns(200) {SiteToSiteVpnAttachment: SiteToSiteVpnAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, VpnConnectionArn: str?}}
+
+@endgroup
+
+@group transit-gateway-peerings
+@endpoint POST /transit-gateway-peerings
+@required {CoreNetworkId: str, TransitGatewayArn: str}
+@optional {Tags: [Tag], ClientToken: str}
+@returns(200) {TransitGatewayPeering: TransitGatewayPeering?{Peering: Peering?{CoreNetworkId: str?, CoreNetworkArn: str?, PeeringId: str?, OwnerAccountId: str?, PeeringType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, Tags: [Tag]?, CreatedAt: str(timestamp)?, LastModificationErrors: [PeeringError]?}, TransitGatewayArn: str?, TransitGatewayPeeringAttachmentId: str?}}
+
+@endgroup
+
+@group transit-gateway-route-table-attachments
+@endpoint POST /transit-gateway-route-table-attachments
+@required {PeeringId: str, TransitGatewayRouteTableArn: str}
+@optional {Tags: [Tag], ClientToken: str}
+@returns(200) {TransitGatewayRouteTableAttachment: TransitGatewayRouteTableAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, PeeringId: str?, TransitGatewayRouteTableArn: str?}}
+
+@endgroup
+
+@group vpc-attachments
+@endpoint POST /vpc-attachments
+@required {CoreNetworkId: str, VpcArn: str, SubnetArns: [str]}
+@optional {Options: VpcOptions, Tags: [Tag], ClientToken: str}
+@returns(200) {VpcAttachment: VpcAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, SubnetArns: [str]?, Options: VpcOptions?{Ipv6Support: bool?, ApplianceModeSupport: bool?}}}
+
+@endgroup
+
+@group attachments
+@endpoint DELETE /attachments/{attachmentId}
+@required {AttachmentId: str}
+@returns(200) {Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}}
+
+@endgroup
+
+@group connect-peers
+@endpoint DELETE /connect-peers/{connectPeerId}
+@required {ConnectPeerId: str}
+@returns(200) {ConnectPeer: ConnectPeer?{CoreNetworkId: str?, ConnectAttachmentId: str?, ConnectPeerId: str?, EdgeLocation: str?, State: str?, CreatedAt: str(timestamp)?, Configuration: ConnectPeerConfiguration?{CoreNetworkAddress: str?, PeerAddress: str?, InsideCidrBlocks: [str]?, Protocol: str?, BgpConfigurations: [ConnectPeerBgpConfiguration]?}, Tags: [Tag]?, SubnetArn: str?, LastModificationErrors: [ConnectPeerError]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint DELETE /global-networks/{globalNetworkId}/connections/{connectionId}
+@required {GlobalNetworkId: str, ConnectionId: str}
+@returns(200) {Connection: Connection?{ConnectionId: str?, ConnectionArn: str?, GlobalNetworkId: str?, DeviceId: str?, ConnectedDeviceId: str?, LinkId: str?, ConnectedLinkId: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endgroup
+
+@group core-networks
+@endpoint DELETE /core-networks/{coreNetworkId}
+@required {CoreNetworkId: str}
+@returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
+
+@endpoint DELETE /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}
+@required {CoreNetworkId: str, PolicyVersionId: int}
+@returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
+
+@endgroup
+
+@group global-networks
+@endpoint DELETE /global-networks/{globalNetworkId}/devices/{deviceId}
+@required {GlobalNetworkId: str, DeviceId: str}
+@returns(200) {Device: Device?{DeviceId: str?, DeviceArn: str?, GlobalNetworkId: str?, AWSLocation: AWSLocation?{Zone: str?, SubnetArn: str?}, Description: str?, Type: str?, Vendor: str?, Model: str?, SerialNumber: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, SiteId: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint DELETE /global-networks/{globalNetworkId}
+@required {GlobalNetworkId: str}
+@returns(200) {GlobalNetwork: GlobalNetwork?{GlobalNetworkId: str?, GlobalNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint DELETE /global-networks/{globalNetworkId}/links/{linkId}
+@required {GlobalNetworkId: str, LinkId: str}
+@returns(200) {Link: Link?{LinkId: str?, LinkArn: str?, GlobalNetworkId: str?, SiteId: str?, Description: str?, Type: str?, Bandwidth: Bandwidth?{UploadSpeed: int?, DownloadSpeed: int?}, Provider: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endgroup
+
+@group peerings
+@endpoint DELETE /peerings/{peeringId}
+@required {PeeringId: str}
+@returns(200) {Peering: Peering?{CoreNetworkId: str?, CoreNetworkArn: str?, PeeringId: str?, OwnerAccountId: str?, PeeringType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, Tags: [Tag]?, CreatedAt: str(timestamp)?, LastModificationErrors: [PeeringError]?}}
+
+@endgroup
+
+@group resource-policy
+@endpoint DELETE /resource-policy/{resourceArn}
+@required {ResourceArn: str}
+
+@endgroup
+
+@group global-networks
+@endpoint DELETE /global-networks/{globalNetworkId}/sites/{siteId}
+@required {GlobalNetworkId: str, SiteId: str}
+@returns(200) {Site: Site?{SiteId: str?, SiteArn: str?, GlobalNetworkId: str?, Description: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint DELETE /global-networks/{globalNetworkId}/transit-gateway-registrations/{transitGatewayArn}
+@required {GlobalNetworkId: str, TransitGatewayArn: str}
+@returns(200) {TransitGatewayRegistration: TransitGatewayRegistration?{GlobalNetworkId: str?, TransitGatewayArn: str?, State: TransitGatewayRegistrationStateReason?{Code: str?, Message: str?}}}
+
+@endpoint GET /global-networks
+@optional {globalNetworkIds: [str], maxResults: int, nextToken: str}
+@returns(200) {GlobalNetworks: [GlobalNetwork]?, NextToken: str?}
+
+@endpoint DELETE /global-networks/{globalNetworkId}/connect-peer-associations/{connectPeerId}
+@required {GlobalNetworkId: str, ConnectPeerId: str}
+@returns(200) {ConnectPeerAssociation: ConnectPeerAssociation?{ConnectPeerId: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
+
+@endpoint DELETE /global-networks/{globalNetworkId}/customer-gateway-associations/{customerGatewayArn}
+@required {GlobalNetworkId: str, CustomerGatewayArn: str}
+@returns(200) {CustomerGatewayAssociation: CustomerGatewayAssociation?{CustomerGatewayArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
+
+@endpoint DELETE /global-networks/{globalNetworkId}/link-associations
+@required {GlobalNetworkId: str, deviceId: str, linkId: str}
+@returns(200) {LinkAssociation: LinkAssociation?{GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, LinkAssociationState: str?}}
+
+@endpoint DELETE /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations/{transitGatewayConnectPeerArn}
+@required {GlobalNetworkId: str, TransitGatewayConnectPeerArn: str}
+@returns(200) {TransitGatewayConnectPeerAssociation: TransitGatewayConnectPeerAssociation?{TransitGatewayConnectPeerArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
+
+@endgroup
+
+@group core-networks
+@endpoint POST /core-networks/{coreNetworkId}/core-network-change-sets/{policyVersionId}/execute
+@required {CoreNetworkId: str, PolicyVersionId: int}
+
+@endgroup
+
+@group connect-attachments
+@endpoint GET /connect-attachments/{attachmentId}
+@required {AttachmentId: str}
+@returns(200) {ConnectAttachment: ConnectAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, TransportAttachmentId: str?, Options: ConnectAttachmentOptions?{Protocol: str?}}}
+
+@endgroup
+
+@group connect-peers
+@endpoint GET /connect-peers/{connectPeerId}
+@required {ConnectPeerId: str}
+@returns(200) {ConnectPeer: ConnectPeer?{CoreNetworkId: str?, ConnectAttachmentId: str?, ConnectPeerId: str?, EdgeLocation: str?, State: str?, CreatedAt: str(timestamp)?, Configuration: ConnectPeerConfiguration?{CoreNetworkAddress: str?, PeerAddress: str?, InsideCidrBlocks: [str]?, Protocol: str?, BgpConfigurations: [ConnectPeerBgpConfiguration]?}, Tags: [Tag]?, SubnetArn: str?, LastModificationErrors: [ConnectPeerError]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint GET /global-networks/{globalNetworkId}/connect-peer-associations
+@required {GlobalNetworkId: str}
+@optional {connectPeerIds: [str], maxResults: int, nextToken: str}
+@returns(200) {ConnectPeerAssociations: [ConnectPeerAssociation]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/connections
+@required {GlobalNetworkId: str}
+@optional {connectionIds: [str], deviceId: str, maxResults: int, nextToken: str}
+@returns(200) {Connections: [Connection]?, NextToken: str?}
+
+@endgroup
+
+@group core-networks
+@endpoint GET /core-networks/{coreNetworkId}
+@required {CoreNetworkId: str}
+@returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
+
+@endpoint GET /core-networks/{coreNetworkId}/core-network-change-events/{policyVersionId}
+@required {CoreNetworkId: str, PolicyVersionId: int}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {CoreNetworkChangeEvents: [CoreNetworkChangeEvent]?, NextToken: str?}
+
+@endpoint GET /core-networks/{coreNetworkId}/core-network-change-sets/{policyVersionId}
+@required {CoreNetworkId: str, PolicyVersionId: int}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {CoreNetworkChanges: [CoreNetworkChange]?, NextToken: str?}
+
+@endpoint GET /core-networks/{coreNetworkId}/core-network-policy
+@required {CoreNetworkId: str}
+@optional {policyVersionId: int, alias: str}
+@returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
+
+@endgroup
+
+@group global-networks
+@endpoint GET /global-networks/{globalNetworkId}/customer-gateway-associations
+@required {GlobalNetworkId: str}
+@optional {customerGatewayArns: [str], maxResults: int, nextToken: str}
+@returns(200) {CustomerGatewayAssociations: [CustomerGatewayAssociation]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/devices
+@required {GlobalNetworkId: str}
+@optional {deviceIds: [str], siteId: str, maxResults: int, nextToken: str}
+@returns(200) {Devices: [Device]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/link-associations
+@required {GlobalNetworkId: str}
+@optional {deviceId: str, linkId: str, maxResults: int, nextToken: str}
+@returns(200) {LinkAssociations: [LinkAssociation]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/links
+@required {GlobalNetworkId: str}
+@optional {linkIds: [str], siteId: str, type: str, provider: str, maxResults: int, nextToken: str}
+@returns(200) {Links: [Link]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/network-resource-count
+@required {GlobalNetworkId: str}
+@optional {resourceType: str, maxResults: int, nextToken: str}
+@returns(200) {NetworkResourceCounts: [NetworkResourceCount]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/network-resource-relationships
+@required {GlobalNetworkId: str}
+@optional {coreNetworkId: str, registeredGatewayArn: str, awsRegion: str, accountId: str, resourceType: str, resourceArn: str, maxResults: int, nextToken: str}
+@returns(200) {Relationships: [Relationship]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/network-resources
+@required {GlobalNetworkId: str}
+@optional {coreNetworkId: str, registeredGatewayArn: str, awsRegion: str, accountId: str, resourceType: str, resourceArn: str, maxResults: int, nextToken: str}
+@returns(200) {NetworkResources: [NetworkResource]?, NextToken: str?}
+
+@endpoint POST /global-networks/{globalNetworkId}/network-routes
+@required {GlobalNetworkId: str, RouteTableIdentifier: RouteTableIdentifier}
+@optional {ExactCidrMatches: [str], LongestPrefixMatches: [str], SubnetOfMatches: [str], SupernetOfMatches: [str], PrefixListIds: [str], States: [str], Types: [str], DestinationFilters: map<str,[str]>}
+@returns(200) {RouteTableArn: str?, CoreNetworkSegmentEdge: CoreNetworkSegmentEdgeIdentifier?{CoreNetworkId: str?, SegmentName: str?, EdgeLocation: str?}, RouteTableType: str?, RouteTableTimestamp: str(timestamp)?, NetworkRoutes: [NetworkRoute]?}
+
+@endpoint GET /global-networks/{globalNetworkId}/network-telemetry
+@required {GlobalNetworkId: str}
+@optional {coreNetworkId: str, registeredGatewayArn: str, awsRegion: str, accountId: str, resourceType: str, resourceArn: str, maxResults: int, nextToken: str}
+@returns(200) {NetworkTelemetry: [NetworkTelemetry]?, NextToken: str?}
+
+@endgroup
+
+@group resource-policy
+@endpoint GET /resource-policy/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {PolicyDocument: str?}
+
+@endgroup
+
+@group global-networks
+@endpoint GET /global-networks/{globalNetworkId}/route-analyses/{routeAnalysisId}
+@required {GlobalNetworkId: str, RouteAnalysisId: str}
+@returns(200) {RouteAnalysis: RouteAnalysis?{GlobalNetworkId: str?, OwnerAccountId: str?, RouteAnalysisId: str?, StartTimestamp: str(timestamp)?, Status: str?, Source: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, Destination: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, IncludeReturnPath: bool?, UseMiddleboxes: bool?, ForwardPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}, ReturnPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}}}
+
+@endgroup
+
+@group site-to-site-vpn-attachments
+@endpoint GET /site-to-site-vpn-attachments/{attachmentId}
+@required {AttachmentId: str}
+@returns(200) {SiteToSiteVpnAttachment: SiteToSiteVpnAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, VpnConnectionArn: str?}}
+
+@endgroup
+
+@group global-networks
+@endpoint GET /global-networks/{globalNetworkId}/sites
+@required {GlobalNetworkId: str}
+@optional {siteIds: [str], maxResults: int, nextToken: str}
+@returns(200) {Sites: [Site]?, NextToken: str?}
+
+@endpoint GET /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations
+@required {GlobalNetworkId: str}
+@optional {transitGatewayConnectPeerArns: [str], maxResults: int, nextToken: str}
+@returns(200) {TransitGatewayConnectPeerAssociations: [TransitGatewayConnectPeerAssociation]?, NextToken: str?}
+
+@endgroup
+
+@group transit-gateway-peerings
+@endpoint GET /transit-gateway-peerings/{peeringId}
+@required {PeeringId: str}
+@returns(200) {TransitGatewayPeering: TransitGatewayPeering?{Peering: Peering?{CoreNetworkId: str?, CoreNetworkArn: str?, PeeringId: str?, OwnerAccountId: str?, PeeringType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, Tags: [Tag]?, CreatedAt: str(timestamp)?, LastModificationErrors: [PeeringError]?}, TransitGatewayArn: str?, TransitGatewayPeeringAttachmentId: str?}}
+
+@endgroup
+
+@group global-networks
+@endpoint GET /global-networks/{globalNetworkId}/transit-gateway-registrations
+@required {GlobalNetworkId: str}
+@optional {transitGatewayArns: [str], maxResults: int, nextToken: str}
+@returns(200) {TransitGatewayRegistrations: [TransitGatewayRegistration]?, NextToken: str?}
+
+@endgroup
+
+@group transit-gateway-route-table-attachments
+@endpoint GET /transit-gateway-route-table-attachments/{attachmentId}
+@required {AttachmentId: str}
+@returns(200) {TransitGatewayRouteTableAttachment: TransitGatewayRouteTableAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, PeeringId: str?, TransitGatewayRouteTableArn: str?}}
+
+@endgroup
+
+@group vpc-attachments
+@endpoint GET /vpc-attachments/{attachmentId}
+@required {AttachmentId: str}
+@returns(200) {VpcAttachment: VpcAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, SubnetArns: [str]?, Options: VpcOptions?{Ipv6Support: bool?, ApplianceModeSupport: bool?}}}
+
+@endgroup
+
+@group attachments
+@endpoint GET /attachments
+@optional {coreNetworkId: str, attachmentType: str, edgeLocation: str, state: str, maxResults: int, nextToken: str}
+@returns(200) {Attachments: [Attachment]?, NextToken: str?}
+
+@endgroup
+
+@group connect-peers
+@endpoint GET /connect-peers
+@optional {coreNetworkId: str, connectAttachmentId: str, maxResults: int, nextToken: str}
+@returns(200) {ConnectPeers: [ConnectPeerSummary]?, NextToken: str?}
+
+@endgroup
+
+@group core-networks
+@endpoint GET /core-networks/{coreNetworkId}/core-network-policy-versions
+@required {CoreNetworkId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {CoreNetworkPolicyVersions: [CoreNetworkPolicyVersion]?, NextToken: str?}
+
+@endpoint GET /core-networks
+@optional {maxResults: int, nextToken: str}
+@returns(200) {CoreNetworks: [CoreNetworkSummary]?, NextToken: str?}
+
+@endgroup
+
+@group organizations
+@endpoint GET /organizations/service-access
+@optional {maxResults: int, nextToken: str}
+@returns(200) {OrganizationStatus: OrganizationStatus?{OrganizationId: str?, OrganizationAwsServiceAccessStatus: str?, SLRDeploymentStatus: str?, AccountStatusList: [AccountStatus]?}, NextToken: str?}
+
+@endgroup
+
+@group peerings
+@endpoint GET /peerings
+@optional {coreNetworkId: str, peeringType: str, edgeLocation: str, state: str, maxResults: int, nextToken: str}
+@returns(200) {Peerings: [Peering]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {TagList: [Tag]?}
+
+@endgroup
+
+@group core-networks
+@endpoint POST /core-networks/{coreNetworkId}/core-network-policy
+@required {CoreNetworkId: str, PolicyDocument: str}
+@optional {Description: str, LatestVersionId: int, ClientToken: str}
+@returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
+
+@endgroup
+
+@group resource-policy
+@endpoint POST /resource-policy/{resourceArn}
+@required {ResourceArn: str, PolicyDocument: str}
+
+@endgroup
+
+@group global-networks
+@endpoint POST /global-networks/{globalNetworkId}/transit-gateway-registrations
+@required {GlobalNetworkId: str, TransitGatewayArn: str}
+@returns(200) {TransitGatewayRegistration: TransitGatewayRegistration?{GlobalNetworkId: str?, TransitGatewayArn: str?, State: TransitGatewayRegistrationStateReason?{Code: str?, Message: str?}}}
+
+@endgroup
+
+@group attachments
+@endpoint POST /attachments/{attachmentId}/reject
+@required {AttachmentId: str}
+@returns(200) {Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}}
+
+@endgroup
+
+@group core-networks
+@endpoint POST /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}/restore
+@required {CoreNetworkId: str, PolicyVersionId: int}
+@returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
+
+@endgroup
+
+@group organizations
+@endpoint POST /organizations/service-access
+@required {Action: str}
+@returns(200) {OrganizationStatus: OrganizationStatus?{OrganizationId: str?, OrganizationAwsServiceAccessStatus: str?, SLRDeploymentStatus: str?, AccountStatusList: [AccountStatus]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint POST /global-networks/{globalNetworkId}/route-analyses
+@required {GlobalNetworkId: str, Source: RouteAnalysisEndpointOptionsSpecification, Destination: RouteAnalysisEndpointOptionsSpecification}
+@optional {IncludeReturnPath: bool, UseMiddleboxes: bool}
+@returns(200) {RouteAnalysis: RouteAnalysis?{GlobalNetworkId: str?, OwnerAccountId: str?, RouteAnalysisId: str?, StartTimestamp: str(timestamp)?, Status: str?, Source: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, Destination: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, IncludeReturnPath: bool?, UseMiddleboxes: bool?, ForwardPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}, ReturnPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}}}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: [Tag]}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group global-networks
+@endpoint PATCH /global-networks/{globalNetworkId}/connections/{connectionId}
+@required {GlobalNetworkId: str, ConnectionId: str}
+@optional {LinkId: str, ConnectedLinkId: str, Description: str}
+@returns(200) {Connection: Connection?{ConnectionId: str?, ConnectionArn: str?, GlobalNetworkId: str?, DeviceId: str?, ConnectedDeviceId: str?, LinkId: str?, ConnectedLinkId: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endgroup
+
+@group core-networks
+@endpoint PATCH /core-networks/{coreNetworkId}
+@required {CoreNetworkId: str}
+@optional {Description: str}
+@returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
+
+@endgroup
+
+@group global-networks
+@endpoint PATCH /global-networks/{globalNetworkId}/devices/{deviceId}
+@required {GlobalNetworkId: str, DeviceId: str}
+@optional {AWSLocation: AWSLocation, Description: str, Type: str, Vendor: str, Model: str, SerialNumber: str, Location: Location, SiteId: str}
+@returns(200) {Device: Device?{DeviceId: str?, DeviceArn: str?, GlobalNetworkId: str?, AWSLocation: AWSLocation?{Zone: str?, SubnetArn: str?}, Description: str?, Type: str?, Vendor: str?, Model: str?, SerialNumber: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, SiteId: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint PATCH /global-networks/{globalNetworkId}
+@required {GlobalNetworkId: str}
+@optional {Description: str}
+@returns(200) {GlobalNetwork: GlobalNetwork?{GlobalNetworkId: str?, GlobalNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint PATCH /global-networks/{globalNetworkId}/links/{linkId}
+@required {GlobalNetworkId: str, LinkId: str}
+@optional {Description: str, Type: str, Bandwidth: Bandwidth, Provider: str}
+@returns(200) {Link: Link?{LinkId: str?, LinkArn: str?, GlobalNetworkId: str?, SiteId: str?, Description: str?, Type: str?, Bandwidth: Bandwidth?{UploadSpeed: int?, DownloadSpeed: int?}, Provider: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endpoint PATCH /global-networks/{globalNetworkId}/network-resources/{resourceArn}/metadata
+@required {GlobalNetworkId: str, ResourceArn: str, Metadata: map<str,str>}
+@returns(200) {ResourceArn: str?, Metadata: map<str,str>?}
+
+@endpoint PATCH /global-networks/{globalNetworkId}/sites/{siteId}
+@required {GlobalNetworkId: str, SiteId: str}
+@optional {Description: str, Location: Location}
+@returns(200) {Site: Site?{SiteId: str?, SiteArn: str?, GlobalNetworkId: str?, Description: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
+
+@endgroup
+
+@group vpc-attachments
+@endpoint PATCH /vpc-attachments/{attachmentId}
+@required {AttachmentId: str}
+@optional {AddSubnetArns: [str], RemoveSubnetArns: [str], Options: VpcOptions}
+@returns(200) {VpcAttachment: VpcAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, SubnetArns: [str]?, Options: VpcOptions?{Ipv6Support: bool?, ApplianceModeSupport: bool?}}}
+
+@endgroup
+
+@end

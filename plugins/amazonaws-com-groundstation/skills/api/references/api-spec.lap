@@ -1,0 +1,245 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Ground Station
+@version 2019-05-23
+@auth AWS SigV4
+@endpoints 33
+@hint download_for_search
+@toc contact(3), config(5), dataflowEndpointGroup(4), ephemeris(4), missionprofile(5), agent(3), minute-usage(1), satellite(2), contacts(1), ephemerides(1), groundstation(1), tags(3)
+
+@group contact
+@endpoint DELETE /contact/{contactId}
+@required {contactId: str}
+@returns(200) {contactId: str?}
+
+@endgroup
+
+@group config
+@endpoint POST /config
+@required {configData: ConfigTypeData, name: str}
+@optional {tags: map<str,str>}
+@returns(200) {configArn: str?, configId: str?, configType: str?}
+
+@endgroup
+
+@group dataflowEndpointGroup
+@endpoint POST /dataflowEndpointGroup
+@required {endpointDetails: [EndpointDetails]}
+@optional {contactPostPassDurationSeconds: int, contactPrePassDurationSeconds: int, tags: map<str,str>}
+@returns(200) {dataflowEndpointGroupId: str?}
+
+@endgroup
+
+@group ephemeris
+@endpoint POST /ephemeris
+@required {name: str, satelliteId: str}
+@optional {enabled: bool, ephemeris: EphemerisData, expirationTime: str(timestamp), kmsKeyArn: str, priority: int, tags: map<str,str>}
+@returns(200) {ephemerisId: str?}
+
+@endgroup
+
+@group missionprofile
+@endpoint POST /missionprofile
+@required {dataflowEdges: [[str]], minimumViableContactDurationSeconds: int, name: str, trackingConfigArn: str}
+@optional {contactPostPassDurationSeconds: int, contactPrePassDurationSeconds: int, streamsKmsKey: KmsKey, streamsKmsRole: str, tags: map<str,str>}
+@returns(200) {missionProfileId: str?}
+
+@endgroup
+
+@group config
+@endpoint DELETE /config/{configType}/{configId}
+@required {configId: str, configType: str}
+@returns(200) {configArn: str?, configId: str?, configType: str?}
+
+@endgroup
+
+@group dataflowEndpointGroup
+@endpoint DELETE /dataflowEndpointGroup/{dataflowEndpointGroupId}
+@required {dataflowEndpointGroupId: str}
+@returns(200) {dataflowEndpointGroupId: str?}
+
+@endgroup
+
+@group ephemeris
+@endpoint DELETE /ephemeris/{ephemerisId}
+@required {ephemerisId: str}
+@returns(200) {ephemerisId: str?}
+
+@endgroup
+
+@group missionprofile
+@endpoint DELETE /missionprofile/{missionProfileId}
+@required {missionProfileId: str}
+@returns(200) {missionProfileId: str?}
+
+@endgroup
+
+@group contact
+@endpoint GET /contact/{contactId}
+@required {contactId: str}
+@returns(200) {contactId: str?, contactStatus: str?, dataflowList: [DataflowDetail]?, endTime: str(timestamp)?, errorMessage: str?, groundStation: str?, maximumElevation: Elevation?{unit: str, value: num(f64)}, missionProfileArn: str?, postPassEndTime: str(timestamp)?, prePassStartTime: str(timestamp)?, region: str?, satelliteArn: str?, startTime: str(timestamp)?, tags: map<str,str>?, visibilityEndTime: str(timestamp)?, visibilityStartTime: str(timestamp)?}
+
+@endgroup
+
+@group ephemeris
+@endpoint GET /ephemeris/{ephemerisId}
+@required {ephemerisId: str}
+@returns(200) {creationTime: str(timestamp)?, enabled: bool?, ephemerisId: str?, invalidReason: str?, name: str?, priority: int?, satelliteId: str?, status: str?, suppliedData: EphemerisTypeDescription?{oem: EphemerisDescription?{ephemerisData: str?, sourceS3Object: S3Object?{bucket: str?, key: str?, version: str?}}, tle: EphemerisDescription?{ephemerisData: str?, sourceS3Object: S3Object?{bucket: str?, key: str?, version: str?}}}, tags: map<str,str>?}
+
+@endgroup
+
+@group agent
+@endpoint GET /agent/{agentId}/configuration
+@required {agentId: str}
+@returns(200) {agentId: str?, taskingDocument: str?}
+
+@endgroup
+
+@group config
+@endpoint GET /config/{configType}/{configId}
+@required {configId: str, configType: str}
+@returns(200) {configArn: str, configData: ConfigTypeData{antennaDownlinkConfig: AntennaDownlinkConfig?{spectrumConfig: SpectrumConfig{bandwidth: FrequencyBandwidth, centerFrequency: Frequency, polarization: str?}}, antennaDownlinkDemodDecodeConfig: AntennaDownlinkDemodDecodeConfig?{decodeConfig: DecodeConfig{unvalidatedJSON: str}, demodulationConfig: DemodulationConfig{unvalidatedJSON: str}, spectrumConfig: SpectrumConfig{bandwidth: FrequencyBandwidth, centerFrequency: Frequency, polarization: str?}}, antennaUplinkConfig: AntennaUplinkConfig?{spectrumConfig: UplinkSpectrumConfig{centerFrequency: Frequency, polarization: str?}, targetEirp: Eirp{units: str, value: num(f64)}, transmitDisabled: bool?}, dataflowEndpointConfig: DataflowEndpointConfig?{dataflowEndpointName: str, dataflowEndpointRegion: str?}, s3RecordingConfig: S3RecordingConfig?{bucketArn: str, prefix: str?, roleArn: str}, trackingConfig: TrackingConfig?{autotrack: str}, uplinkEchoConfig: UplinkEchoConfig?{antennaUplinkConfigArn: str, enabled: bool}}, configId: str, configType: str?, name: str, tags: map<str,str>?}
+
+@endgroup
+
+@group dataflowEndpointGroup
+@endpoint GET /dataflowEndpointGroup/{dataflowEndpointGroupId}
+@required {dataflowEndpointGroupId: str}
+@returns(200) {contactPostPassDurationSeconds: int?, contactPrePassDurationSeconds: int?, dataflowEndpointGroupArn: str?, dataflowEndpointGroupId: str?, endpointsDetails: [EndpointDetails]?, tags: map<str,str>?}
+
+@endgroup
+
+@group minute-usage
+@endpoint POST /minute-usage
+@required {month: int, year: int}
+@returns(200) {estimatedMinutesRemaining: int?, isReservedMinutesCustomer: bool?, totalReservedMinuteAllocation: int?, totalScheduledMinutes: int?, upcomingMinutesScheduled: int?}
+
+@endgroup
+
+@group missionprofile
+@endpoint GET /missionprofile/{missionProfileId}
+@required {missionProfileId: str}
+@returns(200) {contactPostPassDurationSeconds: int?, contactPrePassDurationSeconds: int?, dataflowEdges: [[str]]?, minimumViableContactDurationSeconds: int?, missionProfileArn: str?, missionProfileId: str?, name: str?, region: str?, streamsKmsKey: KmsKey?{kmsAliasArn: str?, kmsAliasName: str?, kmsKeyArn: str?}, streamsKmsRole: str?, tags: map<str,str>?, trackingConfigArn: str?}
+
+@endgroup
+
+@group satellite
+@endpoint GET /satellite/{satelliteId}
+@required {satelliteId: str}
+@returns(200) {currentEphemeris: EphemerisMetaData?{ephemerisId: str?, epoch: str(timestamp)?, name: str?, source: str}, groundStations: [str]?, noradSatelliteID: int?, satelliteArn: str?, satelliteId: str?}
+
+@endgroup
+
+@group config
+@endpoint GET /config
+@optional {maxResults: int, nextToken: str}
+@returns(200) {configList: [ConfigListItem]?, nextToken: str?}
+
+@endgroup
+
+@group contacts
+@endpoint POST /contacts
+@required {endTime: str(timestamp), startTime: str(timestamp), statusList: [str]}
+@optional {groundStation: str, maxResults: int, missionProfileArn: str, nextToken: str, satelliteArn: str}
+@returns(200) {contactList: [ContactData]?, nextToken: str?}
+
+@endgroup
+
+@group dataflowEndpointGroup
+@endpoint GET /dataflowEndpointGroup
+@optional {maxResults: int, nextToken: str}
+@returns(200) {dataflowEndpointGroupList: [DataflowEndpointListItem]?, nextToken: str?}
+
+@endgroup
+
+@group ephemerides
+@endpoint POST /ephemerides
+@required {endTime: str(timestamp), satelliteId: str, startTime: str(timestamp)}
+@optional {maxResults: int, nextToken: str, statusList: [str]}
+@returns(200) {ephemerides: [EphemerisItem]?, nextToken: str?}
+
+@endgroup
+
+@group groundstation
+@endpoint GET /groundstation
+@optional {maxResults: int, nextToken: str, satelliteId: str}
+@returns(200) {groundStationList: [GroundStationData]?, nextToken: str?}
+
+@endgroup
+
+@group missionprofile
+@endpoint GET /missionprofile
+@optional {maxResults: int, nextToken: str}
+@returns(200) {missionProfileList: [MissionProfileListItem]?, nextToken: str?}
+
+@endgroup
+
+@group satellite
+@endpoint GET /satellite
+@optional {maxResults: int, nextToken: str}
+@returns(200) {nextToken: str?, satellites: [SatelliteListItem]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group agent
+@endpoint POST /agent
+@required {agentDetails: AgentDetails, discoveryData: DiscoveryData}
+@returns(200) {agentId: str?}
+
+@endgroup
+
+@group contact
+@endpoint POST /contact
+@required {endTime: str(timestamp), groundStation: str, missionProfileArn: str, satelliteArn: str, startTime: str(timestamp)}
+@optional {tags: map<str,str>}
+@returns(200) {contactId: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group agent
+@endpoint PUT /agent/{agentId}
+@required {agentId: str, aggregateStatus: AggregateStatus, componentStatuses: [ComponentStatusData], taskId: str}
+@returns(200) {agentId: str}
+
+@endgroup
+
+@group config
+@endpoint PUT /config/{configType}/{configId}
+@required {configId: str, configType: str, configData: ConfigTypeData, name: str}
+@returns(200) {configArn: str?, configId: str?, configType: str?}
+
+@endgroup
+
+@group ephemeris
+@endpoint PUT /ephemeris/{ephemerisId}
+@required {ephemerisId: str, enabled: bool}
+@optional {name: str, priority: int}
+@returns(200) {ephemerisId: str?}
+
+@endgroup
+
+@group missionprofile
+@endpoint PUT /missionprofile/{missionProfileId}
+@required {missionProfileId: str}
+@optional {contactPostPassDurationSeconds: int, contactPrePassDurationSeconds: int, dataflowEdges: [[str]], minimumViableContactDurationSeconds: int, name: str, streamsKmsKey: KmsKey, streamsKmsRole: str, trackingConfigArn: str}
+@returns(200) {missionProfileId: str?}
+
+@endgroup
+
+@end

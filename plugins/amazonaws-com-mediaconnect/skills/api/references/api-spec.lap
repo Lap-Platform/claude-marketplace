@@ -1,0 +1,321 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS MediaConnect
+@version 2018-11-14
+@auth AWS SigV4
+@endpoints 52
+@hint download_for_search
+@toc bridges(12), flows(23), gateways(4), gateway-instances(4), offerings(3), reservations(2), entitlements(1), tags(3)
+
+@group bridges
+@endpoint POST /v1/bridges/{bridgeArn}/outputs
+@required {BridgeArn: str, Outputs: [AddBridgeOutputRequest]}
+@returns(200) {BridgeArn: str?, Outputs: [BridgeOutput]?}
+
+@endpoint POST /v1/bridges/{bridgeArn}/sources
+@required {BridgeArn: str, Sources: [AddBridgeSourceRequest]}
+@returns(200) {BridgeArn: str?, Sources: [BridgeSource]?}
+
+@endgroup
+
+@group flows
+@endpoint POST /v1/flows/{flowArn}/mediaStreams
+@required {FlowArn: str, MediaStreams: [AddMediaStreamRequest]}
+@returns(200) {FlowArn: str?, MediaStreams: [MediaStream]?}
+
+@endpoint POST /v1/flows/{flowArn}/outputs
+@required {FlowArn: str, Outputs: [AddOutputRequest]}
+@returns(200) {FlowArn: str?, Outputs: [Output]?}
+
+@endpoint POST /v1/flows/{flowArn}/source
+@required {FlowArn: str, Sources: [SetSourceRequest]}
+@returns(200) {FlowArn: str?, Sources: [Source]?}
+
+@endpoint POST /v1/flows/{flowArn}/vpcInterfaces
+@required {FlowArn: str, VpcInterfaces: [VpcInterfaceRequest]}
+@returns(200) {FlowArn: str?, VpcInterfaces: [VpcInterface]?}
+
+@endgroup
+
+@group bridges
+@endpoint POST /v1/bridges
+@required {Name: str, PlacementArn: str, Sources: [AddBridgeSourceRequest]}
+@optional {EgressGatewayBridge: AddEgressGatewayBridgeRequest, IngressGatewayBridge: AddIngressGatewayBridgeRequest, Outputs: [AddBridgeOutputRequest], SourceFailoverConfig: FailoverConfig}
+@returns(200) {Bridge: Bridge?{BridgeArn: str, BridgeMessages: [MessageDetail]?, BridgeState: str, EgressGatewayBridge: EgressGatewayBridge?{InstanceId: str?, MaxBitrate: int}, IngressGatewayBridge: IngressGatewayBridge?{InstanceId: str?, MaxBitrate: int, MaxOutputs: int}, Name: str, Outputs: [BridgeOutput]?, PlacementArn: str, SourceFailoverConfig: FailoverConfig?{FailoverMode: str?, RecoveryWindow: int?, SourcePriority: SourcePriority?{PrimarySource: str?}, State: str?}, Sources: [BridgeSource]?}}
+
+@endgroup
+
+@group flows
+@endpoint POST /v1/flows
+@required {Name: str}
+@optional {AvailabilityZone: str, Entitlements: [GrantEntitlementRequest], MediaStreams: [AddMediaStreamRequest], Outputs: [AddOutputRequest], Source: SetSourceRequest, SourceFailoverConfig: FailoverConfig, Sources: [SetSourceRequest], VpcInterfaces: [VpcInterfaceRequest], Maintenance: AddMaintenance, SourceMonitoringConfig: MonitoringConfig}
+@returns(200) {Flow: Flow?{AvailabilityZone: str, Description: str?, EgressIp: str?, Entitlements: [Entitlement], FlowArn: str, MediaStreams: [MediaStream]?, Name: str, Outputs: [Output], Source: Source{DataTransferSubscriberFeePercent: int?, Decryption: Encryption?{Algorithm: str?, ConstantInitializationVector: str?, DeviceId: str?, KeyType: str?, Region: str?, ResourceId: str?, RoleArn: str, SecretArn: str?, Url: str?}, Description: str?, EntitlementArn: str?, IngestIp: str?, IngestPort: int?, MediaStreamSourceConfigurations: [MediaStreamSourceConfiguration]?, Name: str, SenderControlPort: int?, SenderIpAddress: str?, SourceArn: str, Transport: Transport?{CidrAllowList: [str]?, MaxBitrate: int?, MaxLatency: int?, MaxSyncBuffer: int?, MinLatency: int?, Protocol: str, RemoteId: str?, SenderControlPort: int?, SenderIpAddress: str?, SmoothingLatency: int?, SourceListenerAddress: str?, SourceListenerPort: int?, StreamId: str?}, VpcInterfaceName: str?, WhitelistCidr: str?, GatewayBridgeSource: GatewayBridgeSource?{BridgeArn: str, VpcInterfaceAttachment: VpcInterfaceAttachment?}}, SourceFailoverConfig: FailoverConfig?{FailoverMode: str?, RecoveryWindow: int?, SourcePriority: SourcePriority?{PrimarySource: str?}, State: str?}, Sources: [Source]?, Status: str, VpcInterfaces: [VpcInterface]?, Maintenance: Maintenance?{MaintenanceDay: str?, MaintenanceDeadline: str?, MaintenanceScheduledDate: str?, MaintenanceStartHour: str?}, SourceMonitoringConfig: MonitoringConfig?{ThumbnailState: str?}}}
+
+@endgroup
+
+@group gateways
+@endpoint POST /v1/gateways
+@required {EgressCidrBlocks: [str], Name: str, Networks: [GatewayNetwork]}
+@returns(200) {Gateway: Gateway?{EgressCidrBlocks: [str], GatewayArn: str, GatewayMessages: [MessageDetail]?, GatewayState: str?, Name: str, Networks: [GatewayNetwork]}}
+
+@endgroup
+
+@group bridges
+@endpoint DELETE /v1/bridges/{bridgeArn}
+@required {BridgeArn: str}
+@returns(200) {BridgeArn: str?}
+
+@endgroup
+
+@group flows
+@endpoint DELETE /v1/flows/{flowArn}
+@required {FlowArn: str}
+@returns(200) {FlowArn: str?, Status: str?}
+
+@endgroup
+
+@group gateways
+@endpoint DELETE /v1/gateways/{gatewayArn}
+@required {GatewayArn: str}
+@returns(200) {GatewayArn: str?}
+
+@endgroup
+
+@group gateway-instances
+@endpoint DELETE /v1/gateway-instances/{gatewayInstanceArn}
+@required {GatewayInstanceArn: str}
+@optional {force: bool}
+@returns(200) {GatewayInstanceArn: str?, InstanceState: str?}
+
+@endgroup
+
+@group bridges
+@endpoint GET /v1/bridges/{bridgeArn}
+@required {BridgeArn: str}
+@returns(200) {Bridge: Bridge?{BridgeArn: str, BridgeMessages: [MessageDetail]?, BridgeState: str, EgressGatewayBridge: EgressGatewayBridge?{InstanceId: str?, MaxBitrate: int}, IngressGatewayBridge: IngressGatewayBridge?{InstanceId: str?, MaxBitrate: int, MaxOutputs: int}, Name: str, Outputs: [BridgeOutput]?, PlacementArn: str, SourceFailoverConfig: FailoverConfig?{FailoverMode: str?, RecoveryWindow: int?, SourcePriority: SourcePriority?{PrimarySource: str?}, State: str?}, Sources: [BridgeSource]?}}
+
+@endgroup
+
+@group flows
+@endpoint GET /v1/flows/{flowArn}
+@required {FlowArn: str}
+@returns(200) {Flow: Flow?{AvailabilityZone: str, Description: str?, EgressIp: str?, Entitlements: [Entitlement], FlowArn: str, MediaStreams: [MediaStream]?, Name: str, Outputs: [Output], Source: Source{DataTransferSubscriberFeePercent: int?, Decryption: Encryption?{Algorithm: str?, ConstantInitializationVector: str?, DeviceId: str?, KeyType: str?, Region: str?, ResourceId: str?, RoleArn: str, SecretArn: str?, Url: str?}, Description: str?, EntitlementArn: str?, IngestIp: str?, IngestPort: int?, MediaStreamSourceConfigurations: [MediaStreamSourceConfiguration]?, Name: str, SenderControlPort: int?, SenderIpAddress: str?, SourceArn: str, Transport: Transport?{CidrAllowList: [str]?, MaxBitrate: int?, MaxLatency: int?, MaxSyncBuffer: int?, MinLatency: int?, Protocol: str, RemoteId: str?, SenderControlPort: int?, SenderIpAddress: str?, SmoothingLatency: int?, SourceListenerAddress: str?, SourceListenerPort: int?, StreamId: str?}, VpcInterfaceName: str?, WhitelistCidr: str?, GatewayBridgeSource: GatewayBridgeSource?{BridgeArn: str, VpcInterfaceAttachment: VpcInterfaceAttachment?}}, SourceFailoverConfig: FailoverConfig?{FailoverMode: str?, RecoveryWindow: int?, SourcePriority: SourcePriority?{PrimarySource: str?}, State: str?}, Sources: [Source]?, Status: str, VpcInterfaces: [VpcInterface]?, Maintenance: Maintenance?{MaintenanceDay: str?, MaintenanceDeadline: str?, MaintenanceScheduledDate: str?, MaintenanceStartHour: str?}, SourceMonitoringConfig: MonitoringConfig?{ThumbnailState: str?}}, Messages: Messages?{Errors: [str]}}
+
+@endpoint GET /v1/flows/{flowArn}/source-metadata
+@required {FlowArn: str}
+@returns(200) {FlowArn: str?, Messages: [MessageDetail]?, Timestamp: str(timestamp)?, TransportMediaInfo: TransportMediaInfo?{Programs: [TransportStreamProgram]}}
+
+@endpoint GET /v1/flows/{flowArn}/source-thumbnail
+@required {FlowArn: str}
+@returns(200) {ThumbnailDetails: ThumbnailDetails?{FlowArn: str, Thumbnail: str?, ThumbnailMessages: [MessageDetail], Timecode: str?, Timestamp: str(timestamp)?}}
+
+@endgroup
+
+@group gateways
+@endpoint GET /v1/gateways/{gatewayArn}
+@required {GatewayArn: str}
+@returns(200) {Gateway: Gateway?{EgressCidrBlocks: [str], GatewayArn: str, GatewayMessages: [MessageDetail]?, GatewayState: str?, Name: str, Networks: [GatewayNetwork]}}
+
+@endgroup
+
+@group gateway-instances
+@endpoint GET /v1/gateway-instances/{gatewayInstanceArn}
+@required {GatewayInstanceArn: str}
+@returns(200) {GatewayInstance: GatewayInstance?{BridgePlacement: str, ConnectionStatus: str, GatewayArn: str, GatewayInstanceArn: str, InstanceId: str, InstanceMessages: [MessageDetail]?, InstanceState: str, RunningBridgeCount: int}}
+
+@endgroup
+
+@group offerings
+@endpoint GET /v1/offerings/{offeringArn}
+@required {OfferingArn: str}
+@returns(200) {Offering: Offering?{CurrencyCode: str, Duration: int, DurationUnits: str, OfferingArn: str, OfferingDescription: str, PricePerUnit: str, PriceUnits: str, ResourceSpecification: ResourceSpecification{ReservedBitrate: int?, ResourceType: str}}}
+
+@endgroup
+
+@group reservations
+@endpoint GET /v1/reservations/{reservationArn}
+@required {ReservationArn: str}
+@returns(200) {Reservation: Reservation?{CurrencyCode: str, Duration: int, DurationUnits: str, End: str, OfferingArn: str, OfferingDescription: str, PricePerUnit: str, PriceUnits: str, ReservationArn: str, ReservationName: str, ReservationState: str, ResourceSpecification: ResourceSpecification{ReservedBitrate: int?, ResourceType: str}, Start: str}}
+
+@endgroup
+
+@group flows
+@endpoint POST /v1/flows/{flowArn}/entitlements
+@required {FlowArn: str, Entitlements: [GrantEntitlementRequest]}
+@returns(200) {Entitlements: [Entitlement]?, FlowArn: str?}
+
+@endgroup
+
+@group bridges
+@endpoint GET /v1/bridges
+@optional {filterArn: str, maxResults: int, nextToken: str}
+@returns(200) {Bridges: [ListedBridge]?, NextToken: str?}
+
+@endgroup
+
+@group entitlements
+@endpoint GET /v1/entitlements
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Entitlements: [ListedEntitlement]?, NextToken: str?}
+
+@endgroup
+
+@group flows
+@endpoint GET /v1/flows
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Flows: [ListedFlow]?, NextToken: str?}
+
+@endgroup
+
+@group gateway-instances
+@endpoint GET /v1/gateway-instances
+@optional {filterArn: str, maxResults: int, nextToken: str}
+@returns(200) {Instances: [ListedGatewayInstance]?, NextToken: str?}
+
+@endgroup
+
+@group gateways
+@endpoint GET /v1/gateways
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Gateways: [ListedGateway]?, NextToken: str?}
+
+@endgroup
+
+@group offerings
+@endpoint GET /v1/offerings
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, Offerings: [Offering]?}
+
+@endgroup
+
+@group reservations
+@endpoint GET /v1/reservations
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, Reservations: [Reservation]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group offerings
+@endpoint POST /v1/offerings/{offeringArn}
+@required {OfferingArn: str, ReservationName: str, Start: str}
+@returns(200) {Reservation: Reservation?{CurrencyCode: str, Duration: int, DurationUnits: str, End: str, OfferingArn: str, OfferingDescription: str, PricePerUnit: str, PriceUnits: str, ReservationArn: str, ReservationName: str, ReservationState: str, ResourceSpecification: ResourceSpecification{ReservedBitrate: int?, ResourceType: str}, Start: str}}
+
+@endgroup
+
+@group bridges
+@endpoint DELETE /v1/bridges/{bridgeArn}/outputs/{outputName}
+@required {BridgeArn: str, OutputName: str}
+@returns(200) {BridgeArn: str?, OutputName: str?}
+
+@endpoint DELETE /v1/bridges/{bridgeArn}/sources/{sourceName}
+@required {BridgeArn: str, SourceName: str}
+@returns(200) {BridgeArn: str?, SourceName: str?}
+
+@endgroup
+
+@group flows
+@endpoint DELETE /v1/flows/{flowArn}/mediaStreams/{mediaStreamName}
+@required {FlowArn: str, MediaStreamName: str}
+@returns(200) {FlowArn: str?, MediaStreamName: str?}
+
+@endpoint DELETE /v1/flows/{flowArn}/outputs/{outputArn}
+@required {FlowArn: str, OutputArn: str}
+@returns(200) {FlowArn: str?, OutputArn: str?}
+
+@endpoint DELETE /v1/flows/{flowArn}/source/{sourceArn}
+@required {FlowArn: str, SourceArn: str}
+@returns(200) {FlowArn: str?, SourceArn: str?}
+
+@endpoint DELETE /v1/flows/{flowArn}/vpcInterfaces/{vpcInterfaceName}
+@required {FlowArn: str, VpcInterfaceName: str}
+@returns(200) {FlowArn: str?, NonDeletedNetworkInterfaceIds: [str]?, VpcInterfaceName: str?}
+
+@endpoint DELETE /v1/flows/{flowArn}/entitlements/{entitlementArn}
+@required {EntitlementArn: str, FlowArn: str}
+@returns(200) {EntitlementArn: str?, FlowArn: str?}
+
+@endpoint POST /v1/flows/start/{flowArn}
+@required {FlowArn: str}
+@returns(200) {FlowArn: str?, Status: str?}
+
+@endpoint POST /v1/flows/stop/{flowArn}
+@required {FlowArn: str}
+@returns(200) {FlowArn: str?, Status: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group bridges
+@endpoint PUT /v1/bridges/{bridgeArn}
+@required {BridgeArn: str}
+@optional {EgressGatewayBridge: UpdateEgressGatewayBridgeRequest, IngressGatewayBridge: UpdateIngressGatewayBridgeRequest, SourceFailoverConfig: UpdateFailoverConfig}
+@returns(200) {Bridge: Bridge?{BridgeArn: str, BridgeMessages: [MessageDetail]?, BridgeState: str, EgressGatewayBridge: EgressGatewayBridge?{InstanceId: str?, MaxBitrate: int}, IngressGatewayBridge: IngressGatewayBridge?{InstanceId: str?, MaxBitrate: int, MaxOutputs: int}, Name: str, Outputs: [BridgeOutput]?, PlacementArn: str, SourceFailoverConfig: FailoverConfig?{FailoverMode: str?, RecoveryWindow: int?, SourcePriority: SourcePriority?{PrimarySource: str?}, State: str?}, Sources: [BridgeSource]?}}
+
+@endpoint PUT /v1/bridges/{bridgeArn}/outputs/{outputName}
+@required {BridgeArn: str, OutputName: str}
+@optional {NetworkOutput: UpdateBridgeNetworkOutputRequest}
+@returns(200) {BridgeArn: str?, Output: BridgeOutput?{FlowOutput: BridgeFlowOutput?{FlowArn: str, FlowSourceArn: str, Name: str}, NetworkOutput: BridgeNetworkOutput?{IpAddress: str, Name: str, NetworkName: str, Port: int, Protocol: str, Ttl: int}}}
+
+@endpoint PUT /v1/bridges/{bridgeArn}/sources/{sourceName}
+@required {BridgeArn: str, SourceName: str}
+@optional {FlowSource: UpdateBridgeFlowSourceRequest, NetworkSource: UpdateBridgeNetworkSourceRequest}
+@returns(200) {BridgeArn: str?, Source: BridgeSource?{FlowSource: BridgeFlowSource?{FlowArn: str, FlowVpcInterfaceAttachment: VpcInterfaceAttachment?{VpcInterfaceName: str?}, Name: str, OutputArn: str?}, NetworkSource: BridgeNetworkSource?{MulticastIp: str, Name: str, NetworkName: str, Port: int, Protocol: str}}}
+
+@endpoint PUT /v1/bridges/{bridgeArn}/state
+@required {BridgeArn: str, DesiredState: str}
+@returns(200) {BridgeArn: str?, DesiredState: str?}
+
+@endgroup
+
+@group flows
+@endpoint PUT /v1/flows/{flowArn}
+@required {FlowArn: str}
+@optional {SourceFailoverConfig: UpdateFailoverConfig, Maintenance: UpdateMaintenance, SourceMonitoringConfig: MonitoringConfig}
+@returns(200) {Flow: Flow?{AvailabilityZone: str, Description: str?, EgressIp: str?, Entitlements: [Entitlement], FlowArn: str, MediaStreams: [MediaStream]?, Name: str, Outputs: [Output], Source: Source{DataTransferSubscriberFeePercent: int?, Decryption: Encryption?{Algorithm: str?, ConstantInitializationVector: str?, DeviceId: str?, KeyType: str?, Region: str?, ResourceId: str?, RoleArn: str, SecretArn: str?, Url: str?}, Description: str?, EntitlementArn: str?, IngestIp: str?, IngestPort: int?, MediaStreamSourceConfigurations: [MediaStreamSourceConfiguration]?, Name: str, SenderControlPort: int?, SenderIpAddress: str?, SourceArn: str, Transport: Transport?{CidrAllowList: [str]?, MaxBitrate: int?, MaxLatency: int?, MaxSyncBuffer: int?, MinLatency: int?, Protocol: str, RemoteId: str?, SenderControlPort: int?, SenderIpAddress: str?, SmoothingLatency: int?, SourceListenerAddress: str?, SourceListenerPort: int?, StreamId: str?}, VpcInterfaceName: str?, WhitelistCidr: str?, GatewayBridgeSource: GatewayBridgeSource?{BridgeArn: str, VpcInterfaceAttachment: VpcInterfaceAttachment?}}, SourceFailoverConfig: FailoverConfig?{FailoverMode: str?, RecoveryWindow: int?, SourcePriority: SourcePriority?{PrimarySource: str?}, State: str?}, Sources: [Source]?, Status: str, VpcInterfaces: [VpcInterface]?, Maintenance: Maintenance?{MaintenanceDay: str?, MaintenanceDeadline: str?, MaintenanceScheduledDate: str?, MaintenanceStartHour: str?}, SourceMonitoringConfig: MonitoringConfig?{ThumbnailState: str?}}}
+
+@endpoint PUT /v1/flows/{flowArn}/entitlements/{entitlementArn}
+@required {EntitlementArn: str, FlowArn: str}
+@optional {Description: str, Encryption: UpdateEncryption, EntitlementStatus: str, Subscribers: [str]}
+@returns(200) {Entitlement: Entitlement?{DataTransferSubscriberFeePercent: int?, Description: str?, Encryption: Encryption?{Algorithm: str?, ConstantInitializationVector: str?, DeviceId: str?, KeyType: str?, Region: str?, ResourceId: str?, RoleArn: str, SecretArn: str?, Url: str?}, EntitlementArn: str, EntitlementStatus: str?, Name: str, Subscribers: [str]}, FlowArn: str?}
+
+@endpoint PUT /v1/flows/{flowArn}/mediaStreams/{mediaStreamName}
+@required {FlowArn: str, MediaStreamName: str}
+@optional {Attributes: MediaStreamAttributesRequest, ClockRate: int, Description: str, MediaStreamType: str, VideoFormat: str}
+@returns(200) {FlowArn: str?, MediaStream: MediaStream?{Attributes: MediaStreamAttributes?{Fmtp: Fmtp{ChannelOrder: str?, Colorimetry: str?, ExactFramerate: str?, Par: str?, Range: str?, ScanMode: str?, Tcs: str?}, Lang: str?}, ClockRate: int?, Description: str?, Fmt: int, MediaStreamId: int, MediaStreamName: str, MediaStreamType: str, VideoFormat: str?}}
+
+@endpoint PUT /v1/flows/{flowArn}/outputs/{outputArn}
+@required {FlowArn: str, OutputArn: str}
+@optional {CidrAllowList: [str], Description: str, Destination: str, Encryption: UpdateEncryption, MaxLatency: int, MediaStreamOutputConfigurations: [MediaStreamOutputConfigurationRequest], MinLatency: int, Port: int, Protocol: str, RemoteId: str, SenderControlPort: int, SenderIpAddress: str, SmoothingLatency: int, StreamId: str, VpcInterfaceAttachment: VpcInterfaceAttachment, OutputStatus: str}
+@returns(200) {FlowArn: str?, Output: Output?{DataTransferSubscriberFeePercent: int?, Description: str?, Destination: str?, Encryption: Encryption?{Algorithm: str?, ConstantInitializationVector: str?, DeviceId: str?, KeyType: str?, Region: str?, ResourceId: str?, RoleArn: str, SecretArn: str?, Url: str?}, EntitlementArn: str?, ListenerAddress: str?, MediaLiveInputArn: str?, MediaStreamOutputConfigurations: [MediaStreamOutputConfiguration]?, Name: str, OutputArn: str, Port: int?, Transport: Transport?{CidrAllowList: [str]?, MaxBitrate: int?, MaxLatency: int?, MaxSyncBuffer: int?, MinLatency: int?, Protocol: str, RemoteId: str?, SenderControlPort: int?, SenderIpAddress: str?, SmoothingLatency: int?, SourceListenerAddress: str?, SourceListenerPort: int?, StreamId: str?}, VpcInterfaceAttachment: VpcInterfaceAttachment?{VpcInterfaceName: str?}, BridgeArn: str?, BridgePorts: [int]?, OutputStatus: str?}}
+
+@endpoint PUT /v1/flows/{flowArn}/source/{sourceArn}
+@required {FlowArn: str, SourceArn: str}
+@optional {Decryption: UpdateEncryption, Description: str, EntitlementArn: str, IngestPort: int, MaxBitrate: int, MaxLatency: int, MaxSyncBuffer: int, MediaStreamSourceConfigurations: [MediaStreamSourceConfigurationRequest], MinLatency: int, Protocol: str, SenderControlPort: int, SenderIpAddress: str, SourceListenerAddress: str, SourceListenerPort: int, StreamId: str, VpcInterfaceName: str, WhitelistCidr: str, GatewayBridgeSource: UpdateGatewayBridgeSourceRequest}
+@returns(200) {FlowArn: str?, Source: Source?{DataTransferSubscriberFeePercent: int?, Decryption: Encryption?{Algorithm: str?, ConstantInitializationVector: str?, DeviceId: str?, KeyType: str?, Region: str?, ResourceId: str?, RoleArn: str, SecretArn: str?, Url: str?}, Description: str?, EntitlementArn: str?, IngestIp: str?, IngestPort: int?, MediaStreamSourceConfigurations: [MediaStreamSourceConfiguration]?, Name: str, SenderControlPort: int?, SenderIpAddress: str?, SourceArn: str, Transport: Transport?{CidrAllowList: [str]?, MaxBitrate: int?, MaxLatency: int?, MaxSyncBuffer: int?, MinLatency: int?, Protocol: str, RemoteId: str?, SenderControlPort: int?, SenderIpAddress: str?, SmoothingLatency: int?, SourceListenerAddress: str?, SourceListenerPort: int?, StreamId: str?}, VpcInterfaceName: str?, WhitelistCidr: str?, GatewayBridgeSource: GatewayBridgeSource?{BridgeArn: str, VpcInterfaceAttachment: VpcInterfaceAttachment?{VpcInterfaceName: str?}}}}
+
+@endgroup
+
+@group gateway-instances
+@endpoint PUT /v1/gateway-instances/{gatewayInstanceArn}
+@required {GatewayInstanceArn: str}
+@optional {BridgePlacement: str}
+@returns(200) {BridgePlacement: str?, GatewayInstanceArn: str?}
+
+@endgroup
+
+@end

@@ -1,0 +1,160 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Managed Blockchain
+@version 2018-09-24
+@auth AWS SigV4
+@endpoints 27
+@hint download_for_search
+@toc accessors(4), networks(18), invitations(2), tags(3)
+
+@group accessors
+@endpoint POST /accessors
+@required {ClientRequestToken: str, AccessorType: str}
+@optional {Tags: map<str,str>, NetworkType: str}
+@returns(200) {AccessorId: str?, BillingToken: str?, NetworkType: str?}
+
+@endgroup
+
+@group networks
+@endpoint POST /networks/{networkId}/members
+@required {NetworkId: str, ClientRequestToken: str, InvitationId: str, MemberConfiguration: MemberConfiguration}
+@returns(200) {MemberId: str?}
+
+@endpoint POST /networks
+@required {ClientRequestToken: str, Name: str, Framework: str, FrameworkVersion: str, VotingPolicy: VotingPolicy, MemberConfiguration: MemberConfiguration}
+@optional {Description: str, FrameworkConfiguration: NetworkFrameworkConfiguration, Tags: map<str,str>}
+@returns(200) {NetworkId: str?, MemberId: str?}
+
+@endpoint POST /networks/{networkId}/nodes
+@required {NetworkId: str, ClientRequestToken: str, NodeConfiguration: NodeConfiguration}
+@optional {MemberId: str, Tags: map<str,str>}
+@returns(200) {NodeId: str?}
+
+@endpoint POST /networks/{networkId}/proposals
+@required {NetworkId: str, ClientRequestToken: str, MemberId: str, Actions: ProposalActions}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {ProposalId: str?}
+
+@endgroup
+
+@group accessors
+@endpoint DELETE /accessors/{AccessorId}
+@required {AccessorId: str}
+
+@endgroup
+
+@group networks
+@endpoint DELETE /networks/{networkId}/members/{memberId}
+@required {NetworkId: str, MemberId: str}
+
+@endpoint DELETE /networks/{networkId}/nodes/{nodeId}
+@required {NetworkId: str, NodeId: str}
+@optional {memberId: str}
+
+@endgroup
+
+@group accessors
+@endpoint GET /accessors/{AccessorId}
+@required {AccessorId: str}
+@returns(200) {Accessor: Accessor?{Id: str?, Type: str?, BillingToken: str?, Status: str?, CreationDate: str(timestamp)?, Arn: str?, Tags: map<str,str>?, NetworkType: str?}}
+
+@endgroup
+
+@group networks
+@endpoint GET /networks/{networkId}/members/{memberId}
+@required {NetworkId: str, MemberId: str}
+@returns(200) {Member: Member?{NetworkId: str?, Id: str?, Name: str?, Description: str?, FrameworkAttributes: MemberFrameworkAttributes?{Fabric: MemberFabricAttributes?{AdminUsername: str?, CaEndpoint: str?}}, LogPublishingConfiguration: MemberLogPublishingConfiguration?{Fabric: MemberFabricLogPublishingConfiguration?{CaLogs: LogConfigurations?}}, Status: str?, CreationDate: str(timestamp)?, Tags: map<str,str>?, Arn: str?, KmsKeyArn: str?}}
+
+@endpoint GET /networks/{networkId}
+@required {NetworkId: str}
+@returns(200) {Network: Network?{Id: str?, Name: str?, Description: str?, Framework: str?, FrameworkVersion: str?, FrameworkAttributes: NetworkFrameworkAttributes?{Fabric: NetworkFabricAttributes?{OrderingServiceEndpoint: str?, Edition: str?}, Ethereum: NetworkEthereumAttributes?{ChainId: str?}}, VpcEndpointServiceName: str?, VotingPolicy: VotingPolicy?{ApprovalThresholdPolicy: ApprovalThresholdPolicy?{ThresholdPercentage: int?, ProposalDurationInHours: int?, ThresholdComparator: str?}}, Status: str?, CreationDate: str(timestamp)?, Tags: map<str,str>?, Arn: str?}}
+
+@endpoint GET /networks/{networkId}/nodes/{nodeId}
+@required {NetworkId: str, NodeId: str}
+@optional {memberId: str}
+@returns(200) {Node: Node?{NetworkId: str?, MemberId: str?, Id: str?, InstanceType: str?, AvailabilityZone: str?, FrameworkAttributes: NodeFrameworkAttributes?{Fabric: NodeFabricAttributes?{PeerEndpoint: str?, PeerEventEndpoint: str?}, Ethereum: NodeEthereumAttributes?{HttpEndpoint: str?, WebSocketEndpoint: str?}}, LogPublishingConfiguration: NodeLogPublishingConfiguration?{Fabric: NodeFabricLogPublishingConfiguration?{ChaincodeLogs: LogConfigurations?, PeerLogs: LogConfigurations?}}, StateDB: str?, Status: str?, CreationDate: str(timestamp)?, Tags: map<str,str>?, Arn: str?, KmsKeyArn: str?}}
+
+@endpoint GET /networks/{networkId}/proposals/{proposalId}
+@required {NetworkId: str, ProposalId: str}
+@returns(200) {Proposal: Proposal?{ProposalId: str?, NetworkId: str?, Description: str?, Actions: ProposalActions?{Invitations: [InviteAction]?, Removals: [RemoveAction]?}, ProposedByMemberId: str?, ProposedByMemberName: str?, Status: str?, CreationDate: str(timestamp)?, ExpirationDate: str(timestamp)?, YesVoteCount: int?, NoVoteCount: int?, OutstandingVoteCount: int?, Tags: map<str,str>?, Arn: str?}}
+
+@endgroup
+
+@group accessors
+@endpoint GET /accessors
+@optional {maxResults: int, nextToken: str, networkType: str}
+@returns(200) {Accessors: [AccessorSummary]?, NextToken: str?}
+
+@endgroup
+
+@group invitations
+@endpoint GET /invitations
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Invitations: [Invitation]?, NextToken: str?}
+
+@endgroup
+
+@group networks
+@endpoint GET /networks/{networkId}/members
+@required {NetworkId: str}
+@optional {name: str, status: str, isOwned: bool, maxResults: int, nextToken: str}
+@returns(200) {Members: [MemberSummary]?, NextToken: str?}
+
+@endpoint GET /networks
+@optional {name: str, framework: str, status: str, maxResults: int, nextToken: str}
+@returns(200) {Networks: [NetworkSummary]?, NextToken: str?}
+
+@endpoint GET /networks/{networkId}/nodes
+@required {NetworkId: str}
+@optional {memberId: str, status: str, maxResults: int, nextToken: str}
+@returns(200) {Nodes: [NodeSummary]?, NextToken: str?}
+
+@endpoint GET /networks/{networkId}/proposals/{proposalId}/votes
+@required {NetworkId: str, ProposalId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {ProposalVotes: [VoteSummary]?, NextToken: str?}
+
+@endpoint GET /networks/{networkId}/proposals
+@required {NetworkId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Proposals: [ProposalSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group invitations
+@endpoint DELETE /invitations/{invitationId}
+@required {InvitationId: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group networks
+@endpoint PATCH /networks/{networkId}/members/{memberId}
+@required {NetworkId: str, MemberId: str}
+@optional {LogPublishingConfiguration: MemberLogPublishingConfiguration}
+
+@endpoint PATCH /networks/{networkId}/nodes/{nodeId}
+@required {NetworkId: str, NodeId: str}
+@optional {MemberId: str, LogPublishingConfiguration: NodeLogPublishingConfiguration}
+
+@endpoint POST /networks/{networkId}/proposals/{proposalId}/votes
+@required {NetworkId: str, ProposalId: str, VoterMemberId: str, Vote: str}
+
+@endgroup
+
+@end

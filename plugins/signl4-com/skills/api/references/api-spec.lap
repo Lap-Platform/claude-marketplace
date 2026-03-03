@@ -1,0 +1,624 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api SIGNL4 API V1
+@base https://connect.signl4.com/api
+@version 1
+@auth ApiKey x-s4-api-key in header | ApiKey x-s4-api-key in query | OAuth2
+@endpoints 109
+@hint download_for_search
+@toc alerts(20), categories(10), events(4), prepaid(5), scripts(11), subscriptions(13), teams(25), users(14), webhooks(7)
+
+@group alerts
+@endpoint POST /alerts
+@required {text: str, title: str}
+@optional {attachments: [map{encoding: int(int32), content: str, id: str, name: str, contentType: str}], category: str, externalId: str, flags: int(int32), parameters: [map{name: str, order: int(int32), type: int(int32), value: str}], severity: int(int32)(0/1/2)}
+@returns(201) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 404, 500}
+
+@endpoint GET /alerts/{alertId}
+@required {alertId: str}
+@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/{alertId}/acknowledge
+@required {alertId: str, uid: str}
+@optional {descr: str}
+@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 404, 409, 500}
+
+@endpoint POST /alerts/{alertId}/annotate
+@required {alertId: str}
+@optional {type: int(int32), text: str, timestamp: str(date-time), userId: str, id: str, teamId: str}
+@returns(200) {type: int(int32), text: str?, timestamp: str(date-time), userId: str?, id: str?, teamId: str?}
+@errors {400, 404, 500}
+
+@endpoint GET /alerts/{alertId}/annotations
+@required {alertId: str}
+@returns(200)
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint GET /alerts/{alertId}/attachments
+@required {alertId: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /alerts/{alertId}/attachments/{attachmentId}
+@required {alertId: str, attachmentId: str}
+@optional {width: int(int32), height: int(int32), scale: bool=True}
+@returns(200)
+@returns(204)
+@errors {400, 404, 500, 403}
+
+@endpoint POST /alerts/{alertId}/close
+@required {alertId: str, uid: str}
+@optional {descr: str}
+@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 404, 409, 500}
+
+@endpoint GET /alerts/{alertId}/notifications
+@required {alertId: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /alerts/{alertId}/overview
+@required {alertId: str}
+@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/{alertId}/undoAcknowledge
+@required {alertId: str, uid: str}
+@optional {descr: str}
+@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 403, 500}
+
+@endpoint POST /alerts/{alertId}/undoClose
+@required {alertId: str, uid: str}
+@optional {descr: str}
+@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
+@errors {400, 403, 500}
+
+@endpoint POST /alerts/acknowledgeAll
+@optional {userId: str, maxDate: str(date-time), minDate: str(date-time), categoryIds: [str], scope: int(int32)(0/1/2), teamIds: [str]}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/acknowledgeMultiple
+@required {uid: str, alertIds: [str]}
+@optional {descr: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/closeAll
+@optional {userId: str, maxDate: str(date-time), minDate: str(date-time), categoryIds: [str], scope: int(int32)(0/1/2), teamIds: [str]}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/closeMultiple
+@required {uid: str, alertIds: [str]}
+@optional {descr: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/paged
+@optional {maxResults: int(int32), userId: str, teamid: str, alertIds: [str], afterId: str, categoryIds: [str], continuationToken: map{nextPartitionKey: str, nextRowKey: str, nextTableName: str}, maxCreated: str(date-time), minCreated: str(date-time), modSince: str(date-time), showPersonalHiddenCategories: bool, userCreatedAlertsFilterMode: int(int32)(0/1/2), alertStatusCodes: int(int32)(0/1/2/4/8/16/32), textToSearch: str}
+@returns(200) {continuationToken: map{nextPartitionKey: str?, nextRowKey: str?, nextTableName: str?}, hasMore: bool, results: [map]?}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /alerts/report
+@optional {userId: str}
+@returns(200) {last24Hours: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, subscriptionId: str, teamCurrentDuty: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, teamId: str, teamLastDuty: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, userId: str?, userLastDutyChange: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}}
+@errors {400, 404, 500}
+
+@endpoint POST /alerts/undoAcknowledgeMultiple
+@required {uid: str, alertIds: [str]}
+@optional {descr: str}
+@returns(204)
+@errors {400, 403, 500}
+
+@endpoint POST /alerts/undoCloseMultiple
+@required {uid: str, alertIds: [str]}
+@optional {descr: str}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group categories
+@endpoint GET /categories/{teamId}
+@required {teamId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /categories/{teamId}
+@required {teamId: str, name: str, color: str, imageName: str, keywords: [str], keywordMatching: int(int32)(0/1)}
+@optional {id: str, teamId: str, isDefault: bool, options: int(int32)(0/1/2/4/8), keywordsExcluded: [str], augmentations: [map{enabled: bool, name: str, type!: int(int32), value: str, id: str, parameters: [map{id: str, name: str, operation: map, defaultValue: str, eventSourceId: str}]}], enrichments: [map{id: str, name: str, type!: int(int32), value: str}], order: int(int32)}
+@returns(201) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /categories/{teamId}/{categoryId}
+@required {teamId: str, categoryId: str}
+@returns(200) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /categories/{teamId}/{categoryId}
+@required {teamId: str, categoryId: str, name: str, color: str, imageName: str, keywords: [str], keywordMatching: int(int32)(0/1)}
+@optional {id: str, teamId: str, isDefault: bool, options: int(int32)(0/1/2/4/8), keywordsExcluded: [str], augmentations: [map{enabled: bool, name: str, type!: int(int32), value: str, id: str, parameters: [map{id: str, name: str, operation: map, defaultValue: str, eventSourceId: str}]}], enrichments: [map{id: str, name: str, type!: int(int32), value: str}], order: int(int32)}
+@returns(200) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /categories/{teamId}/{categoryId}
+@required {teamId: str, categoryId: str}
+@returns(204)
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /categories/{teamId}/{categoryId}/metrics
+@required {teamId: str, categoryId: str}
+@returns(200) {categoryId: str?, last24h: int(int64), lastAlert: str(date-time)?, subscriberCount: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /categories/{teamId}/{categoryId}/subscriptions
+@required {teamId: str, categoryId: str}
+@returns(200)
+@errors {400, 403, 500, 404}
+
+@endpoint POST /categories/{teamId}/{categoryId}/subscriptions
+@required {teamId: str, categoryId: str}
+@returns(200)
+@errors {400, 403, 500, 404}
+
+@endpoint GET /categories/{teamId}/metrics
+@required {teamId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /categories/images
+@returns(200)
+@returns(204)
+@errors {403, 404, 500}
+
+@endgroup
+
+@group events
+@endpoint GET /events/{eventId}/overview
+@required {eventId: str}
+@returns(200) {teamId: str?, alertId: str?, categoryId: str?, acknowledgedAlerts: [str]?, closedAlerts: [str]?, creationTime: str(date-time), createdByUserId: str?, eventSourceType: int(int32), eventSourceGroupId: str?, eventSourceId: str?, eventSourceTeamId: str?, eventStatus: int(int32), id: str?, lastModified: str(date-time), severity: int(int32), text: str?, title: str?}
+@errors {400, 404, 500}
+
+@endpoint GET /events/{eventId}/parameters
+@required {eventId: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /events/{webhookIdOrTeamId}
+@required {webhookIdOrTeamId: str}
+@optional {ExtIdParam: str, ExtStatusParam: str, NewStatus: str, ResolvedStatus: str, AckStatus: str}
+@returns(201) {teamId: str?, alertId: str?, categoryId: str?, acknowledgedAlerts: [str]?, closedAlerts: [str]?, creationTime: str(date-time), createdByUserId: str?, eventSourceType: int(int32), eventSourceGroupId: str?, eventSourceId: str?, eventSourceTeamId: str?, eventStatus: int(int32), id: str?, lastModified: str(date-time), severity: int(int32), text: str?, title: str?}
+@errors {400, 403, 404, 500}
+
+@endpoint POST /events/paged
+@optional {maxResults: int(int32), teamid: str, continuationToken: map{nextPartitionKey: str, nextRowKey: str, nextTableName: str}, eventStatusCode: int(int32)(0/1/2/3/4/5/6/7/8/9/21/22/23/30/1000), maxCreationDate: str(date-time), minCreationDate: str(date-time), modifiedSince: str(date-time), textToSearch: str, eventSourceId: str, eventCreatorFilter: map{userId!: str, userCreatedFilterMode: int(int32)}}
+@returns(200) {continuationToken: map{nextPartitionKey: str?, nextRowKey: str?, nextTableName: str?}, hasMore: bool, results: [map]?}
+@returns(204)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group prepaid
+@endpoint PUT /prepaid/{subscriptionId}/prepaidSettings
+@required {subscriptionId: str}
+@optional {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /prepaid/balance
+@returns(200) {balance: int(int32), latestTopUp: str(date-time)?, pendingTransactions: bool}
+@errors {400, 404, 500}
+
+@endpoint GET /prepaid/settings
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
+@errors {400, 404, 500}
+
+@endpoint PUT /prepaid/settings
+@optional {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
+@errors {400, 404, 500}
+
+@endpoint GET /prepaid/transactions
+@returns(200)
+@errors {400, 404, 500}
+
+@endgroup
+
+@group scripts
+@endpoint GET /scripts/instances
+@optional {teamId: [str], modifiedSince: str(date-time)}
+@returns(200)
+@errors {400}
+
+@endpoint POST /scripts/instances
+@optional {instanceId: str, scriptId: str, scriptName: str, customScriptName: str, customScriptDescription: str, teamId: str, sharedTeams: [str], enabled: bool, config: any}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@returns(201) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404, 500}
+
+@endpoint GET /scripts/instances/{instanceId}
+@required {instanceId: str}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404}
+
+@endpoint PUT /scripts/instances/{instanceId}
+@required {instanceId: str}
+@optional {customScriptName: str, customScriptDescription: str, teamId: str, enabled: bool, config: any}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404, 500}
+
+@endpoint DELETE /scripts/instances/{instanceId}
+@required {instanceId: str}
+@returns(200)
+@errors {400, 404}
+
+@endpoint PUT /scripts/instances/{instanceId}/data
+@required {instanceId: str}
+@optional {instanceId: str, scriptName: str, customScriptName: str, customScriptDescription: str}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404, 500}
+
+@endpoint POST /scripts/instances/{instanceId}/disable
+@required {instanceId: str}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404, 500}
+
+@endpoint POST /scripts/instances/{instanceId}/enable
+@required {instanceId: str}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404, 500}
+
+@endpoint GET /scripts/inventory
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /scripts/inventory/parsed
+@optional {language: str}
+@returns(200)
+@errors {400, 500}
+
+@endpoint GET /scripts/inventory/parsed/{scriptId}
+@required {scriptId: str}
+@optional {language: str}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
+@errors {400, 404}
+
+@endgroup
+
+@group subscriptions
+@endpoint GET /subscriptions
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}
+@required {subscriptionId: str}
+@returns(200) {branchId: str?, country: str?, createdAt: str(date-time), currency: str?, externalAccountId: str?, id: str?, name: str?, nextBilling: str(date-time)?, ownerId: str?, planCode: str?, planState: int(int32), referralEnabled: bool, isBetaMember: bool, elmEnabled: bool, status: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/channelPrices
+@required {subscriptionId: str}
+@returns(200) {sms: int(int32), voicePerMinute: int(int32)}
+@errors {400, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/features
+@required {subscriptionId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/inboundVoiceNumberLicenses
+@required {subscriptionId: str}
+@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/prepaidBalance
+@required {subscriptionId: str}
+@returns(200) {balance: int(int32), latestTopUp: str(date-time)?, pendingTransactions: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/prepaidSettings
+@required {subscriptionId: str}
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/prepaidTransactions
+@required {subscriptionId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /subscriptions/{subscriptionId}/profile
+@required {subscriptionId: str}
+@optional {name: str}
+@returns(200) {branchId: str?, country: str?, createdAt: str(date-time), currency: str?, externalAccountId: str?, id: str?, name: str?, nextBilling: str(date-time)?, ownerId: str?, planCode: str?, planState: int(int32), referralEnabled: bool, isBetaMember: bool, elmEnabled: bool, status: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/settings
+@required {subscriptionId: str}
+@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool}
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /subscriptions/{subscriptionId}/settings
+@required {subscriptionId: str}
+@optional {socialFeed: int(int32)(0/1/2), customRetention: map{days: int(int32), enabled: bool}, allowedIdProviders: int(int32)(0/1/2/4/8/14/15), sms: map{rcsEnabled: bool}, disableInvites: bool}
+@returns(200) {socialFeed: int(int32), customRetention: map{days: int(int32)?, enabled: bool}, allowedIdProviders: int(int32), sms: map{rcsEnabled: bool}, disableInvites: bool?}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/teams
+@required {subscriptionId: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /subscriptions/{subscriptionId}/userLicenses
+@required {subscriptionId: str}
+@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group teams
+@endpoint GET /teams
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /teams
+@optional {language: str, name: str, description: str, timezone: str, createWebhookEndpoint: bool, createEmailEndpoint: bool}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
+@errors {400, 403, 500}
+
+@endpoint GET /teams/{teamId}
+@required {teamId: str}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /teams/{teamId}
+@required {teamId: str}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/alertReports
+@required {teamId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/alertReports/{fileName}
+@required {teamId: str, fileName: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/alertSettings
+@required {teamId: str}
+@returns(200) {escEnabled: bool, escMode: int(int32), escRefId: str?, filterMode: int(int32), filterAction: int(int32), responseMode: int(int32), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32), persNotInterval: int(int32), optOut: int(int32), overrideNotificationProfiles: bool, notificationProfileOverrides: [map]?, signalingMode: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint POST /teams/{teamId}/alertSettings
+@required {teamId: str}
+@optional {escEnabled: bool, escMode: int(int32)(0/1), escRefId: str, filterMode: int(int32)(0/1), filterAction: int(int32)(0/1/2), responseMode: int(int32)(2/4), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32)(0/1), persNotInterval: int(int32), optOut: int(int32)(0/1/2), overrideNotificationProfiles: bool, notificationProfileOverrides: [map{channel: int(int32), delay: int(int32), enabled: bool}], signalingMode: int(int32)(0/1)}
+@returns(200) {escEnabled: bool, escMode: int(int32), escRefId: str?, filterMode: int(int32), filterAction: int(int32), responseMode: int(int32), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32), persNotInterval: int(int32), optOut: int(int32), overrideNotificationProfiles: bool, notificationProfileOverrides: [map]?, signalingMode: int(int32)}
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/dutyReports
+@required {teamId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/dutyReports/{fileName}
+@required {teamId: str, fileName: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/dutysummary
+@required {teamId: str}
+@optional {lastTwoDuties: bool}
+@returns(200) {dutyAssistEnabled: bool, dutySummaries: [map]?, teamId: str?}
+@errors {400, 500}
+
+@endpoint GET /teams/{teamId}/eventSources
+@required {teamId: str}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/memberships
+@required {teamId: str}
+@returns(200)
+@returns(204)
+@errors {403, 404, 500, 400}
+
+@endpoint POST /teams/{teamId}/memberships
+@required {teamId: str, invites: [map{email: str, roleId: str}]}
+@optional {inviterId: str}
+@returns(200)
+@returns(204)
+@errors {400, 403, 500, 404}
+
+@endpoint PUT /teams/{teamId}/memberships/{userId}
+@required {teamId: str, userId: str}
+@optional {requesterUserId: str, setUserOnDuty: bool=True, teamId: str, roleId: str, isValid: bool}
+@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint DELETE /teams/{teamId}/memberships/{userId}
+@required {teamId: str, userId: str}
+@optional {requesterUserId: str}
+@returns(204)
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /teams/{teamId}/memberships/resendInviteMail
+@required {teamId: str, userMail: str}
+@optional {inviterId: str}
+@returns(200)
+@errors {403, 404, 500}
+
+@endpoint PUT /teams/{teamId}/profile
+@required {teamId: str}
+@optional {name: str, description: str}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
+@errors {400, 401, 403, 500}
+
+@endpoint GET /teams/{teamId}/schedules
+@required {teamId: str}
+@optional {UserId: str, MinDate: str(date-time), Limit: int(int32), MergeOverlap: bool}
+@returns(200)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /teams/{teamId}/schedules
+@required {teamId: str}
+@optional {end: str(date-time), id: str, options: int(int32), start: str(date-time), userId: str}
+@returns(200) {end: str(date-time), id: str?, options: int(int32), start: str(date-time), userId: str?}
+@errors {400, 403, 404, 409, 500}
+
+@endpoint DELETE /teams/{teamId}/schedules/{dutyId}
+@required {teamId: str, dutyId: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint GET /teams/{teamId}/schedules/{scheduleId}
+@required {teamId: str, scheduleId: str}
+@returns(200) {end: str(date-time), id: str?, options: int(int32), start: str(date-time), userId: str?}
+@errors {400, 403, 404, 500}
+
+@endpoint POST /teams/{teamId}/schedules/deleteRange
+@required {teamId: str}
+@optional {from: str(date-time), to: str(date-time)}
+@returns(200)
+@errors {400, 403, 404, 409, 500}
+
+@endpoint POST /teams/{teamId}/schedules/multiple
+@required {teamId: str}
+@optional {overrideExisting: bool}
+@returns(200)
+@errors {400, 403, 404, 409, 500}
+
+@endpoint GET /teams/{teamId}/setupProgress
+@required {teamId: str}
+@returns(200) {teamId: str?, timestamp: str(date-time), completedSteps: [str]?}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@returns(200)
+@errors {400, 404, 403}
+
+@endpoint GET /users/{userId}
+@required {userId: str}
+@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?}
+@errors {400, 404, 403}
+
+@endpoint DELETE /users/{userId}
+@required {userId: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint PUT /users/{userId}/changePassword
+@required {userId: str}
+@optional {currentPassword: str, newPassword: str}
+@returns(200)
+@errors {400, 401, 403, 500}
+
+@endpoint POST /users/{userId}/checkPermissions
+@required {userId: str}
+@optional {teamId: str, items: [str]}
+@returns(200) {items: [map]?}
+@errors {400, 403, 404}
+
+@endpoint GET /users/{userId}/dutyStatus
+@required {userId: str}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
+@errors {400, 404, 403}
+
+@endpoint GET /users/{userId}/image
+@required {userId: str}
+@optional {height: int(int32), width: int(int32)}
+@returns(200) {content: str(byte)?, contentDispostion: str?, contentEncoding: str?, contentType: str?, lastModified: str(date-time)?, name: str?}
+@errors {400, 403, 404}
+
+@endpoint POST /users/{userId}/image
+@required {userId: str}
+@returns(204)
+@errors {400, 403, 404, 500}
+
+@endpoint POST /users/{userId}/location
+@required {userId: str}
+@optional {latitude: num(double), longitude: num(double), timestamp: str(date-time)}
+@returns(200) {latitude: num(double), longitude: num(double), timestamp: str(date-time)?}
+@errors {400, 401, 403, 500}
+
+@endpoint PUT /users/{userId}/profile
+@required {userId: str}
+@optional {name: str, timeZone: str, language: int(int32)(0/1/2)}
+@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?}
+@errors {400, 401, 403, 500}
+
+@endpoint POST /users/{userId}/punchIn
+@required {userId: str}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
+@errors {400, 403, 404}
+
+@endpoint POST /users/{userId}/punchInAsManager
+@required {userId: str}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
+@errors {400, 403, 404}
+
+@endpoint POST /users/{userId}/punchOut
+@required {userId: str}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
+@errors {400, 403, 404, 409}
+
+@endpoint GET /users/{userId}/setupProgress
+@required {userId: str}
+@returns(200) {userId: str?, timestamp: str(date-time), completedSteps: [str]?}
+@errors {400, 403, 404, 500}
+
+@endgroup
+
+@group webhooks
+@endpoint GET /webhooks
+@optional {teamId: str}
+@returns(200)
+@errors {404, 500}
+
+@endpoint POST /webhooks
+@required {extUrl: str, name: str}
+@optional {teamId: str, description: str, enabled: bool}
+@returns(201)
+@errors {400, 500}
+
+@endpoint GET /webhooks/{webhookId}
+@required {webhookId: str}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
+@errors {400, 404, 500}
+
+@endpoint PUT /webhooks/{webhookId}
+@required {webhookId: str, extUrl: str, name: str}
+@optional {teamId: str, description: str, enabled: bool}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
+@errors {400, 404, 500}
+
+@endpoint DELETE /webhooks/{webhookId}
+@required {webhookId: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint POST /webhooks/{webhookId}/disable
+@required {webhookId: str}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
+@errors {400, 404, 500}
+
+@endpoint POST /webhooks/{webhookId}/enable
+@required {webhookId: str}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
+@errors {400, 404, 500}
+
+@endgroup
+
+@end

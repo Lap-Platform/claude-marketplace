@@ -1,0 +1,129 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Signer
+@version 2017-08-25
+@auth AWS SigV4
+@endpoints 19
+@toc signing-profiles(8), signing-jobs(5), revocations(1), signing-platforms(2), tags(3)
+
+@group signing-profiles
+@endpoint POST /signing-profiles/{profileName}/permissions
+@required {profileName: str, action: str, principal: str, statementId: str}
+@optional {profileVersion: str, revisionId: str}
+@returns(200) {revisionId: str?}
+
+@endpoint DELETE /signing-profiles/{profileName}
+@required {profileName: str}
+
+@endgroup
+
+@group signing-jobs
+@endpoint GET /signing-jobs/{jobId}
+@required {jobId: str}
+@returns(200) {jobId: str?, source: Source?{s3: S3Source?{bucketName: str, key: str, version: str}}, signingMaterial: SigningMaterial?{certificateArn: str}, platformId: str?, platformDisplayName: str?, profileName: str?, profileVersion: str?, overrides: SigningPlatformOverrides?{signingConfiguration: SigningConfigurationOverrides?{encryptionAlgorithm: str?, hashAlgorithm: str?}, signingImageFormat: str?}, signingParameters: map<str,str>?, createdAt: str(timestamp)?, completedAt: str(timestamp)?, signatureExpiresAt: str(timestamp)?, requestedBy: str?, status: str?, statusReason: str?, revocationRecord: SigningJobRevocationRecord?{reason: str?, revokedAt: str(timestamp)?, revokedBy: str?}, signedObject: SignedObject?{s3: S3SignedObject?{bucketName: str?, key: str?}}, jobOwner: str?, jobInvoker: str?}
+
+@endgroup
+
+@group revocations
+@endpoint GET /revocations
+@required {signatureTimestamp: str(timestamp), platformId: str, profileVersionArn: str, jobArn: str, certificateHashes: [str]}
+@returns(200) {revokedEntities: [str]?}
+
+@endgroup
+
+@group signing-platforms
+@endpoint GET /signing-platforms/{platformId}
+@required {platformId: str}
+@returns(200) {platformId: str?, displayName: str?, partner: str?, target: str?, category: str?, signingConfiguration: SigningConfiguration?{encryptionAlgorithmOptions: EncryptionAlgorithmOptions{allowedValues: [str], defaultValue: str}, hashAlgorithmOptions: HashAlgorithmOptions{allowedValues: [str], defaultValue: str}}, signingImageFormat: SigningImageFormat?{supportedFormats: [str], defaultFormat: str}, maxSizeInMB: int?, revocationSupported: bool?}
+
+@endgroup
+
+@group signing-profiles
+@endpoint GET /signing-profiles/{profileName}
+@required {profileName: str}
+@optional {profileOwner: str}
+@returns(200) {profileName: str?, profileVersion: str?, profileVersionArn: str?, revocationRecord: SigningProfileRevocationRecord?{revocationEffectiveFrom: str(timestamp)?, revokedAt: str(timestamp)?, revokedBy: str?}, signingMaterial: SigningMaterial?{certificateArn: str}, platformId: str?, platformDisplayName: str?, signatureValidityPeriod: SignatureValidityPeriod?{value: int?, type: str?}, overrides: SigningPlatformOverrides?{signingConfiguration: SigningConfigurationOverrides?{encryptionAlgorithm: str?, hashAlgorithm: str?}, signingImageFormat: str?}, signingParameters: map<str,str>?, status: str?, statusReason: str?, arn: str?, tags: map<str,str>?}
+
+@endpoint GET /signing-profiles/{profileName}/permissions
+@required {profileName: str}
+@optional {nextToken: str}
+@returns(200) {revisionId: str?, policySizeBytes: int?, permissions: [Permission]?, nextToken: str?}
+
+@endgroup
+
+@group signing-jobs
+@endpoint GET /signing-jobs
+@optional {status: str, platformId: str, requestedBy: str, maxResults: int, nextToken: str, isRevoked: bool, signatureExpiresBefore: str(timestamp), signatureExpiresAfter: str(timestamp), jobInvoker: str}
+@returns(200) {jobs: [SigningJob]?, nextToken: str?}
+
+@endgroup
+
+@group signing-platforms
+@endpoint GET /signing-platforms
+@optional {category: str, partner: str, target: str, maxResults: int, nextToken: str}
+@returns(200) {platforms: [SigningPlatform]?, nextToken: str?}
+
+@endgroup
+
+@group signing-profiles
+@endpoint GET /signing-profiles
+@optional {includeCanceled: bool, maxResults: int, nextToken: str, platformId: str, statuses: [str]}
+@returns(200) {profiles: [SigningProfile]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group signing-profiles
+@endpoint PUT /signing-profiles/{profileName}
+@required {profileName: str, platformId: str}
+@optional {signingMaterial: SigningMaterial, signatureValidityPeriod: SignatureValidityPeriod, overrides: SigningPlatformOverrides, signingParameters: map<str,str>, tags: map<str,str>}
+@returns(200) {arn: str?, profileVersion: str?, profileVersionArn: str?}
+
+@endpoint DELETE /signing-profiles/{profileName}/permissions/{statementId}
+@required {profileName: str, revisionId: str, statementId: str}
+@returns(200) {revisionId: str?}
+
+@endgroup
+
+@group signing-jobs
+@endpoint PUT /signing-jobs/{jobId}/revoke
+@required {jobId: str, reason: str}
+@optional {jobOwner: str}
+
+@endgroup
+
+@group signing-profiles
+@endpoint PUT /signing-profiles/{profileName}/revoke
+@required {profileName: str, profileVersion: str, reason: str, effectiveTime: str(timestamp)}
+
+@endgroup
+
+@group signing-jobs
+@endpoint POST /signing-jobs/with-payload
+@required {profileName: str, payload: bytes, payloadFormat: str}
+@optional {profileOwner: str}
+@returns(200) {jobId: str?, jobOwner: str?, metadata: map<str,str>?, signature: bytes?}
+
+@endpoint POST /signing-jobs
+@required {source: Source, destination: Destination, profileName: str, clientRequestToken: str}
+@optional {profileOwner: str}
+@returns(200) {jobId: str?, jobOwner: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@end

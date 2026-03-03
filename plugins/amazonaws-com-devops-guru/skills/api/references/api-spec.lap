@@ -1,0 +1,224 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon DevOps Guru
+@version 2020-12-01
+@auth AWS SigV4
+@endpoints 31
+@hint download_for_search
+@toc channels(3), insights(4), accounts(3), anomalies(2), event-sources(2), feedback(2), organization(5), service-integrations(2), cost-estimation(2), resource-collections(2), list-log-anomalies(1), events(1), monitoredResources(1), recommendations(1)
+
+@group channels
+@endpoint PUT /channels
+@required {Config: NotificationChannelConfig}
+@returns(200) {Id: str}
+
+@endgroup
+
+@group insights
+@endpoint DELETE /insights/{Id}
+@required {Id: str}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/health
+@returns(200) {OpenReactiveInsights: int, OpenProactiveInsights: int, MetricsAnalyzed: int, ResourceHours: int(i64), AnalyzedResourceCount: int(i64)?}
+
+@endpoint POST /accounts/overview
+@required {FromTime: str(timestamp)}
+@optional {ToTime: str(timestamp)}
+@returns(200) {ReactiveInsights: int, ProactiveInsights: int, MeanTimeToRecoverInMilliseconds: int(i64)}
+
+@endgroup
+
+@group anomalies
+@endpoint GET /anomalies/{Id}
+@required {Id: str}
+@optional {AccountId: str}
+@returns(200) {ProactiveAnomaly: ProactiveAnomaly?{Id: str?, Severity: str?, Status: str?, UpdateTime: str(timestamp)?, AnomalyTimeRange: AnomalyTimeRange?{StartTime: str(timestamp), EndTime: str(timestamp)?}, AnomalyReportedTimeRange: AnomalyReportedTimeRange?{OpenTime: str(timestamp), CloseTime: str(timestamp)?}, PredictionTimeRange: PredictionTimeRange?{StartTime: str(timestamp), EndTime: str(timestamp)?}, SourceDetails: AnomalySourceDetails?{CloudWatchMetrics: [CloudWatchMetricsDetail]?, PerformanceInsightsMetrics: [PerformanceInsightsMetricsDetail]?}, AssociatedInsightId: str?, ResourceCollection: ResourceCollection?{CloudFormation: CloudFormationCollection?{StackNames: [str]?}, Tags: [TagCollection]?}, Limit: num(f64)?, SourceMetadata: AnomalySourceMetadata?{Source: str?, SourceResourceName: str?, SourceResourceType: str?}, AnomalyResources: [AnomalyResource]?, Description: str?}, ReactiveAnomaly: ReactiveAnomaly?{Id: str?, Severity: str?, Status: str?, AnomalyTimeRange: AnomalyTimeRange?{StartTime: str(timestamp), EndTime: str(timestamp)?}, AnomalyReportedTimeRange: AnomalyReportedTimeRange?{OpenTime: str(timestamp), CloseTime: str(timestamp)?}, SourceDetails: AnomalySourceDetails?{CloudWatchMetrics: [CloudWatchMetricsDetail]?, PerformanceInsightsMetrics: [PerformanceInsightsMetricsDetail]?}, AssociatedInsightId: str?, ResourceCollection: ResourceCollection?{CloudFormation: CloudFormationCollection?{StackNames: [str]?}, Tags: [TagCollection]?}, Type: str?, Name: str?, Description: str?, CausalAnomalyId: str?, AnomalyResources: [AnomalyResource]?}}
+
+@endgroup
+
+@group event-sources
+@endpoint POST /event-sources
+@returns(200) {EventSources: EventSourcesConfig?{AmazonCodeGuruProfiler: AmazonCodeGuruProfilerIntegration?{Status: str?}}}
+
+@endgroup
+
+@group feedback
+@endpoint POST /feedback
+@optional {InsightId: str}
+@returns(200) {InsightFeedback: InsightFeedback?{Id: str?, Feedback: str?}}
+
+@endgroup
+
+@group insights
+@endpoint GET /insights/{Id}
+@required {Id: str}
+@optional {AccountId: str}
+@returns(200) {ProactiveInsight: ProactiveInsight?{Id: str?, Name: str?, Severity: str?, Status: str?, InsightTimeRange: InsightTimeRange?{StartTime: str(timestamp), EndTime: str(timestamp)?}, PredictionTimeRange: PredictionTimeRange?{StartTime: str(timestamp), EndTime: str(timestamp)?}, ResourceCollection: ResourceCollection?{CloudFormation: CloudFormationCollection?{StackNames: [str]?}, Tags: [TagCollection]?}, SsmOpsItemId: str?, Description: str?}, ReactiveInsight: ReactiveInsight?{Id: str?, Name: str?, Severity: str?, Status: str?, InsightTimeRange: InsightTimeRange?{StartTime: str(timestamp), EndTime: str(timestamp)?}, ResourceCollection: ResourceCollection?{CloudFormation: CloudFormationCollection?{StackNames: [str]?}, Tags: [TagCollection]?}, SsmOpsItemId: str?, Description: str?}}
+
+@endgroup
+
+@group organization
+@endpoint POST /organization/health
+@optional {AccountIds: [str], OrganizationalUnitIds: [str]}
+@returns(200) {OpenReactiveInsights: int, OpenProactiveInsights: int, MetricsAnalyzed: int, ResourceHours: int(i64)}
+
+@endpoint POST /organization/overview
+@required {FromTime: str(timestamp)}
+@optional {ToTime: str(timestamp), AccountIds: [str], OrganizationalUnitIds: [str]}
+@returns(200) {ReactiveInsights: int, ProactiveInsights: int}
+
+@endpoint POST /organization/health/resource-collection
+@required {OrganizationResourceCollectionType: str}
+@optional {AccountIds: [str], OrganizationalUnitIds: [str], NextToken: str, MaxResults: int}
+@returns(200) {CloudFormation: [CloudFormationHealth]?, Service: [ServiceHealth]?, Account: [AccountHealth]?, NextToken: str?, Tags: [TagHealth]?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/health/resource-collection/{ResourceCollectionType}
+@required {ResourceCollectionType: str}
+@optional {NextToken: str}
+@returns(200) {CloudFormation: [CloudFormationHealth]?, Service: [ServiceHealth]?, NextToken: str?, Tags: [TagHealth]?}
+
+@endgroup
+
+@group service-integrations
+@endpoint GET /service-integrations
+@returns(200) {ServiceIntegration: ServiceIntegrationConfig?{OpsCenter: OpsCenterIntegration?{OptInStatus: str?}, LogsAnomalyDetection: LogsAnomalyDetectionIntegration?{OptInStatus: str?}, KMSServerSideEncryption: KMSServerSideEncryptionIntegration?{KMSKeyId: str?, OptInStatus: str?, Type: str?}}}
+
+@endgroup
+
+@group cost-estimation
+@endpoint GET /cost-estimation
+@optional {NextToken: str}
+@returns(200) {ResourceCollection: CostEstimationResourceCollectionFilter?{CloudFormation: CloudFormationCostEstimationResourceCollectionFilter?{StackNames: [str]?}, Tags: [TagCostEstimationResourceCollectionFilter]?}, Status: str?, Costs: [ServiceResourceCost]?, TimeRange: CostEstimationTimeRange?{StartTime: str(timestamp)?, EndTime: str(timestamp)?}, TotalCost: num(f64)?, NextToken: str?}
+
+@endgroup
+
+@group resource-collections
+@endpoint GET /resource-collections/{ResourceCollectionType}
+@required {ResourceCollectionType: str}
+@optional {NextToken: str}
+@returns(200) {ResourceCollection: ResourceCollectionFilter?{CloudFormation: CloudFormationCollectionFilter?{StackNames: [str]?}, Tags: [TagCollectionFilter]?}, NextToken: str?}
+
+@endgroup
+
+@group anomalies
+@endpoint POST /anomalies/insight/{InsightId}
+@required {InsightId: str}
+@optional {StartTimeRange: StartTimeRange, MaxResults: int, NextToken: str, AccountId: str, Filters: ListAnomaliesForInsightFilters}
+@returns(200) {ProactiveAnomalies: [ProactiveAnomalySummary]?, ReactiveAnomalies: [ReactiveAnomalySummary]?, NextToken: str?}
+
+@endgroup
+
+@group list-log-anomalies
+@endpoint POST /list-log-anomalies
+@required {InsightId: str}
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {InsightId: str, AnomalousLogGroups: [AnomalousLogGroup], NextToken: str?}
+
+@endgroup
+
+@group events
+@endpoint POST /events
+@required {Filters: ListEventsFilters}
+@optional {MaxResults: int, NextToken: str, AccountId: str}
+@returns(200) {Events: [Event], NextToken: str?}
+
+@endgroup
+
+@group insights
+@endpoint POST /insights
+@required {StatusFilter: ListInsightsStatusFilter}
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {ProactiveInsights: [ProactiveInsightSummary]?, ReactiveInsights: [ReactiveInsightSummary]?, NextToken: str?}
+
+@endgroup
+
+@group monitoredResources
+@endpoint POST /monitoredResources
+@optional {Filters: ListMonitoredResourcesFilters, MaxResults: int, NextToken: str}
+@returns(200) {MonitoredResourceIdentifiers: [MonitoredResourceIdentifier], NextToken: str?}
+
+@endgroup
+
+@group channels
+@endpoint POST /channels
+@optional {NextToken: str}
+@returns(200) {Channels: [NotificationChannel]?, NextToken: str?}
+
+@endgroup
+
+@group organization
+@endpoint POST /organization/insights
+@required {StatusFilter: ListInsightsStatusFilter}
+@optional {MaxResults: int, AccountIds: [str], OrganizationalUnitIds: [str], NextToken: str}
+@returns(200) {ProactiveInsights: [ProactiveOrganizationInsightSummary]?, ReactiveInsights: [ReactiveOrganizationInsightSummary]?, NextToken: str?}
+
+@endgroup
+
+@group recommendations
+@endpoint POST /recommendations
+@required {InsightId: str}
+@optional {NextToken: str, Locale: str, AccountId: str}
+@returns(200) {Recommendations: [Recommendation]?, NextToken: str?}
+
+@endgroup
+
+@group feedback
+@endpoint PUT /feedback
+@optional {InsightFeedback: InsightFeedback}
+
+@endgroup
+
+@group channels
+@endpoint DELETE /channels/{Id}
+@required {Id: str}
+
+@endgroup
+
+@group insights
+@endpoint POST /insights/search
+@required {StartTimeRange: StartTimeRange, Type: str}
+@optional {Filters: SearchInsightsFilters, MaxResults: int, NextToken: str}
+@returns(200) {ProactiveInsights: [ProactiveInsightSummary]?, ReactiveInsights: [ReactiveInsightSummary]?, NextToken: str?}
+
+@endgroup
+
+@group organization
+@endpoint POST /organization/insights/search
+@required {AccountIds: [str], StartTimeRange: StartTimeRange, Type: str}
+@optional {Filters: SearchOrganizationInsightsFilters, MaxResults: int, NextToken: str}
+@returns(200) {ProactiveInsights: [ProactiveInsightSummary]?, ReactiveInsights: [ReactiveInsightSummary]?, NextToken: str?}
+
+@endgroup
+
+@group cost-estimation
+@endpoint PUT /cost-estimation
+@required {ResourceCollection: CostEstimationResourceCollectionFilter}
+@optional {ClientToken: str}
+
+@endgroup
+
+@group event-sources
+@endpoint PUT /event-sources
+@optional {EventSources: EventSourcesConfig}
+
+@endgroup
+
+@group resource-collections
+@endpoint PUT /resource-collections
+@required {Action: str, ResourceCollection: UpdateResourceCollectionFilter}
+
+@endgroup
+
+@group service-integrations
+@endpoint PUT /service-integrations
+@required {ServiceIntegration: UpdateServiceIntegrationConfig}
+
+@endgroup
+
+@end

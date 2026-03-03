@@ -1,0 +1,1448 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api ElevenLabs API Documentation
+@version 1.0
+@auth ApiKey xi-api-key in header
+@common_fields {xi-api-key: any}
+@endpoints 258
+@hint download_for_search
+@toc history(5), sound-generation(1), audio-isolation(2), voices(26), text-to-speech(4), text-to-dialogue(4), speech-to-speech(2), text-to-voice(5), user(2), studio(23), dubbing(20), models(1), audio-native(4), shared-voices(1), similar-voices(1), usage(1), pronunciation-dictionaries(9), service-accounts(5), workspace(14), speech-to-text(3), single-use-token(1), forced-alignment(1), convai(116), music(6), docs(1)
+
+@group history
+@endpoint GET /v1/history
+@optional {page_size: int=100, start_after_history_item_id: any, voice_id: any, model_id: any, date_before_unix: any, date_after_unix: any, sort_direction: any=desc, search: any, source: any}
+@returns(200) {history: [map], last_history_item_id: any, has_more: bool, scanned_until: any}
+@errors {422}
+
+@endpoint GET /v1/history/{history_item_id}
+@required {history_item_id: str}
+@returns(200) {history_item_id: str, request_id: any, voice_id: any, model_id: any, voice_name: any, voice_category: any, text: any, date_unix: int, character_count_change_from: int, character_count_change_to: int, content_type: str, state: str, settings: any, feedback: any, share_link_id: any, source: any, alignments: any, dialogue: any}
+@errors {422}
+
+@endpoint DELETE /v1/history/{history_item_id}
+@required {history_item_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/history/{history_item_id}/audio
+@required {history_item_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/history/download
+@required {history_item_ids: [str]}
+@optional {output_format: any}
+@returns(200)
+@errors {400, 422}
+
+@endgroup
+
+@group sound-generation
+@endpoint POST /v1/sound-generation
+@required {text: str}
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, loop: bool=False, duration_seconds: any, prompt_influence: any=0.3, model_id: str=eleven_text_to_sound_v2}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group audio-isolation
+@endpoint POST /v1/audio-isolation
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/audio-isolation/stream
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group voices
+@endpoint DELETE /v1/voices/{voice_id}/samples/{sample_id}
+@required {voice_id: str, sample_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/voices/{voice_id}/samples/{sample_id}/audio
+@required {voice_id: str, sample_id: str}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group text-to-speech
+@endpoint POST /v1/text-to-speech/{voice_id}
+@required {voice_id: str, text: str}
+@optional {enable_logging: bool=True, optimize_streaming_latency: any, output_format: str(alaw_8000/mp3_22050_32/mp3_24000_48/mp3_44100_128/mp3_44100_192/mp3_44100_32/mp3_44100_64/mp3_44100_96/opus_48000_128/opus_48000_192/opus_48000_32/opus_48000_64/opus_48000_96/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/pcm_8000/ulaw_8000/wav_16000/wav_22050/wav_24000/wav_32000/wav_44100/wav_48000/wav_8000)=mp3_44100_128, model_id: str=eleven_multilingual_v2, language_code: any, voice_settings: any, pronunciation_dictionary_locators: any, seed: any, previous_text: any, next_text: any, previous_request_ids: any, next_request_ids: any, use_pvc_as_ivc: bool=False, apply_text_normalization: str(auto/on/off)=auto, apply_language_text_normalization: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/text-to-speech/{voice_id}/with-timestamps
+@required {voice_id: str, text: str}
+@optional {enable_logging: bool=True, optimize_streaming_latency: any, output_format: str(alaw_8000/mp3_22050_32/mp3_24000_48/mp3_44100_128/mp3_44100_192/mp3_44100_32/mp3_44100_64/mp3_44100_96/opus_48000_128/opus_48000_192/opus_48000_32/opus_48000_64/opus_48000_96/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/pcm_8000/ulaw_8000/wav_16000/wav_22050/wav_24000/wav_32000/wav_44100/wav_48000/wav_8000)=mp3_44100_128, model_id: str=eleven_multilingual_v2, language_code: any, voice_settings: any, pronunciation_dictionary_locators: [map{pronunciation_dictionary_id!: str, version_id: any}], seed: any, previous_text: any, next_text: any, previous_request_ids: [str], next_request_ids: [str], use_pvc_as_ivc: bool=False, apply_text_normalization: str(auto/on/off)=auto, apply_language_text_normalization: bool=False}
+@returns(200) {audio_base64: str, alignment: any, normalized_alignment: any}
+@errors {422}
+
+@endpoint POST /v1/text-to-speech/{voice_id}/stream
+@required {voice_id: str, text: str}
+@optional {enable_logging: bool=True, optimize_streaming_latency: any, output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, model_id: str=eleven_multilingual_v2, language_code: any, voice_settings: any, pronunciation_dictionary_locators: any, seed: any, previous_text: any, next_text: any, previous_request_ids: any, next_request_ids: any, use_pvc_as_ivc: bool=False, apply_text_normalization: str(auto/on/off)=auto, apply_language_text_normalization: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/text-to-speech/{voice_id}/stream/with-timestamps
+@required {voice_id: str, text: str}
+@optional {enable_logging: bool=True, optimize_streaming_latency: any, output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, model_id: str=eleven_multilingual_v2, language_code: any, voice_settings: any, pronunciation_dictionary_locators: any, seed: any, previous_text: any, next_text: any, previous_request_ids: any, next_request_ids: any, use_pvc_as_ivc: bool=False, apply_text_normalization: str(auto/on/off)=auto, apply_language_text_normalization: bool=False}
+@returns(200) {audio_base64: str, alignment: any, normalized_alignment: any}
+@errors {422}
+
+@endgroup
+
+@group text-to-dialogue
+@endpoint POST /v1/text-to-dialogue
+@required {inputs: [map{text!: str, voice_id!: str}]}
+@optional {output_format: any(alaw_8000/mp3_22050_32/mp3_24000_48/mp3_44100_128/mp3_44100_192/mp3_44100_32/mp3_44100_64/mp3_44100_96/opus_48000_128/opus_48000_192/opus_48000_32/opus_48000_64/opus_48000_96/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/pcm_8000/ulaw_8000/wav_16000/wav_22050/wav_24000/wav_32000/wav_44100/wav_48000/wav_8000)=mp3_44100_128, model_id: str=eleven_v3, language_code: any, settings: any, pronunciation_dictionary_locators: any, seed: any, apply_text_normalization: str(auto/on/off)=auto}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/text-to-dialogue/stream
+@required {inputs: [map{text!: str, voice_id!: str}]}
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, model_id: str=eleven_v3, language_code: any, settings: any, pronunciation_dictionary_locators: any, seed: any, apply_text_normalization: str(auto/on/off)=auto}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/text-to-dialogue/stream/with-timestamps
+@required {inputs: [map{text!: str, voice_id!: str}]}
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, model_id: str=eleven_v3, language_code: any, settings: any, pronunciation_dictionary_locators: any, seed: any, apply_text_normalization: str(auto/on/off)=auto}
+@returns(200) {audio_base64: str, alignment: any, normalized_alignment: any, voice_segments: [map]}
+@errors {422}
+
+@endpoint POST /v1/text-to-dialogue/with-timestamps
+@required {inputs: [map{text!: str, voice_id!: str}]}
+@optional {output_format: any(alaw_8000/mp3_22050_32/mp3_24000_48/mp3_44100_128/mp3_44100_192/mp3_44100_32/mp3_44100_64/mp3_44100_96/opus_48000_128/opus_48000_192/opus_48000_32/opus_48000_64/opus_48000_96/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/pcm_8000/ulaw_8000/wav_16000/wav_22050/wav_24000/wav_32000/wav_44100/wav_48000/wav_8000)=mp3_44100_128, model_id: str=eleven_v3, language_code: any, settings: any, pronunciation_dictionary_locators: any, seed: any, apply_text_normalization: str(auto/on/off)=auto}
+@returns(200) {audio_base64: str, alignment: any, normalized_alignment: any, voice_segments: [map]}
+@errors {422}
+
+@endgroup
+
+@group speech-to-speech
+@endpoint POST /v1/speech-to-speech/{voice_id}
+@required {voice_id: str}
+@optional {enable_logging: bool=True, optimize_streaming_latency: any, output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/speech-to-speech/{voice_id}/stream
+@required {voice_id: str}
+@optional {enable_logging: bool=True, optimize_streaming_latency: any, output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group text-to-voice
+@endpoint POST /v1/text-to-voice/create-previews
+@required {voice_description: str}
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_192, text: any, auto_generate_text: bool=False, loudness: num=0.5, quality: num=0.9, seed: any, guidance_scale: num=5, should_enhance: bool=False}
+@returns(200) {previews: [map], text: str}
+@errors {422}
+
+@endpoint POST /v1/text-to-voice
+@required {voice_name: str, voice_description: str, generated_voice_id: str}
+@optional {labels: any, played_not_selected_voice_ids: any}
+@returns(200) {voice_id: str, name: str, samples: any, category: str, fine_tuning: any, labels: map, description: any, preview_url: any, available_for_tiers: [str], settings: any, sharing: any, high_quality_base_model_ids: [str], verified_languages: any, collection_ids: any, safety_control: any, voice_verification: any, permission_on_resource: any, is_owner: any, is_legacy: bool, is_mixed: bool, favorited_at_unix: any, created_at_unix: any, is_bookmarked: any}
+@errors {422}
+
+@endpoint POST /v1/text-to-voice/design
+@required {voice_description: str}
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_192, model_id: str(eleven_multilingual_ttv_v2/eleven_ttv_v3)=eleven_multilingual_ttv_v2, text: any, auto_generate_text: bool=False, loudness: num=0.5, seed: any, guidance_scale: num=5, stream_previews: bool=False, should_enhance: bool=False, remixing_session_id: any, remixing_session_iteration_id: any, quality: any, reference_audio_base64: any, prompt_strength: any}
+@returns(200) {previews: [map], text: str}
+@errors {422}
+
+@endpoint POST /v1/text-to-voice/{voice_id}/remix
+@required {voice_id: str, voice_description: str}
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_192, text: any, auto_generate_text: bool=False, loudness: num=0.5, seed: any, guidance_scale: num=2, stream_previews: bool=False, remixing_session_id: any, remixing_session_iteration_id: any, prompt_strength: any}
+@returns(200) {previews: [map], text: str}
+@errors {422}
+
+@endpoint GET /v1/text-to-voice/{generated_voice_id}/stream
+@required {generated_voice_id: str}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group user
+@endpoint GET /v1/user/subscription
+@returns(200) {tier: str, character_count: int, character_limit: int, max_character_limit_extension: any, can_extend_character_limit: bool, allowed_to_extend_character_limit: bool, next_character_count_reset_unix: any, voice_slots_used: int, professional_voice_slots_used: int, voice_limit: int, max_voice_add_edits: any, voice_add_edit_counter: int, professional_voice_limit: int, can_extend_voice_limit: bool, can_use_instant_voice_cloning: bool, can_use_professional_voice_cloning: bool, currency: any, status: str, billing_period: any, character_refresh_period: any, next_invoice: any, open_invoices: [map], has_open_invoices: bool, pending_change: any}
+@errors {422}
+
+@endpoint GET /v1/user
+@returns(200) {user_id: str, subscription: map{tier: str, character_count: int, character_limit: int, max_character_limit_extension: any, can_extend_character_limit: bool, allowed_to_extend_character_limit: bool, next_character_count_reset_unix: any, voice_slots_used: int, professional_voice_slots_used: int, voice_limit: int, max_voice_add_edits: any, voice_add_edit_counter: int, professional_voice_limit: int, can_extend_voice_limit: bool, can_use_instant_voice_cloning: bool, can_use_professional_voice_cloning: bool, currency: any, status: str, billing_period: any, character_refresh_period: any}, is_new_user: bool, xi_api_key: any, can_use_delayed_payment_methods: bool, is_onboarding_completed: bool, is_onboarding_checklist_completed: bool, show_compliance_terms: bool, first_name: any, is_api_key_hashed: bool, xi_api_key_preview: any, referral_link_code: any, partnerstack_partner_default_link: any, created_at: int, seat_type: str}
+@errors {422}
+
+@endgroup
+
+@group voices
+@endpoint GET /v1/voices
+@optional {show_legacy: any=False}
+@returns(200) {voices: [map]}
+@errors {422}
+
+@endpoint GET /v2/voices
+@optional {next_page_token: any, page_size: int=10, search: any, sort: any, sort_direction: any, voice_type: any, category: any, fine_tuning_state: any, collection_id: any, include_total_count: bool=True, voice_ids: any}
+@returns(200) {voices: [map], has_more: bool, total_count: int, next_page_token: any}
+@errors {422}
+
+@endpoint GET /v1/voices/settings/default
+@returns(200) {stability: any, use_speaker_boost: any, similarity_boost: any, style: any, speed: any}
+
+@endpoint GET /v1/voices/{voice_id}/settings
+@required {voice_id: str}
+@returns(200) {stability: any, use_speaker_boost: any, similarity_boost: any, style: any, speed: any}
+@errors {422}
+
+@endpoint GET /v1/voices/{voice_id}
+@required {voice_id: str}
+@optional {with_settings: bool=True}
+@returns(200) {voice_id: str, name: str, samples: any, category: str, fine_tuning: any, labels: map, description: any, preview_url: any, available_for_tiers: [str], settings: any, sharing: any, high_quality_base_model_ids: [str], verified_languages: any, collection_ids: any, safety_control: any, voice_verification: any, permission_on_resource: any, is_owner: any, is_legacy: bool, is_mixed: bool, favorited_at_unix: any, created_at_unix: any, is_bookmarked: any}
+@errors {422}
+
+@endpoint DELETE /v1/voices/{voice_id}
+@required {voice_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/voices/{voice_id}/settings/edit
+@required {voice_id: str}
+@optional {stability: any=0.5, use_speaker_boost: any=True, similarity_boost: any=0.75, style: any=0.0, speed: any=1.0}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/voices/add
+@returns(200) {voice_id: str, requires_verification: bool}
+@errors {422}
+
+@endpoint POST /v1/voices/{voice_id}/edit
+@required {voice_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/voices/add/{public_user_id}/{voice_id}
+@required {public_user_id: str, voice_id: str, new_name: str}
+@optional {bookmarked: bool=True}
+@returns(200) {voice_id: str}
+@errors {422}
+
+@endgroup
+
+@group studio
+@endpoint POST /v1/studio/podcasts
+@required {model_id: str, mode: any, source: any}
+@optional {safety-identifier: any, quality_preset: str(standard/high/highest/ultra/ultra_lossless)=standard, duration_scale: str(short/default/long)=default, language: any, intro: any, outro: any, instructions_prompt: any, highlights: any, callback_url: any, apply_text_normalization: any}
+@returns(200) {project: map{project_id: str, name: str, create_date_unix: int, created_by_user_id: any, default_title_voice_id: str, default_paragraph_voice_id: str, default_model_id: str, last_conversion_date_unix: any, can_be_downloaded: bool, title: any, author: any, description: any, genres: any, cover_image_url: any, target_audience: any, language: any, content_type: any, original_publication_date: any, mature_content: any, isbn_number: any, volume_normalization: bool, state: str, access_level: str, fiction: any, quality_check_on: bool, quality_check_on_when_bulk_convert: bool, creation_meta: any, source_type: any, chapters_enabled: any, captions_enabled: any, caption_style: any, caption_style_template_overrides: any, public_share_id: any, aspect_ratio: any, agent_settings: any}}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/pronunciation-dictionaries
+@required {project_id: str, pronunciation_dictionary_locators: [map{pronunciation_dictionary_id!: str, version_id!: any}]}
+@optional {invalidate_affected_text: bool=True}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/studio/projects
+@returns(200) {projects: [map]}
+@errors {422}
+
+@endpoint POST /v1/studio/projects
+@returns(200) {project: map{project_id: str, name: str, create_date_unix: int, created_by_user_id: any, default_title_voice_id: str, default_paragraph_voice_id: str, default_model_id: str, last_conversion_date_unix: any, can_be_downloaded: bool, title: any, author: any, description: any, genres: any, cover_image_url: any, target_audience: any, language: any, content_type: any, original_publication_date: any, mature_content: any, isbn_number: any, volume_normalization: bool, state: str, access_level: str, fiction: any, quality_check_on: bool, quality_check_on_when_bulk_convert: bool, creation_meta: any, source_type: any, chapters_enabled: any, captions_enabled: any, caption_style: any, caption_style_template_overrides: any, public_share_id: any, aspect_ratio: any, agent_settings: any}}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}
+@required {project_id: str, name: str, default_title_voice_id: str, default_paragraph_voice_id: str}
+@optional {title: any, author: any, isbn_number: any, volume_normalization: bool=False}
+@returns(200) {project: map{project_id: str, name: str, create_date_unix: int, created_by_user_id: any, default_title_voice_id: str, default_paragraph_voice_id: str, default_model_id: str, last_conversion_date_unix: any, can_be_downloaded: bool, title: any, author: any, description: any, genres: any, cover_image_url: any, target_audience: any, language: any, content_type: any, original_publication_date: any, mature_content: any, isbn_number: any, volume_normalization: bool, state: str, access_level: str, fiction: any, quality_check_on: bool, quality_check_on_when_bulk_convert: bool, creation_meta: any, source_type: any, chapters_enabled: any, captions_enabled: any, caption_style: any, caption_style_template_overrides: any, public_share_id: any, aspect_ratio: any, agent_settings: any}}
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}
+@required {project_id: str}
+@optional {share_id: any}
+@returns(200) {project_id: str, name: str, create_date_unix: int, created_by_user_id: any, default_title_voice_id: str, default_paragraph_voice_id: str, default_model_id: str, last_conversion_date_unix: any, can_be_downloaded: bool, title: any, author: any, description: any, genres: any, cover_image_url: any, target_audience: any, language: any, content_type: any, original_publication_date: any, mature_content: any, isbn_number: any, volume_normalization: bool, state: str, access_level: str, fiction: any, quality_check_on: bool, quality_check_on_when_bulk_convert: bool, creation_meta: any, source_type: any, chapters_enabled: any, captions_enabled: any, caption_style: any, caption_style_template_overrides: any, public_share_id: any, aspect_ratio: any, agent_settings: any, quality_preset: str, chapters: [map], pronunciation_dictionary_versions: [map], pronunciation_dictionary_locators: [map], apply_text_normalization: str, experimental: map, assets: [any], voices: [map], base_voices: any, publishing_read: any}
+@errors {422}
+
+@endpoint DELETE /v1/studio/projects/{project_id}
+@required {project_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/content
+@required {project_id: str}
+@returns(200) {project: map{project_id: str, name: str, create_date_unix: int, created_by_user_id: any, default_title_voice_id: str, default_paragraph_voice_id: str, default_model_id: str, last_conversion_date_unix: any, can_be_downloaded: bool, title: any, author: any, description: any, genres: any, cover_image_url: any, target_audience: any, language: any, content_type: any, original_publication_date: any, mature_content: any, isbn_number: any, volume_normalization: bool, state: str, access_level: str, fiction: any, quality_check_on: bool, quality_check_on_when_bulk_convert: bool, creation_meta: any, source_type: any, chapters_enabled: any, captions_enabled: any, caption_style: any, caption_style_template_overrides: any, public_share_id: any, aspect_ratio: any, agent_settings: any}}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/convert
+@required {project_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/snapshots
+@required {project_id: str}
+@returns(200) {snapshots: [map]}
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/snapshots/{project_snapshot_id}
+@required {project_id: str, project_snapshot_id: str}
+@returns(200) {project_snapshot_id: str, project_id: str, created_at_unix: int, name: str, audio_upload: any, zip_upload: any, character_alignments: [map], audio_duration_secs: num}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/snapshots/{project_snapshot_id}/stream
+@required {project_id: str, project_snapshot_id: str}
+@optional {convert_to_mpeg: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/snapshots/{project_snapshot_id}/archive
+@required {project_id: str, project_snapshot_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/chapters
+@required {project_id: str}
+@returns(200) {chapters: [map]}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/chapters
+@required {project_id: str, name: str}
+@optional {from_url: any}
+@returns(200) {chapter: map{chapter_id: str, name: str, last_conversion_date_unix: any, conversion_progress: any, can_be_downloaded: bool, state: str, has_video: any, voice_ids: any, statistics: any, last_conversion_error: any, content: map{blocks: [map]}}}
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/chapters/{chapter_id}
+@required {project_id: str, chapter_id: str}
+@returns(200) {chapter_id: str, name: str, last_conversion_date_unix: any, conversion_progress: any, can_be_downloaded: bool, state: str, has_video: any, voice_ids: any, statistics: any, last_conversion_error: any, content: map{blocks: [map]}}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/chapters/{chapter_id}
+@required {project_id: str, chapter_id: str}
+@optional {name: any, content: any}
+@returns(200) {chapter: map{chapter_id: str, name: str, last_conversion_date_unix: any, conversion_progress: any, can_be_downloaded: bool, state: str, has_video: any, voice_ids: any, statistics: any, last_conversion_error: any, content: map{blocks: [map]}}}
+@errors {422}
+
+@endpoint DELETE /v1/studio/projects/{project_id}/chapters/{chapter_id}
+@required {project_id: str, chapter_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/chapters/{chapter_id}/convert
+@required {project_id: str, chapter_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/chapters/{chapter_id}/snapshots
+@required {project_id: str, chapter_id: str}
+@returns(200) {snapshots: [map]}
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/chapters/{chapter_id}/snapshots/{chapter_snapshot_id}
+@required {project_id: str, chapter_id: str, chapter_snapshot_id: str}
+@returns(200) {chapter_snapshot_id: str, project_id: str, chapter_id: str, created_at_unix: int, name: str, character_alignments: [map]}
+@errors {422}
+
+@endpoint POST /v1/studio/projects/{project_id}/chapters/{chapter_id}/snapshots/{chapter_snapshot_id}/stream
+@required {project_id: str, chapter_id: str, chapter_snapshot_id: str}
+@optional {convert_to_mpeg: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/studio/projects/{project_id}/muted-tracks
+@required {project_id: str}
+@returns(200) {chapter_ids: [str]}
+@errors {422}
+
+@endgroup
+
+@group dubbing
+@endpoint GET /v1/dubbing/resource/{dubbing_id}
+@required {dubbing_id: str}
+@returns(200) {id: str, version: int, source_language: str, target_languages: [str], input: map{src: str, content_type: str, bucket_name: str, random_path_slug: str, duration_secs: num, is_audio: bool, url: str}, background: any, foreground: any, speaker_tracks: map, speaker_segments: map, renders: map}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/language
+@required {dubbing_id: str, language: any}
+@returns(201) {version: int}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/speaker/{speaker_id}/segment
+@required {dubbing_id: str, speaker_id: str, start_time: num, end_time: num}
+@optional {text: any, translations: any}
+@returns(201) {version: int, new_segment: str}
+@errors {422}
+
+@endpoint PATCH /v1/dubbing/resource/{dubbing_id}/segment/{segment_id}/{language}
+@required {dubbing_id: str, segment_id: str, language: str}
+@optional {start_time: any, end_time: any, text: any}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/migrate-segments
+@required {dubbing_id: str, segment_ids: [str], speaker_id: str}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint DELETE /v1/dubbing/resource/{dubbing_id}/segment/{segment_id}
+@required {dubbing_id: str, segment_id: str}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/transcribe
+@required {dubbing_id: str, segments: [str]}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/translate
+@required {dubbing_id: str, segments: [str], languages: any}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/dub
+@required {dubbing_id: str, segments: [str], languages: any}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint PATCH /v1/dubbing/resource/{dubbing_id}/speaker/{speaker_id}
+@required {dubbing_id: str, speaker_id: str}
+@optional {speaker_name: any, voice_id: any, voice_stability: any, voice_similarity: any, voice_style: any, languages: any}
+@returns(200) {version: int}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/speaker
+@required {dubbing_id: str}
+@optional {speaker_name: any, voice_id: any, voice_stability: any, voice_similarity: any, voice_style: any}
+@returns(200) {version: int, speaker_id: str}
+@errors {422}
+
+@endpoint GET /v1/dubbing/resource/{dubbing_id}/speaker/{speaker_id}/similar-voices
+@required {dubbing_id: str, speaker_id: str}
+@returns(200) {voices: [map]}
+@errors {422}
+
+@endpoint POST /v1/dubbing/resource/{dubbing_id}/render/{language}
+@required {dubbing_id: str, language: str, render_type: str(mp4/aac/mp3/wav/aaf/tracks_zip/clips_zip)}
+@optional {normalize_volume: any=False}
+@returns(200) {version: int, render_id: str}
+@errors {422}
+
+@endpoint GET /v1/dubbing
+@optional {cursor: any, page_size: int=100, dubbing_status: str(dubbing/dubbed/failed), filter_by_creator: str(personal/others/all)=all, order_by: str=created_at, order_direction: str(DESCENDING/ASCENDING)=DESCENDING}
+@returns(200) {dubs: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint POST /v1/dubbing
+@returns(200) {dubbing_id: str, expected_duration_sec: num}
+@errors {422}
+
+@endpoint GET /v1/dubbing/{dubbing_id}
+@required {dubbing_id: str}
+@returns(200) {dubbing_id: str, name: str, status: str, source_language: any, target_languages: [str], editable: bool, created_at: str(date-time), media_metadata: any, error: any}
+@errors {422}
+
+@endpoint DELETE /v1/dubbing/{dubbing_id}
+@required {dubbing_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/dubbing/{dubbing_id}/audio/{language_code}
+@required {dubbing_id: str, language_code: str}
+@returns(200)
+@errors {403, 404, 425, 422}
+
+@endpoint GET /v1/dubbing/{dubbing_id}/transcript/{language_code}
+@required {dubbing_id: str, language_code: str}
+@optional {format_type: str(srt/webvtt/json)=srt}
+@returns(200)
+@errors {403, 404, 425, 422}
+
+@endpoint GET /v1/dubbing/{dubbing_id}/transcripts/{language_code}/format/{format_type}
+@required {dubbing_id: str, language_code: str, format_type: str(srt/webvtt/json)}
+@returns(200) {transcript_format: str, srt: any, webvtt: any, json: any}
+@errors {422}
+
+@endgroup
+
+@group models
+@endpoint GET /v1/models
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group audio-native
+@endpoint POST /v1/audio-native
+@returns(200) {project_id: str, converting: bool, html_snippet: str}
+@errors {422}
+
+@endpoint GET /v1/audio-native/{project_id}/settings
+@required {project_id: str}
+@returns(200) {enabled: bool, snapshot_id: any, settings: any}
+@errors {422}
+
+@endpoint POST /v1/audio-native/{project_id}/content
+@required {project_id: str}
+@returns(200) {project_id: str, converting: bool, publishing: bool, html_snippet: str}
+@errors {422}
+
+@endpoint POST /v1/audio-native/content
+@required {url: str}
+@returns(200) {project_id: str, converting: bool, publishing: bool, html_snippet: str}
+@errors {422}
+
+@endgroup
+
+@group shared-voices
+@endpoint GET /v1/shared-voices
+@optional {page_size: int=30, category: any(professional/famous/high_quality), gender: any, age: any, accent: any, language: any, locale: any, search: any, use_cases: any, descriptives: any, featured: bool=False, min_notice_period_days: any, include_custom_rates: any, include_live_moderated: any, reader_app_enabled: bool=False, owner_id: any, sort: any, page: int=0}
+@returns(200) {voices: [map], has_more: bool, last_sort_id: any}
+@errors {422}
+
+@endgroup
+
+@group similar-voices
+@endpoint POST /v1/similar-voices
+@returns(200) {voices: [map], has_more: bool, last_sort_id: any}
+@errors {422}
+
+@endgroup
+
+@group usage
+@endpoint GET /v1/usage/character-stats
+@required {start_unix: int, end_unix: int}
+@optional {include_workspace_metrics: bool=False, breakdown_type: str=none, aggregation_interval: str=day, aggregation_bucket_size: any, metric: str=credits}
+@returns(200) {time: [int], usage: map}
+@errors {422}
+
+@endgroup
+
+@group pronunciation-dictionaries
+@endpoint POST /v1/pronunciation-dictionaries/add-from-file
+@returns(200) {id: str, name: str, created_by: str, creation_time_unix: int, version_id: str, version_rules_num: int, description: any, permission_on_resource: any}
+@errors {422}
+
+@endpoint POST /v1/pronunciation-dictionaries/add-from-rules
+@required {rules: [any], name: str}
+@optional {description: any, workspace_access: any}
+@returns(200) {id: str, name: str, created_by: str, creation_time_unix: int, version_id: str, version_rules_num: int, description: any, permission_on_resource: any}
+@errors {422}
+
+@endpoint PATCH /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}
+@required {pronunciation_dictionary_id: str}
+@optional {archived: bool, name: str}
+@returns(200) {id: str, latest_version_id: str, latest_version_rules_num: int, name: str, permission_on_resource: any, created_by: str, creation_time_unix: int, archived_time_unix: any, description: any}
+@errors {422}
+
+@endpoint GET /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}
+@required {pronunciation_dictionary_id: str}
+@returns(200) {id: str, latest_version_id: str, latest_version_rules_num: int, name: str, permission_on_resource: any, created_by: str, creation_time_unix: int, archived_time_unix: any, description: any, rules: [any]}
+@errors {422}
+
+@endpoint POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/set-rules
+@required {pronunciation_dictionary_id: str, rules: [any]}
+@returns(200) {id: str, version_id: str, version_rules_num: int}
+@errors {422}
+
+@endpoint POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/add-rules
+@required {pronunciation_dictionary_id: str, rules: [any]}
+@returns(200) {id: str, version_id: str, version_rules_num: int}
+@errors {422}
+
+@endpoint POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/remove-rules
+@required {pronunciation_dictionary_id: str, rule_strings: [str]}
+@returns(200) {id: str, version_id: str, version_rules_num: int}
+@errors {422}
+
+@endpoint GET /v1/pronunciation-dictionaries/{dictionary_id}/{version_id}/download
+@required {dictionary_id: str, version_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/pronunciation-dictionaries
+@optional {cursor: any, page_size: int=30, sort: any=creation_time_unix, sort_direction: any=DESCENDING}
+@returns(200) {pronunciation_dictionaries: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endgroup
+
+@group service-accounts
+@endpoint GET /v1/service-accounts/{service_account_user_id}/api-keys
+@required {service_account_user_id: str}
+@returns(200) {api-keys: [map]}
+@errors {422}
+
+@endpoint POST /v1/service-accounts/{service_account_user_id}/api-keys
+@required {service_account_user_id: str, name: str, permissions: any}
+@optional {character_limit: any}
+@returns(200) {xi-api-key: str, key_id: str}
+@errors {422}
+
+@endpoint PATCH /v1/service-accounts/{service_account_user_id}/api-keys/{api_key_id}
+@required {service_account_user_id: str, api_key_id: str, is_enabled: bool, name: str, permissions: any}
+@optional {character_limit: any}
+@returns(200)
+@errors {422}
+
+@endpoint DELETE /v1/service-accounts/{service_account_user_id}/api-keys/{api_key_id}
+@required {service_account_user_id: str, api_key_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/service-accounts
+@returns(200) {service-accounts: [map]}
+@errors {422}
+
+@endgroup
+
+@group workspace
+@endpoint GET /v1/workspace/groups/search
+@required {name: str}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/workspace/groups/{group_id}/members/remove
+@required {group_id: str, email: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/workspace/groups/{group_id}/members
+@required {group_id: str, email: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/workspace/invites/add
+@required {email: str}
+@optional {workspace_permission: any, seat_type: any, group_ids: any}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/workspace/invites/add-bulk
+@required {emails: [str]}
+@optional {group_ids: any}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint DELETE /v1/workspace/invites
+@required {email: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/workspace/members
+@required {email: str}
+@optional {is_locked: any, workspace_role: any, workspace_seat_type: any}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/workspace/resources/{resource_id}
+@required {resource_id: str, resource_type: str}
+@returns(200) {resource_id: str, resource_name: any, resource_type: str, creator_user_id: any, anonymous_access_level_override: any, role_to_group_ids: map, share_options: [map]}
+@errors {422}
+
+@endpoint POST /v1/workspace/resources/{resource_id}/share
+@required {resource_id: str, role: str(admin/editor/commenter/viewer), resource_type: str(voice/voice_collection/pronunciation_dictionary/dubbing/project/convai_agents/convai_knowledge_base_documents/convai_tools/convai_settings/convai_secrets/workspace_auth_connections/convai_phone_numbers/convai_mcp_servers/convai_api_integration_connections/convai_api_integration_trigger_connections/convai_batch_calls/convai_agent_response_tests/convai_test_suite_invocations/convai_crawl_jobs/convai_crawl_tasks/convai_whatsapp_accounts/convai_agent_versions/convai_agent_branches/convai_agent_versions_deployments/convai_memory_entries/convai_coaching_proposals/dashboard/dashboard_configuration/convai_agent_drafts/resource_locators/assets/content_generations/content_templates/songs)}
+@optional {user_email: any, group_id: any, workspace_api_key_id: any}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/workspace/resources/{resource_id}/unshare
+@required {resource_id: str, resource_type: str(voice/voice_collection/pronunciation_dictionary/dubbing/project/convai_agents/convai_knowledge_base_documents/convai_tools/convai_settings/convai_secrets/workspace_auth_connections/convai_phone_numbers/convai_mcp_servers/convai_api_integration_connections/convai_api_integration_trigger_connections/convai_batch_calls/convai_agent_response_tests/convai_test_suite_invocations/convai_crawl_jobs/convai_crawl_tasks/convai_whatsapp_accounts/convai_agent_versions/convai_agent_branches/convai_agent_versions_deployments/convai_memory_entries/convai_coaching_proposals/dashboard/dashboard_configuration/convai_agent_drafts/resource_locators/assets/content_generations/content_templates/songs)}
+@optional {user_email: any, group_id: any, workspace_api_key_id: any}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/workspace/webhooks
+@optional {include_usages: bool=False}
+@returns(200) {webhooks: [map]}
+@errors {422}
+
+@endpoint POST /v1/workspace/webhooks
+@required {settings: map{auth_type!: str, name!: str, webhook_url!: str}}
+@returns(200) {webhook_id: str, webhook_secret: any}
+@errors {422}
+
+@endpoint PATCH /v1/workspace/webhooks/{webhook_id}
+@required {webhook_id: str, is_disabled: bool, name: str}
+@optional {retry_enabled: any}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint DELETE /v1/workspace/webhooks/{webhook_id}
+@required {webhook_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endgroup
+
+@group speech-to-text
+@endpoint POST /v1/speech-to-text
+@optional {enable_logging: bool=True}
+@returns(200)
+@returns(202)
+@errors {422}
+
+@endpoint GET /v1/speech-to-text/transcripts/{transcription_id}
+@required {transcription_id: str}
+@returns(200)
+@errors {401, 404, 422}
+
+@endpoint DELETE /v1/speech-to-text/transcripts/{transcription_id}
+@required {transcription_id: str}
+@returns(200)
+@errors {401, 422}
+
+@endgroup
+
+@group single-use-token
+@endpoint POST /v1/single-use-token/{token_type}
+@required {token_type: str}
+@returns(200) {token: str}
+@errors {422}
+
+@endgroup
+
+@group forced-alignment
+@endpoint POST /v1/forced-alignment
+@returns(200) {characters: [map], words: [map], loss: num}
+@errors {422}
+
+@endgroup
+
+@group convai
+@endpoint GET /v1/convai/conversation/get-signed-url
+@required {agent_id: str}
+@optional {include_conversation_id: bool=False, branch_id: any}
+@returns(200) {signed_url: str}
+@errors {422}
+
+@endpoint GET /v1/convai/conversation/get_signed_url
+@required {agent_id: str}
+@optional {include_conversation_id: bool=False, branch_id: any}
+@returns(200) {signed_url: str}
+@errors {422}
+
+@endpoint GET /v1/convai/conversation/token
+@required {agent_id: str}
+@optional {participant_name: any, branch_id: any}
+@returns(200) {token: str}
+@errors {422}
+
+@endpoint POST /v1/convai/twilio/outbound-call
+@required {agent_id: str, agent_phone_number_id: str, to_number: str}
+@optional {conversation_initiation_client_data: any, call_recording_enabled: any}
+@returns(200) {success: bool, message: str, conversation_id: any, callSid: any}
+@errors {422}
+
+@endpoint POST /v1/convai/twilio/register-call
+@required {agent_id: str, from_number: str, to_number: str}
+@optional {direction: str(inbound/outbound)=inbound, conversation_initiation_client_data: any}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/whatsapp/outbound-call
+@required {whatsapp_phone_number_id: str, whatsapp_user_id: str, whatsapp_call_permission_request_template_name: str, whatsapp_call_permission_request_template_language_code: str, agent_id: str}
+@optional {conversation_initiation_client_data: any}
+@returns(200) {success: bool, message: str, conversation_id: any}
+@errors {422}
+
+@endpoint POST /v1/convai/whatsapp/outbound-message
+@required {whatsapp_phone_number_id: str, whatsapp_user_id: str, template_name: str, template_language_code: str, template_params: [any], agent_id: str}
+@optional {conversation_initiation_client_data: any}
+@returns(200) {conversation_id: str}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/create
+@required {conversation_config: map{asr: map{quality: str, provider: str, user_input_audio_format: str, keywords: [str]}, turn: map{turn_timeout: num, initial_wait_time: any, silence_end_call_timeout: num, soft_timeout_config: map, mode: str, turn_eagerness: str, spelling_patience: str, speculative_turn: bool}, tts: map{model_id: str, voice_id: str, supported_voices: [map], expressive_mode: bool, suggested_audio_tags: [map], agent_output_audio_format: str, optimize_streaming_latency: int, stability: num, speed: num, similarity_boost: num, text_normalisation_type: str, pronunciation_dictionary_locators: [map]}, conversation: map{text_only: bool, max_duration_seconds: int, client_events: [str], monitoring_enabled: bool, monitoring_events: [str]}, language_presets: map, vad: map{background_voice_detection: bool}, agent: map{first_message: str, language: str, hinglish_mode: bool, dynamic_variables: map, disable_first_message_interruptions: bool, prompt: map}}}
+@optional {platform_settings: any, workflow: map{edges: map, nodes: map, prevent_subagent_loops: bool}, name: any, tags: any, coaching_settings: any}
+@returns(200) {agent_id: str}
+@errors {422}
+
+@endpoint GET /v1/convai/agents/summaries
+@required {agent_ids: [str]}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/agents/{agent_id}
+@required {agent_id: str}
+@optional {version_id: any, branch_id: any}
+@returns(200) {agent_id: str, name: str, conversation_config: map{asr: map{quality: str, provider: str, user_input_audio_format: str, keywords: [str]}, turn: map{turn_timeout: num, initial_wait_time: any, silence_end_call_timeout: num, soft_timeout_config: map{timeout_seconds: num, message: str, use_llm_generated_message: bool}, mode: str, turn_eagerness: str, spelling_patience: str, speculative_turn: bool}, tts: map{model_id: str, voice_id: str, supported_voices: [map], expressive_mode: bool, suggested_audio_tags: [map], agent_output_audio_format: str, optimize_streaming_latency: int, stability: num, speed: num, similarity_boost: num, text_normalisation_type: str, pronunciation_dictionary_locators: [map]}, conversation: map{text_only: bool, max_duration_seconds: int, client_events: [str], monitoring_enabled: bool, monitoring_events: [str]}, language_presets: map, vad: map{background_voice_detection: bool}, agent: map{first_message: str, language: str, hinglish_mode: bool, dynamic_variables: map{dynamic_variable_placeholders: map}, disable_first_message_interruptions: bool, prompt: map{prompt: str, llm: str, reasoning_effort: any, thinking_budget: any, temperature: num, max_tokens: int, tool_ids: [str], built_in_tools: map, mcp_server_ids: [str], native_mcp_server_ids: [str], knowledge_base: [map], custom_llm: any, ignore_default_personality: any, rag: map, timezone: any, backup_llm_config: any, cascade_timeout_seconds: num, tools: [any]}}}, metadata: map{created_at_unix_secs: int, updated_at_unix_secs: int}, platform_settings: map{evaluation: map{criteria: [map]}, widget: map{variant: str, placement: str, expandable: str, avatar: any, feedback_mode: str, end_feedback: any, bg_color: str, text_color: str, btn_color: str, btn_text_color: str, border_color: str, focus_color: str, border_radius: any, btn_radius: any, action_text: any, start_call_text: any, end_call_text: any, expand_text: any, listening_text: any, speaking_text: any, shareable_page_text: any, shareable_page_show_terms: bool, terms_text: any, terms_html: any, terms_key: any, show_avatar_when_collapsed: any, disable_banner: bool, override_link: any, markdown_link_allowed_hosts: [map], markdown_link_include_www: bool, markdown_link_allow_http: bool, mic_muting_enabled: bool, transcript_enabled: bool, text_input_enabled: bool, conversation_mode_toggle_enabled: bool, default_expanded: bool, always_expanded: bool, dismissible: bool, show_agent_status: bool, show_conversation_id: bool, strip_audio_tags: bool, syntax_highlight_theme: any, text_contents: map{main_label: any, start_call: any, start_chat: any, new_call: any, end_call: any, mute_microphone: any, change_language: any, collapse: any, expand: any, copied: any, accept_terms: any, dismiss_terms: any, listening_status: any, speaking_status: any, connecting_status: any, chatting_status: any, input_label: any, input_placeholder: any, input_placeholder_text_only: any, input_placeholder_new_conversation: any, user_ended_conversation: any, agent_ended_conversation: any, conversation_id: any, error_occurred: any, copy_id: any, initiate_feedback: any, request_follow_up_feedback: any, thanks_for_feedback: any, thanks_for_feedback_details: any, follow_up_feedback_placeholder: any, submit: any, go_back: any, send_message: any, text_mode: any, voice_mode: any, switched_to_text_mode: any, switched_to_voice_mode: any, copy: any, download: any, wrap: any, agent_working: any, agent_done: any, agent_error: any}, styles: map{base: any, base_hover: any, base_active: any, base_border: any, base_subtle: any, base_primary: any, base_error: any, accent: any, accent_hover: any, accent_active: any, accent_border: any, accent_subtle: any, accent_primary: any, overlay_padding: any, button_radius: any, input_radius: any, bubble_radius: any, sheet_radius: any, compact_sheet_radius: any, dropdown_sheet_radius: any}, language_selector: bool, supports_text_only: bool, custom_avatar_path: any, language_presets: map}, data_collection: map, overrides: map{conversation_config_override: map{turn: map, tts: map, conversation: map, agent: map}, custom_llm_extra_body: bool, enable_conversation_initiation_client_data_from_webhook: bool}, workspace_overrides: map{conversation_initiation_client_data_webhook: any, webhooks: map{post_call_webhook_id: any, events: [str], send_audio: any}}, testing: map{attached_tests: [map]}, archived: bool, guardrails: map{version: str, focus: map{is_enabled: bool}, prompt_injection: map{is_enabled: bool}, content: map{config: map}, moderation: map{config: map}, custom: map{config: map}}, summary_language: any, auth: map{enable_auth: bool, allowlist: [map], require_origin_header: bool, shareable_token: any}, call_limits: map{agent_concurrency_limit: int, daily_limit: int, bursting_enabled: bool}, privacy: map{record_voice: bool, retention_days: int, delete_transcript_and_pii: bool, delete_audio: bool, apply_to_existing_conversations: bool, zero_retention_mode: bool, conversation_history_redaction: map{enabled: bool, entities: [str]}}, safety: map{is_blocked_ivc: bool, is_blocked_non_ivc: bool, ignore_safety_evaluation: bool}}, phone_numbers: [any], whatsapp_accounts: [map], workflow: map{edges: map, nodes: map, prevent_subagent_loops: bool}, access_info: any, tags: [str], version_id: any, branch_id: any, main_branch_id: any, coaching_settings: any}
+@errors {422}
+
+@endpoint PATCH /v1/convai/agents/{agent_id}
+@required {agent_id: str}
+@optional {branch_id: any, conversation_config: any, platform_settings: any, workflow: map{edges: map, nodes: map, prevent_subagent_loops: bool}, name: any, tags: any, coaching_settings: any, version_description: any}
+@returns(200) {agent_id: str, name: str, conversation_config: map{asr: map{quality: str, provider: str, user_input_audio_format: str, keywords: [str]}, turn: map{turn_timeout: num, initial_wait_time: any, silence_end_call_timeout: num, soft_timeout_config: map{timeout_seconds: num, message: str, use_llm_generated_message: bool}, mode: str, turn_eagerness: str, spelling_patience: str, speculative_turn: bool}, tts: map{model_id: str, voice_id: str, supported_voices: [map], expressive_mode: bool, suggested_audio_tags: [map], agent_output_audio_format: str, optimize_streaming_latency: int, stability: num, speed: num, similarity_boost: num, text_normalisation_type: str, pronunciation_dictionary_locators: [map]}, conversation: map{text_only: bool, max_duration_seconds: int, client_events: [str], monitoring_enabled: bool, monitoring_events: [str]}, language_presets: map, vad: map{background_voice_detection: bool}, agent: map{first_message: str, language: str, hinglish_mode: bool, dynamic_variables: map{dynamic_variable_placeholders: map}, disable_first_message_interruptions: bool, prompt: map{prompt: str, llm: str, reasoning_effort: any, thinking_budget: any, temperature: num, max_tokens: int, tool_ids: [str], built_in_tools: map, mcp_server_ids: [str], native_mcp_server_ids: [str], knowledge_base: [map], custom_llm: any, ignore_default_personality: any, rag: map, timezone: any, backup_llm_config: any, cascade_timeout_seconds: num, tools: [any]}}}, metadata: map{created_at_unix_secs: int, updated_at_unix_secs: int}, platform_settings: map{evaluation: map{criteria: [map]}, widget: map{variant: str, placement: str, expandable: str, avatar: any, feedback_mode: str, end_feedback: any, bg_color: str, text_color: str, btn_color: str, btn_text_color: str, border_color: str, focus_color: str, border_radius: any, btn_radius: any, action_text: any, start_call_text: any, end_call_text: any, expand_text: any, listening_text: any, speaking_text: any, shareable_page_text: any, shareable_page_show_terms: bool, terms_text: any, terms_html: any, terms_key: any, show_avatar_when_collapsed: any, disable_banner: bool, override_link: any, markdown_link_allowed_hosts: [map], markdown_link_include_www: bool, markdown_link_allow_http: bool, mic_muting_enabled: bool, transcript_enabled: bool, text_input_enabled: bool, conversation_mode_toggle_enabled: bool, default_expanded: bool, always_expanded: bool, dismissible: bool, show_agent_status: bool, show_conversation_id: bool, strip_audio_tags: bool, syntax_highlight_theme: any, text_contents: map{main_label: any, start_call: any, start_chat: any, new_call: any, end_call: any, mute_microphone: any, change_language: any, collapse: any, expand: any, copied: any, accept_terms: any, dismiss_terms: any, listening_status: any, speaking_status: any, connecting_status: any, chatting_status: any, input_label: any, input_placeholder: any, input_placeholder_text_only: any, input_placeholder_new_conversation: any, user_ended_conversation: any, agent_ended_conversation: any, conversation_id: any, error_occurred: any, copy_id: any, initiate_feedback: any, request_follow_up_feedback: any, thanks_for_feedback: any, thanks_for_feedback_details: any, follow_up_feedback_placeholder: any, submit: any, go_back: any, send_message: any, text_mode: any, voice_mode: any, switched_to_text_mode: any, switched_to_voice_mode: any, copy: any, download: any, wrap: any, agent_working: any, agent_done: any, agent_error: any}, styles: map{base: any, base_hover: any, base_active: any, base_border: any, base_subtle: any, base_primary: any, base_error: any, accent: any, accent_hover: any, accent_active: any, accent_border: any, accent_subtle: any, accent_primary: any, overlay_padding: any, button_radius: any, input_radius: any, bubble_radius: any, sheet_radius: any, compact_sheet_radius: any, dropdown_sheet_radius: any}, language_selector: bool, supports_text_only: bool, custom_avatar_path: any, language_presets: map}, data_collection: map, overrides: map{conversation_config_override: map{turn: map, tts: map, conversation: map, agent: map}, custom_llm_extra_body: bool, enable_conversation_initiation_client_data_from_webhook: bool}, workspace_overrides: map{conversation_initiation_client_data_webhook: any, webhooks: map{post_call_webhook_id: any, events: [str], send_audio: any}}, testing: map{attached_tests: [map]}, archived: bool, guardrails: map{version: str, focus: map{is_enabled: bool}, prompt_injection: map{is_enabled: bool}, content: map{config: map}, moderation: map{config: map}, custom: map{config: map}}, summary_language: any, auth: map{enable_auth: bool, allowlist: [map], require_origin_header: bool, shareable_token: any}, call_limits: map{agent_concurrency_limit: int, daily_limit: int, bursting_enabled: bool}, privacy: map{record_voice: bool, retention_days: int, delete_transcript_and_pii: bool, delete_audio: bool, apply_to_existing_conversations: bool, zero_retention_mode: bool, conversation_history_redaction: map{enabled: bool, entities: [str]}}, safety: map{is_blocked_ivc: bool, is_blocked_non_ivc: bool, ignore_safety_evaluation: bool}}, phone_numbers: [any], whatsapp_accounts: [map], workflow: map{edges: map, nodes: map, prevent_subagent_loops: bool}, access_info: any, tags: [str], version_id: any, branch_id: any, main_branch_id: any, coaching_settings: any}
+@errors {422}
+
+@endpoint DELETE /v1/convai/agents/{agent_id}
+@required {agent_id: str}
+@returns(200)
+@returns(204)
+@errors {422}
+
+@endpoint GET /v1/convai/agents/{agent_id}/widget
+@required {agent_id: str}
+@optional {conversation_signature: any}
+@returns(200) {agent_id: str, widget_config: map{variant: str, placement: str, expandable: str, avatar: any, feedback_mode: str, end_feedback: any, bg_color: str, text_color: str, btn_color: str, btn_text_color: str, border_color: str, focus_color: str, border_radius: any, btn_radius: any, action_text: any, start_call_text: any, end_call_text: any, expand_text: any, listening_text: any, speaking_text: any, shareable_page_text: any, shareable_page_show_terms: bool, terms_text: any, terms_html: any, terms_key: any, show_avatar_when_collapsed: any, disable_banner: bool, override_link: any, markdown_link_allowed_hosts: [map], markdown_link_include_www: bool, markdown_link_allow_http: bool, mic_muting_enabled: bool, transcript_enabled: bool, text_input_enabled: bool, conversation_mode_toggle_enabled: bool, default_expanded: bool, always_expanded: bool, dismissible: bool, show_agent_status: bool, show_conversation_id: bool, strip_audio_tags: bool, syntax_highlight_theme: any, text_contents: map{main_label: any, start_call: any, start_chat: any, new_call: any, end_call: any, mute_microphone: any, change_language: any, collapse: any, expand: any, copied: any, accept_terms: any, dismiss_terms: any, listening_status: any, speaking_status: any, connecting_status: any, chatting_status: any, input_label: any, input_placeholder: any, input_placeholder_text_only: any, input_placeholder_new_conversation: any, user_ended_conversation: any, agent_ended_conversation: any, conversation_id: any, error_occurred: any, copy_id: any, initiate_feedback: any, request_follow_up_feedback: any, thanks_for_feedback: any, thanks_for_feedback_details: any, follow_up_feedback_placeholder: any, submit: any, go_back: any, send_message: any, text_mode: any, voice_mode: any, switched_to_text_mode: any, switched_to_voice_mode: any, copy: any, download: any, wrap: any, agent_working: any, agent_done: any, agent_error: any}, styles: map{base: any, base_hover: any, base_active: any, base_border: any, base_subtle: any, base_primary: any, base_error: any, accent: any, accent_hover: any, accent_active: any, accent_border: any, accent_subtle: any, accent_primary: any, overlay_padding: any, button_radius: any, input_radius: any, bubble_radius: any, sheet_radius: any, compact_sheet_radius: any, dropdown_sheet_radius: any}, language: str, supported_language_overrides: any, language_presets: map, text_only: bool, supports_text_only: bool, first_message: any, use_rtc: any}}
+@errors {422}
+
+@endpoint GET /v1/convai/agents/{agent_id}/link
+@required {agent_id: str}
+@returns(200) {agent_id: str, token: any}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/avatar
+@required {agent_id: str}
+@returns(200) {agent_id: str, avatar_url: any}
+@errors {422}
+
+@endpoint GET /v1/convai/agents
+@optional {page_size: int=30, search: any, archived: any=False, show_only_owned_agents: bool=False, sort_direction: str=desc, sort_by: any, cursor: any}
+@returns(200) {agents: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/agent/{agent_id}/knowledge-base/size
+@required {agent_id: str}
+@returns(200) {number_of_pages: num}
+@errors {422}
+
+@endpoint POST /v1/convai/agent/{agent_id}/llm-usage/calculate
+@required {agent_id: str}
+@optional {prompt_length: any, number_of_pages: any, rag_enabled: any}
+@returns(200) {llm_prices: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/duplicate
+@required {agent_id: str}
+@optional {name: any}
+@returns(200) {agent_id: str}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/simulate-conversation
+@required {agent_id: str, simulation_specification: map{simulated_user_config!: map{first_message: str, language: str, hinglish_mode: bool, dynamic_variables: map, disable_first_message_interruptions: bool, prompt: map}, tool_mock_config: map, partial_conversation_history: [map{role!: str, agent_metadata: any, message: any, multivoice_message: any, tool_calls: [map], tool_results: [any], feedback: any, llm_override: any, time_in_call_secs!: int, conversation_turn_metrics: any, rag_retrieval_info: any, llm_usage: any, interrupted: bool, original_message: any, source_medium: any}], dynamic_variables: map}}
+@optional {extra_evaluation_criteria: any, new_turns_limit: int=10000}
+@returns(200) {simulated_conversation: [map], analysis: map{evaluation_criteria_results: map, data_collection_results: map, evaluation_criteria_results_list: [map], data_collection_results_list: [map], call_successful: str, transcript_summary: str, call_summary_title: any}}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/simulate-conversation/stream
+@required {agent_id: str, simulation_specification: map{simulated_user_config!: map{first_message: str, language: str, hinglish_mode: bool, dynamic_variables: map, disable_first_message_interruptions: bool, prompt: map}, tool_mock_config: map, partial_conversation_history: [map{role!: str, agent_metadata: any, message: any, multivoice_message: any, tool_calls: [map], tool_results: [any], feedback: any, llm_override: any, time_in_call_secs!: int, conversation_turn_metrics: any, rag_retrieval_info: any, llm_usage: any, interrupted: bool, original_message: any, source_medium: any}], dynamic_variables: map}}
+@optional {extra_evaluation_criteria: any, new_turns_limit: int=10000}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/agent-testing/create
+@returns(200) {id: str}
+@errors {422}
+
+@endpoint GET /v1/convai/agent-testing/{test_id}
+@required {test_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint PUT /v1/convai/agent-testing/{test_id}
+@required {test_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint DELETE /v1/convai/agent-testing/{test_id}
+@required {test_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/agent-testing/summaries
+@required {test_ids: [str]}
+@returns(200) {tests: map}
+@errors {422}
+
+@endpoint GET /v1/convai/agent-testing
+@optional {cursor: any, page_size: int=30, search: any, parent_folder_id: any, include_folders: bool=False, sort_mode: str(default/folders_first)=default}
+@returns(200) {tests: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/test-invocations
+@required {agent_id: str}
+@optional {page_size: int=30, cursor: any}
+@returns(200) {meta: map{total: any, page: any, page_size: any}, results: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/run-tests
+@required {agent_id: str, tests: [map{test_id!: str, workflow_node_id: any}]}
+@optional {agent_config_override: any, branch_id: any}
+@returns(200) {id: str, agent_id: any, branch_id: any, created_at: int, test_runs: [map]}
+@errors {422}
+
+@endpoint GET /v1/convai/test-invocations/{test_invocation_id}
+@required {test_invocation_id: str}
+@returns(200) {id: str, agent_id: any, branch_id: any, created_at: int, test_runs: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/test-invocations/{test_invocation_id}/resubmit
+@required {test_invocation_id: str, test_run_ids: [str], agent_id: str}
+@optional {agent_config_override: any, branch_id: any}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/conversations
+@optional {cursor: any, agent_id: any, call_successful: any, call_start_before_unix: any, call_start_after_unix: any, call_duration_min_secs: any, call_duration_max_secs: any, rating_max: any, rating_min: any, has_feedback_comment: any, user_id: any, evaluation_params: any, data_collection_params: any, tool_names: any, main_languages: any, page_size: int=30, summary_mode: str(exclude/include)=exclude, search: any, conversation_initiation_source: any, branch_id: any}
+@returns(200) {conversations: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/users
+@optional {agent_id: any, call_start_before_unix: any, call_start_after_unix: any, search: any, page_size: int=30, cursor: any}
+@returns(200) {users: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/conversations/{conversation_id}
+@required {conversation_id: str}
+@returns(200) {agent_id: str, agent_name: any, status: str, user_id: any, branch_id: any, version_id: any, metadata: map{start_time_unix_secs: int, accepted_time_unix_secs: any, call_duration_secs: int, cost: any, deletion_settings: map{deletion_time_unix_secs: any, deleted_logs_at_time_unix_secs: any, deleted_audio_at_time_unix_secs: any, deleted_transcript_at_time_unix_secs: any, delete_transcript_and_pii: bool, delete_audio: bool}, feedback: map{type: any, overall_score: any, likes: int, dislikes: int, rating: any, comment: any}, authorization_method: str, charging: map{dev_discount: bool, is_burst: bool, tier: any, llm_usage: map{irreversible_generation: map, initiated_generation: map}, llm_price: any, llm_charge: any, call_charge: any, free_minutes_consumed: num, free_llm_dollars_consumed: num}, phone_call: any, batch_call: any, termination_reason: str, error: any, warnings: [str], main_language: any, rag_usage: any, text_only: bool, features_usage: map{language_detection: map{enabled: bool, used: bool}, transfer_to_agent: map{enabled: bool, used: bool}, transfer_to_number: map{enabled: bool, used: bool}, multivoice: map{enabled: bool, used: bool}, dtmf_tones: map{enabled: bool, used: bool}, external_mcp_servers: map{enabled: bool, used: bool}, pii_zrm_workspace: bool, pii_zrm_agent: bool, tool_dynamic_variable_updates: map{enabled: bool, used: bool}, is_livekit: bool, voicemail_detection: map{enabled: bool, used: bool}, workflow: map{enabled: bool, tool_node: map, standalone_agent_node: map, phone_number_node: map, end_node: map}, agent_testing: map{enabled: bool, tests_ran_after_last_modification: bool, tests_ran_in_last_7_days: bool}, versioning: map{enabled: bool, used: bool}}, eleven_assistant: map{is_eleven_assistant: bool}, initiator_id: any, conversation_initiation_source: str, conversation_initiation_source_version: any, timezone: any, async_metadata: any, whatsapp: any, agent_created_from: str, agent_last_updated_from: str}, analysis: any, conversation_initiation_client_data: map{conversation_config_override: map{turn: any, tts: any, conversation: any, agent: any}, custom_llm_extra_body: map, user_id: any, source_info: map{source: any, version: any}, dynamic_variables: map}, conversation_id: str, has_audio: bool, has_user_audio: bool, has_response_audio: bool, transcript: [map]}
+@errors {422}
+
+@endpoint DELETE /v1/convai/conversations/{conversation_id}
+@required {conversation_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/conversations/{conversation_id}/audio
+@required {conversation_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/conversations/{conversation_id}/feedback
+@required {conversation_id: str}
+@optional {feedback: any}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/conversations/messages/text-search
+@required {text_query: str}
+@optional {agent_id: any, call_successful: any, call_start_before_unix: any, call_start_after_unix: any, call_duration_min_secs: any, call_duration_max_secs: any, rating_max: any, rating_min: any, has_feedback_comment: any, user_id: any, evaluation_params: any, data_collection_params: any, tool_names: any, main_languages: any, page_size: int=20, summary_mode: str(exclude/include)=exclude, conversation_initiation_source: any, branch_id: any, cursor: any}
+@returns(200) {meta: map{total: any, page: any, page_size: any}, results: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/conversations/messages/smart-search
+@required {text_query: str}
+@optional {agent_id: any, page_size: int=20, cursor: any}
+@returns(200) {meta: map{total: any, page: any, page_size: any}, results: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint POST /v1/convai/phone-numbers
+@returns(200) {phone_number_id: str}
+@errors {422}
+
+@endpoint GET /v1/convai/phone-numbers
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/phone-numbers/{phone_number_id}
+@required {phone_number_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint DELETE /v1/convai/phone-numbers/{phone_number_id}
+@required {phone_number_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint PATCH /v1/convai/phone-numbers/{phone_number_id}
+@required {phone_number_id: str}
+@optional {agent_id: any, label: any, inbound_trunk_config: any, outbound_trunk_config: any, livekit_stack: any}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/llm-usage/calculate
+@required {prompt_length: int, number_of_pages: int, rag_enabled: bool}
+@returns(200) {llm_prices: [map]}
+@errors {422}
+
+@endpoint GET /v1/convai/llm/list
+@returns(200) {llms: [map], default_deprecation_config: map{warning_start_days: int, fallback_start_days: int, fallback_complete_days: int, fallback_start_percentage: int, fallback_complete_percentage: int}}
+@errors {422}
+
+@endpoint POST /v1/convai/conversations/{conversation_id}/files
+@required {conversation_id: str}
+@returns(200) {file_id: str}
+@errors {422}
+
+@endpoint DELETE /v1/convai/conversations/{conversation_id}/files/{file_id}
+@required {conversation_id: str, file_id: str}
+@returns(200) {file_id: str}
+@errors {422}
+
+@endpoint GET /v1/convai/analytics/live-count
+@optional {agent_id: any}
+@returns(200) {count: int}
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/summaries
+@required {document_ids: [str]}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base
+@optional {agent_id: str=}
+@returns(200) {id: str, name: str, folder_path: [map]}
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base
+@optional {page_size: int=30, search: any, show_only_owned_documents: bool=False, types: any, parent_folder_id: any, ancestor_folder_id: any, folders_first: bool=False, sort_direction: str=desc, sort_by: any, cursor: any}
+@returns(200) {documents: [any], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/url
+@required {url: str}
+@optional {name: any, parent_folder_id: any}
+@returns(200) {id: str, name: str, folder_path: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/file
+@returns(200) {id: str, name: str, folder_path: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/text
+@required {text: str}
+@optional {name: any, parent_folder_id: any}
+@returns(200) {id: str, name: str, folder_path: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/folder
+@required {name: str}
+@optional {parent_folder_id: any}
+@returns(200) {id: str, name: str, folder_path: [map]}
+@errors {422}
+
+@endpoint PATCH /v1/convai/knowledge-base/{documentation_id}
+@required {documentation_id: str, name: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/{documentation_id}
+@required {documentation_id: str}
+@optional {agent_id: str=}
+@returns(200)
+@errors {422}
+
+@endpoint DELETE /v1/convai/knowledge-base/{documentation_id}
+@required {documentation_id: str}
+@optional {force: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/rag-index
+@required {items: [map{document_id!: str, create_if_missing!: bool, model!: str}]}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/rag-index
+@returns(200) {total_used_bytes: int, total_max_bytes: int, models: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/{documentation_id}/rag-index
+@required {documentation_id: str, model: str(e5_mistral_7b_instruct/multilingual_e5_large_instruct/qwen3_embedding_4b)}
+@returns(200) {id: str, model: str, status: str, progress_percentage: num, document_model_index_usage: map{used_bytes: int}}
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/{documentation_id}/rag-index
+@required {documentation_id: str}
+@returns(200) {indexes: [map]}
+@errors {422}
+
+@endpoint DELETE /v1/convai/knowledge-base/{documentation_id}/rag-index/{rag_index_id}
+@required {documentation_id: str, rag_index_id: str}
+@returns(200) {id: str, model: str, status: str, progress_percentage: num, document_model_index_usage: map{used_bytes: int}}
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/{documentation_id}/dependent-agents
+@required {documentation_id: str}
+@optional {dependent_type: str=all, page_size: int=30, cursor: any}
+@returns(200) {agents: [any], branches: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/{documentation_id}/content
+@required {documentation_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/{documentation_id}/source-file-url
+@required {documentation_id: str}
+@returns(200) {signed_url: str}
+@errors {422}
+
+@endpoint GET /v1/convai/knowledge-base/{documentation_id}/chunk/{chunk_id}
+@required {documentation_id: str, chunk_id: str}
+@returns(200) {id: str, name: str, content: str}
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/{document_id}/move
+@required {document_id: str}
+@optional {move_to: any}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/knowledge-base/bulk-move
+@required {document_ids: [str]}
+@optional {move_to: any}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/tools
+@required {tool_config: any}
+@returns(200) {id: str, tool_config: any, access_info: map{is_creator: bool, creator_name: str, creator_email: str, role: str}, usage_stats: map{total_calls: int, avg_latency_secs: num}}
+@errors {422}
+
+@endpoint GET /v1/convai/tools
+@optional {search: any, page_size: any, show_only_owned_documents: bool=False, types: any, sort_direction: str=desc, sort_by: any, cursor: any}
+@returns(200) {tools: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/tools/{tool_id}
+@required {tool_id: str}
+@returns(200) {id: str, tool_config: any, access_info: map{is_creator: bool, creator_name: str, creator_email: str, role: str}, usage_stats: map{total_calls: int, avg_latency_secs: num}}
+@errors {422}
+
+@endpoint PATCH /v1/convai/tools/{tool_id}
+@required {tool_id: str, tool_config: any}
+@returns(200) {id: str, tool_config: any, access_info: map{is_creator: bool, creator_name: str, creator_email: str, role: str}, usage_stats: map{total_calls: int, avg_latency_secs: num}}
+@errors {422}
+
+@endpoint DELETE /v1/convai/tools/{tool_id}
+@required {tool_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/tools/{tool_id}/dependent-agents
+@required {tool_id: str}
+@optional {cursor: any, page_size: int=30}
+@returns(200) {agents: [any], branches: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/settings
+@returns(200) {conversation_initiation_client_data_webhook: any, webhooks: map{post_call_webhook_id: any, events: [str], send_audio: any}, can_use_mcp_servers: bool, rag_retention_period_days: int, default_livekit_stack: str}
+@errors {422}
+
+@endpoint PATCH /v1/convai/settings
+@optional {conversation_initiation_client_data_webhook: any, webhooks: map{post_call_webhook_id: any, events: [str], send_audio: any}, can_use_mcp_servers: bool=False, rag_retention_period_days: int=10, default_livekit_stack: str(standard/static)}
+@returns(200) {conversation_initiation_client_data_webhook: any, webhooks: map{post_call_webhook_id: any, events: [str], send_audio: any}, can_use_mcp_servers: bool, rag_retention_period_days: int, default_livekit_stack: str}
+@errors {422}
+
+@endpoint GET /v1/convai/settings/dashboard
+@returns(200) {charts: [any]}
+@errors {422}
+
+@endpoint PATCH /v1/convai/settings/dashboard
+@optional {charts: [any]}
+@returns(200) {charts: [any]}
+@errors {422}
+
+@endpoint POST /v1/convai/secrets
+@required {type: str, name: str, value: str}
+@returns(200) {type: str, secret_id: str, name: str}
+@errors {422}
+
+@endpoint GET /v1/convai/secrets
+@optional {page_size: any, cursor: any}
+@returns(200) {secrets: [map], next_cursor: any, has_more: bool}
+@errors {422}
+
+@endpoint DELETE /v1/convai/secrets/{secret_id}
+@required {secret_id: str}
+@returns(204)
+@errors {422}
+
+@endpoint PATCH /v1/convai/secrets/{secret_id}
+@required {secret_id: str, type: str, name: str, value: str}
+@returns(200) {type: str, secret_id: str, name: str}
+@errors {422}
+
+@endpoint POST /v1/convai/batch-calling/submit
+@required {call_name: str, agent_id: str, recipients: [map{id: any, phone_number: any, whatsapp_user_id: any, conversation_initiation_client_data: any}]}
+@optional {scheduled_time_unix: any, agent_phone_number_id: any, whatsapp_params: any, timezone: any}
+@returns(200) {id: str, phone_number_id: any, phone_provider: any, whatsapp_params: any, name: str, agent_id: str, created_at_unix: int, scheduled_time_unix: int, timezone: any, total_calls_dispatched: int, total_calls_scheduled: int, total_calls_finished: int, last_updated_at_unix: int, status: str, retry_count: int, agent_name: str}
+@errors {422}
+
+@endpoint GET /v1/convai/batch-calling/workspace
+@optional {limit: int=100, last_doc: any}
+@returns(200) {batch_calls: [map], next_doc: any, has_more: bool}
+@errors {422}
+
+@endpoint GET /v1/convai/batch-calling/{batch_id}
+@required {batch_id: str}
+@returns(200) {id: str, phone_number_id: any, phone_provider: any, whatsapp_params: any, name: str, agent_id: str, created_at_unix: int, scheduled_time_unix: int, timezone: any, total_calls_dispatched: int, total_calls_scheduled: int, total_calls_finished: int, last_updated_at_unix: int, status: str, retry_count: int, agent_name: str, recipients: [map]}
+@errors {422}
+
+@endpoint DELETE /v1/convai/batch-calling/{batch_id}
+@required {batch_id: str}
+@returns(204)
+@errors {422}
+
+@endpoint POST /v1/convai/batch-calling/{batch_id}/cancel
+@required {batch_id: str}
+@returns(200) {id: str, phone_number_id: any, phone_provider: any, whatsapp_params: any, name: str, agent_id: str, created_at_unix: int, scheduled_time_unix: int, timezone: any, total_calls_dispatched: int, total_calls_scheduled: int, total_calls_finished: int, last_updated_at_unix: int, status: str, retry_count: int, agent_name: str}
+@errors {422}
+
+@endpoint POST /v1/convai/batch-calling/{batch_id}/retry
+@required {batch_id: str}
+@returns(200) {id: str, phone_number_id: any, phone_provider: any, whatsapp_params: any, name: str, agent_id: str, created_at_unix: int, scheduled_time_unix: int, timezone: any, total_calls_dispatched: int, total_calls_scheduled: int, total_calls_finished: int, last_updated_at_unix: int, status: str, retry_count: int, agent_name: str}
+@errors {422}
+
+@endpoint POST /v1/convai/sip-trunk/outbound-call
+@required {agent_id: str, agent_phone_number_id: str, to_number: str}
+@optional {conversation_initiation_client_data: any}
+@returns(200) {success: bool, message: str, conversation_id: any, sip_call_id: any}
+@errors {422}
+
+@endpoint POST /v1/convai/mcp-servers
+@required {config: map{approval_policy: str, tool_approval_hashes: [map{tool_name!: str, tool_hash!: str, approval_policy: str}], transport: str, url!: any, secret_token: any, request_headers: map, auth_connection: any, name!: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map{tool_name!: str, force_pre_tool_speech: any, disable_interruptions: any, tool_call_sound: any, tool_call_sound_behavior: any, execution_mode: any, assignments: [map], input_overrides: any}], disable_compression: bool}}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint GET /v1/convai/mcp-servers
+@returns(200) {mcp_servers: [map]}
+@errors {422}
+
+@endpoint GET /v1/convai/mcp-servers/{mcp_server_id}
+@required {mcp_server_id: str}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint DELETE /v1/convai/mcp-servers/{mcp_server_id}
+@required {mcp_server_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint PATCH /v1/convai/mcp-servers/{mcp_server_id}
+@required {mcp_server_id: str}
+@optional {approval_policy: any, force_pre_tool_speech: any, disable_interruptions: any, tool_call_sound: any, tool_call_sound_behavior: any, execution_mode: any, request_headers: any, disable_compression: any, secret_token: any, auth_connection: any}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint GET /v1/convai/mcp-servers/{mcp_server_id}/tools
+@required {mcp_server_id: str}
+@returns(200) {success: bool, tools: [map], error_message: any}
+@errors {422}
+
+@endpoint PATCH /v1/convai/mcp-servers/{mcp_server_id}/approval-policy
+@required {mcp_server_id: str, approval_policy: str(auto_approve_all/require_approval_all/require_approval_per_tool)}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint POST /v1/convai/mcp-servers/{mcp_server_id}/tool-approvals
+@required {mcp_server_id: str, tool_name: str, tool_description: str}
+@optional {input_schema: map, approval_policy: str(auto_approved/requires_approval)}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint DELETE /v1/convai/mcp-servers/{mcp_server_id}/tool-approvals/{tool_name}
+@required {mcp_server_id: str, tool_name: str}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint POST /v1/convai/mcp-servers/{mcp_server_id}/tool-configs
+@required {mcp_server_id: str, tool_name: str}
+@optional {force_pre_tool_speech: any, disable_interruptions: any, tool_call_sound: any, tool_call_sound_behavior: any, execution_mode: any, assignments: any, input_overrides: any}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {409, 422}
+
+@endpoint GET /v1/convai/mcp-servers/{mcp_server_id}/tool-configs/{tool_name}
+@required {mcp_server_id: str, tool_name: str}
+@returns(200) {tool_name: str, force_pre_tool_speech: any, disable_interruptions: any, tool_call_sound: any, tool_call_sound_behavior: any, execution_mode: any, assignments: [map], input_overrides: any}
+@errors {404, 422}
+
+@endpoint PATCH /v1/convai/mcp-servers/{mcp_server_id}/tool-configs/{tool_name}
+@required {mcp_server_id: str, tool_name: str}
+@optional {force_pre_tool_speech: any, disable_interruptions: any, tool_call_sound: any, tool_call_sound_behavior: any, execution_mode: any, assignments: any, input_overrides: any}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {404, 422}
+
+@endpoint DELETE /v1/convai/mcp-servers/{mcp_server_id}/tool-configs/{tool_name}
+@required {mcp_server_id: str, tool_name: str}
+@returns(200) {id: str, config: map{approval_policy: str, tool_approval_hashes: [map], transport: str, url: any, secret_token: any, request_headers: map, auth_connection: any, name: str, description: str, force_pre_tool_speech: bool, disable_interruptions: bool, tool_call_sound: any, tool_call_sound_behavior: str, execution_mode: str, tool_config_overrides: [map], disable_compression: bool}, access_info: any, dependent_agents: [any], metadata: map{created_at: int, owner_user_id: any}}
+@errors {422}
+
+@endpoint GET /v1/convai/whatsapp-accounts/{phone_number_id}
+@required {phone_number_id: str}
+@returns(200) {business_account_id: str, phone_number_id: str, business_account_name: str, phone_number_name: str, phone_number: str, assigned_agent_id: any, enable_messaging: bool, assigned_agent_name: any}
+@errors {422}
+
+@endpoint PATCH /v1/convai/whatsapp-accounts/{phone_number_id}
+@required {phone_number_id: str}
+@optional {assigned_agent_id: any, enable_messaging: any}
+@returns(200)
+@errors {422}
+
+@endpoint DELETE /v1/convai/whatsapp-accounts/{phone_number_id}
+@required {phone_number_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint GET /v1/convai/whatsapp-accounts
+@returns(200) {items: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/branches
+@required {agent_id: str, parent_version_id: str, name: str, description: str}
+@optional {conversation_config: any, platform_settings: any, workflow: any}
+@returns(200) {created_branch_id: str, created_version_id: str}
+@errors {422}
+
+@endpoint GET /v1/convai/agents/{agent_id}/branches
+@required {agent_id: str}
+@optional {include_archived: bool=False, limit: int=100}
+@returns(200) {meta: map{total: any, page: any, page_size: any}, results: [map]}
+@errors {422}
+
+@endpoint GET /v1/convai/agents/{agent_id}/branches/{branch_id}
+@required {agent_id: str, branch_id: str}
+@returns(200) {id: str, name: str, agent_id: str, description: str, created_at: int, last_committed_at: int, is_archived: bool, protection_status: str, access_info: any, current_live_percentage: num, parent_branch: any, most_recent_versions: [map]}
+@errors {422}
+
+@endpoint PATCH /v1/convai/agents/{agent_id}/branches/{branch_id}
+@required {agent_id: str, branch_id: str}
+@optional {name: any, is_archived: any, protection_status: any}
+@returns(200) {id: str, name: str, agent_id: str, description: str, created_at: int, last_committed_at: int, is_archived: bool, protection_status: str, access_info: any, current_live_percentage: num, parent_branch: any, most_recent_versions: [map]}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/branches/{source_branch_id}/merge
+@required {agent_id: str, source_branch_id: str, target_branch_id: str}
+@optional {archive_source_branch: bool=True}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/deployments
+@required {agent_id: str, deployment_request: map{requests!: [map{branch_id!: str, deployment_strategy!: map}]}}
+@returns(200) {traffic_percentage_branch_id_map: map}
+@errors {422}
+
+@endpoint POST /v1/convai/agents/{agent_id}/drafts
+@required {agent_id: str, branch_id: str, conversation_config: map, platform_settings: map, workflow: map{edges: map, nodes: map, prevent_subagent_loops: bool}, name: str}
+@optional {tags: any}
+@returns(200)
+@errors {422}
+
+@endpoint DELETE /v1/convai/agents/{agent_id}/drafts
+@required {agent_id: str, branch_id: str}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group music
+@endpoint POST /v1/music/plan
+@required {prompt: str}
+@optional {music_length_ms: any, source_composition_plan: any, model_id: str=music_v1}
+@returns(200) {positive_global_styles: [str], negative_global_styles: [str], sections: [map]}
+@errors {422}
+
+@endpoint POST /v1/music
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, prompt: any, music_prompt: any, composition_plan: any, music_length_ms: any, model_id: str=music_v1, seed: any, force_instrumental: bool=False, finetune_id: any, use_phonetic_names: bool=False, respect_sections_durations: bool=True, store_for_inpainting: bool=False, sign_with_c2pa: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/music/detailed
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, prompt: any, music_prompt: any, composition_plan: any, music_length_ms: any, model_id: str=music_v1, seed: any, force_instrumental: bool=False, finetune_id: any, use_phonetic_names: bool=False, store_for_inpainting: bool=False, with_timestamps: bool=False, sign_with_c2pa: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/music/stream
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128, prompt: any, music_prompt: any, composition_plan: any, music_length_ms: any, model_id: str=music_v1, seed: any, force_instrumental: bool=False, finetune_id: any, use_phonetic_names: bool=False, store_for_inpainting: bool=False}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/music/upload
+@returns(200) {song_id: str, composition_plan: any}
+@errors {422}
+
+@endpoint POST /v1/music/stem-separation
+@optional {output_format: str(mp3_22050_32/mp3_24000_48/mp3_44100_32/mp3_44100_64/mp3_44100_96/mp3_44100_128/mp3_44100_192/pcm_8000/pcm_16000/pcm_22050/pcm_24000/pcm_32000/pcm_44100/pcm_48000/ulaw_8000/alaw_8000/opus_48000_32/opus_48000_64/opus_48000_96/opus_48000_128/opus_48000_192)=mp3_44100_128}
+@returns(200)
+@errors {422}
+
+@endgroup
+
+@group voices
+@endpoint POST /v1/voices/pvc
+@required {name: str, language: str}
+@optional {description: any, labels: any}
+@returns(200) {voice_id: str}
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}
+@required {voice_id: str}
+@optional {name: str, language: str, description: any, labels: any}
+@returns(200) {voice_id: str}
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}/samples
+@required {voice_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}/samples/{sample_id}
+@required {voice_id: str, sample_id: str}
+@optional {remove_background_noise: bool=False, selected_speaker_ids: any, trim_start_time: any, trim_end_time: any, file_name: any}
+@returns(200) {voice_id: str}
+@errors {422}
+
+@endpoint DELETE /v1/voices/pvc/{voice_id}/samples/{sample_id}
+@required {voice_id: str, sample_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/audio
+@required {voice_id: str, sample_id: str}
+@optional {remove_background_noise: bool=False}
+@returns(200) {audio_base_64: str, voice_id: str, sample_id: str, media_type: str, duration_secs: any}
+@errors {422}
+
+@endpoint GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/waveform
+@required {voice_id: str, sample_id: str}
+@returns(200) {sample_id: str, visual_waveform: [num]}
+@errors {422}
+
+@endpoint GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/speakers
+@required {voice_id: str, sample_id: str}
+@returns(200) {voice_id: str, sample_id: str, status: str, speakers: any, selected_speaker_ids: any}
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}/samples/{sample_id}/separate-speakers
+@required {voice_id: str, sample_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/speakers/{speaker_id}/audio
+@required {voice_id: str, sample_id: str, speaker_id: str}
+@returns(200) {audio_base_64: str, media_type: str, duration_secs: num}
+@errors {422}
+
+@endpoint GET /v1/voices/pvc/{voice_id}/captcha
+@required {voice_id: str}
+@returns(200)
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}/captcha
+@required {voice_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}/train
+@required {voice_id: str}
+@optional {model_id: any}
+@returns(200) {status: str}
+@errors {422}
+
+@endpoint POST /v1/voices/pvc/{voice_id}/verification
+@required {voice_id: str}
+@returns(200) {status: str}
+@errors {422}
+
+@endgroup
+
+@group docs
+@endpoint GET /docs
+@returns(200)
+
+@endgroup
+
+@end

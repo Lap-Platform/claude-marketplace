@@ -1,0 +1,345 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Managed Streaming for Kafka
+@version 2018-11-14
+@auth AWS SigV4
+@endpoints 52
+@hint download_for_search
+@toc clusters(25), api(5), configurations(7), replication(5), vpc-connection(3), operations(1), compatible-kafka-versions(1), kafka-versions(1), tags(3), vpc-connections(1)
+
+@group clusters
+@endpoint POST /v1/clusters/{clusterArn}/scram-secrets
+@required {ClusterArn: str, SecretArnList: [str]}
+@returns(200) {ClusterArn: str?, UnprocessedScramSecrets: [UnprocessedScramSecret]?}
+
+@endpoint POST /v1/clusters
+@required {BrokerNodeGroupInfo: BrokerNodeGroupInfo, ClusterName: str, KafkaVersion: str, NumberOfBrokerNodes: int}
+@optional {ClientAuthentication: ClientAuthentication, ConfigurationInfo: ConfigurationInfo, EncryptionInfo: EncryptionInfo, EnhancedMonitoring: str, OpenMonitoring: OpenMonitoringInfo, LoggingInfo: LoggingInfo, Tags: map<str,str>, StorageMode: str}
+@returns(200) {ClusterArn: str?, ClusterName: str?, State: str?}
+
+@endgroup
+
+@group api
+@endpoint POST /api/v2/clusters
+@required {ClusterName: str}
+@optional {Tags: map<str,str>, Provisioned: ProvisionedRequest, Serverless: ServerlessRequest}
+@returns(200) {ClusterArn: str?, ClusterName: str?, State: str?, ClusterType: str?}
+
+@endgroup
+
+@group configurations
+@endpoint POST /v1/configurations
+@required {Name: str, ServerProperties: bytes}
+@optional {Description: str, KafkaVersions: [str]}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, LatestRevision: ConfigurationRevision?{CreationTime: str(timestamp), Description: str?, Revision: int(i64)}, Name: str?, State: str?}
+
+@endgroup
+
+@group replication
+@endpoint POST /replication/v1/replicators
+@required {KafkaClusters: [KafkaCluster], ReplicationInfoList: [ReplicationInfo], ReplicatorName: str, ServiceExecutionRoleArn: str}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {ReplicatorArn: str?, ReplicatorName: str?, ReplicatorState: str?}
+
+@endgroup
+
+@group vpc-connection
+@endpoint POST /v1/vpc-connection
+@required {TargetClusterArn: str, Authentication: str, VpcId: str, ClientSubnets: [str], SecurityGroups: [str]}
+@optional {Tags: map<str,str>}
+@returns(200) {VpcConnectionArn: str?, State: str?, Authentication: str?, VpcId: str?, ClientSubnets: [str]?, SecurityGroups: [str]?, CreationTime: str(timestamp)?, Tags: map<str,str>?}
+
+@endgroup
+
+@group clusters
+@endpoint DELETE /v1/clusters/{clusterArn}
+@required {ClusterArn: str}
+@optional {currentVersion: str}
+@returns(200) {ClusterArn: str?, State: str?}
+
+@endpoint DELETE /v1/clusters/{clusterArn}/policy
+@required {ClusterArn: str}
+
+@endgroup
+
+@group configurations
+@endpoint DELETE /v1/configurations/{arn}
+@required {Arn: str}
+@returns(200) {Arn: str?, State: str?}
+
+@endgroup
+
+@group replication
+@endpoint DELETE /replication/v1/replicators/{replicatorArn}
+@required {ReplicatorArn: str}
+@optional {currentVersion: str}
+@returns(200) {ReplicatorArn: str?, ReplicatorState: str?}
+
+@endgroup
+
+@group vpc-connection
+@endpoint DELETE /v1/vpc-connection/{arn}
+@required {Arn: str}
+@returns(200) {VpcConnectionArn: str?, State: str?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /v1/clusters/{clusterArn}
+@required {ClusterArn: str}
+@returns(200) {ClusterInfo: ClusterInfo?{ActiveOperationArn: str?, BrokerNodeGroupInfo: BrokerNodeGroupInfo?{BrokerAZDistribution: str?, ClientSubnets: [str], InstanceType: str, SecurityGroups: [str]?, StorageInfo: StorageInfo?{EbsStorageInfo: EBSStorageInfo?}, ConnectivityInfo: ConnectivityInfo?{PublicAccess: PublicAccess?, VpcConnectivity: VpcConnectivity?}, ZoneIds: [str]?}, ClientAuthentication: ClientAuthentication?{Sasl: Sasl?{Scram: Scram?, Iam: Iam?}, Tls: Tls?{CertificateAuthorityArnList: [str]?, Enabled: bool?}, Unauthenticated: Unauthenticated?{Enabled: bool?}}, ClusterArn: str?, ClusterName: str?, CreationTime: str(timestamp)?, CurrentBrokerSoftwareInfo: BrokerSoftwareInfo?{ConfigurationArn: str?, ConfigurationRevision: int(i64)?, KafkaVersion: str?}, CurrentVersion: str?, EncryptionInfo: EncryptionInfo?{EncryptionAtRest: EncryptionAtRest?{DataVolumeKMSKeyId: str}, EncryptionInTransit: EncryptionInTransit?{ClientBroker: str?, InCluster: bool?}}, EnhancedMonitoring: str?, OpenMonitoring: OpenMonitoring?{Prometheus: Prometheus{JmxExporter: JmxExporter?, NodeExporter: NodeExporter?}}, LoggingInfo: LoggingInfo?{BrokerLogs: BrokerLogs{CloudWatchLogs: CloudWatchLogs?, Firehose: Firehose?, S3: S3?}}, NumberOfBrokerNodes: int?, State: str?, StateInfo: StateInfo?{Code: str?, Message: str?}, Tags: map<str,str>?, ZookeeperConnectString: str?, ZookeeperConnectStringTls: str?, StorageMode: str?, CustomerActionStatus: str?}}
+
+@endgroup
+
+@group api
+@endpoint GET /api/v2/clusters/{clusterArn}
+@required {ClusterArn: str}
+@returns(200) {ClusterInfo: Cluster?{ActiveOperationArn: str?, ClusterType: str?, ClusterArn: str?, ClusterName: str?, CreationTime: str(timestamp)?, CurrentVersion: str?, State: str?, StateInfo: StateInfo?{Code: str?, Message: str?}, Tags: map<str,str>?, Provisioned: Provisioned?{BrokerNodeGroupInfo: BrokerNodeGroupInfo{BrokerAZDistribution: str?, ClientSubnets: [str], InstanceType: str, SecurityGroups: [str]?, StorageInfo: StorageInfo?, ConnectivityInfo: ConnectivityInfo?, ZoneIds: [str]?}, CurrentBrokerSoftwareInfo: BrokerSoftwareInfo?{ConfigurationArn: str?, ConfigurationRevision: int(i64)?, KafkaVersion: str?}, ClientAuthentication: ClientAuthentication?{Sasl: Sasl?, Tls: Tls?, Unauthenticated: Unauthenticated?}, EncryptionInfo: EncryptionInfo?{EncryptionAtRest: EncryptionAtRest?, EncryptionInTransit: EncryptionInTransit?}, EnhancedMonitoring: str?, OpenMonitoring: OpenMonitoringInfo?{Prometheus: PrometheusInfo}, LoggingInfo: LoggingInfo?{BrokerLogs: BrokerLogs}, NumberOfBrokerNodes: int, ZookeeperConnectString: str?, ZookeeperConnectStringTls: str?, StorageMode: str?, CustomerActionStatus: str?}, Serverless: Serverless?{VpcConfigs: [VpcConfig], ClientAuthentication: ServerlessClientAuthentication?{Sasl: ServerlessSasl?}}}}
+
+@endgroup
+
+@group operations
+@endpoint GET /v1/operations/{clusterOperationArn}
+@required {ClusterOperationArn: str}
+@returns(200) {ClusterOperationInfo: ClusterOperationInfo?{ClientRequestId: str?, ClusterArn: str?, CreationTime: str(timestamp)?, EndTime: str(timestamp)?, ErrorInfo: ErrorInfo?{ErrorCode: str?, ErrorString: str?}, OperationArn: str?, OperationState: str?, OperationSteps: [ClusterOperationStep]?, OperationType: str?, SourceClusterInfo: MutableClusterInfo?{BrokerEBSVolumeInfo: [BrokerEBSVolumeInfo]?, ConfigurationInfo: ConfigurationInfo?{Arn: str, Revision: int(i64)}, NumberOfBrokerNodes: int?, EnhancedMonitoring: str?, OpenMonitoring: OpenMonitoring?{Prometheus: Prometheus}, KafkaVersion: str?, LoggingInfo: LoggingInfo?{BrokerLogs: BrokerLogs}, InstanceType: str?, ClientAuthentication: ClientAuthentication?{Sasl: Sasl?, Tls: Tls?, Unauthenticated: Unauthenticated?}, EncryptionInfo: EncryptionInfo?{EncryptionAtRest: EncryptionAtRest?, EncryptionInTransit: EncryptionInTransit?}, ConnectivityInfo: ConnectivityInfo?{PublicAccess: PublicAccess?, VpcConnectivity: VpcConnectivity?}, StorageMode: str?, BrokerCountUpdateInfo: BrokerCountUpdateInfo?{CreatedBrokerIds: [num(f64)]?, DeletedBrokerIds: [num(f64)]?}}, TargetClusterInfo: MutableClusterInfo?{BrokerEBSVolumeInfo: [BrokerEBSVolumeInfo]?, ConfigurationInfo: ConfigurationInfo?{Arn: str, Revision: int(i64)}, NumberOfBrokerNodes: int?, EnhancedMonitoring: str?, OpenMonitoring: OpenMonitoring?{Prometheus: Prometheus}, KafkaVersion: str?, LoggingInfo: LoggingInfo?{BrokerLogs: BrokerLogs}, InstanceType: str?, ClientAuthentication: ClientAuthentication?{Sasl: Sasl?, Tls: Tls?, Unauthenticated: Unauthenticated?}, EncryptionInfo: EncryptionInfo?{EncryptionAtRest: EncryptionAtRest?, EncryptionInTransit: EncryptionInTransit?}, ConnectivityInfo: ConnectivityInfo?{PublicAccess: PublicAccess?, VpcConnectivity: VpcConnectivity?}, StorageMode: str?, BrokerCountUpdateInfo: BrokerCountUpdateInfo?{CreatedBrokerIds: [num(f64)]?, DeletedBrokerIds: [num(f64)]?}}, VpcConnectionInfo: VpcConnectionInfo?{VpcConnectionArn: str?, Owner: str?, UserIdentity: UserIdentity?{Type: str?, PrincipalId: str?}, CreationTime: str(timestamp)?}}}
+
+@endgroup
+
+@group api
+@endpoint GET /api/v2/operations/{clusterOperationArn}
+@required {ClusterOperationArn: str}
+@returns(200) {ClusterOperationInfo: ClusterOperationV2?{ClusterArn: str?, ClusterType: str?, StartTime: str(timestamp)?, EndTime: str(timestamp)?, ErrorInfo: ErrorInfo?{ErrorCode: str?, ErrorString: str?}, OperationArn: str?, OperationState: str?, OperationType: str?, Provisioned: ClusterOperationV2Provisioned?{OperationSteps: [ClusterOperationStep]?, SourceClusterInfo: MutableClusterInfo?{BrokerEBSVolumeInfo: [BrokerEBSVolumeInfo]?, ConfigurationInfo: ConfigurationInfo?, NumberOfBrokerNodes: int?, EnhancedMonitoring: str?, OpenMonitoring: OpenMonitoring?, KafkaVersion: str?, LoggingInfo: LoggingInfo?, InstanceType: str?, ClientAuthentication: ClientAuthentication?, EncryptionInfo: EncryptionInfo?, ConnectivityInfo: ConnectivityInfo?, StorageMode: str?, BrokerCountUpdateInfo: BrokerCountUpdateInfo?}, TargetClusterInfo: MutableClusterInfo?{BrokerEBSVolumeInfo: [BrokerEBSVolumeInfo]?, ConfigurationInfo: ConfigurationInfo?, NumberOfBrokerNodes: int?, EnhancedMonitoring: str?, OpenMonitoring: OpenMonitoring?, KafkaVersion: str?, LoggingInfo: LoggingInfo?, InstanceType: str?, ClientAuthentication: ClientAuthentication?, EncryptionInfo: EncryptionInfo?, ConnectivityInfo: ConnectivityInfo?, StorageMode: str?, BrokerCountUpdateInfo: BrokerCountUpdateInfo?}, VpcConnectionInfo: VpcConnectionInfo?{VpcConnectionArn: str?, Owner: str?, UserIdentity: UserIdentity?, CreationTime: str(timestamp)?}}, Serverless: ClusterOperationV2Serverless?{VpcConnectionInfo: VpcConnectionInfoServerless?{CreationTime: str(timestamp)?, Owner: str?, UserIdentity: UserIdentity?, VpcConnectionArn: str?}}}}
+
+@endgroup
+
+@group configurations
+@endpoint GET /v1/configurations/{arn}
+@required {Arn: str}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, Description: str?, KafkaVersions: [str]?, LatestRevision: ConfigurationRevision?{CreationTime: str(timestamp), Description: str?, Revision: int(i64)}, Name: str?, State: str?}
+
+@endpoint GET /v1/configurations/{arn}/revisions/{revision}
+@required {Arn: str, Revision: int(i64)}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, Description: str?, Revision: int(i64)?, ServerProperties: bytes?}
+
+@endgroup
+
+@group replication
+@endpoint GET /replication/v1/replicators/{replicatorArn}
+@required {ReplicatorArn: str}
+@returns(200) {CreationTime: str(timestamp)?, CurrentVersion: str?, IsReplicatorReference: bool?, KafkaClusters: [KafkaClusterDescription]?, ReplicationInfoList: [ReplicationInfoDescription]?, ReplicatorArn: str?, ReplicatorDescription: str?, ReplicatorName: str?, ReplicatorResourceArn: str?, ReplicatorState: str?, ServiceExecutionRoleArn: str?, StateInfo: ReplicationStateInfo?{Code: str?, Message: str?}, Tags: map<str,str>?}
+
+@endgroup
+
+@group vpc-connection
+@endpoint GET /v1/vpc-connection/{arn}
+@required {Arn: str}
+@returns(200) {VpcConnectionArn: str?, TargetClusterArn: str?, State: str?, Authentication: str?, VpcId: str?, Subnets: [str]?, SecurityGroups: [str]?, CreationTime: str(timestamp)?, Tags: map<str,str>?}
+
+@endgroup
+
+@group clusters
+@endpoint PATCH /v1/clusters/{clusterArn}/scram-secrets
+@required {ClusterArn: str, SecretArnList: [str]}
+@returns(200) {ClusterArn: str?, UnprocessedScramSecrets: [UnprocessedScramSecret]?}
+
+@endpoint GET /v1/clusters/{clusterArn}/bootstrap-brokers
+@required {ClusterArn: str}
+@returns(200) {BootstrapBrokerString: str?, BootstrapBrokerStringTls: str?, BootstrapBrokerStringSaslScram: str?, BootstrapBrokerStringSaslIam: str?, BootstrapBrokerStringPublicTls: str?, BootstrapBrokerStringPublicSaslScram: str?, BootstrapBrokerStringPublicSaslIam: str?, BootstrapBrokerStringVpcConnectivityTls: str?, BootstrapBrokerStringVpcConnectivitySaslScram: str?, BootstrapBrokerStringVpcConnectivitySaslIam: str?}
+
+@endgroup
+
+@group compatible-kafka-versions
+@endpoint GET /v1/compatible-kafka-versions
+@optional {clusterArn: str}
+@returns(200) {CompatibleKafkaVersions: [CompatibleKafkaVersion]?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /v1/clusters/{clusterArn}/policy
+@required {ClusterArn: str}
+@returns(200) {CurrentVersion: str?, Policy: str?}
+
+@endpoint GET /v1/clusters/{clusterArn}/operations
+@required {ClusterArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {ClusterOperationInfoList: [ClusterOperationInfo]?, NextToken: str?}
+
+@endgroup
+
+@group api
+@endpoint GET /api/v2/clusters/{clusterArn}/operations
+@required {ClusterArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {ClusterOperationInfoList: [ClusterOperationV2Summary]?, NextToken: str?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /v1/clusters
+@optional {clusterNameFilter: str, maxResults: int, nextToken: str}
+@returns(200) {ClusterInfoList: [ClusterInfo]?, NextToken: str?}
+
+@endgroup
+
+@group api
+@endpoint GET /api/v2/clusters
+@optional {clusterNameFilter: str, clusterTypeFilter: str, maxResults: int, nextToken: str}
+@returns(200) {ClusterInfoList: [Cluster]?, NextToken: str?}
+
+@endgroup
+
+@group configurations
+@endpoint GET /v1/configurations/{arn}/revisions
+@required {Arn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, Revisions: [ConfigurationRevision]?}
+
+@endpoint GET /v1/configurations
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Configurations: [Configuration]?, NextToken: str?}
+
+@endgroup
+
+@group kafka-versions
+@endpoint GET /v1/kafka-versions
+@optional {maxResults: int, nextToken: str}
+@returns(200) {KafkaVersions: [KafkaVersion]?, NextToken: str?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /v1/clusters/{clusterArn}/nodes
+@required {ClusterArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, NodeInfoList: [NodeInfo]?}
+
+@endgroup
+
+@group replication
+@endpoint GET /replication/v1/replicators
+@optional {maxResults: int, nextToken: str, replicatorNameFilter: str}
+@returns(200) {NextToken: str?, Replicators: [ReplicatorSummary]?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /v1/clusters/{clusterArn}/scram-secrets
+@required {ClusterArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {NextToken: str?, SecretArnList: [str]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /v1/tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group clusters
+@endpoint GET /v1/clusters/{clusterArn}/client-vpc-connections
+@required {ClusterArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {ClientVpcConnections: [ClientVpcConnection]?, NextToken: str?}
+
+@endgroup
+
+@group vpc-connections
+@endpoint GET /v1/vpc-connections
+@optional {maxResults: int, nextToken: str}
+@returns(200) {VpcConnections: [VpcConnection]?, NextToken: str?}
+
+@endgroup
+
+@group clusters
+@endpoint PUT /v1/clusters/{clusterArn}/client-vpc-connection
+@required {ClusterArn: str, VpcConnectionArn: str}
+
+@endpoint PUT /v1/clusters/{clusterArn}/policy
+@required {ClusterArn: str, Policy: str}
+@optional {CurrentVersion: str}
+@returns(200) {CurrentVersion: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/reboot-broker
+@required {ClusterArn: str, BrokerIds: [str]}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /v1/tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /v1/tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group clusters
+@endpoint PUT /v1/clusters/{clusterArn}/nodes/count
+@required {ClusterArn: str, CurrentVersion: str, TargetNumberOfBrokerNodes: int}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/nodes/type
+@required {ClusterArn: str, CurrentVersion: str, TargetInstanceType: str}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/nodes/storage
+@required {ClusterArn: str, CurrentVersion: str, TargetBrokerEBSVolumeInfo: [BrokerEBSVolumeInfo]}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endgroup
+
+@group configurations
+@endpoint PUT /v1/configurations/{arn}
+@required {Arn: str, ServerProperties: bytes}
+@optional {Description: str}
+@returns(200) {Arn: str?, LatestRevision: ConfigurationRevision?{CreationTime: str(timestamp), Description: str?, Revision: int(i64)}}
+
+@endgroup
+
+@group clusters
+@endpoint PUT /v1/clusters/{clusterArn}/connectivity
+@required {ClusterArn: str, ConnectivityInfo: ConnectivityInfo, CurrentVersion: str}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/configuration
+@required {ClusterArn: str, ConfigurationInfo: ConfigurationInfo, CurrentVersion: str}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/version
+@required {ClusterArn: str, CurrentVersion: str, TargetKafkaVersion: str}
+@optional {ConfigurationInfo: ConfigurationInfo}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/monitoring
+@required {ClusterArn: str, CurrentVersion: str}
+@optional {EnhancedMonitoring: str, OpenMonitoring: OpenMonitoringInfo, LoggingInfo: LoggingInfo}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endgroup
+
+@group replication
+@endpoint PUT /replication/v1/replicators/{replicatorArn}/replication-info
+@required {ReplicatorArn: str, CurrentVersion: str, SourceKafkaClusterArn: str, TargetKafkaClusterArn: str}
+@optional {ConsumerGroupReplication: ConsumerGroupReplicationUpdate, TopicReplication: TopicReplicationUpdate}
+@returns(200) {ReplicatorArn: str?, ReplicatorState: str?}
+
+@endgroup
+
+@group clusters
+@endpoint PATCH /v1/clusters/{clusterArn}/security
+@required {ClusterArn: str, CurrentVersion: str}
+@optional {ClientAuthentication: ClientAuthentication, EncryptionInfo: EncryptionInfo}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endpoint PUT /v1/clusters/{clusterArn}/storage
+@required {ClusterArn: str, CurrentVersion: str}
+@optional {ProvisionedThroughput: ProvisionedThroughput, StorageMode: str, VolumeSizeGB: int}
+@returns(200) {ClusterArn: str?, ClusterOperationArn: str?}
+
+@endgroup
+
+@end

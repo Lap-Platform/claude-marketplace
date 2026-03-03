@@ -1,0 +1,407 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon GuardDuty
+@version 2017-11-28
+@auth AWS SigV4
+@endpoints 74
+@hint download_for_search
+@toc detector(57), malware-protection-plan(5), invitation(4), admin(3), organization(1), tags(3), malware-scan(1)
+
+@group detector
+@endpoint POST /detector/{detectorId}/administrator
+@required {DetectorId: str, AdministratorId: str, InvitationId: str}
+
+@endpoint POST /detector/{detectorId}/master
+@required {DetectorId: str, MasterId: str, InvitationId: str}
+
+@endpoint POST /detector/{detectorId}/findings/archive
+@required {DetectorId: str, FindingIds: [str]}
+
+@endpoint POST /detector
+@required {Enable: bool}
+@optional {ClientToken: str, FindingPublishingFrequency: str, DataSources: DataSourceConfigurations, Tags: map<str,str>, Features: [DetectorFeatureConfiguration]}
+@returns(200) {DetectorId: str?, UnprocessedDataSources: UnprocessedDataSourcesResult?{MalwareProtection: MalwareProtectionConfigurationResult?{ScanEc2InstanceWithFindings: ScanEc2InstanceWithFindingsResult?{EbsVolumes: EbsVolumesResult?}, ServiceRole: str?}}}
+
+@endpoint POST /detector/{detectorId}/filter
+@required {DetectorId: str, Name: str, FindingCriteria: FindingCriteria}
+@optional {Description: str, Action: str, Rank: int, ClientToken: str, Tags: map<str,str>}
+@returns(200) {Name: str}
+
+@endpoint POST /detector/{detectorId}/ipset
+@required {DetectorId: str, Name: str, Format: str, Location: str, Activate: bool}
+@optional {ClientToken: str, Tags: map<str,str>}
+@returns(200) {IpSetId: str}
+
+@endgroup
+
+@group malware-protection-plan
+@endpoint POST /malware-protection-plan
+@required {Role: str, ProtectedResource: CreateProtectedResource}
+@optional {ClientToken: str, Actions: MalwareProtectionPlanActions, Tags: map<str,str>}
+@returns(200) {MalwareProtectionPlanId: str?}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/member
+@required {DetectorId: str, AccountDetails: [AccountDetail]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endpoint POST /detector/{detectorId}/publishingDestination
+@required {DetectorId: str, DestinationType: str, DestinationProperties: DestinationProperties}
+@optional {ClientToken: str}
+@returns(200) {DestinationId: str}
+
+@endpoint POST /detector/{detectorId}/findings/create
+@required {DetectorId: str}
+@optional {FindingTypes: [str]}
+
+@endpoint POST /detector/{detectorId}/threatintelset
+@required {DetectorId: str, Name: str, Format: str, Location: str, Activate: bool}
+@optional {ClientToken: str, Tags: map<str,str>}
+@returns(200) {ThreatIntelSetId: str}
+
+@endgroup
+
+@group invitation
+@endpoint POST /invitation/decline
+@required {AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endgroup
+
+@group detector
+@endpoint DELETE /detector/{detectorId}
+@required {DetectorId: str}
+
+@endpoint DELETE /detector/{detectorId}/filter/{filterName}
+@required {DetectorId: str, FilterName: str}
+
+@endpoint DELETE /detector/{detectorId}/ipset/{ipSetId}
+@required {DetectorId: str, IpSetId: str}
+
+@endgroup
+
+@group invitation
+@endpoint POST /invitation/delete
+@required {AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endgroup
+
+@group malware-protection-plan
+@endpoint DELETE /malware-protection-plan/{malwareProtectionPlanId}
+@required {MalwareProtectionPlanId: str}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/member/delete
+@required {DetectorId: str, AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endpoint DELETE /detector/{detectorId}/publishingDestination/{destinationId}
+@required {DetectorId: str, DestinationId: str}
+
+@endpoint DELETE /detector/{detectorId}/threatintelset/{threatIntelSetId}
+@required {DetectorId: str, ThreatIntelSetId: str}
+
+@endpoint POST /detector/{detectorId}/malware-scans
+@required {DetectorId: str}
+@optional {NextToken: str, MaxResults: int, FilterCriteria: FilterCriteria, SortCriteria: SortCriteria}
+@returns(200) {Scans: [Scan], NextToken: str?}
+
+@endpoint GET /detector/{detectorId}/admin
+@required {DetectorId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {AutoEnable: bool?, MemberAccountLimitReached: bool, DataSources: OrganizationDataSourceConfigurationsResult?{S3Logs: OrganizationS3LogsConfigurationResult{AutoEnable: bool}, Kubernetes: OrganizationKubernetesConfigurationResult?{AuditLogs: OrganizationKubernetesAuditLogsConfigurationResult{AutoEnable: bool}}, MalwareProtection: OrganizationMalwareProtectionConfigurationResult?{ScanEc2InstanceWithFindings: OrganizationScanEc2InstanceWithFindingsResult?{EbsVolumes: OrganizationEbsVolumesResult?}}}, Features: [OrganizationFeatureConfigurationResult]?, NextToken: str?, AutoEnableOrganizationMembers: str?}
+
+@endpoint GET /detector/{detectorId}/publishingDestination/{destinationId}
+@required {DetectorId: str, DestinationId: str}
+@returns(200) {DestinationId: str, DestinationType: str, Status: str, PublishingFailureStartTimestamp: int(i64), DestinationProperties: DestinationProperties{DestinationArn: str?, KmsKeyArn: str?}}
+
+@endgroup
+
+@group admin
+@endpoint POST /admin/disable
+@required {AdminAccountId: str}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/administrator/disassociate
+@required {DetectorId: str}
+
+@endpoint POST /detector/{detectorId}/master/disassociate
+@required {DetectorId: str}
+
+@endpoint POST /detector/{detectorId}/member/disassociate
+@required {DetectorId: str, AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endgroup
+
+@group admin
+@endpoint POST /admin/enable
+@required {AdminAccountId: str}
+
+@endgroup
+
+@group detector
+@endpoint GET /detector/{detectorId}/administrator
+@required {DetectorId: str}
+@returns(200) {Administrator: Administrator{AccountId: str?, InvitationId: str?, RelationshipStatus: str?, InvitedAt: str?}}
+
+@endpoint POST /detector/{detectorId}/coverage/statistics
+@required {DetectorId: str, StatisticsType: [str]}
+@optional {FilterCriteria: CoverageFilterCriteria}
+@returns(200) {CoverageStatistics: CoverageStatistics?{CountByResourceType: map<str,int(i64)>?, CountByCoverageStatus: map<str,int(i64)>?}}
+
+@endpoint GET /detector/{detectorId}
+@required {DetectorId: str}
+@returns(200) {CreatedAt: str?, FindingPublishingFrequency: str?, ServiceRole: str, Status: str, UpdatedAt: str?, DataSources: DataSourceConfigurationsResult?{CloudTrail: CloudTrailConfigurationResult{Status: str}, DNSLogs: DNSLogsConfigurationResult{Status: str}, FlowLogs: FlowLogsConfigurationResult{Status: str}, S3Logs: S3LogsConfigurationResult{Status: str}, Kubernetes: KubernetesConfigurationResult?{AuditLogs: KubernetesAuditLogsConfigurationResult{Status: str}}, MalwareProtection: MalwareProtectionConfigurationResult?{ScanEc2InstanceWithFindings: ScanEc2InstanceWithFindingsResult?{EbsVolumes: EbsVolumesResult?}, ServiceRole: str?}}, Tags: map<str,str>?, Features: [DetectorFeatureConfigurationResult]?}
+
+@endpoint GET /detector/{detectorId}/filter/{filterName}
+@required {DetectorId: str, FilterName: str}
+@returns(200) {Name: str, Description: str?, Action: str, Rank: int?, FindingCriteria: FindingCriteria{Criterion: map<str,Condition>?}, Tags: map<str,str>?}
+
+@endpoint POST /detector/{detectorId}/findings/get
+@required {DetectorId: str, FindingIds: [str]}
+@optional {SortCriteria: SortCriteria}
+@returns(200) {Findings: [Finding]}
+
+@endpoint POST /detector/{detectorId}/findings/statistics
+@required {DetectorId: str, FindingStatisticTypes: [str]}
+@optional {FindingCriteria: FindingCriteria}
+@returns(200) {FindingStatistics: FindingStatistics{CountBySeverity: map<str,int>?}}
+
+@endpoint GET /detector/{detectorId}/ipset/{ipSetId}
+@required {DetectorId: str, IpSetId: str}
+@returns(200) {Name: str, Format: str, Location: str, Status: str, Tags: map<str,str>?}
+
+@endgroup
+
+@group invitation
+@endpoint GET /invitation/count
+@returns(200) {InvitationsCount: int?}
+
+@endgroup
+
+@group malware-protection-plan
+@endpoint GET /malware-protection-plan/{malwareProtectionPlanId}
+@required {MalwareProtectionPlanId: str}
+@returns(200) {Arn: str?, Role: str?, ProtectedResource: CreateProtectedResource?{S3Bucket: CreateS3BucketResource?{BucketName: str?, ObjectPrefixes: [str]?}}, Actions: MalwareProtectionPlanActions?{Tagging: MalwareProtectionPlanTaggingAction?{Status: str?}}, CreatedAt: str(timestamp)?, Status: str?, StatusReasons: [MalwareProtectionPlanStatusReason]?, Tags: map<str,str>?}
+
+@endgroup
+
+@group detector
+@endpoint GET /detector/{detectorId}/malware-scan-settings
+@required {DetectorId: str}
+@returns(200) {ScanResourceCriteria: ScanResourceCriteria?{Include: map<str,ScanCondition>?, Exclude: map<str,ScanCondition>?}, EbsSnapshotPreservation: str?}
+
+@endpoint GET /detector/{detectorId}/master
+@required {DetectorId: str}
+@returns(200) {Master: Master{AccountId: str?, InvitationId: str?, RelationshipStatus: str?, InvitedAt: str?}}
+
+@endpoint POST /detector/{detectorId}/member/detector/get
+@required {DetectorId: str, AccountIds: [str]}
+@returns(200) {MemberDataSourceConfigurations: [MemberDataSourceConfiguration], UnprocessedAccounts: [UnprocessedAccount]}
+
+@endpoint POST /detector/{detectorId}/member/get
+@required {DetectorId: str, AccountIds: [str]}
+@returns(200) {Members: [Member], UnprocessedAccounts: [UnprocessedAccount]}
+
+@endgroup
+
+@group organization
+@endpoint GET /organization/statistics
+@returns(200) {OrganizationDetails: OrganizationDetails?{UpdatedAt: str(timestamp)?, OrganizationStatistics: OrganizationStatistics?{TotalAccountsCount: int?, MemberAccountsCount: int?, ActiveAccountsCount: int?, EnabledAccountsCount: int?, CountByFeature: [OrganizationFeatureStatistics]?}}}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/freeTrial/daysRemaining
+@required {DetectorId: str}
+@optional {AccountIds: [str]}
+@returns(200) {Accounts: [AccountFreeTrialInfo]?, UnprocessedAccounts: [UnprocessedAccount]?}
+
+@endpoint GET /detector/{detectorId}/threatintelset/{threatIntelSetId}
+@required {DetectorId: str, ThreatIntelSetId: str}
+@returns(200) {Name: str, Format: str, Location: str, Status: str, Tags: map<str,str>?}
+
+@endpoint POST /detector/{detectorId}/usage/statistics
+@required {DetectorId: str, UsageStatisticType: str, UsageCriteria: UsageCriteria}
+@optional {Unit: str, MaxResults: int, NextToken: str}
+@returns(200) {UsageStatistics: UsageStatistics?{SumByAccount: [UsageAccountResult]?, TopAccountsByFeature: [UsageTopAccountsResult]?, SumByDataSource: [UsageDataSourceResult]?, SumByResource: [UsageResourceResult]?, TopResources: [UsageResourceResult]?, SumByFeature: [UsageFeatureResult]?}, NextToken: str?}
+
+@endpoint POST /detector/{detectorId}/member/invite
+@required {DetectorId: str, AccountIds: [str]}
+@optional {DisableEmailNotification: bool, Message: str}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endpoint POST /detector/{detectorId}/coverage
+@required {DetectorId: str}
+@optional {NextToken: str, MaxResults: int, FilterCriteria: CoverageFilterCriteria, SortCriteria: CoverageSortCriteria}
+@returns(200) {Resources: [CoverageResource], NextToken: str?}
+
+@endpoint GET /detector
+@optional {maxResults: int, nextToken: str}
+@returns(200) {DetectorIds: [str], NextToken: str?}
+
+@endpoint GET /detector/{detectorId}/filter
+@required {DetectorId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {FilterNames: [str], NextToken: str?}
+
+@endpoint POST /detector/{detectorId}/findings
+@required {DetectorId: str}
+@optional {FindingCriteria: FindingCriteria, SortCriteria: SortCriteria, MaxResults: int, NextToken: str}
+@returns(200) {FindingIds: [str], NextToken: str?}
+
+@endpoint GET /detector/{detectorId}/ipset
+@required {DetectorId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {IpSetIds: [str], NextToken: str?}
+
+@endgroup
+
+@group invitation
+@endpoint GET /invitation
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Invitations: [Invitation]?, NextToken: str?}
+
+@endgroup
+
+@group malware-protection-plan
+@endpoint GET /malware-protection-plan
+@optional {nextToken: str}
+@returns(200) {MalwareProtectionPlans: [MalwareProtectionPlanSummary]?, NextToken: str?}
+
+@endgroup
+
+@group detector
+@endpoint GET /detector/{detectorId}/member
+@required {DetectorId: str}
+@optional {maxResults: int, nextToken: str, onlyAssociated: str}
+@returns(200) {Members: [Member]?, NextToken: str?}
+
+@endgroup
+
+@group admin
+@endpoint GET /admin
+@optional {maxResults: int, nextToken: str}
+@returns(200) {AdminAccounts: [AdminAccount]?, NextToken: str?}
+
+@endgroup
+
+@group detector
+@endpoint GET /detector/{detectorId}/publishingDestination
+@required {DetectorId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Destinations: [Destination], NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group detector
+@endpoint GET /detector/{detectorId}/threatintelset
+@required {DetectorId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {ThreatIntelSetIds: [str], NextToken: str?}
+
+@endgroup
+
+@group malware-scan
+@endpoint POST /malware-scan/start
+@required {ResourceArn: str}
+@returns(200) {ScanId: str?}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/member/start
+@required {DetectorId: str, AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endpoint POST /detector/{detectorId}/member/stop
+@required {DetectorId: str, AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/findings/unarchive
+@required {DetectorId: str, FindingIds: [str]}
+
+@endgroup
+
+@group tags
+@endpoint DELETE /tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}
+@required {DetectorId: str}
+@optional {Enable: bool, FindingPublishingFrequency: str, DataSources: DataSourceConfigurations, Features: [DetectorFeatureConfiguration]}
+
+@endpoint POST /detector/{detectorId}/filter/{filterName}
+@required {DetectorId: str, FilterName: str}
+@optional {Description: str, Action: str, Rank: int, FindingCriteria: FindingCriteria}
+@returns(200) {Name: str}
+
+@endpoint POST /detector/{detectorId}/findings/feedback
+@required {DetectorId: str, FindingIds: [str], Feedback: str}
+@optional {Comments: str}
+
+@endpoint POST /detector/{detectorId}/ipset/{ipSetId}
+@required {DetectorId: str, IpSetId: str}
+@optional {Name: str, Location: str, Activate: bool}
+
+@endgroup
+
+@group malware-protection-plan
+@endpoint PATCH /malware-protection-plan/{malwareProtectionPlanId}
+@required {MalwareProtectionPlanId: str}
+@optional {Role: str, Actions: MalwareProtectionPlanActions, ProtectedResource: UpdateProtectedResource}
+
+@endgroup
+
+@group detector
+@endpoint POST /detector/{detectorId}/malware-scan-settings
+@required {DetectorId: str}
+@optional {ScanResourceCriteria: ScanResourceCriteria, EbsSnapshotPreservation: str}
+
+@endpoint POST /detector/{detectorId}/member/detector/update
+@required {DetectorId: str, AccountIds: [str]}
+@optional {DataSources: DataSourceConfigurations, Features: [MemberFeaturesConfiguration]}
+@returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
+
+@endpoint POST /detector/{detectorId}/admin
+@required {DetectorId: str}
+@optional {AutoEnable: bool, DataSources: OrganizationDataSourceConfigurations, Features: [OrganizationFeatureConfiguration], AutoEnableOrganizationMembers: str}
+
+@endpoint POST /detector/{detectorId}/publishingDestination/{destinationId}
+@required {DetectorId: str, DestinationId: str}
+@optional {DestinationProperties: DestinationProperties}
+
+@endpoint POST /detector/{detectorId}/threatintelset/{threatIntelSetId}
+@required {DetectorId: str, ThreatIntelSetId: str}
+@optional {Name: str, Location: str, Activate: bool}
+
+@endgroup
+
+@end

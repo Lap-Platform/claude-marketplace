@@ -1,0 +1,178 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Fault Injection Simulator
+@version 2020-12-01
+@auth AWS SigV4
+@endpoints 26
+@hint download_for_search
+@toc experimentTemplates(10), actions(2), experiments(7), safetyLevers(2), targetResourceTypes(2), tags(3)
+
+@group experimentTemplates
+@endpoint POST /experimentTemplates
+@required {clientToken: str, description: str, stopConditions: [CreateExperimentTemplateStopConditionInput], actions: map<str,CreateExperimentTemplateActionInput>, roleArn: str}
+@optional {targets: map<str,CreateExperimentTemplateTargetInput>, tags: map<str,str>, logConfiguration: CreateExperimentTemplateLogConfigurationInput, experimentOptions: CreateExperimentTemplateExperimentOptionsInput}
+@returns(200) {experimentTemplate: ExperimentTemplate?{id: str?, arn: str?, description: str?, targets: map<str,ExperimentTemplateTarget>?, actions: map<str,ExperimentTemplateAction>?, stopConditions: [ExperimentTemplateStopCondition]?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, roleArn: str?, tags: map<str,str>?, logConfiguration: ExperimentTemplateLogConfiguration?{cloudWatchLogsConfiguration: ExperimentTemplateCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentTemplateS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentTemplateExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endpoint POST /experimentTemplates/{id}/targetAccountConfigurations/{accountId}
+@required {experimentTemplateId: str, accountId: str, roleArn: str}
+@optional {clientToken: str, description: str}
+@returns(200) {targetAccountConfiguration: TargetAccountConfiguration?{roleArn: str?, accountId: str?, description: str?}}
+
+@endpoint DELETE /experimentTemplates/{id}
+@required {id: str}
+@returns(200) {experimentTemplate: ExperimentTemplate?{id: str?, arn: str?, description: str?, targets: map<str,ExperimentTemplateTarget>?, actions: map<str,ExperimentTemplateAction>?, stopConditions: [ExperimentTemplateStopCondition]?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, roleArn: str?, tags: map<str,str>?, logConfiguration: ExperimentTemplateLogConfiguration?{cloudWatchLogsConfiguration: ExperimentTemplateCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentTemplateS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentTemplateExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endpoint DELETE /experimentTemplates/{id}/targetAccountConfigurations/{accountId}
+@required {experimentTemplateId: str, accountId: str}
+@returns(200) {targetAccountConfiguration: TargetAccountConfiguration?{roleArn: str?, accountId: str?, description: str?}}
+
+@endgroup
+
+@group actions
+@endpoint GET /actions/{id}
+@required {id: str}
+@returns(200) {action: Action?{id: str?, arn: str?, description: str?, parameters: map<str,ActionParameter>?, targets: map<str,ActionTarget>?, tags: map<str,str>?}}
+
+@endgroup
+
+@group experiments
+@endpoint GET /experiments/{id}
+@required {id: str}
+@returns(200) {experiment: Experiment?{id: str?, arn: str?, experimentTemplateId: str?, roleArn: str?, state: ExperimentState?{status: str?, reason: str?, error: ExperimentError?{accountId: str?, code: str?, location: str?}}, targets: map<str,ExperimentTarget>?, actions: map<str,ExperimentAction>?, stopConditions: [ExperimentStopCondition]?, creationTime: str(timestamp)?, startTime: str(timestamp)?, endTime: str(timestamp)?, tags: map<str,str>?, logConfiguration: ExperimentLogConfiguration?{cloudWatchLogsConfiguration: ExperimentCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?, actionsMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endpoint GET /experiments/{id}/targetAccountConfigurations/{accountId}
+@required {experimentId: str, accountId: str}
+@returns(200) {targetAccountConfiguration: ExperimentTargetAccountConfiguration?{roleArn: str?, accountId: str?, description: str?}}
+
+@endgroup
+
+@group experimentTemplates
+@endpoint GET /experimentTemplates/{id}
+@required {id: str}
+@returns(200) {experimentTemplate: ExperimentTemplate?{id: str?, arn: str?, description: str?, targets: map<str,ExperimentTemplateTarget>?, actions: map<str,ExperimentTemplateAction>?, stopConditions: [ExperimentTemplateStopCondition]?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, roleArn: str?, tags: map<str,str>?, logConfiguration: ExperimentTemplateLogConfiguration?{cloudWatchLogsConfiguration: ExperimentTemplateCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentTemplateS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentTemplateExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endgroup
+
+@group safetyLevers
+@endpoint GET /safetyLevers/{id}
+@required {id: str}
+@returns(200) {safetyLever: SafetyLever?{id: str?, arn: str?, state: SafetyLeverState?{status: str?, reason: str?}}}
+
+@endgroup
+
+@group experimentTemplates
+@endpoint GET /experimentTemplates/{id}/targetAccountConfigurations/{accountId}
+@required {experimentTemplateId: str, accountId: str}
+@returns(200) {targetAccountConfiguration: TargetAccountConfiguration?{roleArn: str?, accountId: str?, description: str?}}
+
+@endgroup
+
+@group targetResourceTypes
+@endpoint GET /targetResourceTypes/{resourceType}
+@required {resourceType: str}
+@returns(200) {targetResourceType: TargetResourceType?{resourceType: str?, description: str?, parameters: map<str,TargetResourceTypeParameter>?}}
+
+@endgroup
+
+@group actions
+@endpoint GET /actions
+@optional {maxResults: int, nextToken: str}
+@returns(200) {actions: [ActionSummary]?, nextToken: str?}
+
+@endgroup
+
+@group experiments
+@endpoint GET /experiments/{id}/resolvedTargets
+@required {experimentId: str}
+@optional {maxResults: int, nextToken: str, targetName: str}
+@returns(200) {resolvedTargets: [ResolvedTarget]?, nextToken: str?}
+
+@endpoint GET /experiments/{id}/targetAccountConfigurations
+@required {experimentId: str}
+@optional {nextToken: str}
+@returns(200) {targetAccountConfigurations: [ExperimentTargetAccountConfigurationSummary]?, nextToken: str?}
+
+@endgroup
+
+@group experimentTemplates
+@endpoint GET /experimentTemplates
+@optional {maxResults: int, nextToken: str}
+@returns(200) {experimentTemplates: [ExperimentTemplateSummary]?, nextToken: str?}
+
+@endgroup
+
+@group experiments
+@endpoint GET /experiments
+@optional {maxResults: int, nextToken: str, experimentTemplateId: str}
+@returns(200) {experiments: [ExperimentSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group experimentTemplates
+@endpoint GET /experimentTemplates/{id}/targetAccountConfigurations
+@required {experimentTemplateId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {targetAccountConfigurations: [TargetAccountConfigurationSummary]?, nextToken: str?}
+
+@endgroup
+
+@group targetResourceTypes
+@endpoint GET /targetResourceTypes
+@optional {maxResults: int, nextToken: str}
+@returns(200) {targetResourceTypes: [TargetResourceTypeSummary]?, nextToken: str?}
+
+@endgroup
+
+@group experiments
+@endpoint POST /experiments
+@required {clientToken: str, experimentTemplateId: str}
+@optional {experimentOptions: StartExperimentExperimentOptionsInput, tags: map<str,str>}
+@returns(200) {experiment: Experiment?{id: str?, arn: str?, experimentTemplateId: str?, roleArn: str?, state: ExperimentState?{status: str?, reason: str?, error: ExperimentError?{accountId: str?, code: str?, location: str?}}, targets: map<str,ExperimentTarget>?, actions: map<str,ExperimentAction>?, stopConditions: [ExperimentStopCondition]?, creationTime: str(timestamp)?, startTime: str(timestamp)?, endTime: str(timestamp)?, tags: map<str,str>?, logConfiguration: ExperimentLogConfiguration?{cloudWatchLogsConfiguration: ExperimentCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?, actionsMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endpoint DELETE /experiments/{id}
+@required {id: str}
+@returns(200) {experiment: Experiment?{id: str?, arn: str?, experimentTemplateId: str?, roleArn: str?, state: ExperimentState?{status: str?, reason: str?, error: ExperimentError?{accountId: str?, code: str?, location: str?}}, targets: map<str,ExperimentTarget>?, actions: map<str,ExperimentAction>?, stopConditions: [ExperimentStopCondition]?, creationTime: str(timestamp)?, startTime: str(timestamp)?, endTime: str(timestamp)?, tags: map<str,str>?, logConfiguration: ExperimentLogConfiguration?{cloudWatchLogsConfiguration: ExperimentCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?, actionsMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str}
+@optional {tagKeys: [str]}
+
+@endgroup
+
+@group experimentTemplates
+@endpoint PATCH /experimentTemplates/{id}
+@required {id: str}
+@optional {description: str, stopConditions: [UpdateExperimentTemplateStopConditionInput], targets: map<str,UpdateExperimentTemplateTargetInput>, actions: map<str,UpdateExperimentTemplateActionInputItem>, roleArn: str, logConfiguration: UpdateExperimentTemplateLogConfigurationInput, experimentOptions: UpdateExperimentTemplateExperimentOptionsInput}
+@returns(200) {experimentTemplate: ExperimentTemplate?{id: str?, arn: str?, description: str?, targets: map<str,ExperimentTemplateTarget>?, actions: map<str,ExperimentTemplateAction>?, stopConditions: [ExperimentTemplateStopCondition]?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, roleArn: str?, tags: map<str,str>?, logConfiguration: ExperimentTemplateLogConfiguration?{cloudWatchLogsConfiguration: ExperimentTemplateCloudWatchLogsLogConfiguration?{logGroupArn: str?}, s3Configuration: ExperimentTemplateS3LogConfiguration?{bucketName: str?, prefix: str?}, logSchemaVersion: int?}, experimentOptions: ExperimentTemplateExperimentOptions?{accountTargeting: str?, emptyTargetResolutionMode: str?}, targetAccountConfigurationsCount: int(i64)?}}
+
+@endgroup
+
+@group safetyLevers
+@endpoint PATCH /safetyLevers/{id}/state
+@required {id: str, state: UpdateSafetyLeverStateInput}
+@returns(200) {safetyLever: SafetyLever?{id: str?, arn: str?, state: SafetyLeverState?{status: str?, reason: str?}}}
+
+@endgroup
+
+@group experimentTemplates
+@endpoint PATCH /experimentTemplates/{id}/targetAccountConfigurations/{accountId}
+@required {experimentTemplateId: str, accountId: str}
+@optional {roleArn: str, description: str}
+@returns(200) {targetAccountConfiguration: TargetAccountConfiguration?{roleArn: str?, accountId: str?, description: str?}}
+
+@endgroup
+
+@end

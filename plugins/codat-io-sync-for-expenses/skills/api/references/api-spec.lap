@@ -1,0 +1,75 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Sync for Expenses API
+@base https://api.codat.io
+@version prealpha
+@auth ApiKey Authorization in header
+@endpoints 14
+@toc companies(14)
+
+@endpoint GET /companies/{companyId}/sync/expenses/config
+@returns(200) {bankAccount: map{id: str}, supplier: map{id: str}, customer: map{id: str}}
+@errors {401, 404, 429}
+
+@endpoint POST /companies/{companyId}/sync/expenses/config
+@required {bankAccount: map{id: str}, supplier: map{id: str}, customer: map{id: str}}
+@returns(200) {bankAccount: map{id: str}, supplier: map{id: str}, customer: map{id: str}}
+@errors {400, 401, 404, 429}
+
+@endpoint POST /companies/{companyId}/sync/expenses/connections/partnerExpense
+@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map], connectionInfo: map}
+@errors {400, 401, 404, 429}
+
+@endpoint GET /companies/{companyId}/sync/expenses/mappingOptions
+@returns(200) {expenseProvider: str?, accounts: [map]?, trackingCategories: [map]?, taxRates: [map]?}
+@errors {401, 404, 429}
+
+@endpoint POST /companies/{companyId}/sync/expenses/syncs
+@optional {datasetIds: [str(uuid)]}
+@returns(202) {syncId: str(uuid)}
+@errors {400, 404, 422}
+
+@endpoint GET /companies/{companyId}/sync/expenses/syncs/lastSuccessful/status
+@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool}
+@errors {401, 404, 429}
+
+@endpoint GET /companies/{companyId}/sync/expenses/syncs/latest/status
+@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool}
+@errors {401, 404, 429}
+
+@endpoint GET /companies/{companyId}/sync/expenses/syncs/list/status
+@returns(200)
+@errors {401, 404, 429}
+
+@endpoint GET /companies/{companyId}/sync/expenses/syncs/{syncId}/status
+@required {syncId: str(uuid)}
+@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool}
+@errors {401, 404, 429}
+
+@endpoint GET /companies/{companyId}/sync/expenses/syncs/{syncId}/transactions
+@required {syncId: str(uuid)}
+@optional {page: int(int32)=1, pageSize: int(int32)=100}
+@returns(200)
+@errors {401, 404, 429}
+
+@endpoint GET /companies/{companyId}/sync/expenses/syncs/{syncId}/transactions/{transactionId}
+@required {syncId: str(uuid), transactionId: str(uuid)}
+@returns(200)
+@errors {401, 404, 429}
+
+@endpoint POST /companies/{companyId}/sync/expenses/data/expense-transactions
+@optional {items: [map{id!: str(uuid), type!: str, issueDate!: str, currency!: str, currencyRate: num, contactRef: map{id: str, contactType: str}, merchantName: str, lines: [map{netAmount!: num, taxAmount!: num, taxRateRef: map, accountRef!: map, trackingRefs: [map]}], notes: str}]}
+@returns(200) {datasetId: str(uuid)}
+@errors {400, 401, 404, 429}
+
+@endpoint PUT /companies/{companyId}/sync/expenses/expense-transactions/{transactionId}
+@required {type: str(Payment/Refund/Reward/Chargeback/TransferIn/TransferOut/AdjustmentIn/AdjustmentOut), issueDate: str}
+@optional {currency: str, currencyRate: num, contactRef: map{id: str, contactType: str}, merchantName: str, lines: [map{netAmount!: num, taxAmount!: num, taxRateRef: map{id: str}, accountRef!: map{id: str}, trackingRefs: [map{id: str}]}], notes: str}
+@returns(202) {syncId: str}
+@errors {400, 401, 404, 422, 429}
+
+@endpoint POST /companies/{companyId}/sync/expenses/syncs/{syncId}/transactions/{transactionId}/attachments
+@returns(200) {companyId: str(uuid), id: str, transactionId: str}
+@errors {400, 401, 404, 429}
+
+@end

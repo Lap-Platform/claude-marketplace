@@ -1,0 +1,408 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Location Service
+@version 2020-11-19
+@auth AWS SigV4
+@endpoints 60
+@hint download_for_search
+@toc tracking(15), geofencing(12), routes(7), metadata(5), maps(9), places(9), tags(3)
+
+@group tracking
+@endpoint POST /tracking/v0/trackers/{TrackerName}/consumers
+@required {TrackerName: str, ConsumerArn: str}
+
+@endpoint POST /tracking/v0/trackers/{TrackerName}/delete-positions
+@required {TrackerName: str, DeviceIds: [str]}
+@returns(200) {Errors: [BatchDeleteDevicePositionHistoryError]}
+
+@endgroup
+
+@group geofencing
+@endpoint POST /geofencing/v0/collections/{CollectionName}/delete-geofences
+@required {CollectionName: str, GeofenceIds: [str]}
+@returns(200) {Errors: [BatchDeleteGeofenceError]}
+
+@endpoint POST /geofencing/v0/collections/{CollectionName}/positions
+@required {CollectionName: str, DevicePositionUpdates: [DevicePositionUpdate]}
+@returns(200) {Errors: [BatchEvaluateGeofencesError]}
+
+@endgroup
+
+@group tracking
+@endpoint POST /tracking/v0/trackers/{TrackerName}/get-positions
+@required {TrackerName: str, DeviceIds: [str]}
+@returns(200) {Errors: [BatchGetDevicePositionError], DevicePositions: [DevicePosition]}
+
+@endgroup
+
+@group geofencing
+@endpoint POST /geofencing/v0/collections/{CollectionName}/put-geofences
+@required {CollectionName: str, Entries: [BatchPutGeofenceRequestEntry]}
+@returns(200) {Successes: [BatchPutGeofenceSuccess], Errors: [BatchPutGeofenceError]}
+
+@endgroup
+
+@group tracking
+@endpoint POST /tracking/v0/trackers/{TrackerName}/positions
+@required {TrackerName: str, Updates: [DevicePositionUpdate]}
+@returns(200) {Errors: [BatchUpdateDevicePositionError]}
+
+@endgroup
+
+@group routes
+@endpoint POST /routes/v0/calculators/{CalculatorName}/calculate/route
+@required {CalculatorName: str, DeparturePosition: [num(f64)], DestinationPosition: [num(f64)]}
+@optional {key: str, WaypointPositions: [[num(f64)]], TravelMode: str, DepartureTime: str(timestamp), DepartNow: bool, DistanceUnit: str, IncludeLegGeometry: bool, CarModeOptions: CalculateRouteCarModeOptions, TruckModeOptions: CalculateRouteTruckModeOptions, ArrivalTime: str(timestamp), OptimizeFor: str}
+@returns(200) {Legs: [Leg], Summary: CalculateRouteSummary{RouteBBox: [num(f64)], DataSource: str, Distance: num(f64), DurationSeconds: num(f64), DistanceUnit: str}}
+
+@endpoint POST /routes/v0/calculators/{CalculatorName}/calculate/route-matrix
+@required {CalculatorName: str, DeparturePositions: [[num(f64)]], DestinationPositions: [[num(f64)]]}
+@optional {key: str, TravelMode: str, DepartureTime: str(timestamp), DepartNow: bool, DistanceUnit: str, CarModeOptions: CalculateRouteCarModeOptions, TruckModeOptions: CalculateRouteTruckModeOptions}
+@returns(200) {RouteMatrix: [[RouteMatrixEntry]], SnappedDeparturePositions: [[num(f64)]]?, SnappedDestinationPositions: [[num(f64)]]?, Summary: CalculateRouteMatrixSummary{DataSource: str, RouteCount: int, ErrorCount: int, DistanceUnit: str}}
+
+@endgroup
+
+@group geofencing
+@endpoint POST /geofencing/v0/collections
+@required {CollectionName: str}
+@optional {PricingPlan: str, PricingPlanDataSource: str, Description: str, Tags: map<str,str>, KmsKeyId: str}
+@returns(200) {CollectionName: str, CollectionArn: str, CreateTime: str(timestamp)}
+
+@endgroup
+
+@group metadata
+@endpoint POST /metadata/v0/keys
+@required {KeyName: str, Restrictions: ApiKeyRestrictions}
+@optional {Description: str, ExpireTime: str(timestamp), NoExpiry: bool, Tags: map<str,str>}
+@returns(200) {Key: str, KeyArn: str, KeyName: str, CreateTime: str(timestamp)}
+
+@endgroup
+
+@group maps
+@endpoint POST /maps/v0/maps
+@required {MapName: str, Configuration: MapConfiguration}
+@optional {PricingPlan: str, Description: str, Tags: map<str,str>}
+@returns(200) {MapName: str, MapArn: str, CreateTime: str(timestamp)}
+
+@endgroup
+
+@group places
+@endpoint POST /places/v0/indexes
+@required {IndexName: str, DataSource: str}
+@optional {PricingPlan: str, Description: str, DataSourceConfiguration: DataSourceConfiguration, Tags: map<str,str>}
+@returns(200) {IndexName: str, IndexArn: str, CreateTime: str(timestamp)}
+
+@endgroup
+
+@group routes
+@endpoint POST /routes/v0/calculators
+@required {CalculatorName: str, DataSource: str}
+@optional {PricingPlan: str, Description: str, Tags: map<str,str>}
+@returns(200) {CalculatorName: str, CalculatorArn: str, CreateTime: str(timestamp)}
+
+@endgroup
+
+@group tracking
+@endpoint POST /tracking/v0/trackers
+@required {TrackerName: str}
+@optional {PricingPlan: str, KmsKeyId: str, PricingPlanDataSource: str, Description: str, Tags: map<str,str>, PositionFiltering: str, EventBridgeEnabled: bool, KmsKeyEnableGeospatialQueries: bool}
+@returns(200) {TrackerName: str, TrackerArn: str, CreateTime: str(timestamp)}
+
+@endgroup
+
+@group geofencing
+@endpoint DELETE /geofencing/v0/collections/{CollectionName}
+@required {CollectionName: str}
+
+@endgroup
+
+@group metadata
+@endpoint DELETE /metadata/v0/keys/{KeyName}
+@required {KeyName: str}
+@optional {forceDelete: bool}
+
+@endgroup
+
+@group maps
+@endpoint DELETE /maps/v0/maps/{MapName}
+@required {MapName: str}
+
+@endgroup
+
+@group places
+@endpoint DELETE /places/v0/indexes/{IndexName}
+@required {IndexName: str}
+
+@endgroup
+
+@group routes
+@endpoint DELETE /routes/v0/calculators/{CalculatorName}
+@required {CalculatorName: str}
+
+@endgroup
+
+@group tracking
+@endpoint DELETE /tracking/v0/trackers/{TrackerName}
+@required {TrackerName: str}
+
+@endgroup
+
+@group geofencing
+@endpoint GET /geofencing/v0/collections/{CollectionName}
+@required {CollectionName: str}
+@returns(200) {CollectionName: str, CollectionArn: str, Description: str, PricingPlan: str?, PricingPlanDataSource: str?, KmsKeyId: str?, Tags: map<str,str>?, CreateTime: str(timestamp), UpdateTime: str(timestamp), GeofenceCount: int?}
+
+@endgroup
+
+@group metadata
+@endpoint GET /metadata/v0/keys/{KeyName}
+@required {KeyName: str}
+@returns(200) {Key: str, KeyArn: str, KeyName: str, Restrictions: ApiKeyRestrictions{AllowActions: [str], AllowResources: [str], AllowReferers: [str]?}, CreateTime: str(timestamp), ExpireTime: str(timestamp), UpdateTime: str(timestamp), Description: str?, Tags: map<str,str>?}
+
+@endgroup
+
+@group maps
+@endpoint GET /maps/v0/maps/{MapName}
+@required {MapName: str}
+@returns(200) {MapName: str, MapArn: str, PricingPlan: str?, DataSource: str, Configuration: MapConfiguration{Style: str, PoliticalView: str?, CustomLayers: [str]?}, Description: str, Tags: map<str,str>?, CreateTime: str(timestamp), UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group places
+@endpoint GET /places/v0/indexes/{IndexName}
+@required {IndexName: str}
+@returns(200) {IndexName: str, IndexArn: str, PricingPlan: str?, Description: str, CreateTime: str(timestamp), UpdateTime: str(timestamp), DataSource: str, DataSourceConfiguration: DataSourceConfiguration{IntendedUse: str?}, Tags: map<str,str>?}
+
+@endgroup
+
+@group routes
+@endpoint GET /routes/v0/calculators/{CalculatorName}
+@required {CalculatorName: str}
+@returns(200) {CalculatorName: str, CalculatorArn: str, PricingPlan: str?, Description: str, CreateTime: str(timestamp), UpdateTime: str(timestamp), DataSource: str, Tags: map<str,str>?}
+
+@endgroup
+
+@group tracking
+@endpoint GET /tracking/v0/trackers/{TrackerName}
+@required {TrackerName: str}
+@returns(200) {TrackerName: str, TrackerArn: str, Description: str, PricingPlan: str?, PricingPlanDataSource: str?, Tags: map<str,str>?, CreateTime: str(timestamp), UpdateTime: str(timestamp), KmsKeyId: str?, PositionFiltering: str?, EventBridgeEnabled: bool?, KmsKeyEnableGeospatialQueries: bool?}
+
+@endpoint DELETE /tracking/v0/trackers/{TrackerName}/consumers/{ConsumerArn}
+@required {TrackerName: str, ConsumerArn: str}
+
+@endgroup
+
+@group geofencing
+@endpoint POST /geofencing/v0/collections/{CollectionName}/forecast-geofence-events
+@required {CollectionName: str, DeviceState: ForecastGeofenceEventsDeviceState}
+@optional {TimeHorizonMinutes: num(f64), DistanceUnit: str, SpeedUnit: str, NextToken: str, MaxResults: int}
+@returns(200) {ForecastedEvents: [ForecastedEvent], NextToken: str?, DistanceUnit: str, SpeedUnit: str}
+
+@endgroup
+
+@group tracking
+@endpoint GET /tracking/v0/trackers/{TrackerName}/devices/{DeviceId}/positions/latest
+@required {TrackerName: str, DeviceId: str}
+@returns(200) {DeviceId: str?, SampleTime: str(timestamp), ReceivedTime: str(timestamp), Position: [num(f64)], Accuracy: PositionalAccuracy?{Horizontal: num(f64)}, PositionProperties: map<str,str>?}
+
+@endpoint POST /tracking/v0/trackers/{TrackerName}/devices/{DeviceId}/list-positions
+@required {TrackerName: str, DeviceId: str}
+@optional {NextToken: str, StartTimeInclusive: str(timestamp), EndTimeExclusive: str(timestamp), MaxResults: int}
+@returns(200) {DevicePositions: [DevicePosition], NextToken: str?}
+
+@endgroup
+
+@group geofencing
+@endpoint GET /geofencing/v0/collections/{CollectionName}/geofences/{GeofenceId}
+@required {CollectionName: str, GeofenceId: str}
+@returns(200) {GeofenceId: str, Geometry: GeofenceGeometry{Polygon: [[[num(f64)]]]?, Circle: Circle?{Center: [num(f64)], Radius: num(f64)}, Geobuf: bytes?}, Status: str, CreateTime: str(timestamp), UpdateTime: str(timestamp), GeofenceProperties: map<str,str>?}
+
+@endgroup
+
+@group maps
+@endpoint GET /maps/v0/maps/{MapName}/glyphs/{FontStack}/{FontUnicodeRange}
+@required {MapName: str, FontStack: str, FontUnicodeRange: str}
+@optional {key: str}
+@returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
+
+@endpoint GET /maps/v0/maps/{MapName}/sprites/{FileName}
+@required {MapName: str, FileName: str}
+@optional {key: str}
+@returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
+
+@endpoint GET /maps/v0/maps/{MapName}/style-descriptor
+@required {MapName: str}
+@optional {key: str}
+@returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
+
+@endpoint GET /maps/v0/maps/{MapName}/tiles/{Z}/{X}/{Y}
+@required {MapName: str, Z: str, X: str, Y: str}
+@optional {key: str}
+@returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
+
+@endgroup
+
+@group places
+@endpoint GET /places/v0/indexes/{IndexName}/places/{PlaceId}
+@required {IndexName: str, PlaceId: str}
+@optional {language: str, key: str}
+@returns(200) {Place: Place{Label: str?, Geometry: PlaceGeometry{Point: [num(f64)]?}, AddressNumber: str?, Street: str?, Neighborhood: str?, Municipality: str?, SubRegion: str?, Region: str?, Country: str?, PostalCode: str?, Interpolated: bool?, TimeZone: TimeZone?{Name: str, Offset: int?}, UnitType: str?, UnitNumber: str?, Categories: [str]?, SupplementalCategories: [str]?, SubMunicipality: str?}}
+
+@endgroup
+
+@group tracking
+@endpoint POST /tracking/v0/trackers/{TrackerName}/list-positions
+@required {TrackerName: str}
+@optional {MaxResults: int, NextToken: str, FilterGeometry: TrackingFilterGeometry}
+@returns(200) {Entries: [ListDevicePositionsResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group geofencing
+@endpoint POST /geofencing/v0/list-collections
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Entries: [ListGeofenceCollectionsResponseEntry], NextToken: str?}
+
+@endpoint POST /geofencing/v0/collections/{CollectionName}/list-geofences
+@required {CollectionName: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Entries: [ListGeofenceResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group metadata
+@endpoint POST /metadata/v0/list-keys
+@optional {MaxResults: int, NextToken: str, Filter: ApiKeyFilter}
+@returns(200) {Entries: [ListKeysResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group maps
+@endpoint POST /maps/v0/list-maps
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Entries: [ListMapsResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group places
+@endpoint POST /places/v0/list-indexes
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Entries: [ListPlaceIndexesResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group routes
+@endpoint POST /routes/v0/list-calculators
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Entries: [ListRouteCalculatorsResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group tracking
+@endpoint POST /tracking/v0/trackers/{TrackerName}/list-consumers
+@required {TrackerName: str}
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {ConsumerArns: [str], NextToken: str?}
+
+@endpoint POST /tracking/v0/list-trackers
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Entries: [ListTrackersResponseEntry], NextToken: str?}
+
+@endgroup
+
+@group geofencing
+@endpoint PUT /geofencing/v0/collections/{CollectionName}/geofences/{GeofenceId}
+@required {CollectionName: str, GeofenceId: str, Geometry: GeofenceGeometry}
+@optional {GeofenceProperties: map<str,str>}
+@returns(200) {GeofenceId: str, CreateTime: str(timestamp), UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group places
+@endpoint POST /places/v0/indexes/{IndexName}/search/position
+@required {IndexName: str, Position: [num(f64)]}
+@optional {key: str, MaxResults: int, Language: str}
+@returns(200) {Summary: SearchPlaceIndexForPositionSummary{Position: [num(f64)], MaxResults: int?, DataSource: str, Language: str?}, Results: [SearchForPositionResult]}
+
+@endpoint POST /places/v0/indexes/{IndexName}/search/suggestions
+@required {IndexName: str, Text: str}
+@optional {key: str, BiasPosition: [num(f64)], FilterBBox: [num(f64)], FilterCountries: [str], MaxResults: int, Language: str, FilterCategories: [str]}
+@returns(200) {Summary: SearchPlaceIndexForSuggestionsSummary{Text: str, BiasPosition: [num(f64)]?, FilterBBox: [num(f64)]?, FilterCountries: [str]?, MaxResults: int?, DataSource: str, Language: str?, FilterCategories: [str]?}, Results: [SearchForSuggestionsResult]}
+
+@endpoint POST /places/v0/indexes/{IndexName}/search/text
+@required {IndexName: str, Text: str}
+@optional {key: str, BiasPosition: [num(f64)], FilterBBox: [num(f64)], FilterCountries: [str], MaxResults: int, Language: str, FilterCategories: [str]}
+@returns(200) {Summary: SearchPlaceIndexForTextSummary{Text: str, BiasPosition: [num(f64)]?, FilterBBox: [num(f64)]?, FilterCountries: [str]?, MaxResults: int?, ResultBBox: [num(f64)]?, DataSource: str, Language: str?, FilterCategories: [str]?}, Results: [SearchForTextResult]}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group geofencing
+@endpoint PATCH /geofencing/v0/collections/{CollectionName}
+@required {CollectionName: str}
+@optional {PricingPlan: str, PricingPlanDataSource: str, Description: str}
+@returns(200) {CollectionName: str, CollectionArn: str, UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group metadata
+@endpoint PATCH /metadata/v0/keys/{KeyName}
+@required {KeyName: str}
+@optional {Description: str, ExpireTime: str(timestamp), NoExpiry: bool, ForceUpdate: bool, Restrictions: ApiKeyRestrictions}
+@returns(200) {KeyArn: str, KeyName: str, UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group maps
+@endpoint PATCH /maps/v0/maps/{MapName}
+@required {MapName: str}
+@optional {PricingPlan: str, Description: str, ConfigurationUpdate: MapConfigurationUpdate}
+@returns(200) {MapName: str, MapArn: str, UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group places
+@endpoint PATCH /places/v0/indexes/{IndexName}
+@required {IndexName: str}
+@optional {PricingPlan: str, Description: str, DataSourceConfiguration: DataSourceConfiguration}
+@returns(200) {IndexName: str, IndexArn: str, UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group routes
+@endpoint PATCH /routes/v0/calculators/{CalculatorName}
+@required {CalculatorName: str}
+@optional {PricingPlan: str, Description: str}
+@returns(200) {CalculatorName: str, CalculatorArn: str, UpdateTime: str(timestamp)}
+
+@endgroup
+
+@group tracking
+@endpoint PATCH /tracking/v0/trackers/{TrackerName}
+@required {TrackerName: str}
+@optional {PricingPlan: str, PricingPlanDataSource: str, Description: str, PositionFiltering: str, EventBridgeEnabled: bool, KmsKeyEnableGeospatialQueries: bool}
+@returns(200) {TrackerName: str, TrackerArn: str, UpdateTime: str(timestamp)}
+
+@endpoint POST /tracking/v0/trackers/{TrackerName}/positions/verify
+@required {TrackerName: str, DeviceState: DeviceState}
+@optional {DistanceUnit: str}
+@returns(200) {InferredState: InferredState{Position: [num(f64)]?, Accuracy: PositionalAccuracy?{Horizontal: num(f64)}, DeviationDistance: num(f64)?, ProxyDetected: bool}, DeviceId: str, SampleTime: str(timestamp), ReceivedTime: str(timestamp), DistanceUnit: str}
+
+@endgroup
+
+@end

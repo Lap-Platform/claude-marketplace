@@ -1,0 +1,786 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Rudder API
+@base https://{rudderServer}/rudder/api/latest
+@version 22
+@auth ApiKey X-API-Token in header
+@endpoints 176
+@hint download_for_search
+@toc api(1), apiaccounts(7), archives(2), branding(3), campaigns(10), changeRequests(4), compliance(9), cve(9), datasources(7), directives(7), groups(11), info(3), inventories(4), methods(2), nodes(14), openscap(1), parameters(5), plugins(3), rules(10), scaleoutrelay(2), secret(5), securitytags(2), settings(6), status(1), system(13), systemUpdate(5), techniques(13), tenants(4), usermanagement(10), users(1), validatedUsers(2)
+
+@group api
+@endpoint GET /api/changeRequests
+@returns(200) {result: str, action: str, data: [map]}
+
+@endgroup
+
+@group apiaccounts
+@endpoint GET /apiaccounts
+@returns(200) {result: str, action: str, data: map{accounts: [map]}}
+
+@endpoint POST /apiaccounts
+@optional {id: str, name: str, description: str, status: str(enabled/disabled), generateToken: bool, expirationPolicy: str(never/datetime), expirationDate: str(rfc3339), tenants: str, authorizationType: str(rw/ro/acl), acl: [map{path: str, actions: [str]}]}
+@returns(200) {result: str, id: str(uuid), action: str, data: map{accounts: [map]}}
+
+@endpoint GET /apiaccounts/${apiAccountId}
+@required {apiAccountId: str(uuid)}
+@returns(200) {result: str, id: str, action: str, data: map{accounts: [map]}}
+
+@endpoint DELETE /apiaccounts/${apiAccountId}
+@required {apiAccountId: str(uuid)}
+@returns(200) {result: str, id: str, action: str, data: map{accounts: [map]}}
+
+@endpoint POST /apiaccounts/${apiAccountId}
+@required {apiAccountId: str(uuid)}
+@optional {name: str, description: str, status: str(enabled/disabled), expirationPolicy: str(never/datetime), expirationDate: str(rfc3339), tenants: str, authorizationType: str(rw/ro/acl), acl: [map{path: str, actions: [str]}]}
+@returns(200) {result: str, action: str, data: map{accounts: [map]}}
+
+@endpoint POST /apiaccounts/${apiAccountId}/regenerate
+@required {apiAccountId: str(uuid)}
+@returns(200) {result: str, id: str, action: str, data: map{accounts: [map]}}
+
+@endpoint GET /apiaccounts/token
+@returns(200) {result: str, id: str, action: str, data: map{accounts: [map]}}
+
+@endgroup
+
+@group archives
+@endpoint GET /archives/export
+@optional {rules: [str], directives: [str], techniques: [str], groups: [str], include: [str]}
+@returns(200)
+
+@endpoint POST /archives/import
+@returns(200) {result: str, action: str, data: map{archiveImported: bool}}
+
+@endgroup
+
+@group branding
+@endpoint GET /branding
+@returns(200) {result: str, action: str, data: map{branding: map{displayBar: bool, displayLabel: bool, labelText: str, barColor: map{red: num, blue: num, green: num, alpha: num}, labelColor: map{red: num, blue: num, green: num, alpha: num}, wideLogo: map{enable: bool}, smallLogo: map{enable: bool}, displayBarLogin: bool, displayMotd: bool, motd: str}}}
+
+@endpoint POST /branding
+@required {displayBar: bool, displayLabel: bool, labelText: str, barColor: map{red!: num, blue!: num, green!: num, alpha!: num}, labelColor: map{red!: num, blue!: num, green!: num, alpha!: num}, wideLogo: map{enable!: bool}, smallLogo: map{enable!: bool}, displayBarLogin: bool, displayMotd: bool, motd: str}
+@returns(200) {result: str, action: str, data: map{branding: map{displayBar: bool, displayLabel: bool, labelText: str, barColor: map{red: num, blue: num, green: num, alpha: num}, labelColor: map{red: num, blue: num, green: num, alpha: num}, wideLogo: map{enable: bool}, smallLogo: map{enable: bool}, displayBarLogin: bool, displayMotd: bool, motd: str}}}
+
+@endpoint POST /branding/reload
+@returns(200) {result: str, action: str, data: map{branding: map{displayBar: bool, displayLabel: bool, labelText: str, barColor: map{red: num, blue: num, green: num, alpha: num}, labelColor: map{red: num, blue: num, green: num, alpha: num}, wideLogo: map{enable: bool}, smallLogo: map{enable: bool}, displayBarLogin: bool, displayMotd: bool, motd: str}}}
+
+@endgroup
+
+@group campaigns
+@endpoint GET /campaigns
+@optional {campaignType: str(system-update/software-update), status: str(enabled/disabled/archived)}
+@returns(200) {result: str, action: str, data: map{campaigns: [map]}}
+
+@endpoint POST /campaigns
+@optional {info: map{id: str(uuid), name: str, description: str, status: any, schedule: any}, campaignType: str(system-update/software-update), version: int, details: any}
+@returns(200) {result: str, action: str, data: map{campaigns: [map]}}
+
+@endpoint GET /campaigns/events
+@optional {campaignType: str(system-update/software-update), state: str(scheduled/running/finished/skipped), campaignId: str, limit: int, offset: int, before: str(date-time), after: str(date-time), order: str(start/startDate/end/endDate), asc: str(asc/desc)}
+@returns(200) {result: str, action: str, data: map{campaignEvents: [map]}}
+
+@endpoint GET /campaigns/events/{id}
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, data: map{campaignEvents: [map]}}
+
+@endpoint POST /campaigns/events/{id}
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, data: map{campaignEvents: [map]}}
+
+@endpoint DELETE /campaigns/events/{id}
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, data: map{campaignEvents: [map]}}
+
+@endpoint GET /campaigns/{id}
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, data: map{campaigns: [map]}}
+
+@endpoint DELETE /campaigns/{id}
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, data: map{campaigns: [map]}}
+
+@endpoint GET /campaigns/{id}/events
+@required {id: str(uuid)}
+@optional {campaignType: str(system-update/software-update), state: str(scheduled/running/finished/skipped), limit: int, offset: int, before: str(date-time), after: str(date-time), order: str(start/startDate/end/endDate), asc: str(asc/desc)}
+@returns(200) {result: str, action: str, data: map{campaignEvents: [map]}}
+
+@endpoint POST /campaigns/{id}/schedule
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, data: map{campaignEvents: [map]}}
+
+@endgroup
+
+@group changeRequests
+@endpoint GET /changeRequests/{changeRequestId}
+@required {changeRequestId: int}
+@returns(200) {result: str, action: str, data: map{changeRequests: [map]}}
+
+@endpoint DELETE /changeRequests/{changeRequestId}
+@required {changeRequestId: int}
+@returns(200) {result: str, action: str, data: map{changeRequests: [map]}}
+
+@endpoint POST /changeRequests/{changeRequestId}
+@required {changeRequestId: int}
+@optional {name: str, description: str}
+@returns(200) {result: str, action: str, data: map{changeRequests: [map]}}
+
+@endpoint POST /changeRequests/{changeRequestId}/accept
+@required {changeRequestId: int}
+@optional {status: str(pending deployment/deployed)}
+@returns(200) {result: str, action: str, data: map{changeRequests: [map]}}
+
+@endgroup
+
+@group compliance
+@endpoint GET /compliance
+@optional {precision: int=2}
+@returns(200) {result: str, action: str, data: map{globalCompliance: map{compliance: num(integer), complianceDetails: map{successAlreadyOK: num(float), noReport: num(float), successNotApplicable: num(float), unexpectedMissingComponent: num(float), error: num(float), unexpectedUnknownComponent: num(float), successRepaired: num(float)}}}}
+
+@endpoint GET /compliance/directives
+@returns(200) {result: str, action: str, data: map{directivesCompliance: map{id: str(uuid), name: str, mode: str, compliance: num(float), complianceDetails: map{successAlreadyOK: num(float), noReport: num(float), successNotApplicable: num(float), unexpectedMissingComponent: num(float), error: num(float), unexpectedUnknownComponent: num(float), successRepaired: num(float)}, rules: map{id: str(uuid), name: str, mode: str, compliance: num(float), complianceDetails: map, components: [map]}, nodes: map{id: str(uuid), name: str, compliance: num(float), complianceDetails: map, rules: map}}}}
+
+@endpoint GET /compliance/directives/{directiveId}
+@required {directiveId: str(uuid)}
+@optional {format: str(csv/json)=json}
+@returns(200)
+
+@endpoint GET /compliance/groups/{targetOrNodeGroupId}
+@required {targetOrNodeGroupId: any}
+@optional {level: int=10, precision: int=2}
+@returns(200) {result: str, action: str, data: map{nodeGroups: [map]}}
+
+@endpoint GET /compliance/groups/{targetOrNodeGroupId}/target
+@required {targetOrNodeGroupId: any}
+@optional {level: int=10, precision: int=2}
+@returns(200) {result: str, action: str, data: map{nodeGroups: [map]}}
+
+@endpoint GET /compliance/nodes
+@optional {level: int=10, precision: int=2}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint GET /compliance/nodes/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@optional {level: int=10, precision: int=2}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint GET /compliance/rules
+@optional {level: int=10, precision: int=2}
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endpoint GET /compliance/rules/{ruleId}
+@required {ruleId: str(uuid)}
+@optional {level: int=10, precision: int=2}
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endgroup
+
+@group cve
+@endpoint GET /cve
+@returns(200) {result: str, action: str, data: map{CVEs: [map]}}
+
+@endpoint POST /cve/check
+@returns(200) {result: str, action: str, data: map{cveChecks: [map]}}
+
+@endpoint GET /cve/check/config
+@returns(200) {result: str, action: str, data: map{url: str, apiKey: str}}
+
+@endpoint POST /cve/check/config
+@optional {url: str, apiKey: str}
+@returns(200) {result: str, action: str, data: map{url: str, apiKey: str}}
+
+@endpoint GET /cve/check/last
+@optional {groupId: str, nodeId: str, cveId: str, package: str, severity: str(critical/high/medium/low/none/unknown)}
+@returns(200) {result: str, action: str, data: map{CVEChecks: [map]}}
+
+@endpoint POST /cve/list
+@optional {cveIds: [str], onlyScore: bool=False, minScore: num(A score between 0 and 10 as a float), maxScore: num(A score between 0 and 10 as a float), publishedDate: str(date-time)}
+@returns(200) {result: str, action: str, data: map{CVEs: [map]}}
+
+@endpoint POST /cve/update
+@optional {url: str, years: [str]}
+@returns(200) {result: str, action: str, data: map{CVEs: int}}
+
+@endpoint POST /cve/update/fs
+@returns(200) {result: str, action: str, data: map{CVEs: int}}
+
+@endpoint GET /cve/{cveId}
+@required {cveId: str(CVE ID)}
+@returns(200) {result: str, action: str, data: map{CVEs: [map]}}
+
+@endgroup
+
+@group datasources
+@endpoint GET /datasources
+@returns(200) {result: str, action: str, data: map{datasources: [map]}}
+
+@endpoint PUT /datasources
+@optional {id: str, name: str, description: str, enabled: bool, updateTimeout: int, runParameters: map{onGeneration: bool, onNewNode: bool, schedule: map{type: str}}, type: map{name: str, parameters: map{url: str, requestMethod: str, headers: [map], path: str, checkSsl: bool, requestTimeout: int, requestMode: map}}}
+@returns(200) {result: str, action: str, data: map{datasources: [map]}}
+
+@endpoint POST /datasources/reload
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint POST /datasources/reload/{datasourceId}
+@required {datasourceId: str}
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint GET /datasources/{datasourceId}
+@required {datasourceId: str}
+@returns(200) {result: str, action: str, data: map{datasources: [map]}}
+
+@endpoint POST /datasources/{datasourceId}
+@required {datasourceId: str}
+@optional {id: str, name: str, description: str, enabled: bool, updateTimeout: int, runParameters: map{onGeneration: bool, onNewNode: bool, schedule: map{type: str}}, type: map{name: str, parameters: map{url: str, requestMethod: str, headers: [map], path: str, checkSsl: bool, requestTimeout: int, requestMode: map}}}
+@returns(200) {result: str, action: str, data: map{datasources: [map]}}
+
+@endpoint DELETE /datasources/{datasourceId}
+@required {datasourceId: str}
+@returns(200) {result: str, action: str, data: map{datasources: [map]}}
+
+@endgroup
+
+@group directives
+@endpoint GET /directives
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint PUT /directives
+@optional {source: str(uuid), id: str(uuid), displayName: str, shortDescription: str, longDescription: str(markdown), techniqueName: str, techniqueVersion: str, priority: int, enabled: bool, system: bool, tags: [map], parameters: map}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint GET /directives/tree
+@optional {includeSystem: bool=False, includeSystem: bool}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint GET /directives/{directiveId}
+@required {directiveId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint DELETE /directives/{directiveId}
+@required {directiveId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint POST /directives/{directiveId}
+@required {directiveId: str(uuid)}
+@optional {id: str(uuid), displayName: str, shortDescription: str, longDescription: str(markdown), techniqueName: str, techniqueVersion: str, priority: int, enabled: bool, system: bool, policyMode: str(enforce/audit), tags: [map], parameters: map}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint POST /directives/{directiveId}/check
+@required {directiveId: str(uuid)}
+@optional {id: str(uuid), displayName: str, shortDescription: str, longDescription: str(markdown), techniqueName: str, techniqueVersion: str, priority: int, enabled: bool, system: bool, policyMode: str(enforce/audit), tags: [map], parameters: map}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endgroup
+
+@group groups
+@endpoint GET /groups
+@returns(200) {result: str, action: str, data: map{groups: [map]}}
+
+@endpoint PUT /groups
+@required {category: str(uuid), displayName: str}
+@optional {source: str(uuid), id: str(uuid)={autogenerated}, description: str, query: map{select: str, composition: str, where: [map{objectType: str, attribute: str, comparator: str, value: str}]}, dynamic: bool=True, enabled: bool=True, properties: [map{name!: str, value!: any}]}
+@returns(200) {result: str, action: str, data: map{groups: [map]}}
+
+@endpoint PUT /groups/categories
+@required {parent: str(uuid), name: str}
+@optional {id: str(uuid)={autogenerated}, description: str}
+@returns(200) {result: str, action: str, data: map{groupCategories: [map]}}
+
+@endpoint GET /groups/categories/{groupCategoryId}
+@required {groupCategoryId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{groupCategories: [map]}}
+
+@endpoint DELETE /groups/categories/{groupCategoryId}
+@required {groupCategoryId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{groupCategories: [map]}}
+
+@endpoint POST /groups/categories/{groupCategoryId}
+@required {groupCategoryId: str(uuid), parent: str(uuid), name: str}
+@optional {description: str}
+@returns(200) {result: str, action: str, data: map{groupCategories: [map]}}
+
+@endpoint GET /groups/tree
+@optional {includeSystem: bool=False}
+@returns(200) {result: str, action: str, data: map{groupCategories: map}}
+
+@endpoint GET /groups/{groupId}
+@required {groupId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{groups: [map]}}
+
+@endpoint POST /groups/{groupId}
+@required {groupId: str(uuid)}
+@optional {category: str(uuid), displayName: str, description: str, query: map{select: str, composition: str, where: [map{objectType: str, attribute: str, comparator: str, value: str}]}, dynamic: bool=True, enabled: bool=True}
+@returns(200) {result: str, action: str, data: map{groups: [map]}}
+
+@endpoint DELETE /groups/{groupId}
+@required {groupId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{groups: [map]}}
+
+@endpoint POST /groups/{groupId}/reload
+@required {groupId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{groups: [map]}}
+
+@endgroup
+
+@group info
+@endpoint GET /info
+@returns(200) {result: str, action: str, data: map{documentation: str, availableVersions: [map], endpoints: [[map]]}}
+
+@endpoint GET /info/details/{endpointName}
+@required {endpointName: str}
+@returns(200) {result: str, action: str, data: map{documentation: str, endpointName: str, endpoints: [map]}}
+
+@endpoint GET /info/{sectionId}
+@required {sectionId: str}
+@returns(200) {result: str, action: str, data: map{documentation: str, availableVersions: [map], endpoints: [[map]]}}
+
+@endgroup
+
+@group inventories
+@endpoint POST /inventories/upload
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint POST /inventories/watcher/restart
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint POST /inventories/watcher/start
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint POST /inventories/watcher/stop
+@returns(200) {result: str, action: str, data: str}
+
+@endgroup
+
+@group methods
+@endpoint GET /methods
+@returns(200) {result: str, action: str, data: map{methods: map{id: str, name: str, version: str, category: str, desc: str, documentation: str, parameters: [map], agents: [str], condition: map{prefix: str, parameter: str}, deprecated: map{info: str, replacedBy: str}}}}
+
+@endpoint POST /methods/reload
+@returns(200) {result: str, action: str, data: map{methods: map{id: str, name: str, version: str, category: str, desc: str, documentation: str, parameters: [map], agents: [str], condition: map{prefix: str, parameter: str}, deprecated: map{info: str, replacedBy: str}}}}
+
+@endgroup
+
+@group nodes
+@endpoint GET /nodes
+@optional {include: str(comma-separated list)=default, query: any, where: any, composition: str(and/or)=and, select: str=node}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint PUT /nodes
+@returns(200) {result: str, action: str, data: map{created: [str], failed: [str]}}
+
+@endpoint POST /nodes/applyPolicy
+@returns(200) {result: str, action: str, data: [map]}
+
+@endpoint GET /nodes/pending
+@optional {include: str(comma-separated list)=default, query: any, where: any, composition: str(and/or)=and, select: str=node}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint POST /nodes/pending
+@optional {nodeId: [str(uuid)], status: str(accepted/refused)}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint POST /nodes/pending/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@optional {status: str(accepted/refused)}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint GET /nodes/status
+@required {ids: str(comma-separated list)=default}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint GET /nodes/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@optional {include: str(comma-separated list)=default}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint POST /nodes/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@optional {properties: [map{name!: str, value!: any}], policyMode: str(audit/enforce/default), state: str(enabled/ignored/empty-policies/initializing/preparing-eol), agentKey: map{value!: str(PEM), status: str}}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint DELETE /nodes/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@optional {mode: str(move/erase)=move}
+@returns(200) {result: str, action: str, data: map{nodes: [map]}}
+
+@endpoint POST /nodes/{nodeId}/applyPolicy
+@required {nodeId: str(uuid (or "root"))}
+@optional {classes: [str]}
+@returns(200)
+
+@endpoint POST /nodes/{nodeId}/fetchData
+@required {nodeId: str(uuid (or "root"))}
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint POST /nodes/{nodeId}/fetchData/{datasourceId}
+@required {nodeId: str(uuid (or "root")), datasourceId: str}
+@returns(200) {result: str, action: str, data: str}
+
+@endpoint GET /nodes/{nodeId}/inheritedProperties
+@required {nodeId: str(uuid (or "root"))}
+@returns(200) {result: str, action: str, data: [map]}
+
+@endgroup
+
+@group openscap
+@endpoint GET /openscap/report/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@returns(200)
+
+@endgroup
+
+@group parameters
+@endpoint GET /parameters
+@returns(200) {result: str, action: str, data: map{parameters: [map]}}
+
+@endpoint PUT /parameters
+@required {id: str}
+@optional {value: any, description: str, overridable: bool}
+@returns(200) {id: str, result: str, action: str, data: map{parameters: [map]}}
+
+@endpoint GET /parameters/{parameterId}
+@required {parameterId: str}
+@returns(200) {id: str, result: str, action: str, data: map{parameters: [map]}}
+
+@endpoint POST /parameters/{parameterId}
+@required {parameterId: str}
+@returns(200) {id: str, result: str, action: str, data: map{parameters: [map]}}
+
+@endpoint DELETE /parameters/{parameterId}
+@required {parameterId: str}
+@returns(200) {id: str, result: str, action: str, data: map{parameters: [map]}}
+@errors {500}
+
+@endgroup
+
+@group plugins
+@endpoint GET /plugins/info
+@returns(200) {result: str, action: str, data: map{plugins: [map]}}
+
+@endpoint GET /plugins/settings
+@returns(200) {result: str, action: str, data: map{plugins: [map]}}
+
+@endpoint POST /plugins/settings
+@returns(200) {result: str, action: str, data: map{username: str, password: str, url: str, proxyUser: str, proxyPassword: str, proxyUrl: str}}
+
+@endgroup
+
+@group rules
+@endpoint GET /rules
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endpoint PUT /rules
+@optional {source: str(uuid), id: str(uuid), displayName: str, shortDescription: str, longDescription: str, category: str(uuid), directives: [str], targets: [map{include!: map{or: [str]}, exclude!: map{or: [str]}}], enabled: bool, system: bool, tags: [map]}
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endpoint PUT /rules/categories
+@required {parent: str(uuid), name: str}
+@optional {id: str(uuid)={autogenerated}, description: str}
+@returns(200) {result: str, action: str, data: map{ruleCategories: [map]}}
+
+@endpoint GET /rules/categories/{ruleCategoryId}
+@required {ruleCategoryId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{rulesCategories: [map]}}
+
+@endpoint DELETE /rules/categories/{ruleCategoryId}
+@required {ruleCategoryId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{groupCategories: [map]}}
+
+@endpoint POST /rules/categories/{ruleCategoryId}
+@required {ruleCategoryId: str(uuid), parent: str(uuid), name: str}
+@optional {description: str}
+@returns(200) {result: str, action: str, data: map{ruleCategories: [map]}}
+
+@endpoint GET /rules/tree
+@returns(200) {result: str, action: str, data: map{ruleCategories: map}}
+
+@endpoint GET /rules/{ruleId}
+@required {ruleId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endpoint POST /rules/{ruleId}
+@required {ruleId: str(uuid)}
+@optional {id: str(uuid), displayName: str, shortDescription: str, longDescription: str, category: str(uuid), directives: [str], targets: [map{include!: map{or: [str]}, exclude!: map{or: [str]}}], enabled: bool, system: bool, tags: [map]}
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endpoint DELETE /rules/{ruleId}
+@required {ruleId: str(uuid)}
+@returns(200) {result: str, action: str, data: map{rules: [map]}}
+
+@endgroup
+
+@group scaleoutrelay
+@endpoint POST /scaleoutrelay/demote/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@returns(200) {action: str, result: str, data: str}
+
+@endpoint POST /scaleoutrelay/promote/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@returns(200) {action: str, result: str, data: str}
+
+@endgroup
+
+@group secret
+@endpoint GET /secret
+@returns(200) {result: str, action: str, data: map{secrets: [map]}}
+
+@endpoint POST /secret
+@optional {name: str, description: str, value: str}
+@returns(200) {result: str, action: str, data: map{secrets: [map]}}
+
+@endpoint PUT /secret
+@optional {name: str, description: str, value: str}
+@returns(200) {result: str, action: str, data: map{secrets: [map]}}
+
+@endpoint GET /secret/{name}
+@required {name: str}
+@returns(200) {result: str, action: str, data: map{secrets: [map]}}
+
+@endpoint DELETE /secret/{name}
+@required {name: str}
+@returns(200) {result: str, action: str, data: map{secrets: [map]}}
+
+@endgroup
+
+@group securitytags
+@endpoint POST /securitytags/nodes
+@returns(200) {result: str, action: str, data: map{securitytags: [map]}}
+
+@endpoint DELETE /securitytags/nodes
+@returns(200) {result: str, action: str, data: map{nodes: [str]}}
+
+@endgroup
+
+@group settings
+@endpoint GET /settings
+@returns(200) {result: str, action: str, data: map{settings: map{allowed_networks: [map], global_policy_mode: str, global_policy_mode_overridable: bool, run_frequency: int, first_run_hour: int, first_run_minute: int, splay_time: int, modified_file_ttl: int, output_file_ttl: int, require_time_synchronization: bool, relay_server_synchronization_method: str, relay_server_synchronize_policies: bool, relay_server_synchronize_shared_files: bool, rudder_report_protocol_default: str, reporting_mode: str, enable_change_message: bool, mandatory_change_message: bool, change_message_prompt: str, enable_change_request: bool, enable_self_validation: bool, enable_self_deployment: bool, display_recent_changes_graphs: bool, enable_javascript_directives: str, send_metrics: str, node_accept_duplicated_hostname: bool, node_onaccept_default_state: str, node_onaccept_default_policyMode: str, unexpected_unbound_var_values: bool, rudder_compute_changes: bool, rudder_generation_compute_dyngroups: bool, rudder_compute_dyngroups_max_parallelism: str, rudder_generation_max_parallelism: str, rudder_generation_js_timeout: int, rudder_generation_continue_on_error: bool, rudder_generation_delay: str, rudder_generation_policy: str}}}
+
+@endpoint GET /settings/allowed_networks/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@returns(200) {id: str, result: str, action: str, data: map{allowed_network: [str]}}
+
+@endpoint POST /settings/allowed_networks/{nodeId}
+@required {nodeId: str(uuid (or "root"))}
+@optional {value: [str]}
+@returns(200) {result: str, action: str, id: str, data: map{settings: [str]}}
+
+@endpoint POST /settings/allowed_networks/{nodeId}/diff
+@required {nodeId: str(uuid (or "root"))}
+@optional {allowed_networks: map{add: [str], delete: [str]}}
+@returns(200) {result: str, action: str, data: map{settings: [str]}}
+
+@endpoint GET /settings/{settingId}
+@required {settingId: str}
+@returns(200) {id: str, result: str, action: str, data: map{settingId: str}}
+
+@endpoint POST /settings/{settingId}
+@required {settingId: str}
+@optional {value: str}
+@returns(200) {id: str, result: str, action: str, data: map{settingId: str}}
+
+@endgroup
+
+@group status
+@endpoint GET /status
+@returns(200)
+
+@endgroup
+
+@group system
+@endpoint GET /system/archives/{archiveKind}
+@required {archiveKind: str(full/groups/rules/directives/parameters)}
+@returns(200) {result: str, action: str, data: map{full: [map]}}
+
+@endpoint POST /system/archives/{archiveKind}
+@required {archiveKind: str(full/groups/rules/directives/parameters)}
+@returns(200) {result: str, action: str, data: map{full: map{commiter: str, gitCommit: str(hash), id: str}}}
+
+@endpoint POST /system/archives/{archiveKind}/restore/{archiveRestoreKind}
+@required {archiveKind: str(full/groups/rules/directives/parameters), archiveRestoreKind: str(latestArchive/latestCommit/archive ID)}
+@returns(200) {result: str, action: str, data: map{full: str, groups: str, rules: str, directive: str, parameters: str}}
+
+@endpoint GET /system/archives/{archiveKind}/zip/{commitId}
+@required {archiveKind: str(full/groups/rules/directives/parameters), commitId: str}
+@returns(200)
+
+@endpoint GET /system/healthcheck
+@returns(200) {result: str, action: str, data: [map]}
+
+@endpoint GET /system/info
+@returns(200) {result: str, action: str, data: map{rudder: any, system: any, nodes: any, plugins: [map]}}
+
+@endpoint POST /system/maintenance/purgeSoftware
+@returns(200) {result: str, action: str, data: [str]}
+
+@endpoint POST /system/regenerate/policies
+@returns(200) {result: str, action: str, data: map{policies: str}}
+
+@endpoint POST /system/reload
+@returns(200) {result: str, action: str, data: map{groups: str, techniques: str}}
+
+@endpoint POST /system/reload/groups
+@returns(200) {result: str, action: str, data: map{groups: str}}
+
+@endpoint POST /system/reload/techniques
+@returns(200) {result: str, action: str, data: map{techniques: str}}
+
+@endpoint GET /system/status
+@returns(200) {result: str, action: str, data: map{global: str}}
+
+@endpoint POST /system/update/policies
+@returns(200) {result: str, action: str, data: map{policies: str}}
+
+@endgroup
+
+@group systemUpdate
+@endpoint GET /systemUpdate/campaign/{id}/history
+@required {id: str(uuid)}
+@optional {limit: int, offset: int, before: str(date-time), after: str(date-time), order: str(start/startDate/end/endDate), asc: str(asc/desc)}
+@returns(200) {result: str, action: str, data: map{campaignHistory: [map]}}
+
+@endpoint GET /systemUpdate/events/{id}/report
+@required {id: str(uuid)}
+@returns(200)
+
+@endpoint GET /systemUpdate/events/{id}/result
+@required {id: str(uuid)}
+@returns(200) {result: str, action: str, id: str(uuid), data: map{eventResult: [map]}}
+
+@endpoint GET /systemUpdate/events/{id}/result/{nodeId}
+@required {id: str(uuid), nodeId: str(uuid (or "root"))}
+@returns(200) {result: str, action: str, id: str(uuid), data: map{nodeResult: [map]}}
+
+@endpoint GET /systemUpdate/events/{id}/summaryReport
+@required {id: str(uuid)}
+@returns(200)
+
+@endgroup
+
+@group techniques
+@endpoint GET /techniques
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endpoint PUT /techniques
+@returns(200) {result: str, action: str, data: map{techniques: map{technique: map{id: str, name: str, version: str, category: str, description: str, source: str, parameters: [map], resources: [map], calls: [any]}}}}
+
+@endpoint GET /techniques/categories
+@returns(200) {result: str, action: str, data: map{techniqueCategories: map{name: str, path: str, id: str, subcategories: [map]}}}
+
+@endpoint POST /techniques/reload
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endpoint GET /techniques/versions
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endpoint GET /techniques/{techniqueId}
+@required {techniqueId: str}
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endpoint GET /techniques/{techniqueId}/directives
+@required {techniqueId: str}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint POST /techniques/{techniqueId}/{techniqueVersion}
+@required {techniqueId: str, techniqueVersion: str}
+@returns(200) {result: str, action: str, data: map{techniques: map{technique: map{id: str, name: str, version: str, category: str, description: str, source: str, parameters: [map], resources: [map], calls: [any]}}}}
+
+@endpoint DELETE /techniques/{techniqueId}/{techniqueVersion}
+@required {techniqueId: str, techniqueVersion: str}
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endpoint GET /techniques/{techniqueId}/{techniqueVersion}
+@required {techniqueId: str, techniqueVersion: str}
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endpoint GET /techniques/{techniqueId}/{techniqueVersion}/directives
+@required {techniqueId: str, techniqueVersion: str}
+@returns(200) {result: str, action: str, data: map{directives: [map]}}
+
+@endpoint GET /techniques/{techniqueId}/{techniqueVersion}/resources
+@required {techniqueId: str, techniqueVersion: str}
+@returns(200) {result: str, action: str, data: map{resources: [map]}}
+
+@endpoint GET /techniques/{techniqueId}/{techniqueVersion}/revisions
+@required {techniqueId: str, techniqueVersion: str}
+@returns(200) {result: str, action: str, data: map{techniques: [map]}}
+
+@endgroup
+
+@group tenants
+@endpoint GET /tenants
+@returns(200) {result: str, action: str, data: map{tenants: [map]}}
+
+@endpoint POST /tenants
+@returns(200) {result: str, action: str, data: map{tenants: [map]}}
+
+@endpoint DELETE /tenants
+@returns(200) {result: str, action: str, data: map{tenants: [str]}}
+
+@endpoint GET /tenants/{id}
+@required {id: str(string matching ^(\p{Alnum}[\p{Alnum}-_]*)$)}
+@returns(200) {result: str, action: str, data: map{tenants: [map]}}
+
+@endgroup
+
+@group usermanagement
+@endpoint POST /usermanagement
+@required {username: str, password: str, permissions: [str], isPreHashed: bool(false/true)}
+@optional {name: str, email: str, otherInfo: map}
+@returns(200) {result: str, action: str, data: map{addedUser: map{username: str, password: str, permissions: [str], name: str, email: str, otherInfo: map}}}
+
+@endpoint POST /usermanagement/coverage/{username}
+@required {username: str, permissions: [str], authz: [str]}
+@returns(200) {action: str, result: str, data: map{coverage: map{permissions: [str], custom: [str]}}}
+
+@endpoint GET /usermanagement/roles
+@returns(200) {result: str, action: str, data: [map]}
+
+@endpoint PUT /usermanagement/status/activate/{username}
+@required {username: str}
+@returns(200) {action: str, id: str, result: str, data: map{status: str}}
+@errors {500}
+
+@endpoint PUT /usermanagement/status/disable/{username}
+@required {username: str}
+@returns(200) {action: str, id: str, result: str, data: map{status: str}}
+@errors {500}
+
+@endpoint POST /usermanagement/update/info/{username}
+@required {username: str}
+@optional {name: str, email: str, otherInfo: map}
+@returns(200) {result: str, action: str, data: map{updatedUser: map{name: str, email: str, otherInfo: map}}}
+
+@endpoint POST /usermanagement/update/{username}
+@required {username: str, username: str, password: str, permissions: [str], isPreHashed: bool(false/true)}
+@returns(200) {result: str, action: str, data: map{updatedUser: map{username: str, password: str, permissions: [str]}}}
+
+@endpoint GET /usermanagement/users
+@returns(200) {result: str, action: str, data: map{roleListOverride: str, authenticationBackends: [str], providerProperties: map, users: [map], digest: str, tenantsEnabled: bool}}
+
+@endpoint POST /usermanagement/users/reload
+@returns(200) {result: str, action: str, data: map{reload: map{status: str}}}
+
+@endpoint DELETE /usermanagement/{username}
+@required {username: str}
+@returns(200) {result: str, action: str, data: map{deletedUser: map{username: str}}}
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@returns(200) {result: str, action: str, data: [map]}
+
+@endgroup
+
+@group validatedUsers
+@endpoint POST /validatedUsers
+@required {validatedUsers: [str]}
+@returns(200) {result: str, action: str, data: map{username: str, isValidated: bool, userExists: bool}}
+
+@endpoint DELETE /validatedUsers/{username}
+@required {username: str}
+@returns(200) {result: str, action: str, data: str}
+
+@endgroup
+
+@end

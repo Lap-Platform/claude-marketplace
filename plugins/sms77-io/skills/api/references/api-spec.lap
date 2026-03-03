@@ -1,0 +1,248 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api seven
+@base https://gateway.seven.io/api
+@version 1.0.0
+@auth OAuth2
+@endpoints 51
+@hint download_for_search
+@toc analytics(4), balance(1), contacts(5), groups(5), hooks(3), journal(4), lookup(5), numbers(6), pricing(1), rcs(3), sms(2), status(1), subaccounts(5), validate_for_voice(1), voice(2), waba(3)
+
+@group analytics
+@endpoint GET /analytics/country
+@optional {end: str, label: str, start: str, subaccounts: str}
+@returns(200)
+
+@endpoint GET /analytics/date
+@optional {end: str, label: str, start: str, subaccounts: str}
+@returns(200)
+
+@endpoint GET /analytics/label
+@optional {end: str, label: str, start: str, subaccounts: str}
+@returns(200)
+
+@endpoint GET /analytics/subaccount
+@optional {end: str, label: str, start: str, subaccounts: str}
+@returns(200)
+
+@endgroup
+
+@group balance
+@endpoint GET /balance
+@returns(200) {amount: num(float), currency: str}
+
+@endgroup
+
+@group contacts
+@endpoint GET /contacts
+@returns(200) {data: [map], pagingMetadata: map{offset: int, count: int, total: int, limit: int, has_more: bool}}
+
+@endpoint POST /contacts
+@returns(200) {id: int(int32), avatar: str, validation: map{state: str, timestamp: str}, initials: map{initials: str, color: str}, properties: map{firstname: str, lastname: str, mobile_number: int(int64), home_number: str, email: str, address: str, postal_code: str, city: str, birthday: str(date), notes: str}, groups: [int], created: str}
+
+@endpoint DELETE /contacts/{id}
+@required {id: str}
+@returns(200) {error: str, success: bool}
+
+@endpoint GET /contacts/{id}
+@required {id: str}
+@returns(200) {id: int(int32), avatar: str, validation: map{state: str, timestamp: str}, initials: map{initials: str, color: str}, properties: map{firstname: str, lastname: str, mobile_number: int(int64), home_number: str, email: str, address: str, postal_code: str, city: str, birthday: str(date), notes: str}, groups: [int], created: str}
+
+@endpoint PATCH /contacts/{id}
+@required {id: str}
+@returns(200) {id: int(int32), avatar: str, validation: map{state: str, timestamp: str}, initials: map{initials: str, color: str}, properties: map{firstname: str, lastname: str, mobile_number: int(int64), home_number: str, email: str, address: str, postal_code: str, city: str, birthday: str(date), notes: str}, groups: [int], created: str}
+
+@endgroup
+
+@group groups
+@endpoint GET /groups
+@returns(200) {data: [map], pagingMetadata: map{offset: int, count: int, total: int, limit: int, has_more: bool}}
+
+@endpoint POST /groups
+@returns(200) {id: int, name: str, members_count: int, has_more: bool}
+
+@endpoint DELETE /groups/{id}
+@required {id: str}
+@returns(200) {success: bool}
+
+@endpoint GET /groups/{id}
+@required {id: int}
+@returns(200) {id: int, name: str, members_count: int, has_more: bool}
+
+@endpoint PATCH /groups/{id}
+@required {id: int}
+@returns(200) {id: int, name: str, members_count: int, has_more: bool}
+
+@endgroup
+
+@group hooks
+@endpoint DELETE /hooks
+@returns(200) {code: str, error_message: str, id: int, success: bool}
+
+@endpoint GET /hooks
+@returns(200) {data: [map]}
+
+@endpoint POST /hooks
+@returns(200) {code: str, error_message: str, id: int, success: bool}
+
+@endgroup
+
+@group journal
+@endpoint GET /journal/outbound
+@optional {id: int, date_from: str, date_to: str, to: str, state: str, limit: int, offset: int}
+@returns(200)
+
+@endpoint GET /journal/inbound
+@optional {id: int, date_from: str, date_to: str, to: str, state: str, limit: int, offset: int}
+@returns(200)
+
+@endpoint GET /journal/replies
+@optional {id: int, date_from: str, date_to: str, to: str, state: str, limit: int, offset: int}
+@returns(200)
+
+@endpoint GET /journal/voice
+@optional {id: int, date_from: str, date_to: str, to: str, state: str, limit: int, offset: int}
+@returns(200)
+
+@endgroup
+
+@group lookup
+@endpoint GET /lookup/cnam
+@required {number: str}
+@returns(200) {code: num, success: str, name: str, number: str}
+
+@endpoint GET /lookup/format
+@required {number: str}
+@returns(200) {success: bool, international: str, international_formatted: str, national: str, country_iso: str, country_name: str, country_code: str}
+
+@endpoint GET /lookup/hlr
+@required {number: str}
+@returns(200) {international_formatted: str, country_name: str, country_code: str, international_format_number: str, national_format_number: str, country_prefix: str, current_carrier: map{network_code: str, name: str, country: str, network_type: str}, original_carrier: map{network_code: str, name: str, country: str, network_type: str}, lookup_outcome: str, lookup_outcome_message: str, valid_number: str, reachable: str, roaming: map{status: str, roaming_country_code: str, roaming_network_code: str, roaming_network_name: str}}
+
+@endpoint GET /lookup/mnp
+@required {number: str}
+@returns(200) {code: num, success: bool, price: num(float), mnp: map{country: str, number: str, national_format: str, international_formatted: str, network: str, mccmnc: str, isPorted: bool, network_type: str}}
+
+@endpoint GET /lookup/rcs
+@required {number: str}
+@returns(200)
+
+@endgroup
+
+@group numbers
+@endpoint GET /numbers/active
+@returns(200) {activeNumbers: [map]}
+
+@endpoint DELETE /numbers/active/{number}
+@required {number: str}
+@returns(200) {success: bool}
+
+@endpoint GET /numbers/active/{number}
+@required {number: str}
+@returns(200) {country: str, number: str, friendly_name: str, billing: map{fees: map{setup: num, basic_charge: num, sms_mo: int(int32), voice_mo: int(int32)}, payment_interval: str}, features: map{sms: bool, a2p_sms: bool, voice: bool}, forward_sms_mo: map{sms: map{number: str, enabled: bool}, email: map{address: [str], enabled: bool}, slack: map{uri: str, enabled: bool}}, expires: str, created: str}
+
+@endpoint PATCH /numbers/active/{number}
+@required {number: str}
+@returns(200) {country: str, number: str, friendly_name: str, billing: map{fees: map{setup: num, basic_charge: num, sms_mo: int(int32), voice_mo: int(int32)}, payment_interval: str}, features: map{sms: bool, a2p_sms: bool, voice: bool}, forward_sms_mo: map{sms: map{number: str, enabled: bool}, email: map{address: [str], enabled: bool}, slack: map{uri: str, enabled: bool}}, expires: str, created: str}
+
+@endpoint GET /numbers/available
+@optional {country: str, features_sms: bool, features_a2p_sms: bool, features_voice: bool}
+@returns(200) {availableNumbers: [map]}
+
+@endpoint POST /numbers/order
+@returns(200) {error: str, success: bool}
+
+@endgroup
+
+@group pricing
+@endpoint GET /pricing
+@optional {country: str}
+@returns(200) {countCountries: int, countNetworks: int, countries: [map]}
+
+@endgroup
+
+@group rcs
+@endpoint POST /rcs/events
+@returns(200) {success: bool}
+
+@endpoint POST /rcs/messages
+@returns(200) {balance: num, debug: str, messages: [map], sms_type: str, success: str, total_price: num}
+
+@endpoint DELETE /rcs/messages/{id}
+@required {id: str}
+@returns(200) {success: bool}
+
+@endgroup
+
+@group sms
+@endpoint DELETE /sms
+@returns(200) {deleted: [int], success: bool}
+
+@endpoint POST /sms
+@returns(200) {balance: num, debug: str, messages: [map], sms_type: str, success: str, total_price: num}
+
+@endgroup
+
+@group status
+@endpoint GET /status
+@required {msg_id: str}
+@returns(200)
+
+@endgroup
+
+@group subaccounts
+@endpoint GET /subaccounts/list
+@optional {id: str}
+@returns(200)
+
+@endpoint POST /subaccounts/create
+@returns(200) {error: str, subaccount: map{id: str, username: str, company: str, balance: str, total_usage: str, auto_topup: map{amount: str, threshold: str}, contact: map{email: str, name: str}}, success: bool}
+
+@endpoint POST /subaccounts/update
+@returns(200) {error: str, success: bool}
+
+@endpoint POST /subaccounts/transfer_credits
+@returns(200) {error: str, success: bool}
+
+@endpoint POST /subaccounts/delete
+@returns(200) {error: str, success: bool}
+
+@endgroup
+
+@group validate_for_voice
+@endpoint POST /validate_for_voice
+@returns(200)
+
+@endgroup
+
+@group voice
+@endpoint POST /voice
+@returns(200)
+
+@endpoint POST /voice/{call_id}/hangup
+@required {call_id: str}
+@returns(200) {error: str, success: bool}
+
+@endgroup
+
+@group waba
+@endpoint POST /waba/messages
+@required {from: str, to: str}
+@optional {type: str(template/text/image/video/audio/document/sticker/location/contacts/interactive), template: str, language: str, text: str, delay: str, label: str, foreign_id: str, ttl: int, performance_tracking: bool=False, components: map{header: [str], body: [str], buttons: [map{type: str, sub_type: str, parameters: [map]}]}, url: str, caption: str, filename: str, latitude: num(double), longitude: num(double), name: str, address: str, contacts: [map{name!: map{first_name!: str, last_name: str}, phones!: [map{phone!: str, type: str}]}], interactive_type: str(button/list), body: str, header: str, footer: str, buttons: [map{id!: str, title!: str}], button_text: str, sections: [map{title!: str, rows!: [map{id!: str, title!: str, description: str}]}]}
+@returns(200) {success: str, total_price: num, balance: num, debug: str, sms_type: str, messages: [map]}
+@errors {400}
+
+@endpoint DELETE /waba/messages/{id}
+@required {id: str}
+@returns(200) {success: bool}
+@errors {400, 404}
+
+@endpoint POST /waba/events
+@required {event: str(read/is_typing/reaction)}
+@optional {from: str, to: str, msg_id: str, message_id: str, emoji: str}
+@returns(200) {success: bool}
+@errors {400}
+
+@endgroup
+
+@end

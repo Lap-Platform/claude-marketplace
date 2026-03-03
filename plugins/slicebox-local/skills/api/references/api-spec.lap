@@ -1,0 +1,570 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Slicebox API
+@version 2.0
+@auth ApiKey token in path
+@endpoints 118
+@hint download_for_search
+@toc sources(1), destinations(1), system(2), import(6), metadata(26), images(13), anonymization(8), users(6), log(3), boxes(11), transactions(7), directorywatches(3), scps(3), scus(4), filtering(9), seriestypes(12), forwarding(3)
+
+@group sources
+@endpoint GET /sources
+@returns(200)
+
+@endgroup
+
+@group destinations
+@endpoint GET /destinations
+@returns(200)
+
+@endgroup
+
+@group system
+@endpoint POST /system/stop
+@returns(200)
+
+@endpoint GET /system/health
+@returns(200)
+
+@endgroup
+
+@group import
+@endpoint GET /import/sessions
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /import/sessions
+@required {import session: map}
+@returns(201)
+
+@endpoint GET /import/sessions/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /import/sessions/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint POST /import/sessions/{id}/images
+@required {id: any, dataset: any}
+@returns(200)
+@returns(201)
+@errors {404}
+
+@endpoint GET /import/sessions/{id}/images
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group metadata
+@endpoint GET /metadata/patients
+@optional {startindex: any, count: any, orderby: any, orderascending: any, filter: any, sources: any, seriestypes: any, seriestags: any}
+@returns(200)
+
+@endpoint POST /metadata/patients/query
+@required {query: map}
+@returns(200)
+
+@endpoint GET /metadata/patients/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /metadata/patients/{id}/images
+@required {id: any}
+@optional {sources: any, seriestypes: any, seriestags: any}
+@returns(200)
+
+@endpoint GET /metadata/studies
+@required {patientid: any}
+@optional {startindex: any, count: any, sources: any, seriestypes: any, seriestags: any}
+@returns(200)
+
+@endpoint POST /metadata/studies/query
+@required {query: map}
+@returns(200)
+
+@endpoint GET /metadata/studies/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /metadata/studies/{id}/images
+@required {id: any}
+@optional {sources: any, seriestypes: any, seriestags: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /metadata/series
+@required {studyid: any}
+@optional {startindex: any, count: any, sources: any, seriestypes: any, seriestags: any}
+@returns(200)
+
+@endpoint POST /metadata/series/query
+@required {query: map}
+@returns(200)
+
+@endpoint GET /metadata/series/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /metadata/series/{id}/source
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /metadata/series/{id}/seriestypes
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /metadata/series/{id}/seriestypes
+@required {id: any}
+@returns(204)
+
+@endpoint PUT /metadata/series/{seriesId}/seriestypes/{seriesTypeId}
+@required {seriesId: any, seriesTypeId: any}
+@returns(204)
+@errors {404}
+
+@endpoint DELETE /metadata/series/{seriesId}/seriestypes/{seriesTypeId}
+@required {seriesId: any, seriesTypeId: any}
+@returns(204)
+
+@endpoint GET /metadata/series/{id}/seriestags
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint POST /metadata/series/{id}/seriestags
+@required {id: any, query: map}
+@returns(201)
+@errors {404}
+
+@endpoint DELETE /metadata/series/{seriesId}/seriestags/{seriesTagId}
+@required {seriesId: any, seriesTagId: any}
+@returns(204)
+
+@endpoint GET /metadata/seriestags
+@returns(200)
+
+@endpoint GET /metadata/images
+@required {seriesid: any}
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /metadata/images/query
+@required {query: map}
+@returns(200)
+
+@endpoint GET /metadata/images/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /metadata/flatseries
+@optional {startindex: any, count: any, orderby: any, orderascending: any, filter: any, sources: any, seriestypes: any, seriestags: any}
+@returns(200)
+
+@endpoint GET /metadata/flatseries/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint POST /metadata/flatseries/query
+@required {query: map}
+@returns(200)
+
+@endgroup
+
+@group images
+@endpoint POST /images
+@required {dataset: any}
+@returns(200)
+@returns(201)
+
+@endpoint POST /images/jpeg
+@required {studyid: any, jpeg bytes: any}
+@optional {description: any}
+@returns(201)
+
+@endpoint GET /images/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /images/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint POST /images/delete
+@required {image IDs: [int(int64)]}
+@returns(204)
+
+@endpoint GET /images/{id}/attributes
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /images/{id}/imageinformation
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /images/{id}/png
+@required {id: any}
+@optional {framenumber: any, windowmin: any, windowmax: any, imageheight: any}
+@returns(200)
+@errors {404, 501}
+
+@endpoint PUT /images/{id}/modify
+@required {id: any, tag path value mappings: [map]}
+@returns(201)
+
+@endpoint PUT /images/{id}/anonymize
+@required {id: any, tag values: map}
+@returns(200)
+@errors {404}
+
+@endpoint POST /images/{id}/anonymized
+@required {id: any, tag values: map}
+@returns(200)
+@errors {404}
+
+@endpoint POST /images/export
+@required {image ids: [int(int64)]}
+@returns(200)
+@returns(201)
+
+@endpoint GET /images/export
+@required {id: any}
+@returns(200)
+
+@endgroup
+
+@group anonymization
+@endpoint POST /anonymization/anonymize
+@required {query: [map]}
+@returns(200)
+
+@endpoint GET /anonymization/keys
+@optional {startindex: any, count: any, orderby: any, orderascending: any, filter: any}
+@returns(200)
+
+@endpoint GET /anonymization/keys/{id}
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /anonymization/keys/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /anonymization/keys/{id}/keyvalues
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint POST /anonymization/keys/query
+@required {query: map}
+@returns(200)
+
+@endpoint GET /anonymization/options
+@returns(200)
+
+@endpoint GET /anonymization/keys/export/csv
+@returns(200)
+
+@endgroup
+
+@group users
+@endpoint POST /users/login
+@required {UserPass: map}
+@returns(201)
+@errors {401}
+
+@endpoint POST /users/logout
+@returns(201)
+
+@endpoint GET /users/current
+@returns(200)
+@errors {404}
+
+@endpoint GET /users
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /users
+@required {user: map}
+@returns(201)
+
+@endpoint DELETE /users/{id}
+@required {id: any}
+@returns(204)
+
+@endgroup
+
+@group log
+@endpoint GET /log
+@optional {startindex: any, count: any, subject: any, type: any}
+@returns(200)
+
+@endpoint DELETE /log
+@returns(204)
+
+@endpoint DELETE /log/{id}
+@required {id: any}
+@returns(204)
+
+@endgroup
+
+@group boxes
+@endpoint GET /boxes
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /boxes/createconnection
+@required {remoteBoxConnectionData: map}
+@returns(201)
+
+@endpoint POST /boxes/connect
+@required {remoteBox: map}
+@returns(201)
+
+@endpoint DELETE /boxes/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint POST /boxes/{id}/send
+@required {id: any, sequence of image tag values: map}
+@returns(201)
+@errors {404}
+
+@endpoint GET /boxes/incoming
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint DELETE /boxes/incoming/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /boxes/incoming/{id}/images
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endpoint GET /boxes/outgoing
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint DELETE /boxes/outgoing/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /boxes/outgoing/{id}/images
+@required {id: any}
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group transactions
+@endpoint POST /transactions/{token}/image
+@required {token: any, transactionid: any, sequencenumber: any, totalimagecount: any, dataset: any}
+@returns(204)
+@errors {401}
+
+@endpoint GET /transactions/{token}/status
+@required {token: any, transactionid: any}
+@returns(200)
+@errors {401, 404}
+
+@endpoint PUT /transactions/{token}/status
+@required {token: any, transactionid: any, transaction status: str}
+@returns(204)
+@errors {404}
+
+@endpoint GET /transactions/{token}/outgoing/poll
+@required {token: any}
+@returns(200)
+@errors {401, 404}
+
+@endpoint GET /transactions/{token}/outgoing
+@required {token: any, transactionid: any, imageid: any}
+@returns(200)
+@errors {401, 404}
+
+@endpoint POST /transactions/{token}/outgoing/done
+@required {token: any, outgoing entry and image information block: map}
+@returns(204)
+@errors {401}
+
+@endpoint POST /transactions/{token}/outgoing/failed
+@required {token: any, outgoing transaction and image, and error message: map}
+@returns(204)
+@errors {401}
+
+@endgroup
+
+@group directorywatches
+@endpoint GET /directorywatches
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /directorywatches
+@optional {watchedDirectory: map}
+@returns(201)
+
+@endpoint DELETE /directorywatches/{id}
+@required {id: any}
+@returns(204)
+
+@endgroup
+
+@group scps
+@endpoint GET /scps
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /scps
+@optional {scp: map}
+@returns(201)
+@errors {400}
+
+@endpoint DELETE /scps/{id}
+@required {id: any}
+@returns(204)
+
+@endgroup
+
+@group scus
+@endpoint GET /scus
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /scus
+@optional {scu: map}
+@returns(201)
+@errors {400}
+
+@endpoint DELETE /scus/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint POST /scus/{id}/send
+@required {id: any, imageids: [int(int64)]}
+@returns(204)
+@errors {404, 502}
+
+@endgroup
+
+@group filtering
+@endpoint GET /filtering/filters
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /filtering/filters
+@required {tagFilter: map}
+@returns(201)
+
+@endpoint DELETE /filtering/filters/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /filtering/filters/{id}/tagpaths
+@required {id: any}
+@returns(200)
+
+@endpoint POST /filtering/filters/{id}/tagpaths
+@required {id: any, tagpath: map}
+@returns(201)
+
+@endpoint DELETE /filtering/filters/{id}/tagpaths/{tagpathid}
+@required {id: any, tagpathid: any}
+@returns(204)
+
+@endpoint GET /filtering/associations
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /filtering/associations
+@required {sourcetagfilter: map}
+@returns(201)
+
+@endpoint DELETE /filtering/associations/{id}
+@required {id: any}
+@returns(204)
+
+@endgroup
+
+@group seriestypes
+@endpoint GET /seriestypes
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /seriestypes
+@optional {SeriesType: map}
+@returns(201)
+
+@endpoint PUT /seriestypes/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint DELETE /seriestypes/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint POST /seriestypes/series/query
+@required {query: map}
+@returns(200)
+
+@endpoint GET /seriestypes/rules
+@required {seriestypeid: any}
+@returns(200)
+
+@endpoint POST /seriestypes/rules
+@optional {SeriesTypeRule: map}
+@returns(201)
+
+@endpoint GET /seriestypes/rules/updatestatus
+@returns(200)
+
+@endpoint DELETE /seriestypes/rules/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /seriestypes/rules/{id}/attributes
+@required {id: any}
+@returns(200)
+
+@endpoint POST /seriestypes/rules/{id}/attributes
+@required {id: any}
+@optional {SeriesTypeRuleAttribute: map}
+@returns(201)
+
+@endpoint DELETE /seriestypes/rules/{ruleId}/attributes/{attributeId}
+@required {ruleId: any, attributeId: any}
+@returns(204)
+
+@endgroup
+
+@group forwarding
+@endpoint GET /forwarding/rules
+@optional {startindex: any, count: any}
+@returns(200)
+
+@endpoint POST /forwarding/rules
+@optional {FowardingRule: map}
+@returns(201)
+
+@endpoint DELETE /forwarding/rule/{id}
+@required {id: any}
+@returns(204)
+
+@endgroup
+
+@end

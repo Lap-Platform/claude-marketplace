@@ -1,0 +1,567 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS IoT SiteWise
+@version 2019-12-02
+@auth AWS SigV4
+@endpoints 84
+@hint download_for_search
+@toc assets(13), timeseries(5), projects(8), properties(8), access-policies(5), asset-models(12), jobs(3), dashboards(5), 20200301(7), portals(5), actions(3), configuration(4), logging(2), queries(1), tags(3)
+
+@group assets
+@endpoint POST /assets/{assetId}/associate
+@required {assetId: str, hierarchyId: str, childAssetId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group timeseries
+@endpoint POST /timeseries/associate/
+@required {alias: str, assetId: str, propertyId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group projects
+@endpoint POST /projects/{projectId}/assets/associate
+@required {projectId: str, assetIds: [str]}
+@optional {clientToken: str}
+@returns(200) {errors: [AssetErrorDetails]?}
+
+@endpoint POST /projects/{projectId}/assets/disassociate
+@required {projectId: str, assetIds: [str]}
+@optional {clientToken: str}
+@returns(200) {errors: [AssetErrorDetails]?}
+
+@endgroup
+
+@group properties
+@endpoint POST /properties/batch/aggregates
+@required {entries: [BatchGetAssetPropertyAggregatesEntry]}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {errorEntries: [BatchGetAssetPropertyAggregatesErrorEntry], successEntries: [BatchGetAssetPropertyAggregatesSuccessEntry], skippedEntries: [BatchGetAssetPropertyAggregatesSkippedEntry], nextToken: str?}
+
+@endpoint POST /properties/batch/latest
+@required {entries: [BatchGetAssetPropertyValueEntry]}
+@optional {nextToken: str}
+@returns(200) {errorEntries: [BatchGetAssetPropertyValueErrorEntry], successEntries: [BatchGetAssetPropertyValueSuccessEntry], skippedEntries: [BatchGetAssetPropertyValueSkippedEntry], nextToken: str?}
+
+@endpoint POST /properties/batch/history
+@required {entries: [BatchGetAssetPropertyValueHistoryEntry]}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {errorEntries: [BatchGetAssetPropertyValueHistoryErrorEntry], successEntries: [BatchGetAssetPropertyValueHistorySuccessEntry], skippedEntries: [BatchGetAssetPropertyValueHistorySkippedEntry], nextToken: str?}
+
+@endpoint POST /properties
+@required {entries: [PutAssetPropertyValueEntry]}
+@returns(200) {errorEntries: [BatchPutAssetPropertyErrorEntry]}
+
+@endgroup
+
+@group access-policies
+@endpoint POST /access-policies
+@required {accessPolicyIdentity: Identity, accessPolicyResource: Resource, accessPolicyPermission: str}
+@optional {clientToken: str, tags: map<str,str>}
+@returns(200) {accessPolicyId: str, accessPolicyArn: str}
+
+@endgroup
+
+@group assets
+@endpoint POST /assets
+@required {assetName: str, assetModelId: str}
+@optional {clientToken: str, tags: map<str,str>, assetDescription: str, assetId: str, assetExternalId: str}
+@returns(200) {assetId: str, assetArn: str, assetStatus: AssetStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endgroup
+
+@group asset-models
+@endpoint POST /asset-models
+@required {assetModelName: str}
+@optional {assetModelType: str, assetModelId: str, assetModelExternalId: str, assetModelDescription: str, assetModelProperties: [AssetModelPropertyDefinition], assetModelHierarchies: [AssetModelHierarchyDefinition], assetModelCompositeModels: [AssetModelCompositeModelDefinition], clientToken: str, tags: map<str,str>}
+@returns(200) {assetModelId: str, assetModelArn: str, assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endpoint POST /asset-models/{assetModelId}/composite-models
+@required {assetModelId: str, assetModelCompositeModelName: str, assetModelCompositeModelType: str}
+@optional {If-Match: str, If-None-Match: str, Match-For-Version-Type: str, assetModelCompositeModelExternalId: str, parentAssetModelCompositeModelId: str, assetModelCompositeModelId: str, assetModelCompositeModelDescription: str, clientToken: str, composedAssetModelId: str, assetModelCompositeModelProperties: [AssetModelPropertyDefinition]}
+@returns(200) {assetModelCompositeModelId: str, assetModelCompositeModelPath: [AssetModelCompositeModelPathSegment], assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs
+@required {jobName: str, jobRoleArn: str, files: [File], errorReportLocation: ErrorReportLocation, jobConfiguration: JobConfiguration}
+@optional {adaptiveIngestion: bool, deleteFilesAfterImport: bool}
+@returns(200) {jobId: str, jobName: str, jobStatus: str}
+
+@endgroup
+
+@group dashboards
+@endpoint POST /dashboards
+@required {projectId: str, dashboardName: str, dashboardDefinition: str}
+@optional {dashboardDescription: str, clientToken: str, tags: map<str,str>}
+@returns(200) {dashboardId: str, dashboardArn: str}
+
+@endgroup
+
+@group 20200301
+@endpoint POST /20200301/gateways
+@required {gatewayName: str, gatewayPlatform: GatewayPlatform}
+@optional {tags: map<str,str>}
+@returns(200) {gatewayId: str, gatewayArn: str}
+
+@endgroup
+
+@group portals
+@endpoint POST /portals
+@required {portalName: str, portalContactEmail: str, roleArn: str}
+@optional {portalDescription: str, clientToken: str, portalLogoImageFile: ImageFile, tags: map<str,str>, portalAuthMode: str, notificationSenderEmail: str, alarms: Alarms}
+@returns(200) {portalId: str, portalArn: str, portalStartUrl: str, portalStatus: PortalStatus{state: str, error: MonitorErrorDetails?{code: str?, message: str?}}, ssoApplicationId: str}
+
+@endgroup
+
+@group projects
+@endpoint POST /projects
+@required {portalId: str, projectName: str}
+@optional {projectDescription: str, clientToken: str, tags: map<str,str>}
+@returns(200) {projectId: str, projectArn: str}
+
+@endgroup
+
+@group access-policies
+@endpoint DELETE /access-policies/{accessPolicyId}
+@required {accessPolicyId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group assets
+@endpoint DELETE /assets/{assetId}
+@required {assetId: str}
+@optional {clientToken: str}
+@returns(200) {assetStatus: AssetStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endgroup
+
+@group asset-models
+@endpoint DELETE /asset-models/{assetModelId}
+@required {assetModelId: str}
+@optional {clientToken: str, If-Match: str, If-None-Match: str, Match-For-Version-Type: str}
+@returns(200) {assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endpoint DELETE /asset-models/{assetModelId}/composite-models/{assetModelCompositeModelId}
+@required {assetModelId: str, assetModelCompositeModelId: str}
+@optional {clientToken: str, If-Match: str, If-None-Match: str, Match-For-Version-Type: str}
+@returns(200) {assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endgroup
+
+@group dashboards
+@endpoint DELETE /dashboards/{dashboardId}
+@required {dashboardId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group 20200301
+@endpoint DELETE /20200301/gateways/{gatewayId}
+@required {gatewayId: str}
+
+@endgroup
+
+@group portals
+@endpoint DELETE /portals/{portalId}
+@required {portalId: str}
+@optional {clientToken: str}
+@returns(200) {portalStatus: PortalStatus{state: str, error: MonitorErrorDetails?{code: str?, message: str?}}}
+
+@endgroup
+
+@group projects
+@endpoint DELETE /projects/{projectId}
+@required {projectId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group timeseries
+@endpoint POST /timeseries/delete/
+@optional {alias: str, assetId: str, propertyId: str, clientToken: str}
+
+@endgroup
+
+@group access-policies
+@endpoint GET /access-policies/{accessPolicyId}
+@required {accessPolicyId: str}
+@returns(200) {accessPolicyId: str, accessPolicyArn: str, accessPolicyIdentity: Identity{user: UserIdentity?{id: str}, group: GroupIdentity?{id: str}, iamUser: IAMUserIdentity?{arn: str}, iamRole: IAMRoleIdentity?{arn: str}}, accessPolicyResource: Resource{portal: PortalResource?{id: str}, project: ProjectResource?{id: str}}, accessPolicyPermission: str, accessPolicyCreationDate: str(timestamp), accessPolicyLastUpdateDate: str(timestamp)}
+
+@endgroup
+
+@group actions
+@endpoint GET /actions/{actionId}
+@required {actionId: str}
+@returns(200) {actionId: str, targetResource: TargetResource{assetId: str}, actionDefinitionId: str, actionPayload: ActionPayload{stringValue: str}, executionTime: str(timestamp)}
+
+@endgroup
+
+@group assets
+@endpoint GET /assets/{assetId}
+@required {assetId: str}
+@optional {excludeProperties: bool}
+@returns(200) {assetId: str, assetArn: str, assetName: str, assetModelId: str, assetProperties: [AssetProperty], assetHierarchies: [AssetHierarchy], assetCompositeModels: [AssetCompositeModel]?, assetCreationDate: str(timestamp), assetLastUpdateDate: str(timestamp), assetStatus: AssetStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}, assetDescription: str?, assetCompositeModelSummaries: [AssetCompositeModelSummary]?, assetExternalId: str?}
+
+@endpoint GET /assets/{assetId}/composite-models/{assetCompositeModelId}
+@required {assetId: str, assetCompositeModelId: str}
+@returns(200) {assetId: str, assetCompositeModelId: str, assetCompositeModelExternalId: str?, assetCompositeModelPath: [AssetCompositeModelPathSegment], assetCompositeModelName: str, assetCompositeModelDescription: str, assetCompositeModelType: str, assetCompositeModelProperties: [AssetProperty], assetCompositeModelSummaries: [AssetCompositeModelSummary], actionDefinitions: [ActionDefinition]?}
+
+@endgroup
+
+@group asset-models
+@endpoint GET /asset-models/{assetModelId}
+@required {assetModelId: str}
+@optional {excludeProperties: bool, assetModelVersion: str}
+@returns(200) {assetModelId: str, assetModelExternalId: str?, assetModelArn: str, assetModelName: str, assetModelType: str?, assetModelDescription: str, assetModelProperties: [AssetModelProperty], assetModelHierarchies: [AssetModelHierarchy], assetModelCompositeModels: [AssetModelCompositeModel]?, assetModelCompositeModelSummaries: [AssetModelCompositeModelSummary]?, assetModelCreationDate: str(timestamp), assetModelLastUpdateDate: str(timestamp), assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}, assetModelVersion: str?, eTag: str?}
+
+@endpoint GET /asset-models/{assetModelId}/composite-models/{assetModelCompositeModelId}
+@required {assetModelId: str, assetModelCompositeModelId: str}
+@optional {assetModelVersion: str}
+@returns(200) {assetModelId: str, assetModelCompositeModelId: str, assetModelCompositeModelExternalId: str?, assetModelCompositeModelPath: [AssetModelCompositeModelPathSegment], assetModelCompositeModelName: str, assetModelCompositeModelDescription: str, assetModelCompositeModelType: str, assetModelCompositeModelProperties: [AssetModelProperty], compositionDetails: CompositionDetails?{compositionRelationship: [CompositionRelationshipItem]?}, assetModelCompositeModelSummaries: [AssetModelCompositeModelSummary], actionDefinitions: [ActionDefinition]?}
+
+@endgroup
+
+@group assets
+@endpoint GET /assets/{assetId}/properties/{propertyId}
+@required {assetId: str, propertyId: str}
+@returns(200) {assetId: str, assetName: str, assetModelId: str, assetProperty: Property?{id: str, name: str, alias: str?, notification: PropertyNotification?{topic: str, state: str}, dataType: str, unit: str?, type: PropertyType?{attribute: Attribute?{defaultValue: str?}, measurement: Measurement?{processingConfig: MeasurementProcessingConfig?}, transform: Transform?{expression: str, variables: [ExpressionVariable], processingConfig: TransformProcessingConfig?}, metric: Metric?{expression: str, variables: [ExpressionVariable], window: MetricWindow, processingConfig: MetricProcessingConfig?}}, path: [AssetPropertyPathSegment]?, externalId: str?}, compositeModel: CompositeModelProperty?{name: str, type: str, assetProperty: Property{id: str, name: str, alias: str?, notification: PropertyNotification?{topic: str, state: str}, dataType: str, unit: str?, type: PropertyType?{attribute: Attribute?, measurement: Measurement?, transform: Transform?, metric: Metric?}, path: [AssetPropertyPathSegment]?, externalId: str?}, id: str?, externalId: str?}, assetExternalId: str?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /jobs/{jobId}
+@required {jobId: str}
+@returns(200) {jobId: str, jobName: str, jobStatus: str, jobRoleArn: str, files: [File], errorReportLocation: ErrorReportLocation{bucket: str, prefix: str}, jobConfiguration: JobConfiguration{fileFormat: FileFormat{csv: Csv?{columnNames: [str]}, parquet: Parquet?}}, jobCreationDate: str(timestamp), jobLastUpdateDate: str(timestamp), adaptiveIngestion: bool?, deleteFilesAfterImport: bool?}
+
+@endgroup
+
+@group dashboards
+@endpoint GET /dashboards/{dashboardId}
+@required {dashboardId: str}
+@returns(200) {dashboardId: str, dashboardArn: str, dashboardName: str, projectId: str, dashboardDescription: str?, dashboardDefinition: str, dashboardCreationDate: str(timestamp), dashboardLastUpdateDate: str(timestamp)}
+
+@endgroup
+
+@group configuration
+@endpoint GET /configuration/account/encryption
+@returns(200) {encryptionType: str, kmsKeyArn: str?, configurationStatus: ConfigurationStatus{state: str, error: ConfigurationErrorDetails?{code: str, message: str}}}
+
+@endgroup
+
+@group 20200301
+@endpoint GET /20200301/gateways/{gatewayId}
+@required {gatewayId: str}
+@returns(200) {gatewayId: str, gatewayName: str, gatewayArn: str, gatewayPlatform: GatewayPlatform?{greengrass: Greengrass?{groupArn: str}, greengrassV2: GreengrassV2?{coreDeviceThingName: str}, siemensIE: SiemensIE?{iotCoreThingName: str}}, gatewayCapabilitySummaries: [GatewayCapabilitySummary], creationDate: str(timestamp), lastUpdateDate: str(timestamp)}
+
+@endpoint GET /20200301/gateways/{gatewayId}/capability/{capabilityNamespace}
+@required {gatewayId: str, capabilityNamespace: str}
+@returns(200) {gatewayId: str, capabilityNamespace: str, capabilityConfiguration: str, capabilitySyncStatus: str}
+
+@endgroup
+
+@group logging
+@endpoint GET /logging
+@returns(200) {loggingOptions: LoggingOptions{level: str}}
+
+@endgroup
+
+@group portals
+@endpoint GET /portals/{portalId}
+@required {portalId: str}
+@returns(200) {portalId: str, portalArn: str, portalName: str, portalDescription: str?, portalClientId: str, portalStartUrl: str, portalContactEmail: str, portalStatus: PortalStatus{state: str, error: MonitorErrorDetails?{code: str?, message: str?}}, portalCreationDate: str(timestamp), portalLastUpdateDate: str(timestamp), portalLogoImageLocation: ImageLocation?{id: str, url: str}, roleArn: str?, portalAuthMode: str?, notificationSenderEmail: str?, alarms: Alarms?{alarmRoleArn: str, notificationLambdaArn: str?}}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects/{projectId}
+@required {projectId: str}
+@returns(200) {projectId: str, projectArn: str, projectName: str, portalId: str, projectDescription: str?, projectCreationDate: str(timestamp), projectLastUpdateDate: str(timestamp)}
+
+@endgroup
+
+@group configuration
+@endpoint GET /configuration/account/storage
+@returns(200) {storageType: str, multiLayerStorage: MultiLayerStorage?{customerManagedS3Storage: CustomerManagedS3Storage{s3ResourceArn: str, roleArn: str}}, disassociatedDataStorage: str?, retentionPeriod: RetentionPeriod?{numberOfDays: int?, unlimited: bool?}, configurationStatus: ConfigurationStatus{state: str, error: ConfigurationErrorDetails?{code: str, message: str}}, lastUpdateDate: str(timestamp)?, warmTier: str?, warmTierRetentionPeriod: WarmTierRetentionPeriod?{numberOfDays: int?, unlimited: bool?}}
+
+@endgroup
+
+@group timeseries
+@endpoint GET /timeseries/describe/
+@optional {alias: str, assetId: str, propertyId: str}
+@returns(200) {assetId: str?, propertyId: str?, alias: str?, timeSeriesId: str, dataType: str, dataTypeSpec: str?, timeSeriesCreationDate: str(timestamp), timeSeriesLastUpdateDate: str(timestamp), timeSeriesArn: str}
+
+@endgroup
+
+@group assets
+@endpoint POST /assets/{assetId}/disassociate
+@required {assetId: str, hierarchyId: str, childAssetId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group timeseries
+@endpoint POST /timeseries/disassociate/
+@required {alias: str, assetId: str, propertyId: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group actions
+@endpoint POST /actions
+@required {targetResource: TargetResource, actionDefinitionId: str, actionPayload: ActionPayload}
+@optional {clientToken: str}
+@returns(200) {actionId: str}
+
+@endgroup
+
+@group queries
+@endpoint POST /queries/execution
+@required {queryStatement: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {columns: [ColumnInfo]?, rows: [Row]?, nextToken: str?}
+
+@endgroup
+
+@group properties
+@endpoint GET /properties/aggregates
+@required {aggregateTypes: [str], resolution: str, startDate: str(timestamp), endDate: str(timestamp)}
+@optional {assetId: str, propertyId: str, propertyAlias: str, qualities: [str], timeOrdering: str, nextToken: str, maxResults: int}
+@returns(200) {aggregatedValues: [AggregatedValue], nextToken: str?}
+
+@endpoint GET /properties/latest
+@optional {assetId: str, propertyId: str, propertyAlias: str}
+@returns(200) {propertyValue: AssetPropertyValue?{value: Variant{stringValue: str?, integerValue: int?, doubleValue: num(f64)?, booleanValue: bool?}, timestamp: TimeInNanos{timeInSeconds: int(i64), offsetInNanos: int?}, quality: str?}}
+
+@endpoint GET /properties/history
+@optional {assetId: str, propertyId: str, propertyAlias: str, startDate: str(timestamp), endDate: str(timestamp), qualities: [str], timeOrdering: str, nextToken: str, maxResults: int}
+@returns(200) {assetPropertyValueHistory: [AssetPropertyValue], nextToken: str?}
+
+@endpoint GET /properties/interpolated
+@required {startTimeInSeconds: int(i64), endTimeInSeconds: int(i64), quality: str, intervalInSeconds: int(i64), type: str}
+@optional {assetId: str, propertyId: str, propertyAlias: str, startTimeOffsetInNanos: int, endTimeOffsetInNanos: int, nextToken: str, maxResults: int, intervalWindowInSeconds: int(i64)}
+@returns(200) {interpolatedAssetPropertyValues: [InterpolatedAssetPropertyValue], nextToken: str?}
+
+@endgroup
+
+@group access-policies
+@endpoint GET /access-policies
+@optional {identityType: str, identityId: str, resourceType: str, resourceId: str, iamArn: str, nextToken: str, maxResults: int}
+@returns(200) {accessPolicySummaries: [AccessPolicySummary], nextToken: str?}
+
+@endgroup
+
+@group actions
+@endpoint GET /actions
+@required {targetResourceType: str, targetResourceId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {actionSummaries: [ActionSummary], nextToken: str}
+
+@endgroup
+
+@group asset-models
+@endpoint GET /asset-models/{assetModelId}/composite-models
+@required {assetModelId: str}
+@optional {nextToken: str, maxResults: int, assetModelVersion: str}
+@returns(200) {assetModelCompositeModelSummaries: [AssetModelCompositeModelSummary], nextToken: str?}
+
+@endpoint GET /asset-models/{assetModelId}/properties
+@required {assetModelId: str}
+@optional {nextToken: str, maxResults: int, filter: str, assetModelVersion: str}
+@returns(200) {assetModelPropertySummaries: [AssetModelPropertySummary], nextToken: str?}
+
+@endpoint GET /asset-models
+@optional {assetModelTypes: [str], nextToken: str, maxResults: int, assetModelVersion: str}
+@returns(200) {assetModelSummaries: [AssetModelSummary], nextToken: str?}
+
+@endgroup
+
+@group assets
+@endpoint GET /assets/{assetId}/properties
+@required {assetId: str}
+@optional {nextToken: str, maxResults: int, filter: str}
+@returns(200) {assetPropertySummaries: [AssetPropertySummary], nextToken: str?}
+
+@endpoint GET /assets/{assetId}/assetRelationships
+@required {assetId: str, traversalType: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {assetRelationshipSummaries: [AssetRelationshipSummary], nextToken: str?}
+
+@endpoint GET /assets
+@optional {nextToken: str, maxResults: int, assetModelId: str, filter: str}
+@returns(200) {assetSummaries: [AssetSummary], nextToken: str?}
+
+@endpoint GET /assets/{assetId}/hierarchies
+@required {assetId: str}
+@optional {hierarchyId: str, traversalDirection: str, nextToken: str, maxResults: int}
+@returns(200) {assetSummaries: [AssociatedAssetsSummary], nextToken: str?}
+
+@endgroup
+
+@group jobs
+@endpoint GET /jobs
+@optional {nextToken: str, maxResults: int, filter: str}
+@returns(200) {jobSummaries: [JobSummary], nextToken: str?}
+
+@endgroup
+
+@group asset-models
+@endpoint GET /asset-models/{assetModelId}/composition-relationships
+@required {assetModelId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {compositionRelationshipSummaries: [CompositionRelationshipSummary], nextToken: str?}
+
+@endgroup
+
+@group dashboards
+@endpoint GET /dashboards
+@required {projectId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {dashboardSummaries: [DashboardSummary], nextToken: str?}
+
+@endgroup
+
+@group 20200301
+@endpoint GET /20200301/gateways
+@optional {nextToken: str, maxResults: int}
+@returns(200) {gatewaySummaries: [GatewaySummary], nextToken: str?}
+
+@endgroup
+
+@group portals
+@endpoint GET /portals
+@optional {nextToken: str, maxResults: int}
+@returns(200) {portalSummaries: [PortalSummary]?, nextToken: str?}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects/{projectId}/assets
+@required {projectId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {assetIds: [str], nextToken: str?}
+
+@endpoint GET /projects
+@required {portalId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {projectSummaries: [ProjectSummary], nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group timeseries
+@endpoint GET /timeseries/
+@optional {nextToken: str, maxResults: int, assetId: str, aliasPrefix: str, timeSeriesType: str}
+@returns(200) {TimeSeriesSummaries: [TimeSeriesSummary], nextToken: str?}
+
+@endgroup
+
+@group configuration
+@endpoint POST /configuration/account/encryption
+@required {encryptionType: str}
+@optional {kmsKeyId: str}
+@returns(200) {encryptionType: str, kmsKeyArn: str?, configurationStatus: ConfigurationStatus{state: str, error: ConfigurationErrorDetails?{code: str, message: str}}}
+
+@endgroup
+
+@group logging
+@endpoint PUT /logging
+@required {loggingOptions: LoggingOptions}
+
+@endgroup
+
+@group configuration
+@endpoint POST /configuration/account/storage
+@required {storageType: str}
+@optional {multiLayerStorage: MultiLayerStorage, disassociatedDataStorage: str, retentionPeriod: RetentionPeriod, warmTier: str, warmTierRetentionPeriod: WarmTierRetentionPeriod}
+@returns(200) {storageType: str, multiLayerStorage: MultiLayerStorage?{customerManagedS3Storage: CustomerManagedS3Storage{s3ResourceArn: str, roleArn: str}}, disassociatedDataStorage: str?, retentionPeriod: RetentionPeriod?{numberOfDays: int?, unlimited: bool?}, configurationStatus: ConfigurationStatus{state: str, error: ConfigurationErrorDetails?{code: str, message: str}}, warmTier: str?, warmTierRetentionPeriod: WarmTierRetentionPeriod?{numberOfDays: int?, unlimited: bool?}}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags
+@required {resourceArn: str, tags: map<str,str>}
+
+@endpoint DELETE /tags
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group access-policies
+@endpoint PUT /access-policies/{accessPolicyId}
+@required {accessPolicyId: str, accessPolicyIdentity: Identity, accessPolicyResource: Resource, accessPolicyPermission: str}
+@optional {clientToken: str}
+
+@endgroup
+
+@group assets
+@endpoint PUT /assets/{assetId}
+@required {assetId: str, assetName: str}
+@optional {clientToken: str, assetDescription: str, assetExternalId: str}
+@returns(200) {assetStatus: AssetStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endgroup
+
+@group asset-models
+@endpoint PUT /asset-models/{assetModelId}
+@required {assetModelId: str, assetModelName: str}
+@optional {If-Match: str, If-None-Match: str, Match-For-Version-Type: str, assetModelExternalId: str, assetModelDescription: str, assetModelProperties: [AssetModelProperty], assetModelHierarchies: [AssetModelHierarchy], assetModelCompositeModels: [AssetModelCompositeModel], clientToken: str}
+@returns(200) {assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endpoint PUT /asset-models/{assetModelId}/composite-models/{assetModelCompositeModelId}
+@required {assetModelId: str, assetModelCompositeModelId: str, assetModelCompositeModelName: str}
+@optional {If-Match: str, If-None-Match: str, Match-For-Version-Type: str, assetModelCompositeModelExternalId: str, assetModelCompositeModelDescription: str, clientToken: str, assetModelCompositeModelProperties: [AssetModelProperty]}
+@returns(200) {assetModelCompositeModelPath: [AssetModelCompositeModelPathSegment], assetModelStatus: AssetModelStatus{state: str, error: ErrorDetails?{code: str, message: str, details: [DetailedError]?}}}
+
+@endgroup
+
+@group assets
+@endpoint PUT /assets/{assetId}/properties/{propertyId}
+@required {assetId: str, propertyId: str}
+@optional {propertyAlias: str, propertyNotificationState: str, clientToken: str, propertyUnit: str}
+
+@endgroup
+
+@group dashboards
+@endpoint PUT /dashboards/{dashboardId}
+@required {dashboardId: str, dashboardName: str, dashboardDefinition: str}
+@optional {dashboardDescription: str, clientToken: str}
+
+@endgroup
+
+@group 20200301
+@endpoint PUT /20200301/gateways/{gatewayId}
+@required {gatewayId: str, gatewayName: str}
+
+@endpoint POST /20200301/gateways/{gatewayId}/capability
+@required {gatewayId: str, capabilityNamespace: str, capabilityConfiguration: str}
+@returns(200) {capabilityNamespace: str, capabilitySyncStatus: str}
+
+@endgroup
+
+@group portals
+@endpoint PUT /portals/{portalId}
+@required {portalId: str, portalName: str, portalContactEmail: str, roleArn: str}
+@optional {portalDescription: str, portalLogoImage: Image, clientToken: str, notificationSenderEmail: str, alarms: Alarms}
+@returns(200) {portalStatus: PortalStatus{state: str, error: MonitorErrorDetails?{code: str?, message: str?}}}
+
+@endgroup
+
+@group projects
+@endpoint PUT /projects/{projectId}
+@required {projectId: str, projectName: str}
+@optional {projectDescription: str, clientToken: str}
+
+@endgroup
+
+@end
