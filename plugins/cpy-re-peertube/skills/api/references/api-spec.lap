@@ -1,0 +1,1214 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api PeerTube
+@base https://peertube2.cpy.re
+@version 8.0.0
+@auth OAuth2
+@endpoints 265
+@hint download_for_search
+@toc static(4), download(1), feeds(4), api(256)
+
+@group static
+@endpoint GET /static/web-videos/{filename}
+@required {filename: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /static/web-videos/private/{filename}
+@required {filename: str}
+@optional {videoFileToken: str}
+@returns(200)
+@errors {403, 404}
+
+@endpoint GET /static/streaming-playlists/hls/{filename}
+@required {filename: str}
+@returns(200)
+@errors {403, 404}
+
+@endpoint GET /static/streaming-playlists/hls/private/{filename}
+@required {filename: str}
+@optional {videoFileToken: str, reinjectVideoFileToken: bool}
+@returns(200)
+@errors {403, 404}
+
+@endgroup
+
+@group download
+@endpoint GET /download/videos/generate/{videoId}
+@required {videoId: any, videoFileIds: [int]}
+@optional {videoFileToken: str}
+@returns(200)
+
+@endgroup
+
+@group feeds
+@endpoint GET /feeds/video-comments.{format}
+@required {format: str(xml/rss/rss2/atom/atom1/json/json1)}
+@optional {videoId: str, accountId: str, accountName: str, videoChannelId: str, videoChannelName: str}
+@returns(200)
+@errors {400, 404, 406}
+
+@endpoint GET /feeds/videos.{format}
+@required {format: str(xml/rss/rss2/atom/atom1/json/json1)}
+@optional {accountId: str, accountName: str, videoChannelId: str, videoChannelName: str, sort: str, nsfw: str(true/false), isLocal: bool, include: int(0/1/2/4/8/16/32), privacyOneOf: int, hasHLSFiles: bool, hasWebVideoFiles: bool}
+@returns(200)
+@errors {404, 406}
+
+@endpoint GET /feeds/subscriptions.{format}
+@required {format: str(xml/rss/rss2/atom/atom1/json/json1), accountId: str, token: str}
+@optional {sort: str, nsfw: str(true/false), isLocal: bool, include: int(0/1/2/4/8/16/32), privacyOneOf: int, hasHLSFiles: bool, hasWebVideoFiles: bool}
+@returns(200)
+@errors {406}
+
+@endpoint GET /feeds/podcast/videos.xml
+@required {videoChannelId: str}
+@returns(200)
+@errors {404}
+
+@endgroup
+
+@group api
+@endpoint GET /api/v1/accounts/{name}
+@required {name: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /api/v1/accounts/{name}/videos
+@required {name: str}
+@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/accounts/{name}/followers
+@required {name: str}
+@optional {start: int, count: int=15, sort: str, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/accounts
+@optional {start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/config
+@returns(200) {instance: map{name: str, shortDescription: str, defaultClientRoute: str, isNSFW: bool, defaultNSFWPolicy: str, serverCountry: str, defaultLanguage: str, support: map{text: str}, social: map{externalLink: str, mastodonLink: str, blueskyLink: str, xLink: str}, customizations: map{javascript: str, css: str}, avatars: [any], banners: [any]}, search: map{remoteUri: map{users: bool, anonymous: bool}}, plugin: map{registered: [str]}, theme: map{registered: [str]}, email: map{enabled: bool}, contactForm: map{enabled: bool}, serverVersion: str, serverCommit: str, signup: map{allowed: bool, allowedForCurrentIP: bool, requiresEmailVerification: bool}, transcoding: map{hls: map{enabled: bool}, web_videos: map{enabled: bool}, enabledResolutions: [int]}, import: map{videos: map{http: map{enabled: bool}, torrent: map{enabled: bool}}, videoChannelSynchronization: map{enabled: bool}, users: map{enabled: bool}}, export: map{users: map{enabled: bool, exportExpiration: num, maxUserVideoQuota: num}}, autoBlacklist: map{videos: map{ofUsers: map{enabled: bool}}}, avatar: map{file: map{size: map{max: int}}, extensions: [str]}, video: map{image: map{extensions: [str], size: map{max: int}}, file: map{extensions: [str]}}, videoCaption: map{file: map{size: map{max: int}, extensions: [str]}}, user: map{videoQuota: int, videoQuotaDaily: int}, trending: map{videos: map{intervalDays: int}}, tracker: map{enabled: bool}, followings: map{instance: map{autoFollowIndex: map{indexUrl: str(url)}}}, federation: map{enabled: bool}, homepage: map{enabled: bool}, openTelemetry: map{metrics: map{enabled: bool, playbackStatsInterval: num}}, views: map{views: map{watchingInterval: map{anonymous: num, users: num}}}}
+
+@endpoint GET /api/v1/config/about
+@returns(200) {instance: map{name: str, shortDescription: str, description: str, terms: str, codeOfConduct: str, hardwareInformation: str, creationReason: str, moderationInformation: str, administrator: str, maintenanceLifetime: str, businessModel: str, languages: [str], categories: [int], avatars: [any], banners: [any]}}
+
+@endpoint GET /api/v1/config/custom
+@returns(200) {instance: map{name: str, shortDescription: str, description: str, terms: str, codeOfConduct: str, creationReason: str, moderationInformation: str, administrator: str, maintenanceLifetime: str, businessModel: str, hardwareInformation: str, languages: [str], categories: [num], isNSFW: bool, defaultNSFWPolicy: str, serverCountry: str, support: map{text: str}, social: map{externalLink: str, mastodonLink: str, blueskyLink: str, xLink: str}, defaultClientRoute: str, customizations: map{javascript: str, css: str}}, theme: map{default: str}, services: map{twitter: map{username: str}}, cache: map{previews: map{size: int}, captions: map{size: int}}, signup: map{enabled: bool, limit: int, requiresEmailVerification: bool}, admin: map{email: str(email)}, contactForm: map{enabled: bool}, user: map{videoQuota: int, videoQuotaDaily: int}, transcoding: map{enabled: bool, originalFile: map{keep: bool}, allowAdditionalExtensions: bool, allowAudioFiles: bool, threads: int, concurrency: num, profile: str, resolutions: map{0p: bool, 144p: bool, 240p: bool, 360p: bool, 480p: bool, 720p: bool, 1080p: bool, 1440p: bool, 2160p: bool}, web_videos: map{enabled: bool}, hls: map{enabled: bool, splitAudioAndVideo: bool}}, import: map{videos: map{http: map{enabled: bool}, torrent: map{enabled: bool}}, video_channel_synchronization: map{enabled: bool}}, autoBlacklist: map{videos: map{ofUsers: map{enabled: bool}}}, followers: map{instance: map{enabled: bool, manualApproval: bool}}, storyboard: map{enabled: bool}, defaults: map{publish: map{downloadEnabled: bool, commentsPolicy: int, privacy: int, licence: int}, p2p: map{webapp: map{enabled: bool}, embed: map{enabled: bool}}, player: map{autoPlay: bool}}}
+
+@endpoint PUT /api/v1/config/custom
+@returns(200)
+@errors {400}
+
+@endpoint DELETE /api/v1/config/custom
+@returns(200)
+
+@endpoint POST /api/v1/config/instance-banner/pick
+@returns(204)
+@errors {413}
+
+@endpoint DELETE /api/v1/config/instance-banner
+@returns(204)
+
+@endpoint POST /api/v1/config/instance-avatar/pick
+@returns(204)
+@errors {413}
+
+@endpoint DELETE /api/v1/config/instance-avatar
+@returns(204)
+
+@endpoint POST /api/v1/config/instance-logo/{logoType}/pick
+@required {logoType: str(favicon/header-wide/header-square/opengraph)}
+@returns(204)
+@errors {413}
+
+@endpoint DELETE /api/v1/config/instance-logo/{logoType}
+@required {logoType: str(favicon/header-wide/header-square/opengraph)}
+@returns(204)
+
+@endpoint GET /api/v1/custom-pages/homepage/instance
+@returns(200) {content: str}
+@errors {404}
+
+@endpoint PUT /api/v1/custom-pages/homepage/instance
+@optional {content: str}
+@returns(204)
+
+@endpoint POST /api/v1/jobs/pause
+@returns(204)
+
+@endpoint POST /api/v1/jobs/resume
+@returns(204)
+
+@endpoint GET /api/v1/jobs/{state}
+@required {state: str(/active/completed/failed/waiting/delayed)}
+@optional {jobType: str(activitypub-follow/activitypub-http-broadcast/activitypub-http-fetcher/activitypub-http-unicast/email/video-transcoding/video-file-import/video-import/videos-views-stats/activitypub-refresher/video-redundancy/video-live-ending/video-channel-import), start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/server/followers
+@optional {state: str(pending/accepted), actorType: str(Person/Application/Group/Service/Organization), start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint DELETE /api/v1/server/followers/{handle}
+@required {handle: str(email)}
+@returns(204)
+@errors {404}
+
+@endpoint POST /api/v1/server/followers/{handle}/reject
+@required {handle: str(email)}
+@returns(204)
+@errors {404}
+
+@endpoint POST /api/v1/server/followers/{handle}/accept
+@required {handle: str(email)}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/server/following
+@optional {state: str(pending/accepted), actorType: str(Person/Application/Group/Service/Organization), start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/server/following
+@optional {hosts: [str(hostname)], handles: [str]}
+@returns(204)
+@errors {500}
+
+@endpoint DELETE /api/v1/server/following/{hostOrHandle}
+@required {hostOrHandle: str}
+@returns(204)
+@errors {404}
+
+@endpoint POST /api/v1/users
+@required {username: str, password: str(password), email: str(email), role: int(0/1/2)}
+@optional {videoQuota: int, videoQuotaDaily: int, channelName: str, adminFlags: int(0/1)}
+@returns(200) {user: map{id: int, account: map{id: int}}}
+@errors {403}
+
+@endpoint GET /api/v1/users
+@optional {search: str, blocked: bool, start: int, count: int=15, sort: str(-id/-username/-createdAt)}
+@returns(200)
+
+@endpoint DELETE /api/v1/users/{id}
+@returns(204)
+
+@endpoint GET /api/v1/users/{id}
+@optional {withStats: bool}
+@returns(200)
+
+@endpoint PUT /api/v1/users/{id}
+@optional {email: any, emailVerified: bool, videoQuota: int, videoQuotaDaily: int, pluginAuth: str, role: int(0/1/2), adminFlags: int(0/1), password: str(password)}
+@returns(204)
+
+@endpoint GET /api/v1/oauth-clients/local
+@returns(200) {client_id: str, client_secret: str}
+
+@endpoint POST /api/v1/users/token
+@optional {x-peertube-otp: str}
+@returns(200) {token_type: str, access_token: str, refresh_token: str, expires_in: int, refresh_token_expires_in: int}
+@errors {400, 401}
+
+@endpoint POST /api/v1/users/revoke-token
+@returns(200)
+
+@endpoint GET /api/v1/users/{id}/token-sessions
+@required {id: int}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/users/{id}/token-sessions/{tokenSessionId}/revoke
+@required {id: int, tokenSessionId: int}
+@returns(200)
+
+@endpoint POST /api/v1/users/ask-send-verify-email
+@required {email: str}
+@returns(204)
+
+@endpoint POST /api/v1/users/registrations/ask-send-verify-email
+@required {email: str}
+@returns(204)
+
+@endpoint POST /api/v1/users/{id}/verify-email
+@required {id: int, verificationString: str(url)}
+@optional {isPendingEmail: bool}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/users/registrations/{registrationId}/verify-email
+@required {registrationId: int, verificationString: str(url)}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/users/ask-reset-password
+@required {email: str}
+@returns(204)
+
+@endpoint POST /api/v1/users/{id}/reset-password
+@required {id: int, verificationString: str(url), password: str}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/users/{id}/two-factor/request
+@required {id: int}
+@optional {currentPassword: str}
+@returns(200)
+@errors {403, 404}
+
+@endpoint POST /api/v1/users/{id}/two-factor/confirm-request
+@required {id: int, requestToken: str, otpToken: str}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/users/{id}/two-factor/disable
+@required {id: int}
+@optional {currentPassword: str}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/users/{userId}/imports/import-resumable
+@required {userId: int, X-Upload-Content-Length: num, X-Upload-Content-Type: str(mimetype)}
+@optional {filename: str(filename)}
+@returns(201)
+
+@endpoint PUT /api/v1/users/{userId}/imports/import-resumable
+@required {userId: int, upload_id: str, Content-Range: str, Content-Length: num}
+@returns(204)
+@errors {308}
+
+@endpoint DELETE /api/v1/users/{userId}/imports/import-resumable
+@required {userId: int, upload_id: str, Content-Length: num}
+@returns(204)
+
+@endpoint GET /api/v1/users/{userId}/imports/latest
+@required {userId: int}
+@returns(200) {id: int, state: map{id: int, label: str}, createdAt: str(date-time)}
+
+@endpoint POST /api/v1/users/{userId}/exports/request
+@required {userId: int}
+@optional {withVideoFiles: bool}
+@returns(200) {export: map{id: int}}
+
+@endpoint GET /api/v1/users/{userId}/exports
+@required {userId: int}
+@returns(200) {id: int, state: map{id: int, label: str}, size: int, privateDownloadUrl: str, createdAt: str(date-time), expiresOn: str(date-time)}
+
+@endpoint DELETE /api/v1/users/{userId}/exports/{id}
+@required {userId: int, id: int}
+@returns(204)
+
+@endpoint GET /api/v1/users/me
+@returns(200)
+
+@endpoint PUT /api/v1/users/me
+@optional {password: str(password), currentPassword: str(password), email: any, displayName: str, nsfwPolicy: str(true/false/both), nsfwFlagsDisplayed: int(0/1/2/4), nsfwFlagsHidden: int(0/1/2/4), nsfwFlagsWarned: int(0/1/2/4), nsfwFlagsBlurred: int(0/1/2/4), p2pEnabled: bool, autoPlayVideo: bool, autoPlayNextVideo: bool, autoPlayNextVideoPlaylist: bool, videosHistoryEnabled: bool, videoLanguages: [str], language: str, theme: str, noInstanceConfigWarningModal: bool, noAccountSetupWarningModal: bool, noWelcomeModal: bool}
+@returns(204)
+
+@endpoint GET /api/v1/users/me/videos/comments
+@optional {search: str, searchAccount: str, searchVideo: str, videoId: int, videoChannelId: int, autoTagOneOf: any, isHeldForReview: bool, includeCollaborations: bool}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/users/me/videos/imports
+@optional {start: int, count: int=15, sort: str, includeCollaborations: bool, videoId: int, targetUrl: str, videoChannelSyncId: num, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/users/me/video-quota-used
+@returns(200) {videoQuotaUsed: num, videoQuotaUsedDaily: num}
+
+@endpoint GET /api/v1/users/me/videos/{videoId}/rating
+@required {videoId: any}
+@returns(200) {id: int, rating: str}
+
+@endpoint GET /api/v1/users/me/videos
+@optional {channelNameOneOf: any, start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str, includeCollaborations: bool}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/users/me/subscriptions
+@optional {start: int, count: int=15, sort: str(-id/-createdAt/-channelUpdatedAt)}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/users/me/subscriptions
+@required {uri: str(uri)}
+@returns(204)
+
+@endpoint GET /api/v1/users/me/subscriptions/exist
+@required {uris: [str(uri)]}
+@returns(200)
+
+@endpoint GET /api/v1/users/me/subscriptions/videos
+@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/users/me/subscriptions/{subscriptionHandle}
+@required {subscriptionHandle: str}
+@returns(200)
+
+@endpoint DELETE /api/v1/users/me/subscriptions/{subscriptionHandle}
+@required {subscriptionHandle: str}
+@returns(204)
+
+@endpoint GET /api/v1/users/me/notifications
+@optional {typeOneOf: [int], unread: bool, start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/users/me/notifications/read
+@required {ids: [int]}
+@returns(204)
+
+@endpoint POST /api/v1/users/me/notifications/read-all
+@returns(204)
+
+@endpoint PUT /api/v1/users/me/notification-settings
+@optional {abuseAsModerator: int, videoAutoBlacklistAsModerator: int, newUserRegistration: int, newVideoFromSubscription: int, blacklistOnMyVideo: int, myVideoPublished: int, myVideoImportFinished: int, commentMention: int, newCommentOnMyVideo: int, newFollow: int, newInstanceFollower: int, autoInstanceFollowing: int, abuseStateChange: int, abuseNewMessage: int, newPeerTubeVersion: int, newPluginVersion: int, myVideoStudioEditionFinished: int, myVideoTranscriptionGenerated: int}
+@returns(204)
+
+@endpoint POST /api/v1/users/me/new-feature-info/read
+@required {feature: int}
+@returns(204)
+
+@endpoint GET /api/v1/users/me/history/videos
+@optional {start: int, count: int=15, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint DELETE /api/v1/users/me/history/videos/{videoId}
+@required {videoId: any}
+@returns(204)
+
+@endpoint POST /api/v1/users/me/history/videos/remove
+@returns(204)
+
+@endpoint POST /api/v1/users/me/avatar/pick
+@returns(200) {avatars: [any]}
+@errors {413}
+
+@endpoint DELETE /api/v1/users/me/avatar
+@returns(204)
+
+@endpoint POST /api/v1/users/register
+@required {username: any, password: str(password), email: str(email)}
+@optional {displayName: str, channel: map{name: str, displayName: str}}
+@returns(204)
+@errors {400, 403, 409}
+
+@endpoint POST /api/v1/users/registrations/request
+@returns(200) {id: int, state: map{id: int, label: str}, registrationReason: str, moderationResponse: str?, username: str, email: str(email), emailVerified: bool, accountDisplayName: str, channelHandle: str, channelDisplayName: str, createdAt: str(date-time), updatedAt: str(date-time), user: map?{id: int}}
+@errors {400, 403, 409}
+
+@endpoint POST /api/v1/users/registrations/{registrationId}/accept
+@required {registrationId: int, moderationResponse: str}
+@optional {preventEmailDelivery: bool}
+@returns(204)
+
+@endpoint POST /api/v1/users/registrations/{registrationId}/reject
+@required {registrationId: int, moderationResponse: str}
+@optional {preventEmailDelivery: bool}
+@returns(204)
+
+@endpoint DELETE /api/v1/users/registrations/{registrationId}
+@required {registrationId: int}
+@returns(204)
+
+@endpoint GET /api/v1/users/registrations
+@optional {start: int, count: int=15, search: str, sort: str(-createdAt/createdAt/state/-state)}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/videos/ownership
+@returns(200)
+
+@endpoint POST /api/v1/videos/ownership/{id}/accept
+@required {id: any}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/videos/ownership/{id}/refuse
+@required {id: any}
+@returns(204)
+@errors {403, 404}
+
+@endpoint POST /api/v1/videos/{id}/give-ownership
+@required {id: any, username: str}
+@returns(204)
+@errors {400, 404}
+
+@endpoint POST /api/v1/videos/{id}/token
+@required {id: any}
+@optional {x-peertube-video-password: str}
+@returns(200) {files: map{token: str, expires: str(date-time)}}
+@errors {400, 404}
+
+@endpoint POST /api/v1/videos/{id}/studio/edit
+@required {id: any}
+@returns(204)
+@errors {400, 404}
+
+@endpoint GET /api/v1/videos
+@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/videos/categories
+@returns(200)
+
+@endpoint GET /api/v1/videos/licences
+@returns(200)
+
+@endpoint GET /api/v1/videos/languages
+@returns(200)
+
+@endpoint GET /api/v1/videos/privacies
+@returns(200)
+
+@endpoint PUT /api/v1/videos/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /api/v1/videos/{id}
+@required {id: any}
+@optional {x-peertube-video-password: str}
+@returns(200)
+@errors {401, 403}
+
+@endpoint DELETE /api/v1/videos/{id}
+@required {id: any}
+@returns(204)
+
+@endpoint GET /api/v1/videos/{id}/description
+@required {id: any}
+@optional {x-peertube-video-password: str}
+@returns(200)
+
+@endpoint POST /api/v1/videos/{id}/views
+@required {id: any, currentTime: int(seconds)}
+@optional {viewEvent: str, sessionId: str, client: str, device: any, operatingSystem: str}
+@returns(204)
+
+@endpoint GET /api/v1/videos/{id}/stats/overall
+@required {id: any}
+@optional {startDate: str(date-time), endDate: str(date-time)}
+@returns(200) {averageWatchTime: num, totalWatchTime: num, viewersPeak: num, totalViewers: num, viewersPeakDate: str(date-time), countries: [map], subdivisions: [map]}
+
+@endpoint GET /api/v1/videos/{id}/stats/user-agent
+@required {id: any}
+@optional {startDate: str(date-time), endDate: str(date-time)}
+@returns(200) {clients: [map], devices: [map], operatingSystem: [map]}
+
+@endpoint GET /api/v1/videos/{id}/stats/retention
+@required {id: any}
+@returns(200) {data: [map]}
+
+@endpoint GET /api/v1/videos/{id}/stats/timeseries/{metric}
+@required {id: any, metric: str(viewers/aggregateWatchTime)}
+@optional {startDate: str(date-time), endDate: str(date-time)}
+@returns(200) {data: [map]}
+
+@endpoint POST /api/v1/videos/upload
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
+@errors {403, 408, 413, 415, 422}
+
+@endpoint POST /api/v1/videos/upload-resumable
+@required {X-Upload-Content-Length: num, X-Upload-Content-Type: str(mimetype)}
+@returns(200)
+@returns(201)
+@errors {413, 415}
+
+@endpoint PUT /api/v1/videos/upload-resumable
+@required {upload_id: str, Content-Range: str, Content-Length: num}
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
+@errors {308, 403, 404, 409, 422, 429, 503}
+
+@endpoint DELETE /api/v1/videos/upload-resumable
+@required {upload_id: str, Content-Length: num}
+@returns(204)
+@errors {404}
+
+@endpoint POST /api/v1/videos/imports
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
+@errors {400, 403, 409}
+
+@endpoint POST /api/v1/videos/imports/{id}/cancel
+@required {id: int}
+@returns(204)
+
+@endpoint POST /api/v1/videos/imports/{id}/retry
+@required {id: int}
+@returns(204)
+
+@endpoint DELETE /api/v1/videos/imports/{id}
+@required {id: int}
+@returns(204)
+
+@endpoint POST /api/v1/videos/live
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
+@errors {400, 403}
+
+@endpoint GET /api/v1/videos/live/{id}
+@required {id: any}
+@returns(200) {rtmpUrl: str, rtmpsUrl: str, streamKey: str, saveReplay: bool, replaySettings: map{privacy: int}, permanentLive: bool, latencyMode: any, schedules: [any]}
+
+@endpoint PUT /api/v1/videos/live/{id}
+@required {id: any}
+@optional {saveReplay: bool, replaySettings: map{privacy: int}, permanentLive: bool, latencyMode: any, schedules: [any]}
+@returns(204)
+@errors {400, 403}
+
+@endpoint GET /api/v1/videos/live/{id}/sessions
+@required {id: any}
+@optional {sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/videos/{id}/live-session
+@required {id: any}
+@optional {x-peertube-video-password: str}
+@returns(200) {id: int, startDate: str(date-time), endDate: str(date-time)?, error: int?, replayVideo: map{id: num, uuid: str(uuid), shortUUID: str}}
+
+@endpoint GET /api/v1/videos/{id}/source
+@required {id: any}
+@returns(200) {inputFilename: str, fileDownloadUrl: str, resolution: any, size: int, fps: num, width: int, height: int, createdAt: str(date-time)}
+
+@endpoint DELETE /api/v1/videos/{id}/source/file
+@required {id: any}
+@returns(204)
+@errors {404}
+
+@endpoint POST /api/v1/videos/{id}/source/replace-resumable
+@required {id: any, X-Upload-Content-Length: num, X-Upload-Content-Type: str(mimetype)}
+@optional {filename: str(filename)}
+@returns(200)
+@returns(201)
+@errors {413, 415}
+
+@endpoint PUT /api/v1/videos/{id}/source/replace-resumable
+@required {id: any, upload_id: str, Content-Range: str, Content-Length: num}
+@returns(204)
+@errors {308, 403, 404, 409, 422, 429, 503}
+
+@endpoint DELETE /api/v1/videos/{id}/source/replace-resumable
+@required {id: any, upload_id: str, Content-Length: num}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/users/me/abuses
+@optional {id: int, state: int, sort: str(-id/-createdAt/-state), start: int, count: int=15}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/abuses
+@optional {id: int, predefinedReason: [str], search: str, state: int, searchReporter: str, searchReportee: str, searchVideo: str, searchVideoChannel: str, videoIs: str(deleted/blacklisted), filter: str(video/comment/account), start: int, count: int=15, sort: str(-id/-createdAt/-state)}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/abuses
+@required {reason: str}
+@optional {predefinedReasons: [str], video: map{id: any, startAt: int(seconds), endAt: int(seconds)}, comment: map{id: any}, account: map{id: int}}
+@returns(200) {abuse: map{id: int}}
+@errors {400}
+
+@endpoint PUT /api/v1/abuses/{abuseId}
+@required {abuseId: int}
+@optional {state: int(1/2/3), moderationComment: str}
+@returns(204)
+@errors {404}
+
+@endpoint DELETE /api/v1/abuses/{abuseId}
+@required {abuseId: int}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/abuses/{abuseId}/messages
+@required {abuseId: int}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/abuses/{abuseId}/messages
+@required {abuseId: int, message: str}
+@returns(200)
+@errors {400}
+
+@endpoint DELETE /api/v1/abuses/{abuseId}/messages/{abuseMessageId}
+@required {abuseId: int, abuseMessageId: int}
+@returns(204)
+
+@endpoint POST /api/v1/videos/{id}/blacklist
+@required {id: any}
+@returns(204)
+
+@endpoint DELETE /api/v1/videos/{id}/blacklist
+@required {id: any}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/videos/blacklist
+@optional {type: int(1/2), search: str, start: int, count: int=15, sort: str(-id/name/-duration/-views/-likes/-dislikes/-uuid/-createdAt)}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/videos/{id}/storyboards
+@required {id: any}
+@returns(200) {storyboards: [any]}
+
+@endpoint GET /api/v1/videos/{id}/captions
+@required {id: any}
+@optional {x-peertube-video-password: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/videos/{id}/captions/generate
+@required {id: any}
+@optional {forceTranscription: bool=False}
+@returns(204)
+@errors {404}
+
+@endpoint PUT /api/v1/videos/{id}/captions/{captionLanguage}
+@required {id: any, captionLanguage: str}
+@returns(204)
+@errors {404}
+
+@endpoint DELETE /api/v1/videos/{id}/captions/{captionLanguage}
+@required {id: any, captionLanguage: str}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/videos/{id}/chapters
+@required {id: any}
+@optional {x-peertube-video-password: str}
+@returns(200) {chapters: map{title: str, timecode: int}}
+
+@endpoint PUT /api/v1/videos/{id}/chapters
+@required {id: any}
+@optional {chapters: [map{title: str, timecode: int}]}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/videos/{id}/embed-privacy
+@required {id: any}
+@returns(200) {policy: map{id: int, label: str}, domains: [str]}
+@errors {400}
+
+@endpoint PUT /api/v1/videos/{id}/embed-privacy
+@required {id: any}
+@optional {policy: int(1/2/3), domains: [str]}
+@returns(204)
+@errors {400}
+
+@endpoint GET /api/v1/videos/{id}/embed-privacy/allowed
+@required {id: any, domain: str}
+@returns(200) {domainAllowed: bool, userBypassAllowed: bool?}
+@errors {400}
+
+@endpoint GET /api/v1/videos/{id}/passwords
+@required {id: any}
+@optional {start: int, count: int=15, sort: str}
+@returns(204) {total: int, data: [any]}
+@errors {400}
+
+@endpoint PUT /api/v1/videos/{id}/passwords
+@required {id: any}
+@optional {passwords: [str]}
+@returns(204)
+@errors {400}
+
+@endpoint POST /api/v1/videos/{id}/passwords
+@required {id: any}
+@optional {password: str}
+@returns(204)
+@errors {400}
+
+@endpoint DELETE /api/v1/videos/{id}/passwords/{videoPasswordId}
+@required {id: any, videoPasswordId: int}
+@returns(204)
+@errors {403, 400}
+
+@endpoint GET /api/v1/video-channels
+@optional {start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/video-channels
+@returns(200) {videoChannel: map{id: int}}
+
+@endpoint GET /api/v1/video-channels/{channelHandle}
+@required {channelHandle: str}
+@returns(200)
+
+@endpoint PUT /api/v1/video-channels/{channelHandle}
+@required {channelHandle: str}
+@returns(204)
+
+@endpoint DELETE /api/v1/video-channels/{channelHandle}
+@required {channelHandle: str}
+@returns(204)
+
+@endpoint GET /api/v1/video-channels/{channelHandle}/videos
+@required {channelHandle: str}
+@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/video-channels/{channelHandle}/activities
+@required {channelHandle: str}
+@optional {start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [map]}
+
+@endpoint GET /api/v1/video-channels/{channelHandle}/video-playlists
+@required {channelHandle: str}
+@optional {start: int, count: int=15, sort: str, playlistType: int}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/video-playlists/reorder
+@required {channelHandle: str, startPosition: int, insertAfterPosition: int}
+@optional {reorderLength: int}
+@returns(204)
+
+@endpoint GET /api/v1/video-channels/{channelHandle}/followers
+@required {channelHandle: str}
+@optional {start: int, count: int=15, sort: str, search: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/avatar/pick
+@required {channelHandle: str}
+@returns(200) {avatars: [any]}
+@errors {413}
+
+@endpoint DELETE /api/v1/video-channels/{channelHandle}/avatar
+@required {channelHandle: str}
+@returns(204)
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/banner/pick
+@required {channelHandle: str}
+@returns(200) {banners: [any]}
+@errors {413}
+
+@endpoint DELETE /api/v1/video-channels/{channelHandle}/banner
+@required {channelHandle: str}
+@returns(204)
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/import-videos
+@required {channelHandle: str, externalChannelUrl: str}
+@optional {videoChannelSyncId: int}
+@returns(204)
+
+@endpoint POST /api/v1/video-channel-syncs
+@optional {externalChannelUrl: str, videoChannelId: int}
+@returns(200) {videoChannelSync: map{id: int, state: map{id: int, label: str}, externalChannelUrl: str, createdAt: str(date-time), lastSyncAt: str(date-time)?, channel: any}}
+
+@endpoint DELETE /api/v1/video-channel-syncs/{channelSyncId}
+@required {channelSyncId: int}
+@returns(204)
+
+@endpoint POST /api/v1/video-channel-syncs/{channelSyncId}/sync
+@required {channelSyncId: int}
+@returns(204)
+
+@endpoint GET /api/v1/player-settings/videos/{id}
+@required {id: any}
+@optional {raw: bool=False}
+@returns(200) {theme: str}
+@errors {404}
+
+@endpoint PUT /api/v1/player-settings/videos/{id}
+@required {id: any, theme: str(channel-default/instance-default/galaxy/lucide)}
+@returns(200) {theme: str}
+@errors {404}
+
+@endpoint GET /api/v1/player-settings/video-channels/{channelHandle}
+@required {channelHandle: str}
+@optional {raw: bool=False}
+@returns(200) {theme: str}
+@errors {404}
+
+@endpoint PUT /api/v1/player-settings/video-channels/{channelHandle}
+@required {channelHandle: str, theme: str(instance-default/galaxy/lucide)}
+@returns(200) {theme: str}
+@errors {404}
+
+@endpoint GET /api/v1/video-playlists/privacies
+@returns(200)
+
+@endpoint GET /api/v1/video-playlists
+@optional {start: int, count: int=15, sort: str, playlistType: int}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/video-playlists
+@returns(200) {videoPlaylist: map{id: int, uuid: str(uuid), shortUUID: any}}
+
+@endpoint GET /api/v1/video-playlists/{playlistId}
+@required {playlistId: int}
+@returns(200) {id: int, uuid: str(uuid), shortUUID: any, createdAt: str(date-time), updatedAt: str(date-time), description: str, displayName: str, isLocal: bool, videoLength: int, thumbnailPath: str, thumbnails: [any], privacy: any, type: any, ownerAccount: any, videoChannel: any, videoChannelPosition: int}
+
+@endpoint PUT /api/v1/video-playlists/{playlistId}
+@required {playlistId: int}
+@returns(204)
+
+@endpoint DELETE /api/v1/video-playlists/{playlistId}
+@required {playlistId: int}
+@returns(204)
+
+@endpoint GET /api/v1/video-playlists/{playlistId}/videos
+@required {playlistId: int}
+@optional {start: int, count: int=15}
+@returns(200) {total: int, data: [map]}
+
+@endpoint POST /api/v1/video-playlists/{playlistId}/videos
+@required {playlistId: int, videoId: any}
+@optional {startTimestamp: int(seconds), stopTimestamp: int(seconds)}
+@returns(200) {videoPlaylistElement: map{id: int}}
+
+@endpoint POST /api/v1/video-playlists/{playlistId}/videos/reorder
+@required {playlistId: int, startPosition: int, insertAfterPosition: int}
+@optional {reorderLength: int}
+@returns(204)
+
+@endpoint PUT /api/v1/video-playlists/{playlistId}/videos/{playlistElementId}
+@required {playlistId: int, playlistElementId: int}
+@optional {startTimestamp: int(seconds), stopTimestamp: int(seconds)}
+@returns(204)
+
+@endpoint DELETE /api/v1/video-playlists/{playlistId}/videos/{playlistElementId}
+@required {playlistId: int, playlistElementId: int}
+@returns(204)
+
+@endpoint GET /api/v1/users/me/video-playlists/videos-exist
+@required {videoIds: [any]}
+@returns(200) {videoId: [map]}
+
+@endpoint GET /api/v1/accounts/{name}/video-playlists
+@required {name: str}
+@optional {start: int, count: int=15, sort: str, search: str, playlistType: int, includeCollaborations: bool, channelNameOneOf: any}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/accounts/{name}/video-channels
+@required {name: str}
+@optional {withStats: bool, start: int, count: int=15, search: str, sort: str, includeCollaborations: bool}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/accounts/{name}/video-channel-syncs
+@required {name: str}
+@optional {start: int, count: int=15, sort: str, includeCollaborations: bool}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/accounts/{name}/ratings
+@required {name: str}
+@optional {start: int, count: int=15, sort: str, rating: str(like/dislike)}
+@returns(200)
+
+@endpoint GET /api/v1/videos/{id}/comment-threads
+@required {id: any}
+@optional {start: int, count: int=15, sort: str(-createdAt/-totalReplies), x-peertube-video-password: str}
+@returns(200) {total: int, totalNotDeletedComments: int, data: [any]}
+
+@endpoint POST /api/v1/videos/{id}/comment-threads
+@required {id: any, text: any}
+@returns(200) {comment: any}
+@errors {404}
+
+@endpoint GET /api/v1/videos/{id}/comment-threads/{threadId}
+@required {id: any, threadId: int}
+@optional {x-peertube-video-password: str}
+@returns(200) {comment: any, children: [any]}
+
+@endpoint GET /api/v1/videos/comments
+@optional {search: str, searchAccount: str, searchVideo: str, videoId: int, videoChannelId: int, autoTagOneOf: any, isLocal: bool, onLocalVideo: bool}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/videos/{id}/comments/{commentId}
+@required {id: any, commentId: int, text: any}
+@optional {x-peertube-video-password: str}
+@returns(200) {comment: any}
+@errors {404}
+
+@endpoint DELETE /api/v1/videos/{id}/comments/{commentId}
+@required {id: any, commentId: int}
+@returns(204)
+@errors {403, 404, 409}
+
+@endpoint POST /api/v1/videos/{id}/comments/{commentId}/approve
+@required {id: any, commentId: int}
+@returns(204)
+
+@endpoint PUT /api/v1/videos/{id}/rate
+@required {id: any, rating: str(like/dislike)}
+@optional {x-peertube-video-password: str}
+@returns(204)
+@errors {404}
+
+@endpoint DELETE /api/v1/videos/{id}/hls
+@required {id: any}
+@returns(204)
+@errors {404}
+
+@endpoint DELETE /api/v1/videos/{id}/web-videos
+@required {id: any}
+@returns(204)
+@errors {404}
+
+@endpoint POST /api/v1/videos/{id}/transcoding
+@required {id: any, transcodingType: str(hls/web-video)}
+@optional {forceTranscoding: bool=False}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/search/videos
+@required {search: str}
+@optional {uuids: any, searchTarget: str(local/search-index), start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, startDate: str(date-time), endDate: str(date-time), originallyPublishedStartDate: str(date-time), originallyPublishedEndDate: str(date-time), durationMin: int, durationMax: int}
+@returns(200) {total: int, data: [any]}
+@errors {500}
+
+@endpoint GET /api/v1/search/video-channels
+@required {search: str}
+@optional {start: int, count: int=15, searchTarget: str(local/search-index), sort: str, host: str, handles: any}
+@returns(200) {total: int, data: [any]}
+@errors {500}
+
+@endpoint GET /api/v1/search/video-playlists
+@required {search: str}
+@optional {start: int, count: int=15, searchTarget: str(local/search-index), sort: str, host: str, uuids: any}
+@returns(200) {total: int, data: [any]}
+@errors {500}
+
+@endpoint GET /api/v1/blocklist/status
+@optional {accounts: [str], hosts: [str]}
+@returns(200) {accounts: map, hosts: map}
+
+@endpoint GET /api/v1/server/blocklist/accounts
+@optional {start: int, count: int=15, sort: str}
+@returns(200)
+
+@endpoint POST /api/v1/server/blocklist/accounts
+@required {accountName: str}
+@returns(200)
+@errors {409}
+
+@endpoint DELETE /api/v1/server/blocklist/accounts/{accountName}
+@required {accountName: str}
+@returns(201)
+@errors {404}
+
+@endpoint GET /api/v1/server/blocklist/servers
+@optional {start: int, count: int=15, sort: str}
+@returns(200)
+
+@endpoint POST /api/v1/server/blocklist/servers
+@required {host: str(hostname)}
+@returns(204)
+@errors {409}
+
+@endpoint DELETE /api/v1/server/blocklist/servers/{host}
+@required {host: str(hostname)}
+@returns(204)
+@errors {404}
+
+@endpoint PUT /api/v1/server/redundancy/{host}
+@required {host: str(hostname), redundancyAllowed: bool}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/server/redundancy/videos
+@required {target: str(my-videos/remote-videos)}
+@optional {start: int, count: int=15, sort: str}
+@returns(200)
+
+@endpoint POST /api/v1/server/redundancy/videos
+@required {videoId: any}
+@returns(204)
+@errors {400, 404, 409}
+
+@endpoint DELETE /api/v1/server/redundancy/videos/{redundancyId}
+@required {redundancyId: str}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/server/stats
+@returns(200) {totalUsers: num, totalDailyActiveUsers: num, totalWeeklyActiveUsers: num, totalMonthlyActiveUsers: num, totalModerators: num, totalAdmins: num, totalLocalVideos: num, totalLocalVideoViews: num, totalLocalVideoComments: num, totalLocalVideoFilesSize: num, totalVideos: num, totalVideoComments: num, totalLocalVideoChannels: num, totalLocalDailyActiveVideoChannels: num, totalLocalWeeklyActiveVideoChannels: num, totalLocalMonthlyActiveVideoChannels: num, totalLocalPlaylists: num, totalInstanceFollowers: num, totalInstanceFollowing: num, videosRedundancy: [map], totalActivityPubMessagesProcessed: num, totalActivityPubMessagesSuccesses: num, totalActivityPubMessagesErrors: num, activityPubMessagesProcessedPerSecond: num, totalActivityPubMessagesWaiting: num, averageRegistrationRequestResponseTimeMs: num, totalRegistrationRequestsProcessed: num, totalRegistrationRequests: num, averageAbuseResponseTimeMs: num, totalAbusesProcessed: num, totalAbuses: num}
+
+@endpoint POST /api/v1/server/logs/client
+@required {message: str, url: str, level: any(error/warn)}
+@optional {stackTrace: str, userAgent: str, meta: str}
+@returns(204)
+
+@endpoint GET /api/v1/server/logs
+@returns(200)
+
+@endpoint GET /api/v1/server/audit-logs
+@returns(200)
+
+@endpoint GET /api/v1/plugins
+@optional {pluginType: int, uninstalled: bool, start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/plugins/available
+@optional {search: str, pluginType: int, currentPeerTubeEngine: str, start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+@errors {503}
+
+@endpoint POST /api/v1/plugins/install
+@returns(204)
+@errors {400}
+
+@endpoint POST /api/v1/plugins/update
+@returns(204)
+@errors {400, 404}
+
+@endpoint POST /api/v1/plugins/uninstall
+@required {npmName: str}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/plugins/{npmName}
+@required {npmName: str}
+@returns(200) {name: str, type: int, latestVersion: str, version: str, enabled: bool, uninstalled: bool, peertubeEngine: str, description: str, homepage: str(url), settings: map, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {404}
+
+@endpoint PUT /api/v1/plugins/{npmName}/settings
+@required {npmName: str}
+@optional {settings: map}
+@returns(204)
+@errors {404}
+
+@endpoint GET /api/v1/plugins/{npmName}/public-settings
+@required {npmName: str}
+@returns(200)
+@errors {404}
+
+@endpoint GET /api/v1/plugins/{npmName}/registered-settings
+@required {npmName: str}
+@returns(200)
+@errors {404}
+
+@endpoint POST /api/v1/metrics/playback
+@required {playerMode: str(p2p-media-loader/web-video), p2pEnabled: bool, resolutionChanges: num, errors: num, downloadedBytesP2P: num, downloadedBytesHTTP: num, uploadedBytesP2P: num, videoId: any}
+@optional {resolution: num, fps: num, p2pPeers: num, bufferStalled: num}
+@returns(204)
+
+@endpoint POST /api/v1/runners/registration-tokens/generate
+@returns(204)
+
+@endpoint DELETE /api/v1/runners/registration-tokens/{registrationTokenId}
+@required {registrationTokenId: int}
+@returns(204)
+
+@endpoint GET /api/v1/runners/registration-tokens
+@optional {start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/runners/register
+@required {registrationToken: str, name: str}
+@optional {description: str}
+@returns(200) {id: int, runnerToken: str}
+
+@endpoint POST /api/v1/runners/unregister
+@required {runnerToken: str}
+@returns(204)
+
+@endpoint DELETE /api/v1/runners/{runnerId}
+@required {runnerId: int, runnerToken: str}
+@returns(204)
+
+@endpoint GET /api/v1/runners
+@optional {start: int, count: int=15, sort: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/runners/jobs/request
+@required {runnerToken: str}
+@optional {jobTypes: [str]}
+@returns(200) {availableJobs: [map]}
+
+@endpoint POST /api/v1/runners/jobs/{jobUUID}/accept
+@required {jobUUID: str(uuid), runnerToken: str}
+@returns(200) {job: any}
+
+@endpoint POST /api/v1/runners/jobs/{jobUUID}/abort
+@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, reason: str}
+@returns(204)
+
+@endpoint POST /api/v1/runners/jobs/{jobUUID}/update
+@required {jobUUID: str(uuid), runnerToken: str, jobToken: str}
+@optional {progress: int, payload: any}
+@returns(204)
+
+@endpoint POST /api/v1/runners/jobs/{jobUUID}/error
+@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, message: str}
+@returns(204)
+
+@endpoint POST /api/v1/runners/jobs/{jobUUID}/success
+@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, payload: any}
+@returns(204)
+
+@endpoint GET /api/v1/runners/jobs/{jobUUID}/cancel
+@required {jobUUID: str(uuid)}
+@returns(204)
+
+@endpoint DELETE /api/v1/runners/jobs/{jobUUID}
+@required {jobUUID: str(uuid)}
+@returns(204)
+
+@endpoint GET /api/v1/runners/jobs
+@optional {start: int, count: int=15, sort: str(updatedAt/createdAt/priority/state/progress), search: str, stateOneOf: [int]}
+@returns(200) {total: int, data: [any]}
+
+@endpoint GET /api/v1/automatic-tags/policies/accounts/{accountName}/comments
+@required {accountName: str}
+@returns(200) {review: [str]}
+
+@endpoint PUT /api/v1/automatic-tags/policies/accounts/{accountName}/comments
+@required {accountName: str}
+@optional {review: [str]}
+@returns(204)
+
+@endpoint GET /api/v1/automatic-tags/accounts/{accountName}/available
+@required {accountName: str}
+@returns(200) {available: [map]}
+
+@endpoint GET /api/v1/automatic-tags/server/available
+@returns(200) {available: [map]}
+
+@endpoint GET /api/v1/watched-words/accounts/{accountName}/lists
+@required {accountName: str}
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/watched-words/accounts/{accountName}/lists
+@required {accountName: str}
+@optional {listName: str, words: [str]}
+@returns(200) {watchedWordsList: map{id: int}}
+
+@endpoint PUT /api/v1/watched-words/accounts/{accountName}/lists/{listId}
+@required {accountName: str, listId: str}
+@optional {listName: str, words: [str]}
+@returns(204)
+
+@endpoint DELETE /api/v1/watched-words/accounts/{accountName}/lists/{listId}
+@required {accountName: str, listId: str}
+@returns(204)
+
+@endpoint GET /api/v1/watched-words/server/lists
+@returns(200) {total: int, data: [any]}
+
+@endpoint POST /api/v1/watched-words/server/lists
+@optional {listName: str, words: [str]}
+@returns(200) {watchedWordsList: map{id: int}}
+
+@endpoint PUT /api/v1/watched-words/server/lists/{listId}
+@required {listId: str}
+@optional {listName: str, words: [str]}
+@returns(204)
+
+@endpoint DELETE /api/v1/watched-words/server/lists/{listId}
+@required {listId: str}
+@returns(204)
+
+@endpoint POST /api/v1/client-config/update-language
+@required {language: str}
+@returns(204)
+
+@endpoint GET /api/v1/video-channels/{channelHandle}/collaborators
+@required {channelHandle: str}
+@returns(200) {total: int, data: [map]}
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/collaborators/invite
+@required {channelHandle: str}
+@optional {accountHandle: str}
+@returns(200) {collaborator: map{id: int, account: any, state: map{id: int, label: str}, createdAt: str(date-time), updatedAt: str(date-time)}}
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/accept
+@required {channelHandle: str, collaboratorId: int}
+@returns(204)
+
+@endpoint POST /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/reject
+@required {channelHandle: str, collaboratorId: int}
+@returns(204)
+
+@endpoint DELETE /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}
+@required {channelHandle: str, collaboratorId: int}
+@returns(204)
+
+@endgroup
+
+@end

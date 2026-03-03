@@ -1,0 +1,110 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Fulfillment.com APIv2
+@base https://api.fulfillment.com/v2
+@version 2.0
+@auth OAuth2 | ApiKey x-api-key in header
+@endpoints 15
+@toc users(1), returns(2), orders(7), oauth(1), inventory(2), track(1), accounting(1)
+
+@group users
+@endpoint GET /users/me
+@returns(200) {id: int, apiKey: str, contactInfo: map{id: int, apiKey: str, contactInfo: any, merchant: map{id: int}, createDate: str(date-time), updatedAt: str(date-time), updatedBy: str(date-time), status: bool, deptLeader: bool, username: str, name: str}, merchant: map{id: int}, createDate: str(date-time), updatedAt: str(date-time), updatedBy: str(date-time), status: bool, deptLeader: bool, username: str, name: str}
+
+@endgroup
+
+@group returns
+@endpoint GET /returns
+@required {fromDate: str, toDate: str}
+@optional {page: int=1, limit: int=80}
+@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]}
+
+@endpoint PUT /returns
+@required {items: [map{sku!: str, quantityExpected!: int}], recipient: any, rmaNumber: str}
+@optional {merchantOrderId: str}
+@returns(201) {items: [map], recipient: map{id: int, updatedBy: any, updatedAt: str(date-time), iso: map{id: int, iso2: str, name: str}, companyName: str, country: str, postalCode: str, addressRegion: str, addressLocality: str, address2: str, address1: str, phone: str, lastName: str, firstName: str, email: str}, merchantOrderId: str, rmaNumber: str}
+@returns(202)
+@errors {404, 409}
+
+@endgroup
+
+@group orders
+@endpoint PUT /orders/{id}/status
+@required {id: int(int32), reason: str, status: map{code!: str}}
+@returns(200)
+@errors {404}
+
+@endpoint PUT /orders/{id}/ship
+@required {id: int(int32), trackingNumber: str}
+@optional {weightOverride: num(float)}
+@returns(200)
+@errors {404}
+
+@endpoint GET /orders/{id}
+@required {id: str}
+@optional {merchantId: int, hydrate: [str]}
+@returns(200)
+@errors {404}
+
+@endpoint DELETE /orders/{id}
+@required {id: int(int32)}
+@returns(200)
+@errors {404, 405}
+
+@endpoint GET /orders
+@required {fromDate: str, toDate: str}
+@optional {merchantIds: [int], warehouseIds: [int], page: int=1, limit: int=80, hydrate: [str]}
+@returns(200)
+@errors {404}
+
+@endpoint POST /orders
+@required {merchantOrderId: str, shippingMethod: str, recipient: map{companyName: str, country!: str, postalCode: str, addressRegion!: str, addressLocality!: str, address2: str, address1!: str, phone!: str, lastName!: str, firstName!: str, email!: str}, items: [map{quantity!: int, sku!: str, declaredValue!: str(double)}]}
+@optional {merchantId: int, warehouse: map{id: int}, integrator: str(1ShoppingCart/3dCart/AdobeBC/AmazonAU/AmazonEU/AmazonNA/BigCommerce/BrandBoom/BrightPearl/BuyGoods/Celery/ChannelAdvisor/Clickbank/CommerceHub/Custom/Demandware/Ebay/Ecwid/Etsy/FoxyCart/Goodsie/Infusionsoft/Konnektive/LimeLight/Linio/Linnworks/Magento/Netsuite/NewEgg/Nexternal/NuOrder/Opencart/OrderWave/osCommerce1/Overstock/PayPal/PrestaShop/Pricefalls/Quickbooks/Rakuten/Sears/Sellbrite/SellerCloud/Shipstation/Shopify/Skubana/SolidCommerce/SparkPay/SpreeCommerce/spsCommerce/StitchLabs/StoneEdge/TradeGecko/UltraCart/Volusion/VTEX/Walmart/WooCommerce/Yahoo), notes: str}
+@returns(201) {id: int, trackingNumbers: [map], validatedConsignee: any, originalConsignee: map{id: int, updatedBy: any, updatedAt: str(date-time), iso: map{id: int, iso2: str, name: str}, companyName: str, country: str, postalCode: str, addressRegion: str, addressLocality: str, address2: str, address1: str, phone: str, lastName: str, firstName: str, email: str}, currentStatus: map{id: int, createdBy: any, status: map{id: int, isClosed: bool, actionRequiredBy: map{id: int, name: str}, stage: map{name: str, code: str}, state: map{name: str, code: str}, detail: str, reason: str, name: str, detailCode: str, code: str}, reason: str, date: str(date-time)}, warehouse: map{id: int}, merchant: map{id: int, name: str}, departDate: str(date-time), dispatchDate: str(date-time), recordedOn: str(date-time), merchantShippingMethod: str, purchaseOrderNum: str, merchantOrderId: str, parentOrder: map{id: int}}
+@errors {400, 401, 403, 409, 422}
+
+@endpoint GET /orders/simple
+@required {fromDate: str, toDate: str}
+@optional {merchantIds: [int], warehouseIds: [int], page: int=1, limit: int=80}
+@returns(200) {id: int, merchantOrderId: str, parentOrderId: int, warehouseId: int, firstPrintDate: str(date-time), departDate: str(date-time), deliveryDate: str(date-time), carrier: str, trackingNumbers: [str]}
+@errors {404}
+
+@endgroup
+
+@group oauth
+@endpoint POST /oauth/access_token
+@returns(200) {refresh_token: str, expires_in: int, token_type: str, access_token: str}
+@errors {401}
+
+@endgroup
+
+@group inventory
+@endpoint GET /inventory
+@optional {page: int=1, limit: int=80, externalSkuNames: [str]}
+@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /inventory/full
+@optional {externalSkuNames: [str], warehouseIds: [int], page: int=1, limit: int=80}
+@returns(200) {data: [map], meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group track
+@endpoint GET /track/{trackingNumber}
+@required {trackingNumber: str}
+@returns(200) {events: [map], deliveryEvent: str(date-time), firstTransitEvent: str(date-time), service: str, carrier: str, status: map{code: str, description: str}, trackingNumber: str}
+@errors {404, 429}
+
+@endgroup
+
+@group accounting
+@endpoint GET /accounting
+@required {fromDate: str, toDate: str, hydrate: [str]}
+@optional {page: int=1, limit: int=80, warehouseIds: [int], orderIds: [int]}
+@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]}
+
+@endgroup
+
+@end

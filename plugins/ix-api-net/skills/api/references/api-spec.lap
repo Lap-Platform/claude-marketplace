@@ -1,0 +1,718 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api IX-API
+@base /api/v2
+@version 2.7.1
+@auth Bearer bearer | OAuth2
+@endpoints 115
+@hint download_for_search
+@toc auth(2), facilities(2), devices(2), pops(2), metro-area-networks(2), metro-areas(2), product-offerings(2), availability-zones(2), ports(4), port-reservations(9), connections(11), network-service-configs(11), network-feature-configs(6), account(1), accounts(6), roles(2), contacts(6), role-assignments(4), health(1), implementation(1), extensions(1), ips(5), macs(4), network-services(13), network-features(2), member-joining-rules(6), routing-functions(6)
+
+@group auth
+@endpoint POST /auth/token
+@required {api_key: str, api_secret: str}
+@returns(201) {access_token: str, refresh_token: str}
+@errors {401, 400}
+
+@endpoint POST /auth/refresh
+@required {refresh_token: str}
+@returns(201) {access_token: str, refresh_token: str}
+@errors {401, 400}
+
+@endgroup
+
+@group facilities
+@endpoint GET /facilities
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, capability_speed: int, capability_speed_lt: int, capability_speed_lte: int, capability_speed_gt: int, capability_speed_gte: int, capability_media_type: str, organisation_name: str, metro_area: str, metro_area_network: str, address_country: str, address_locality: str, postal_code: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /facilities/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, metro_area: str, address_country: str, address_locality: str, address_region: str, postal_code: str, street_address: str, peeringdb_facility_id: int(int32)?, organisation_name: str, pops: [str], latitude: num, longitude: num}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group devices
+@endpoint GET /devices
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, capability_speed: int, capability_speed_lt: int, capability_speed_lte: int, capability_speed_gt: int, capability_speed_gte: int, name: str, capability_media_type: str, facility: str, pop: str, metro_area_network: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /devices/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, pop: str, capabilities: [map], facility: str}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group pops
+@endpoint GET /pops
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, facility: str, metro_area_network: str, capability_media_type: str, capability_speed: int, capability_speed_lt: int, capability_speed_lte: int, capability_speed_gt: int, capability_speed_gte: int}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /pops/{id}
+@required {id: str}
+@returns(200) {name: str, facility: str, metro_area_network: str, devices: [str], id: str, availability_zone: str?}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group metro-area-networks
+@endpoint GET /metro-area-networks
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, name: str, metro_area: str, service_provider: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /metro-area-networks/{id}
+@required {id: str}
+@returns(200) {id: str, name: str, metro_area: str, service_provider: str, pops: [str]}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group metro-areas
+@endpoint GET /metro-areas
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /metro-areas/{id}
+@required {id: str}
+@returns(200) {id: str, un_locode: str, iata_code: str, display_name: str, facilities: [str], metro_area_networks: [str]}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group product-offerings
+@endpoint GET /product-offerings
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, type: str(connection/exchange_lan/p2p_vc/mp2mp_vc/p2mp_vc/cloud_vc/routing_function), resource_type: str(connection/port_reservation/network_service/network_service_config/routing_function), name: str, handover_metro_area: str, handover_metro_area_network: str, handover_pop: str, service_metro_area: str, service_metro_area_network: str, service_provider: str, downgrade_allowed: str(true/false), upgrade_allowed: str(true/false), bandwidth: int, physical_port_speed: int, service_provider_region: str, service_provider_pop: str, delivery_method: str(dedicated/shared), cloud_key: str, contract_initial_period: str, contract_initial_notice_period: str, contract_renewal_period: str, contract_renewal_notice_period: str, fields: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /product-offerings/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group availability-zones
+@endpoint GET /availability-zones
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, name: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /availability-zones/{id}
+@required {id: str}
+@returns(200) {id: str, name: str}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group ports
+@endpoint GET /ports
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, consuming_account: str, external_ref: str, media_type: str, pop: str, name: str, device: str, speed: str, connection: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /ports/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, role_assignments: [str], id: str, connection: str?, speed: int?, name: str, media_type: str, operational_state: str, device: str, pop: str}
+@errors {403, 401, 404}
+
+@endpoint GET /ports/{id}/statistics
+@required {id: str}
+@optional {start: str(date-time), end: str(date-time)}
+@returns(200) {aggregates: map, light_levels_tx: [num], light_levels_rx: [num]}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /ports/{id}/statistics/{aggregate}/timeseries
+@required {id: str, aggregate: str}
+@optional {start: str(date-time), end: str(date-time), fields: str}
+@returns(200) {title: str, precision: int, created_at: str(date-time), next_update_at: str(date-time), origin_timezone: str, fields: [str], samples: [[any]]}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group port-reservations
+@endpoint GET /port-reservations
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, connection: str, port: str, external_ref: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /port-reservations
+@required {id: str, connection: str}
+@optional {purchase_order: str=, contract_ref: str, external_ref: str, subscriber_side_demarc: str, connecting_party: str, cross_connect_id: str}
+@returns(201) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), purchase_order: str, contract_ref: str?, external_ref: str?, id: str, subscriber_side_demarc: str, connecting_party: str?, cross_connect_id: str, connection: str, exchange_side_demarc: str?, port: str?}
+@errors {403, 401, 400}
+
+@endpoint GET /port-reservations/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), purchase_order: str, contract_ref: str?, external_ref: str?, id: str, subscriber_side_demarc: str, connecting_party: str?, cross_connect_id: str, connection: str, exchange_side_demarc: str?, port: str?}
+@errors {403, 401, 404}
+
+@endpoint PUT /port-reservations/{id}
+@required {id: str, id: str}
+@optional {purchase_order: str=, contract_ref: str, external_ref: str, subscriber_side_demarc: str, connecting_party: str, cross_connect_id: str}
+@returns(202) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), purchase_order: str, contract_ref: str?, external_ref: str?, id: str, subscriber_side_demarc: str, connecting_party: str?, cross_connect_id: str, connection: str, exchange_side_demarc: str?, port: str?}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /port-reservations/{id}
+@required {id: str}
+@returns(202) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), purchase_order: str, contract_ref: str?, external_ref: str?, id: str, subscriber_side_demarc: str, connecting_party: str?, cross_connect_id: str, connection: str, exchange_side_demarc: str?, port: str?}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /port-reservations/{id}
+@required {id: str}
+@optional {decommission_at: str(date)}
+@returns(202) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), purchase_order: str, contract_ref: str?, external_ref: str?, id: str, subscriber_side_demarc: str, connecting_party: str?, cross_connect_id: str, connection: str, exchange_side_demarc: str?, port: str?}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /port-reservations/{id}/cancellation-policy
+@required {id: str}
+@optional {decommission_at: str}
+@returns(200) {decommission_at: str(date), charged_until: str(date)}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /port-reservations/{id}/loa
+@required {id: str}
+@returns(200)
+@errors {403, 401, 404}
+
+@endpoint POST /port-reservations/{id}/loa
+@required {id: str}
+@returns(200)
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group connections
+@endpoint GET /connections
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, consuming_account: str, external_ref: str, mode: str, mode__is_not: str, name: str, metro_area: str, metro_area_network: str, pop: str, facility: str, role_assignments: [str], contacts: [str], supported_network_service: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /connections
+@required {managing_account: str, consuming_account: str, billing_account: str, role_assignments: [str], id: str, mode: str(lag_lacp/lag_static/flex_ethernet/standalone), product_offering: str, port_quantity: int}
+@optional {external_ref: str, purchase_order: str=, contract_ref: str, lacp_timeout: str(slow/fast), subscriber_side_demarcs: [str], connecting_party: str}
+@returns(201) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, role_assignments: [str], id: str, mode: str, lacp_timeout: str?, product_offering: str, name: str, ports: [str], port_reservations: [str], pop: str, speed: int?, capacity_allocated: int, capacity_allocation_limit: int?, vlan_types: [str], outer_vlan_ethertypes: [str], port_quantity: int, subscriber_side_demarcs: [str], metro_area: str, metro_area_network: str}
+@errors {403, 401, 400}
+
+@endpoint GET /connections/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, role_assignments: [str], id: str, mode: str, lacp_timeout: str?, product_offering: str, name: str, ports: [str], port_reservations: [str], pop: str, speed: int?, capacity_allocated: int, capacity_allocation_limit: int?, vlan_types: [str], outer_vlan_ethertypes: [str], port_quantity: int, subscriber_side_demarcs: [str], metro_area: str, metro_area_network: str}
+@errors {403, 401, 404}
+
+@endpoint PUT /connections/{id}
+@required {id: str, managing_account: str, consuming_account: str, billing_account: str, role_assignments: [str], id: str, mode: str(lag_lacp/lag_static/flex_ethernet/standalone), product_offering: str}
+@optional {external_ref: str, purchase_order: str=, contract_ref: str, lacp_timeout: str(slow/fast)}
+@returns(202) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, role_assignments: [str], id: str, mode: str, lacp_timeout: str?, product_offering: str, name: str, ports: [str], port_reservations: [str], pop: str, speed: int?, capacity_allocated: int, capacity_allocation_limit: int?, vlan_types: [str], outer_vlan_ethertypes: [str], port_quantity: int, subscriber_side_demarcs: [str], metro_area: str, metro_area_network: str}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /connections/{id}
+@required {id: str}
+@returns(202) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, role_assignments: [str], id: str, mode: str, lacp_timeout: str?, product_offering: str, name: str, ports: [str], port_reservations: [str], pop: str, speed: int?, capacity_allocated: int, capacity_allocation_limit: int?, vlan_types: [str], outer_vlan_ethertypes: [str], port_quantity: int, subscriber_side_demarcs: [str], metro_area: str, metro_area_network: str}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /connections/{id}
+@required {id: str}
+@optional {decommission_at: str(date)}
+@returns(202) {state: str, status: [map], decommission_at: str(date), charged_until: str(date), current_billing_start_date: str(date), managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, role_assignments: [str], id: str, mode: str, lacp_timeout: str?, product_offering: str, name: str, ports: [str], port_reservations: [str], pop: str, speed: int?, capacity_allocated: int, capacity_allocation_limit: int?, vlan_types: [str], outer_vlan_ethertypes: [str], port_quantity: int, subscriber_side_demarcs: [str], metro_area: str, metro_area_network: str}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /connections/{id}/statistics
+@required {id: str}
+@optional {start: str(date-time), end: str(date-time)}
+@returns(200) {aggregates: map}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /connections/{id}/statistics/{aggregate}/timeseries
+@required {id: str, aggregate: str}
+@optional {start: str(date-time), end: str(date-time), fields: str}
+@returns(200) {title: str, precision: int, created_at: str(date-time), next_update_at: str(date-time), origin_timezone: str, fields: [str], samples: [[any]]}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /connections/{id}/loa
+@required {id: str}
+@returns(200)
+@errors {403, 401, 404}
+
+@endpoint POST /connections/{id}/loa
+@required {id: str}
+@returns(200)
+@errors {403, 401, 404, 400}
+
+@endpoint GET /connections/{id}/cancellation-policy
+@required {id: str}
+@optional {decommission_at: str}
+@returns(200) {decommission_at: str(date), charged_until: str(date)}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group network-service-configs
+@endpoint GET /network-service-configs
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, consuming_account: str, external_ref: str, type: str(exchange_lan/p2p_vc/p2mp_vc/mp2mp_vc/cloud_vc), inner_vlan: int, outer_vlan: int, capacity: int, network_service: str, connection: str, product_offering: str, role_assignments: [str], contacts: [str]}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /network-service-configs
+@required {type: str}
+@returns(201) {type: str}
+@errors {403, 401, 400}
+
+@endpoint GET /network-service-configs/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404}
+
+@endpoint PUT /network-service-configs/{id}
+@required {id: str, type: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /network-service-configs/{id}
+@required {id: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /network-service-configs/{id}
+@required {id: str}
+@optional {decommission_at: str(date)}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-service-configs/{id}/statistics
+@required {id: str}
+@optional {start: str(date-time), end: str(date-time)}
+@returns(200) {aggregates: map}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-service-configs/{id}/statistics/{aggregate}/timeseries
+@required {id: str, aggregate: str}
+@optional {start: str(date-time), end: str(date-time), fields: str}
+@returns(200) {title: str, precision: int, created_at: str(date-time), next_update_at: str(date-time), origin_timezone: str, fields: [str], samples: [[any]]}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-service-configs/{id}/peer-statistics
+@required {id: str}
+@optional {start: str(date-time), end: str(date-time), asn: int, mac_address: str, ip_address: str, ip_version: int}
+@returns(200)
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-service-configs/{id}/peer-statistics/{aggregate}/timeseries
+@required {id: str, aggregate: str}
+@optional {start: str(date-time), end: str(date-time), fields: str, asn: int, mac_address: str, ip_address: str, ip_version: int}
+@returns(200)
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-service-configs/{id}/cancellation-policy
+@required {id: str}
+@optional {decommission_at: str}
+@returns(200) {decommission_at: str(date), charged_until: str(date)}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group network-feature-configs
+@endpoint GET /network-feature-configs
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, consuming_account: str, external_ref: str, type: str, service_config: str, network_service_config: str, network_feature: str, role_assignments: [str], contacts: [str]}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /network-feature-configs
+@required {type: str}
+@returns(201) {type: str}
+@errors {403, 401, 400}
+
+@endpoint GET /network-feature-configs/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404}
+
+@endpoint PUT /network-feature-configs/{id}
+@required {id: str, type: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /network-feature-configs/{id}
+@required {id: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /network-feature-configs/{id}
+@required {id: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group account
+@endpoint GET /account
+@returns(200) {state: str, status: [map], id: str, managing_account: str?, name: str, legal_name: str?, billing_information: map{name: str, address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, vat_number: str?}, external_ref: str?, discoverable: bool, metro_area_network_presence: [str], address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, asns: [int]}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, billable: int, external_ref: str, name: str, asn: int}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /accounts
+@required {id: str, name: str, address: map{country!: str, locality!: str, region: str, postal_code!: str, street_address!: str, post_office_box_number: str}}
+@optional {managing_account: str, legal_name: str, billing_information: map{name!: str, address!: map{country!: str, locality!: str, region: str, postal_code!: str, street_address!: str, post_office_box_number: str}, vat_number: str}, external_ref: str, discoverable: bool=False, metro_area_network_presence: [str]=[]}
+@returns(201) {state: str, status: [map], id: str, managing_account: str?, name: str, legal_name: str?, billing_information: map{name: str, address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, vat_number: str?}, external_ref: str?, discoverable: bool, metro_area_network_presence: [str], address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, asns: [int]}
+@errors {403, 401, 400}
+
+@endpoint GET /accounts/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], id: str, managing_account: str?, name: str, legal_name: str?, billing_information: map{name: str, address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, vat_number: str?}, external_ref: str?, discoverable: bool, metro_area_network_presence: [str], address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, asns: [int]}
+@errors {403, 401, 404}
+
+@endpoint PUT /accounts/{id}
+@required {id: str, id: str, name: str, metro_area_network_presence: [str], address: map{country!: str, locality!: str, region: str, postal_code!: str, street_address!: str, post_office_box_number: str}}
+@optional {managing_account: str, legal_name: str, billing_information: map{name!: str, address!: map{country!: str, locality!: str, region: str, postal_code!: str, street_address!: str, post_office_box_number: str}, vat_number: str}, external_ref: str, discoverable: bool=False}
+@returns(202) {state: str, status: [map], id: str, managing_account: str?, name: str, legal_name: str?, billing_information: map{name: str, address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, vat_number: str?}, external_ref: str?, discoverable: bool, metro_area_network_presence: [str], address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, asns: [int]}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /accounts/{id}
+@required {id: str}
+@returns(202) {state: str, status: [map], id: str, managing_account: str?, name: str, legal_name: str?, billing_information: map{name: str, address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, vat_number: str?}, external_ref: str?, discoverable: bool, metro_area_network_presence: [str], address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, asns: [int]}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /accounts/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], id: str, managing_account: str?, name: str, legal_name: str?, billing_information: map{name: str, address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, vat_number: str?}, external_ref: str?, discoverable: bool, metro_area_network_presence: [str], address: map{country: str, locality: str, region: str?, postal_code: str, street_address: str, post_office_box_number: str?}, asns: [int]}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group roles
+@endpoint GET /roles
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, name: str, contact: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /roles/{id}
+@required {id: str}
+@returns(200) {name: str, required_fields: [str], id: str}
+@errors {401}
+
+@endgroup
+
+@group contacts
+@endpoint GET /contacts
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, managing_account: str, consuming_account: str, external_ref: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /contacts
+@required {managing_account: str, consuming_account: str, id: str}
+@optional {external_ref: str, name: str, telephone: str, email: str}
+@returns(201) {managing_account: str, consuming_account: str, external_ref: str?, id: str, name: str?, telephone: str?, email: str?}
+@errors {403, 401, 400}
+
+@endpoint GET /contacts/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, name: str?, telephone: str?, email: str?}
+@errors {403, 401, 404}
+
+@endpoint PUT /contacts/{id}
+@required {id: str, managing_account: str, consuming_account: str, id: str}
+@optional {external_ref: str, name: str, telephone: str, email: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, name: str?, telephone: str?, email: str?}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /contacts/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, name: str?, telephone: str?, email: str?}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /contacts/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, name: str?, telephone: str?, email: str?}
+@errors {403, 401, 404, 400, 409}
+
+@endgroup
+
+@group role-assignments
+@endpoint GET /role-assignments
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, contact: str, role: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /role-assignments
+@required {role: str, contact: str}
+@returns(201) {role: str, contact: str, id: str}
+@errors {403, 401, 400}
+
+@endpoint GET /role-assignments/{id}
+@required {id: str}
+@returns(200) {role: str, contact: str, id: str}
+@errors {403, 401, 404}
+
+@endpoint DELETE /role-assignments/{id}
+@required {id: str}
+@returns(200) {role: str, contact: str, id: str}
+@errors {403, 401, 404, 400, 409}
+
+@endgroup
+
+@group health
+@endpoint GET /health
+@returns(200) {status: str, version: str, releaseId: str, notes: [str], output: str, serviceId: str, description: str, checks: map, links: map}
+
+@endgroup
+
+@group implementation
+@endpoint GET /implementation
+@returns(200) {schema_version: str, service_version: str, supported_network_service_types: [str], supported_network_service_config_types: [str], supported_network_feature_types: [str], supported_network_feature_config_types: [str], supported_operations: [str], supported_features: map{pagination: bool}}
+
+@endgroup
+
+@group extensions
+@endpoint GET /extensions
+@optional {page_limit: int, page_offset: int, page_token: str}
+@returns(200)
+@returns(206)
+@errors {400}
+
+@endgroup
+
+@group ips
+@endpoint GET /ips
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, managing_account: str, consuming_account: str, external_ref: str, network_service: str, network_service_config: str, network_feature: str, network_feature_config: str, version: int, fqdn: str, prefix_length: int, valid_not_before: str, valid_not_after: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /ips
+@required {managing_account: str, consuming_account: str, id: str, version: int(4/6), address: str, prefix_length: int(int32)}
+@optional {external_ref: str, fqdn: str, valid_not_before: str(date-time), valid_not_after: str(date-time)}
+@returns(201) {managing_account: str, consuming_account: str, external_ref: str?, id: str, version: int, address: str, prefix_length: int(int32), fqdn: str?, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 400}
+
+@endpoint GET /ips/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, version: int, address: str, prefix_length: int(int32), fqdn: str?, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 404}
+
+@endpoint PUT /ips/{id}
+@required {id: str, managing_account: str, consuming_account: str, id: str, version: int(4/6), address: str, prefix_length: int(int32)}
+@optional {external_ref: str, fqdn: str, valid_not_before: str(date-time), valid_not_after: str(date-time)}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, version: int, address: str, prefix_length: int(int32), fqdn: str?, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /ips/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, version: int, address: str, prefix_length: int(int32), fqdn: str?, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group macs
+@endpoint GET /macs
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, managing_account: str, consuming_account: str, external_ref: str, network_service_config: str, address: str, valid_not_before: str, valid_not_after: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /macs
+@required {managing_account: str, consuming_account: str, id: str, address: str}
+@optional {external_ref: str, valid_not_before: str(date-time), valid_not_after: str(date-time)}
+@returns(201) {managing_account: str, consuming_account: str, external_ref: str?, id: str, address: str, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 400}
+
+@endpoint GET /macs/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, address: str, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 404}
+
+@endpoint DELETE /macs/{id}
+@required {id: str}
+@returns(200) {managing_account: str, consuming_account: str, external_ref: str?, id: str, address: str, valid_not_before: str(date-time)?, valid_not_after: str(date-time)?}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group network-services
+@endpoint GET /network-services
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, consuming_account: str, external_ref: str, type: str(exchange_lan/p2p_vc/p2mp_vc/mp2mp_vc/cloud_vc), pop: str, product_offering: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /network-services
+@required {type: str}
+@returns(201) {type: str}
+@errors {403, 401, 400}
+
+@endpoint GET /network-services/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404}
+
+@endpoint PUT /network-services/{id}
+@required {id: str, type: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /network-services/{id}
+@required {id: str}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /network-services/{id}
+@required {id: str}
+@optional {decommission_at: str(date)}
+@returns(202) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-services/{id}/statistics
+@required {id: str}
+@optional {start: str(date-time), end: str(date-time)}
+@returns(200) {aggregates: map}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-services/{id}/statistics/{aggregate}/timeseries
+@required {id: str, aggregate: str}
+@optional {start: str(date-time), end: str(date-time), fields: str}
+@returns(200) {title: str, precision: int, created_at: str(date-time), next_update_at: str(date-time), origin_timezone: str, fields: [str], samples: [[any]]}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-services/{id}/rtt-statistics
+@required {id: str}
+@optional {asn: str, ip: str, after: int}
+@returns(200)
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-services/{id}/change-request
+@required {id: str}
+@returns(202) {product_offering: str, capacity: int?}
+@errors {403, 401, 404}
+
+@endpoint POST /network-services/{id}/change-request
+@required {id: str, product_offering: str}
+@optional {capacity: int}
+@returns(202) {product_offering: str, capacity: int?}
+@errors {403, 401, 400}
+
+@endpoint DELETE /network-services/{id}/change-request
+@required {id: str}
+@returns(202) {product_offering: str, capacity: int?}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /network-services/{id}/cancellation-policy
+@required {id: str}
+@optional {decommission_at: str}
+@returns(200) {decommission_at: str(date), charged_until: str(date)}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group network-features
+@endpoint GET /network-features
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, type: str, required: str, network_service: str, name: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint GET /network-features/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404}
+
+@endgroup
+
+@group member-joining-rules
+@endpoint GET /member-joining-rules
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, managing_account: str, consuming_account: str, external_ref: str, network_service: str}
+@returns(200)
+@returns(206)
+@errors {403, 401, 400}
+
+@endpoint POST /member-joining-rules
+@required {type: str}
+@returns(201) {type: str}
+@errors {403, 401, 400}
+
+@endpoint GET /member-joining-rules/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404}
+
+@endpoint PUT /member-joining-rules/{id}
+@required {id: str, type: str}
+@returns(200) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint PATCH /member-joining-rules/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /member-joining-rules/{id}
+@required {id: str}
+@returns(200) {type: str}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@group routing-functions
+@endpoint GET /routing-functions
+@optional {id: [str], page_limit: int, page_offset: int, page_token: str, state: str, state__is_not: str, managing_account: str, consuming_account: str, external_ref: str, asn: str}
+@returns(200)
+@errors {403, 401, 400}
+
+@endpoint POST /routing-functions
+@required {managing_account: str, consuming_account: str, billing_account: str, id: str, product_offering: str, asn: int}
+@optional {external_ref: str, purchase_order: str=, contract_ref: str, capacity: int}
+@returns(201) {state: str, status: [map], managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, id: str, product_offering: str, asn: int, capacity: int?}
+@errors {403, 401, 400}
+
+@endpoint GET /routing-functions/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, id: str, product_offering: str, asn: int, capacity: int?}
+@errors {403, 401, 404}
+
+@endpoint PATCH /routing-functions/{id}
+@required {id: str}
+@returns(200) {state: str, status: [map], managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, id: str, product_offering: str, asn: int, capacity: int?}
+@errors {403, 401, 404, 400}
+
+@endpoint DELETE /routing-functions/{id}
+@required {id: str}
+@optional {decommission_at: str(date)}
+@returns(202) {state: str, status: [map], managing_account: str, consuming_account: str, external_ref: str?, purchase_order: str, contract_ref: str?, billing_account: str, id: str, product_offering: str, asn: int, capacity: int?}
+@errors {403, 401, 404, 400}
+
+@endpoint GET /routing-functions/{id}/cancellation-policy
+@required {id: str}
+@optional {decommission_at: str}
+@returns(200) {decommission_at: str(date), charged_until: str(date)}
+@errors {403, 401, 404, 400}
+
+@endgroup
+
+@end

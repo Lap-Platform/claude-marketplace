@@ -1,0 +1,150 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AmazonMQ
+@version 2017-11-27
+@auth AWS SigV4
+@endpoints 23
+@hint download_for_search
+@toc brokers(12), configurations(6), tags(3), broker-engine-types(1), broker-instance-options(1)
+
+@group brokers
+@endpoint POST /v1/brokers
+@required {BrokerName: str, DeploymentMode: str, EngineType: str, HostInstanceType: str, PubliclyAccessible: bool, Users: [User]}
+@optional {AuthenticationStrategy: str, AutoMinorVersionUpgrade: bool, Configuration: ConfigurationId, CreatorRequestId: str, EncryptionOptions: EncryptionOptions, EngineVersion: str, LdapServerMetadata: LdapServerMetadataInput, Logs: Logs, MaintenanceWindowStartTime: WeeklyStartTime, SecurityGroups: [str], StorageType: str, SubnetIds: [str], Tags: map<str,str>, DataReplicationMode: str, DataReplicationPrimaryBrokerArn: str}
+@returns(200) {BrokerArn: str?, BrokerId: str?}
+
+@endgroup
+
+@group configurations
+@endpoint POST /v1/configurations
+@required {EngineType: str, Name: str}
+@optional {AuthenticationStrategy: str, EngineVersion: str, Tags: map<str,str>}
+@returns(200) {Arn: str?, AuthenticationStrategy: str?, Created: str(timestamp)?, Id: str?, LatestRevision: ConfigurationRevision?{Created: str(timestamp), Description: str?, Revision: int}, Name: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /v1/tags/{resource-arn}
+@required {ResourceArn: str}
+@optional {Tags: map<str,str>}
+
+@endgroup
+
+@group brokers
+@endpoint POST /v1/brokers/{broker-id}/users/{username}
+@required {BrokerId: str, Username: str, Password: str}
+@optional {ConsoleAccess: bool, Groups: [str], ReplicationUser: bool}
+
+@endpoint DELETE /v1/brokers/{broker-id}
+@required {BrokerId: str}
+@returns(200) {BrokerId: str?}
+
+@endgroup
+
+@group tags
+@endpoint DELETE /v1/tags/{resource-arn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group brokers
+@endpoint DELETE /v1/brokers/{broker-id}/users/{username}
+@required {BrokerId: str, Username: str}
+
+@endpoint GET /v1/brokers/{broker-id}
+@required {BrokerId: str}
+@returns(200) {ActionsRequired: [ActionRequired]?, AuthenticationStrategy: str?, AutoMinorVersionUpgrade: bool?, BrokerArn: str?, BrokerId: str?, BrokerInstances: [BrokerInstance]?, BrokerName: str?, BrokerState: str?, Configurations: Configurations?{Current: ConfigurationId?{Id: str, Revision: int?}, History: [ConfigurationId]?, Pending: ConfigurationId?{Id: str, Revision: int?}}, Created: str(timestamp)?, DeploymentMode: str?, EncryptionOptions: EncryptionOptions?{KmsKeyId: str?, UseAwsOwnedKey: bool}, EngineType: str?, EngineVersion: str?, HostInstanceType: str?, LdapServerMetadata: LdapServerMetadataOutput?{Hosts: [str], RoleBase: str, RoleName: str?, RoleSearchMatching: str, RoleSearchSubtree: bool?, ServiceAccountUsername: str, UserBase: str, UserRoleName: str?, UserSearchMatching: str, UserSearchSubtree: bool?}, Logs: LogsSummary?{Audit: bool?, AuditLogGroup: str?, General: bool, GeneralLogGroup: str, Pending: PendingLogs?{Audit: bool?, General: bool?}}, MaintenanceWindowStartTime: WeeklyStartTime?{DayOfWeek: str, TimeOfDay: str, TimeZone: str?}, PendingAuthenticationStrategy: str?, PendingEngineVersion: str?, PendingHostInstanceType: str?, PendingLdapServerMetadata: LdapServerMetadataOutput?{Hosts: [str], RoleBase: str, RoleName: str?, RoleSearchMatching: str, RoleSearchSubtree: bool?, ServiceAccountUsername: str, UserBase: str, UserRoleName: str?, UserSearchMatching: str, UserSearchSubtree: bool?}, PendingSecurityGroups: [str]?, PubliclyAccessible: bool?, SecurityGroups: [str]?, StorageType: str?, SubnetIds: [str]?, Tags: map<str,str>?, Users: [UserSummary]?, DataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, DataReplicationMode: str?, PendingDataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, PendingDataReplicationMode: str?}
+
+@endgroup
+
+@group broker-engine-types
+@endpoint GET /v1/broker-engine-types
+@optional {engineType: str, maxResults: int, nextToken: str}
+@returns(200) {BrokerEngineTypes: [BrokerEngineType]?, MaxResults: int?, NextToken: str?}
+
+@endgroup
+
+@group broker-instance-options
+@endpoint GET /v1/broker-instance-options
+@optional {engineType: str, hostInstanceType: str, maxResults: int, nextToken: str, storageType: str}
+@returns(200) {BrokerInstanceOptions: [BrokerInstanceOption]?, MaxResults: int?, NextToken: str?}
+
+@endgroup
+
+@group configurations
+@endpoint GET /v1/configurations/{configuration-id}
+@required {ConfigurationId: str}
+@returns(200) {Arn: str?, AuthenticationStrategy: str?, Created: str(timestamp)?, Description: str?, EngineType: str?, EngineVersion: str?, Id: str?, LatestRevision: ConfigurationRevision?{Created: str(timestamp), Description: str?, Revision: int}, Name: str?, Tags: map<str,str>?}
+
+@endpoint GET /v1/configurations/{configuration-id}/revisions/{configuration-revision}
+@required {ConfigurationId: str, ConfigurationRevision: str}
+@returns(200) {ConfigurationId: str?, Created: str(timestamp)?, Data: str?, Description: str?}
+
+@endgroup
+
+@group brokers
+@endpoint GET /v1/brokers/{broker-id}/users/{username}
+@required {BrokerId: str, Username: str}
+@returns(200) {BrokerId: str?, ConsoleAccess: bool?, Groups: [str]?, Pending: UserPendingChanges?{ConsoleAccess: bool?, Groups: [str]?, PendingChange: str}, Username: str?, ReplicationUser: bool?}
+
+@endpoint GET /v1/brokers
+@optional {maxResults: int, nextToken: str}
+@returns(200) {BrokerSummaries: [BrokerSummary]?, NextToken: str?}
+
+@endgroup
+
+@group configurations
+@endpoint GET /v1/configurations/{configuration-id}/revisions
+@required {ConfigurationId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {ConfigurationId: str?, MaxResults: int?, NextToken: str?, Revisions: [ConfigurationRevision]?}
+
+@endpoint GET /v1/configurations
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Configurations: [Configuration]?, MaxResults: int?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /v1/tags/{resource-arn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group brokers
+@endpoint GET /v1/brokers/{broker-id}/users
+@required {BrokerId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {BrokerId: str?, MaxResults: int?, NextToken: str?, Users: [UserSummary]?}
+
+@endpoint POST /v1/brokers/{broker-id}/promote
+@required {BrokerId: str, Mode: str}
+@returns(200) {BrokerId: str?}
+
+@endpoint POST /v1/brokers/{broker-id}/reboot
+@required {BrokerId: str}
+
+@endpoint PUT /v1/brokers/{broker-id}
+@required {BrokerId: str}
+@optional {AuthenticationStrategy: str, AutoMinorVersionUpgrade: bool, Configuration: ConfigurationId, EngineVersion: str, HostInstanceType: str, LdapServerMetadata: LdapServerMetadataInput, Logs: Logs, MaintenanceWindowStartTime: WeeklyStartTime, SecurityGroups: [str], DataReplicationMode: str}
+@returns(200) {AuthenticationStrategy: str?, AutoMinorVersionUpgrade: bool?, BrokerId: str?, Configuration: ConfigurationId?{Id: str, Revision: int?}, EngineVersion: str?, HostInstanceType: str?, LdapServerMetadata: LdapServerMetadataOutput?{Hosts: [str], RoleBase: str, RoleName: str?, RoleSearchMatching: str, RoleSearchSubtree: bool?, ServiceAccountUsername: str, UserBase: str, UserRoleName: str?, UserSearchMatching: str, UserSearchSubtree: bool?}, Logs: Logs?{Audit: bool?, General: bool?}, MaintenanceWindowStartTime: WeeklyStartTime?{DayOfWeek: str, TimeOfDay: str, TimeZone: str?}, SecurityGroups: [str]?, DataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, DataReplicationMode: str?, PendingDataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, PendingDataReplicationMode: str?}
+
+@endgroup
+
+@group configurations
+@endpoint PUT /v1/configurations/{configuration-id}
+@required {ConfigurationId: str, Data: str}
+@optional {Description: str}
+@returns(200) {Arn: str?, Created: str(timestamp)?, Id: str?, LatestRevision: ConfigurationRevision?{Created: str(timestamp), Description: str?, Revision: int}, Name: str?, Warnings: [SanitizationWarning]?}
+
+@endgroup
+
+@group brokers
+@endpoint PUT /v1/brokers/{broker-id}/users/{username}
+@required {BrokerId: str, Username: str}
+@optional {ConsoleAccess: bool, Groups: [str], Password: str, ReplicationUser: bool}
+
+@endgroup
+
+@end

@@ -1,0 +1,452 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Well-Architected Tool
+@version 2020-03-31
+@auth AWS SigV4
+@endpoints 72
+@hint download_for_search
+@toc workloads(28), lenses(9), profiles(7), reviewTemplates(11), templates(3), consolidatedReport(1), global-settings(2), profileTemplate(1), importLens(1), notifications(1), profileNotifications(1), profileSummaries(1), shareInvitations(2), tags(3), workloadsSummaries(1)
+
+@group workloads
+@endpoint PATCH /workloads/{WorkloadId}/associateLenses
+@required {WorkloadId: str, LensAliases: [str]}
+
+@endpoint PATCH /workloads/{WorkloadId}/associateProfiles
+@required {WorkloadId: str, ProfileArns: [str]}
+
+@endgroup
+
+@group lenses
+@endpoint POST /lenses/{LensAlias}/shares
+@required {LensAlias: str, SharedWith: str, ClientRequestToken: str}
+@returns(200) {ShareId: str?}
+
+@endpoint POST /lenses/{LensAlias}/versions
+@required {LensAlias: str, LensVersion: str, ClientRequestToken: str}
+@optional {IsMajorVersion: bool}
+@returns(200) {LensArn: str?, LensVersion: str?}
+
+@endgroup
+
+@group workloads
+@endpoint POST /workloads/{WorkloadId}/milestones
+@required {WorkloadId: str, MilestoneName: str, ClientRequestToken: str}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?}
+
+@endgroup
+
+@group profiles
+@endpoint POST /profiles
+@required {ProfileName: str, ProfileDescription: str, ProfileQuestions: [ProfileQuestionUpdate], ClientRequestToken: str}
+@optional {Tags: map<str,str>}
+@returns(200) {ProfileArn: str?, ProfileVersion: str?}
+
+@endpoint POST /profiles/{ProfileArn}/shares
+@required {ProfileArn: str, SharedWith: str, ClientRequestToken: str}
+@returns(200) {ShareId: str?, ProfileArn: str?}
+
+@endgroup
+
+@group reviewTemplates
+@endpoint POST /reviewTemplates
+@required {TemplateName: str, Description: str, Lenses: [str], ClientRequestToken: str}
+@optional {Notes: str, Tags: map<str,str>}
+@returns(200) {TemplateArn: str?}
+
+@endgroup
+
+@group templates
+@endpoint POST /templates/shares/{TemplateArn}
+@required {TemplateArn: str, SharedWith: str, ClientRequestToken: str}
+@returns(200) {TemplateArn: str?, ShareId: str?}
+
+@endgroup
+
+@group workloads
+@endpoint POST /workloads
+@required {WorkloadName: str, Description: str, Environment: str, Lenses: [str], ClientRequestToken: str}
+@optional {AccountIds: [str], AwsRegions: [str], NonAwsRegions: [str], PillarPriorities: [str], ArchitecturalDesign: str, ReviewOwner: str, IndustryType: str, Industry: str, Notes: str, Tags: map<str,str>, DiscoveryConfig: WorkloadDiscoveryConfig, Applications: [str], ProfileArns: [str], ReviewTemplateArns: [str], JiraConfiguration: WorkloadJiraConfigurationInput}
+@returns(200) {WorkloadId: str?, WorkloadArn: str?}
+
+@endpoint POST /workloads/{WorkloadId}/shares
+@required {WorkloadId: str, SharedWith: str, PermissionType: str, ClientRequestToken: str}
+@returns(200) {WorkloadId: str?, ShareId: str?}
+
+@endgroup
+
+@group lenses
+@endpoint DELETE /lenses/{LensAlias}
+@required {LensAlias: str, ClientRequestToken: str, LensStatus: str}
+
+@endpoint DELETE /lenses/{LensAlias}/shares/{ShareId}
+@required {ShareId: str, LensAlias: str, ClientRequestToken: str}
+
+@endgroup
+
+@group profiles
+@endpoint DELETE /profiles/{ProfileArn}
+@required {ProfileArn: str, ClientRequestToken: str}
+
+@endpoint DELETE /profiles/{ProfileArn}/shares/{ShareId}
+@required {ShareId: str, ProfileArn: str, ClientRequestToken: str}
+
+@endgroup
+
+@group reviewTemplates
+@endpoint DELETE /reviewTemplates/{TemplateArn}
+@required {TemplateArn: str, ClientRequestToken: str}
+
+@endgroup
+
+@group templates
+@endpoint DELETE /templates/shares/{TemplateArn}/{ShareId}
+@required {ShareId: str, TemplateArn: str, ClientRequestToken: str}
+
+@endgroup
+
+@group workloads
+@endpoint DELETE /workloads/{WorkloadId}
+@required {WorkloadId: str, ClientRequestToken: str}
+
+@endpoint DELETE /workloads/{WorkloadId}/shares/{ShareId}
+@required {ShareId: str, WorkloadId: str, ClientRequestToken: str}
+
+@endpoint PATCH /workloads/{WorkloadId}/disassociateLenses
+@required {WorkloadId: str, LensAliases: [str]}
+
+@endpoint PATCH /workloads/{WorkloadId}/disassociateProfiles
+@required {WorkloadId: str, ProfileArns: [str]}
+
+@endgroup
+
+@group lenses
+@endpoint GET /lenses/{LensAlias}/export
+@required {LensAlias: str}
+@optional {LensVersion: str}
+@returns(200) {LensJSON: str?}
+
+@endgroup
+
+@group workloads
+@endpoint GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers/{QuestionId}
+@required {WorkloadId: str, LensAlias: str, QuestionId: str}
+@optional {MilestoneNumber: int}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?, LensAlias: str?, LensArn: str?, Answer: Answer?{QuestionId: str?, PillarId: str?, QuestionTitle: str?, QuestionDescription: str?, ImprovementPlanUrl: str?, HelpfulResourceUrl: str?, HelpfulResourceDisplayText: str?, Choices: [Choice]?, SelectedChoices: [str]?, ChoiceAnswers: [ChoiceAnswer]?, IsApplicable: bool?, Risk: str?, Notes: str?, Reason: str?, JiraConfiguration: JiraConfiguration?{JiraIssueUrl: str?, LastSyncedTime: str(timestamp)?}}}
+
+@endgroup
+
+@group consolidatedReport
+@endpoint GET /consolidatedReport
+@required {Format: str}
+@optional {IncludeSharedResources: bool, NextToken: str, MaxResults: int}
+@returns(200) {Metrics: [ConsolidatedReportMetric]?, NextToken: str?, Base64String: str?}
+
+@endgroup
+
+@group global-settings
+@endpoint GET /global-settings
+@returns(200) {OrganizationSharingStatus: str?, DiscoveryIntegrationStatus: str?, JiraConfiguration: AccountJiraConfigurationOutput?{IntegrationStatus: str?, IssueManagementStatus: str?, IssueManagementType: str?, Subdomain: str?, JiraProjectKey: str?, StatusMessage: str?}}
+
+@endgroup
+
+@group lenses
+@endpoint GET /lenses/{LensAlias}
+@required {LensAlias: str}
+@optional {LensVersion: str}
+@returns(200) {Lens: Lens?{LensArn: str?, LensVersion: str?, Name: str?, Description: str?, Owner: str?, ShareInvitationId: str?, Tags: map<str,str>?}}
+
+@endgroup
+
+@group workloads
+@endpoint GET /workloads/{WorkloadId}/lensReviews/{LensAlias}
+@required {WorkloadId: str, LensAlias: str}
+@optional {MilestoneNumber: int}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?, LensReview: LensReview?{LensAlias: str?, LensArn: str?, LensVersion: str?, LensName: str?, LensStatus: str?, PillarReviewSummaries: [PillarReviewSummary]?, JiraConfiguration: JiraSelectedQuestionConfiguration?{SelectedPillars: [SelectedPillar]?}, UpdatedAt: str(timestamp)?, Notes: str?, RiskCounts: map<str,int>?, NextToken: str?, Profiles: [WorkloadProfile]?, PrioritizedRiskCounts: map<str,int>?}}
+
+@endpoint GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/report
+@required {WorkloadId: str, LensAlias: str}
+@optional {MilestoneNumber: int}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?, LensReviewReport: LensReviewReport?{LensAlias: str?, LensArn: str?, Base64String: str?}}
+
+@endgroup
+
+@group lenses
+@endpoint GET /lenses/{LensAlias}/versionDifference
+@required {LensAlias: str}
+@optional {BaseLensVersion: str, TargetLensVersion: str}
+@returns(200) {LensAlias: str?, LensArn: str?, BaseLensVersion: str?, TargetLensVersion: str?, LatestLensVersion: str?, VersionDifferences: VersionDifferences?{PillarDifferences: [PillarDifference]?}}
+
+@endgroup
+
+@group workloads
+@endpoint GET /workloads/{WorkloadId}/milestones/{MilestoneNumber}
+@required {WorkloadId: str, MilestoneNumber: int}
+@returns(200) {WorkloadId: str?, Milestone: Milestone?{MilestoneNumber: int?, MilestoneName: str?, RecordedAt: str(timestamp)?, Workload: Workload?{WorkloadId: str?, WorkloadArn: str?, WorkloadName: str?, Description: str?, Environment: str?, UpdatedAt: str(timestamp)?, AccountIds: [str]?, AwsRegions: [str]?, NonAwsRegions: [str]?, ArchitecturalDesign: str?, ReviewOwner: str?, ReviewRestrictionDate: str(timestamp)?, IsReviewOwnerUpdateAcknowledged: bool?, IndustryType: str?, Industry: str?, Notes: str?, ImprovementStatus: str?, RiskCounts: map<str,int>?, PillarPriorities: [str]?, Lenses: [str]?, Owner: str?, ShareInvitationId: str?, Tags: map<str,str>?, DiscoveryConfig: WorkloadDiscoveryConfig?{TrustedAdvisorIntegrationStatus: str?, WorkloadResourceDefinition: [str]?}, Applications: [str]?, Profiles: [WorkloadProfile]?, PrioritizedRiskCounts: map<str,int>?, JiraConfiguration: WorkloadJiraConfigurationOutput?{IssueManagementStatus: str?, IssueManagementType: str?, JiraProjectKey: str?, StatusMessage: str?}}}}
+
+@endgroup
+
+@group profiles
+@endpoint GET /profiles/{ProfileArn}
+@required {ProfileArn: str}
+@optional {ProfileVersion: str}
+@returns(200) {Profile: Profile?{ProfileArn: str?, ProfileVersion: str?, ProfileName: str?, ProfileDescription: str?, ProfileQuestions: [ProfileQuestion]?, Owner: str?, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, ShareInvitationId: str?, Tags: map<str,str>?}}
+
+@endgroup
+
+@group profileTemplate
+@endpoint GET /profileTemplate
+@returns(200) {ProfileTemplate: ProfileTemplate?{TemplateName: str?, TemplateQuestions: [ProfileTemplateQuestion]?, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?}}
+
+@endgroup
+
+@group reviewTemplates
+@endpoint GET /reviewTemplates/{TemplateArn}
+@required {TemplateArn: str}
+@returns(200) {ReviewTemplate: ReviewTemplate?{Description: str?, Lenses: [str]?, Notes: str?, QuestionCounts: map<str,int>?, Owner: str?, UpdatedAt: str(timestamp)?, TemplateArn: str?, TemplateName: str?, Tags: map<str,str>?, UpdateStatus: str?, ShareInvitationId: str?}}
+
+@endpoint GET /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/answers/{QuestionId}
+@required {TemplateArn: str, LensAlias: str, QuestionId: str}
+@returns(200) {TemplateArn: str?, LensAlias: str?, Answer: ReviewTemplateAnswer?{QuestionId: str?, PillarId: str?, QuestionTitle: str?, QuestionDescription: str?, ImprovementPlanUrl: str?, HelpfulResourceUrl: str?, HelpfulResourceDisplayText: str?, Choices: [Choice]?, SelectedChoices: [str]?, ChoiceAnswers: [ChoiceAnswer]?, IsApplicable: bool?, AnswerStatus: str?, Notes: str?, Reason: str?}}
+
+@endpoint GET /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}
+@required {TemplateArn: str, LensAlias: str}
+@returns(200) {TemplateArn: str?, LensReview: ReviewTemplateLensReview?{LensAlias: str?, LensArn: str?, LensVersion: str?, LensName: str?, LensStatus: str?, PillarReviewSummaries: [ReviewTemplatePillarReviewSummary]?, UpdatedAt: str(timestamp)?, Notes: str?, QuestionCounts: map<str,int>?, NextToken: str?}}
+
+@endgroup
+
+@group workloads
+@endpoint GET /workloads/{WorkloadId}
+@required {WorkloadId: str}
+@returns(200) {Workload: Workload?{WorkloadId: str?, WorkloadArn: str?, WorkloadName: str?, Description: str?, Environment: str?, UpdatedAt: str(timestamp)?, AccountIds: [str]?, AwsRegions: [str]?, NonAwsRegions: [str]?, ArchitecturalDesign: str?, ReviewOwner: str?, ReviewRestrictionDate: str(timestamp)?, IsReviewOwnerUpdateAcknowledged: bool?, IndustryType: str?, Industry: str?, Notes: str?, ImprovementStatus: str?, RiskCounts: map<str,int>?, PillarPriorities: [str]?, Lenses: [str]?, Owner: str?, ShareInvitationId: str?, Tags: map<str,str>?, DiscoveryConfig: WorkloadDiscoveryConfig?{TrustedAdvisorIntegrationStatus: str?, WorkloadResourceDefinition: [str]?}, Applications: [str]?, Profiles: [WorkloadProfile]?, PrioritizedRiskCounts: map<str,int>?, JiraConfiguration: WorkloadJiraConfigurationOutput?{IssueManagementStatus: str?, IssueManagementType: str?, JiraProjectKey: str?, StatusMessage: str?}}}
+
+@endgroup
+
+@group importLens
+@endpoint PUT /importLens
+@required {JSONString: str, ClientRequestToken: str}
+@optional {LensAlias: str, Tags: map<str,str>}
+@returns(200) {LensArn: str?, Status: str?}
+
+@endgroup
+
+@group workloads
+@endpoint GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers
+@required {WorkloadId: str, LensAlias: str}
+@optional {PillarId: str, MilestoneNumber: int, NextToken: str, MaxResults: int, QuestionPriority: str}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?, LensAlias: str?, LensArn: str?, AnswerSummaries: [AnswerSummary]?, NextToken: str?}
+
+@endpoint POST /workloads/{WorkloadId}/checks
+@required {WorkloadId: str, LensArn: str, PillarId: str, QuestionId: str, ChoiceId: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {CheckDetails: [CheckDetail]?, NextToken: str?}
+
+@endpoint POST /workloads/{WorkloadId}/checkSummaries
+@required {WorkloadId: str, LensArn: str, PillarId: str, QuestionId: str, ChoiceId: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {CheckSummaries: [CheckSummary]?, NextToken: str?}
+
+@endpoint GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/improvements
+@required {WorkloadId: str, LensAlias: str}
+@optional {PillarId: str, MilestoneNumber: int, NextToken: str, MaxResults: int, QuestionPriority: str}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?, LensAlias: str?, LensArn: str?, ImprovementSummaries: [ImprovementSummary]?, NextToken: str?}
+
+@endpoint GET /workloads/{WorkloadId}/lensReviews
+@required {WorkloadId: str}
+@optional {MilestoneNumber: int, NextToken: str, MaxResults: int}
+@returns(200) {WorkloadId: str?, MilestoneNumber: int?, LensReviewSummaries: [LensReviewSummary]?, NextToken: str?}
+
+@endgroup
+
+@group lenses
+@endpoint GET /lenses/{LensAlias}/shares
+@required {LensAlias: str}
+@optional {SharedWithPrefix: str, NextToken: str, MaxResults: int, Status: str}
+@returns(200) {LensShareSummaries: [LensShareSummary]?, NextToken: str?}
+
+@endpoint GET /lenses
+@optional {NextToken: str, MaxResults: int, LensType: str, LensStatus: str, LensName: str}
+@returns(200) {LensSummaries: [LensSummary]?, NextToken: str?}
+
+@endgroup
+
+@group workloads
+@endpoint POST /workloads/{WorkloadId}/milestonesSummaries
+@required {WorkloadId: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {WorkloadId: str?, MilestoneSummaries: [MilestoneSummary]?, NextToken: str?}
+
+@endgroup
+
+@group notifications
+@endpoint POST /notifications
+@optional {WorkloadId: str, NextToken: str, MaxResults: int, ResourceArn: str}
+@returns(200) {NotificationSummaries: [NotificationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group profileNotifications
+@endpoint GET /profileNotifications/
+@optional {WorkloadId: str, NextToken: str, MaxResults: int}
+@returns(200) {NotificationSummaries: [ProfileNotificationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group profiles
+@endpoint GET /profiles/{ProfileArn}/shares
+@required {ProfileArn: str}
+@optional {SharedWithPrefix: str, NextToken: str, MaxResults: int, Status: str}
+@returns(200) {ProfileShareSummaries: [ProfileShareSummary]?, NextToken: str?}
+
+@endgroup
+
+@group profileSummaries
+@endpoint GET /profileSummaries
+@optional {ProfileNamePrefix: str, ProfileOwnerType: str, NextToken: str, MaxResults: int}
+@returns(200) {ProfileSummaries: [ProfileSummary]?, NextToken: str?}
+
+@endgroup
+
+@group reviewTemplates
+@endpoint GET /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/answers
+@required {TemplateArn: str, LensAlias: str}
+@optional {PillarId: str, NextToken: str, MaxResults: int}
+@returns(200) {TemplateArn: str?, LensAlias: str?, AnswerSummaries: [ReviewTemplateAnswerSummary]?, NextToken: str?}
+
+@endpoint GET /reviewTemplates
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {ReviewTemplates: [ReviewTemplateSummary]?, NextToken: str?}
+
+@endgroup
+
+@group shareInvitations
+@endpoint GET /shareInvitations
+@optional {WorkloadNamePrefix: str, LensNamePrefix: str, ShareResourceType: str, NextToken: str, MaxResults: int, ProfileNamePrefix: str, TemplateNamePrefix: str}
+@returns(200) {ShareInvitationSummaries: [ShareInvitationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{WorkloadArn}
+@required {WorkloadArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group templates
+@endpoint GET /templates/shares/{TemplateArn}
+@required {TemplateArn: str}
+@optional {SharedWithPrefix: str, NextToken: str, MaxResults: int, Status: str}
+@returns(200) {TemplateArn: str?, TemplateShareSummaries: [TemplateShareSummary]?, NextToken: str?}
+
+@endgroup
+
+@group workloads
+@endpoint GET /workloads/{WorkloadId}/shares
+@required {WorkloadId: str}
+@optional {SharedWithPrefix: str, NextToken: str, MaxResults: int, Status: str}
+@returns(200) {WorkloadId: str?, WorkloadShareSummaries: [WorkloadShareSummary]?, NextToken: str?}
+
+@endgroup
+
+@group workloadsSummaries
+@endpoint POST /workloadsSummaries
+@optional {WorkloadNamePrefix: str, NextToken: str, MaxResults: int}
+@returns(200) {WorkloadSummaries: [WorkloadSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{WorkloadArn}
+@required {WorkloadArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{WorkloadArn}
+@required {WorkloadArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group workloads
+@endpoint PATCH /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers/{QuestionId}
+@required {WorkloadId: str, LensAlias: str, QuestionId: str}
+@optional {SelectedChoices: [str], ChoiceUpdates: map<str,ChoiceUpdate>, Notes: str, IsApplicable: bool, Reason: str}
+@returns(200) {WorkloadId: str?, LensAlias: str?, LensArn: str?, Answer: Answer?{QuestionId: str?, PillarId: str?, QuestionTitle: str?, QuestionDescription: str?, ImprovementPlanUrl: str?, HelpfulResourceUrl: str?, HelpfulResourceDisplayText: str?, Choices: [Choice]?, SelectedChoices: [str]?, ChoiceAnswers: [ChoiceAnswer]?, IsApplicable: bool?, Risk: str?, Notes: str?, Reason: str?, JiraConfiguration: JiraConfiguration?{JiraIssueUrl: str?, LastSyncedTime: str(timestamp)?}}}
+
+@endgroup
+
+@group global-settings
+@endpoint PATCH /global-settings
+@optional {OrganizationSharingStatus: str, DiscoveryIntegrationStatus: str, JiraConfiguration: AccountJiraConfigurationInput}
+
+@endgroup
+
+@group workloads
+@endpoint POST /workloads/{WorkloadId}/updateIntegration
+@required {WorkloadId: str, ClientRequestToken: str, IntegratingService: str}
+
+@endpoint PATCH /workloads/{WorkloadId}/lensReviews/{LensAlias}
+@required {WorkloadId: str, LensAlias: str}
+@optional {LensNotes: str, PillarNotes: map<str,str>, JiraConfiguration: JiraSelectedQuestionConfiguration}
+@returns(200) {WorkloadId: str?, LensReview: LensReview?{LensAlias: str?, LensArn: str?, LensVersion: str?, LensName: str?, LensStatus: str?, PillarReviewSummaries: [PillarReviewSummary]?, JiraConfiguration: JiraSelectedQuestionConfiguration?{SelectedPillars: [SelectedPillar]?}, UpdatedAt: str(timestamp)?, Notes: str?, RiskCounts: map<str,int>?, NextToken: str?, Profiles: [WorkloadProfile]?, PrioritizedRiskCounts: map<str,int>?}}
+
+@endgroup
+
+@group profiles
+@endpoint PATCH /profiles/{ProfileArn}
+@required {ProfileArn: str}
+@optional {ProfileDescription: str, ProfileQuestions: [ProfileQuestionUpdate]}
+@returns(200) {Profile: Profile?{ProfileArn: str?, ProfileVersion: str?, ProfileName: str?, ProfileDescription: str?, ProfileQuestions: [ProfileQuestion]?, Owner: str?, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, ShareInvitationId: str?, Tags: map<str,str>?}}
+
+@endgroup
+
+@group reviewTemplates
+@endpoint PATCH /reviewTemplates/{TemplateArn}
+@required {TemplateArn: str}
+@optional {TemplateName: str, Description: str, Notes: str, LensesToAssociate: [str], LensesToDisassociate: [str]}
+@returns(200) {ReviewTemplate: ReviewTemplate?{Description: str?, Lenses: [str]?, Notes: str?, QuestionCounts: map<str,int>?, Owner: str?, UpdatedAt: str(timestamp)?, TemplateArn: str?, TemplateName: str?, Tags: map<str,str>?, UpdateStatus: str?, ShareInvitationId: str?}}
+
+@endpoint PATCH /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/answers/{QuestionId}
+@required {TemplateArn: str, LensAlias: str, QuestionId: str}
+@optional {SelectedChoices: [str], ChoiceUpdates: map<str,ChoiceUpdate>, Notes: str, IsApplicable: bool, Reason: str}
+@returns(200) {TemplateArn: str?, LensAlias: str?, Answer: ReviewTemplateAnswer?{QuestionId: str?, PillarId: str?, QuestionTitle: str?, QuestionDescription: str?, ImprovementPlanUrl: str?, HelpfulResourceUrl: str?, HelpfulResourceDisplayText: str?, Choices: [Choice]?, SelectedChoices: [str]?, ChoiceAnswers: [ChoiceAnswer]?, IsApplicable: bool?, AnswerStatus: str?, Notes: str?, Reason: str?}}
+
+@endpoint PATCH /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}
+@required {TemplateArn: str, LensAlias: str}
+@optional {LensNotes: str, PillarNotes: map<str,str>}
+@returns(200) {TemplateArn: str?, LensReview: ReviewTemplateLensReview?{LensAlias: str?, LensArn: str?, LensVersion: str?, LensName: str?, LensStatus: str?, PillarReviewSummaries: [ReviewTemplatePillarReviewSummary]?, UpdatedAt: str(timestamp)?, Notes: str?, QuestionCounts: map<str,int>?, NextToken: str?}}
+
+@endgroup
+
+@group shareInvitations
+@endpoint PATCH /shareInvitations/{ShareInvitationId}
+@required {ShareInvitationId: str, ShareInvitationAction: str}
+@returns(200) {ShareInvitation: ShareInvitation?{ShareInvitationId: str?, ShareResourceType: str?, WorkloadId: str?, LensAlias: str?, LensArn: str?, ProfileArn: str?, TemplateArn: str?}}
+
+@endgroup
+
+@group workloads
+@endpoint PATCH /workloads/{WorkloadId}
+@required {WorkloadId: str}
+@optional {WorkloadName: str, Description: str, Environment: str, AccountIds: [str], AwsRegions: [str], NonAwsRegions: [str], PillarPriorities: [str], ArchitecturalDesign: str, ReviewOwner: str, IsReviewOwnerUpdateAcknowledged: bool, IndustryType: str, Industry: str, Notes: str, ImprovementStatus: str, DiscoveryConfig: WorkloadDiscoveryConfig, Applications: [str], JiraConfiguration: WorkloadJiraConfigurationInput}
+@returns(200) {Workload: Workload?{WorkloadId: str?, WorkloadArn: str?, WorkloadName: str?, Description: str?, Environment: str?, UpdatedAt: str(timestamp)?, AccountIds: [str]?, AwsRegions: [str]?, NonAwsRegions: [str]?, ArchitecturalDesign: str?, ReviewOwner: str?, ReviewRestrictionDate: str(timestamp)?, IsReviewOwnerUpdateAcknowledged: bool?, IndustryType: str?, Industry: str?, Notes: str?, ImprovementStatus: str?, RiskCounts: map<str,int>?, PillarPriorities: [str]?, Lenses: [str]?, Owner: str?, ShareInvitationId: str?, Tags: map<str,str>?, DiscoveryConfig: WorkloadDiscoveryConfig?{TrustedAdvisorIntegrationStatus: str?, WorkloadResourceDefinition: [str]?}, Applications: [str]?, Profiles: [WorkloadProfile]?, PrioritizedRiskCounts: map<str,int>?, JiraConfiguration: WorkloadJiraConfigurationOutput?{IssueManagementStatus: str?, IssueManagementType: str?, JiraProjectKey: str?, StatusMessage: str?}}}
+
+@endpoint PATCH /workloads/{WorkloadId}/shares/{ShareId}
+@required {ShareId: str, WorkloadId: str, PermissionType: str}
+@returns(200) {WorkloadId: str?, WorkloadShare: WorkloadShare?{ShareId: str?, SharedBy: str?, SharedWith: str?, PermissionType: str?, Status: str?, WorkloadName: str?, WorkloadId: str?}}
+
+@endpoint PUT /workloads/{WorkloadId}/lensReviews/{LensAlias}/upgrade
+@required {WorkloadId: str, LensAlias: str, MilestoneName: str}
+@optional {ClientRequestToken: str}
+
+@endpoint PUT /workloads/{WorkloadId}/profiles/{ProfileArn}/upgrade
+@required {WorkloadId: str, ProfileArn: str}
+@optional {MilestoneName: str, ClientRequestToken: str}
+
+@endgroup
+
+@group reviewTemplates
+@endpoint PUT /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/upgrade
+@required {TemplateArn: str, LensAlias: str}
+@optional {ClientRequestToken: str}
+
+@endgroup
+
+@end

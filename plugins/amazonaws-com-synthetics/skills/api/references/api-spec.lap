@@ -1,0 +1,143 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Synthetics
+@version 2017-10-11
+@auth AWS SigV4
+@endpoints 21
+@hint download_for_search
+@toc group(6), canary(7), canaries(2), runtime-versions(1), resource(1), groups(1), tags(3)
+
+@group group
+@endpoint PATCH /group/{groupIdentifier}/associate
+@required {GroupIdentifier: str, ResourceArn: str}
+
+@endgroup
+
+@group canary
+@endpoint POST /canary
+@required {Name: str, Code: CanaryCodeInput, ArtifactS3Location: str, ExecutionRoleArn: str, Schedule: CanaryScheduleInput, RuntimeVersion: str}
+@optional {RunConfig: CanaryRunConfigInput, SuccessRetentionPeriodInDays: int, FailureRetentionPeriodInDays: int, VpcConfig: VpcConfigInput, Tags: map<str,str>, ArtifactConfig: ArtifactConfigInput}
+@returns(200) {Canary: Canary?{Id: str?, Name: str?, Code: CanaryCodeOutput?{SourceLocationArn: str?, Handler: str?}, ExecutionRoleArn: str?, Schedule: CanaryScheduleOutput?{Expression: str?, DurationInSeconds: int(i64)?}, RunConfig: CanaryRunConfigOutput?{TimeoutInSeconds: int?, MemoryInMB: int?, ActiveTracing: bool?}, SuccessRetentionPeriodInDays: int?, FailureRetentionPeriodInDays: int?, Status: CanaryStatus?{State: str?, StateReason: str?, StateReasonCode: str?}, Timeline: CanaryTimeline?{Created: str(timestamp)?, LastModified: str(timestamp)?, LastStarted: str(timestamp)?, LastStopped: str(timestamp)?}, ArtifactS3Location: str?, EngineArn: str?, RuntimeVersion: str?, VpcConfig: VpcConfigOutput?{VpcId: str?, SubnetIds: [str]?, SecurityGroupIds: [str]?}, VisualReference: VisualReferenceOutput?{BaseScreenshots: [BaseScreenshot]?, BaseCanaryRunId: str?}, Tags: map<str,str>?, ArtifactConfig: ArtifactConfigOutput?{S3Encryption: S3EncryptionConfig?{EncryptionMode: str?, KmsKeyArn: str?}}}}
+
+@endgroup
+
+@group group
+@endpoint POST /group
+@required {Name: str}
+@optional {Tags: map<str,str>}
+@returns(200) {Group: Group?{Id: str?, Name: str?, Arn: str?, Tags: map<str,str>?, CreatedTime: str(timestamp)?, LastModifiedTime: str(timestamp)?}}
+
+@endgroup
+
+@group canary
+@endpoint DELETE /canary/{name}
+@required {Name: str}
+@optional {deleteLambda: bool}
+
+@endgroup
+
+@group group
+@endpoint DELETE /group/{groupIdentifier}
+@required {GroupIdentifier: str}
+
+@endgroup
+
+@group canaries
+@endpoint POST /canaries
+@optional {NextToken: str, MaxResults: int, Names: [str]}
+@returns(200) {Canaries: [Canary]?, NextToken: str?}
+
+@endpoint POST /canaries/last-run
+@optional {NextToken: str, MaxResults: int, Names: [str]}
+@returns(200) {CanariesLastRun: [CanaryLastRun]?, NextToken: str?}
+
+@endgroup
+
+@group runtime-versions
+@endpoint POST /runtime-versions
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {RuntimeVersions: [RuntimeVersion]?, NextToken: str?}
+
+@endgroup
+
+@group group
+@endpoint PATCH /group/{groupIdentifier}/disassociate
+@required {GroupIdentifier: str, ResourceArn: str}
+
+@endgroup
+
+@group canary
+@endpoint GET /canary/{name}
+@required {Name: str}
+@returns(200) {Canary: Canary?{Id: str?, Name: str?, Code: CanaryCodeOutput?{SourceLocationArn: str?, Handler: str?}, ExecutionRoleArn: str?, Schedule: CanaryScheduleOutput?{Expression: str?, DurationInSeconds: int(i64)?}, RunConfig: CanaryRunConfigOutput?{TimeoutInSeconds: int?, MemoryInMB: int?, ActiveTracing: bool?}, SuccessRetentionPeriodInDays: int?, FailureRetentionPeriodInDays: int?, Status: CanaryStatus?{State: str?, StateReason: str?, StateReasonCode: str?}, Timeline: CanaryTimeline?{Created: str(timestamp)?, LastModified: str(timestamp)?, LastStarted: str(timestamp)?, LastStopped: str(timestamp)?}, ArtifactS3Location: str?, EngineArn: str?, RuntimeVersion: str?, VpcConfig: VpcConfigOutput?{VpcId: str?, SubnetIds: [str]?, SecurityGroupIds: [str]?}, VisualReference: VisualReferenceOutput?{BaseScreenshots: [BaseScreenshot]?, BaseCanaryRunId: str?}, Tags: map<str,str>?, ArtifactConfig: ArtifactConfigOutput?{S3Encryption: S3EncryptionConfig?{EncryptionMode: str?, KmsKeyArn: str?}}}}
+
+@endpoint POST /canary/{name}/runs
+@required {Name: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {CanaryRuns: [CanaryRun]?, NextToken: str?}
+
+@endgroup
+
+@group group
+@endpoint GET /group/{groupIdentifier}
+@required {GroupIdentifier: str}
+@returns(200) {Group: Group?{Id: str?, Name: str?, Arn: str?, Tags: map<str,str>?, CreatedTime: str(timestamp)?, LastModifiedTime: str(timestamp)?}}
+
+@endgroup
+
+@group resource
+@endpoint POST /resource/{resourceArn}/groups
+@required {ResourceArn: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Groups: [GroupSummary]?, NextToken: str?}
+
+@endgroup
+
+@group group
+@endpoint POST /group/{groupIdentifier}/resources
+@required {GroupIdentifier: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Resources: [str]?, NextToken: str?}
+
+@endgroup
+
+@group groups
+@endpoint POST /groups
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Groups: [GroupSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group canary
+@endpoint POST /canary/{name}/start
+@required {Name: str}
+
+@endpoint POST /canary/{name}/stop
+@required {Name: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group canary
+@endpoint PATCH /canary/{name}
+@required {Name: str}
+@optional {Code: CanaryCodeInput, ExecutionRoleArn: str, RuntimeVersion: str, Schedule: CanaryScheduleInput, RunConfig: CanaryRunConfigInput, SuccessRetentionPeriodInDays: int, FailureRetentionPeriodInDays: int, VpcConfig: VpcConfigInput, VisualReference: VisualReferenceInput, ArtifactS3Location: str, ArtifactConfig: ArtifactConfigInput}
+
+@endgroup
+
+@end

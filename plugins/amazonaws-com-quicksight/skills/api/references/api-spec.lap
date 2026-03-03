@@ -1,0 +1,845 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon QuickSight
+@version 2018-04-01
+@auth AWS SigV4
+@endpoints 177
+@hint download_for_search
+@toc accounts(171), account(3), resources(3)
+
+@group accounts
+@endpoint POST /accounts/{AwsAccountId}/topics/{TopicId}/batch-create-reviewed-answers
+@required {AwsAccountId: str, TopicId: str, Answers: [CreateTopicReviewedAnswer]}
+@returns(200) {TopicId: str?, TopicArn: str?, SucceededAnswers: [SucceededTopicReviewedAnswer]?, InvalidAnswers: [InvalidTopicReviewedAnswer]?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/topics/{TopicId}/batch-delete-reviewed-answers
+@required {AwsAccountId: str, TopicId: str}
+@optional {AnswerIds: [str]}
+@returns(200) {TopicId: str?, TopicArn: str?, SucceededAnswers: [SucceededTopicReviewedAnswer]?, InvalidAnswers: [InvalidTopicReviewedAnswer]?, RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
+@required {AwsAccountId: str, DataSetId: str, IngestionId: str}
+@returns(200) {Arn: str?, IngestionId: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/customizations
+@required {AwsAccountId: str, AccountCustomization: AccountCustomization}
+@optional {namespace: str, Tags: [Tag]}
+@returns(200) {Arn: str?, AwsAccountId: str?, Namespace: str?, AccountCustomization: AccountCustomization?{DefaultTheme: str?, DefaultEmailCustomizationTemplate: str?}, RequestId: str?, Status: int?}
+
+@endgroup
+
+@group account
+@endpoint POST /account/{AwsAccountId}
+@required {AwsAccountId: str, AuthenticationMethod: str, AccountName: str, NotificationEmail: str}
+@optional {Edition: str, ActiveDirectoryName: str, Realm: str, DirectoryId: str, AdminGroup: [str], AuthorGroup: [str], ReaderGroup: [str], AdminProGroup: [str], AuthorProGroup: [str], ReaderProGroup: [str], FirstName: str, LastName: str, EmailAddress: str, ContactNumber: str, IAMIdentityCenterInstanceArn: str}
+@returns(200) {SignupResponse: SignupResponse?{IAMUser: bool?, userLoginName: str?, accountName: str?, directoryType: str?}, Status: int?, RequestId: str?}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts/{AwsAccountId}/analyses/{AnalysisId}
+@required {AwsAccountId: str, AnalysisId: str, Name: str}
+@optional {Parameters: Parameters, Permissions: [ResourcePermission], SourceEntity: AnalysisSourceEntity, ThemeArn: str, Tags: [Tag], Definition: AnalysisDefinition, ValidationStrategy: ValidationStrategy, FolderArns: [str]}
+@returns(200) {Arn: str?, AnalysisId: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/dashboards/{DashboardId}
+@required {AwsAccountId: str, DashboardId: str, Name: str}
+@optional {Parameters: Parameters, Permissions: [ResourcePermission], SourceEntity: DashboardSourceEntity, Tags: [Tag], VersionDescription: str, DashboardPublishOptions: DashboardPublishOptions, ThemeArn: str, Definition: DashboardVersionDefinition, ValidationStrategy: ValidationStrategy, FolderArns: [str], LinkSharingConfiguration: LinkSharingConfiguration, LinkEntities: [str]}
+@returns(200) {Arn: str?, VersionArn: str?, DashboardId: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/data-sets
+@required {AwsAccountId: str, DataSetId: str, Name: str, PhysicalTableMap: map<str,PhysicalTable>, ImportMode: str}
+@optional {LogicalTableMap: map<str,LogicalTable>, ColumnGroups: [ColumnGroup], FieldFolders: map<str,FieldFolder>, Permissions: [ResourcePermission], RowLevelPermissionDataSet: RowLevelPermissionDataSet, RowLevelPermissionTagConfiguration: RowLevelPermissionTagConfiguration, ColumnLevelPermissionRules: [ColumnLevelPermissionRule], Tags: [Tag], DataSetUsageConfiguration: DataSetUsageConfiguration, DatasetParameters: [DatasetParameter], FolderArns: [str]}
+@returns(200) {Arn: str?, DataSetId: str?, IngestionArn: str?, IngestionId: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/data-sources
+@required {AwsAccountId: str, DataSourceId: str, Name: str, Type: str}
+@optional {DataSourceParameters: DataSourceParameters, Credentials: DataSourceCredentials, Permissions: [ResourcePermission], VpcConnectionProperties: VpcConnectionProperties, SslProperties: SslProperties, Tags: [Tag], FolderArns: [str]}
+@returns(200) {Arn: str?, DataSourceId: str?, CreationStatus: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/folders/{FolderId}
+@required {AwsAccountId: str, FolderId: str}
+@optional {Name: str, FolderType: str, ParentFolderArn: str, Permissions: [ResourcePermission], Tags: [Tag], SharingModel: str}
+@returns(200) {Status: int?, Arn: str?, FolderId: str?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/folders/{FolderId}/members/{MemberType}/{MemberId}
+@required {AwsAccountId: str, FolderId: str, MemberId: str, MemberType: str}
+@returns(200) {Status: int?, FolderMember: FolderMember?{MemberId: str?, MemberType: str?}, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/namespaces/{Namespace}/groups
+@required {AwsAccountId: str, Namespace: str, GroupName: str}
+@optional {Description: str}
+@returns(200) {Group: Group?{Arn: str?, GroupName: str?, Description: str?, PrincipalId: str?}, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
+@required {MemberName: str, GroupName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {GroupMember: GroupMember?{Arn: str?, MemberName: str?}, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/
+@required {AwsAccountId: str, Namespace: str, AssignmentName: str, AssignmentStatus: str}
+@optional {PolicyArn: str, Identities: map<str,[str]>}
+@returns(200) {AssignmentName: str?, AssignmentId: str?, AssignmentStatus: str?, PolicyArn: str?, Identities: map<str,[str]>?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
+@required {DataSetId: str, IngestionId: str, AwsAccountId: str}
+@optional {IngestionType: str}
+@returns(200) {Arn: str?, IngestionId: str?, IngestionStatus: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}
+@required {AwsAccountId: str, Namespace: str, IdentityStore: str}
+@optional {Tags: [Tag]}
+@returns(200) {Arn: str?, Name: str?, CapacityRegion: str?, CreationStatus: str?, IdentityStore: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules
+@required {DataSetId: str, AwsAccountId: str, Schedule: RefreshSchedule}
+@returns(200) {Status: int?, RequestId: str?, ScheduleId: str?, Arn: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/members/{MemberName}
+@required {MemberName: str, AwsAccountId: str, Namespace: str, Role: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/templates/{TemplateId}
+@required {AwsAccountId: str, TemplateId: str}
+@optional {Name: str, Permissions: [ResourcePermission], SourceEntity: TemplateSourceEntity, Tags: [Tag], VersionDescription: str, Definition: TemplateVersionDefinition, ValidationStrategy: ValidationStrategy}
+@returns(200) {Arn: str?, VersionArn: str?, TemplateId: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+@required {AwsAccountId: str, TemplateId: str, AliasName: str, TemplateVersionNumber: int(i64)}
+@returns(200) {TemplateAlias: TemplateAlias?{AliasName: str?, Arn: str?, TemplateVersionNumber: int(i64)?}, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/themes/{ThemeId}
+@required {AwsAccountId: str, ThemeId: str, Name: str, BaseThemeId: str, Configuration: ThemeConfiguration}
+@optional {VersionDescription: str, Permissions: [ResourcePermission], Tags: [Tag]}
+@returns(200) {Arn: str?, VersionArn: str?, ThemeId: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+@required {AwsAccountId: str, ThemeId: str, AliasName: str, ThemeVersionNumber: int(i64)}
+@returns(200) {ThemeAlias: ThemeAlias?{Arn: str?, AliasName: str?, ThemeVersionNumber: int(i64)?}, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/topics
+@required {AwsAccountId: str, TopicId: str, Topic: TopicDetails}
+@optional {Tags: [Tag]}
+@returns(200) {Arn: str?, TopicId: str?, RefreshArn: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/topics/{TopicId}/schedules
+@required {AwsAccountId: str, TopicId: str, DatasetArn: str, RefreshSchedule: TopicRefreshSchedule}
+@optional {DatasetName: str}
+@returns(200) {TopicId: str?, TopicArn: str?, DatasetArn: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/vpc-connections
+@required {AwsAccountId: str, VPCConnectionId: str, Name: str, SubnetIds: [str], SecurityGroupIds: [str], RoleArn: str}
+@optional {DnsResolvers: [str], Tags: [Tag]}
+@returns(200) {Arn: str?, VPCConnectionId: str?, CreationStatus: str?, AvailabilityStatus: str?, RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/customizations
+@required {AwsAccountId: str}
+@optional {namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endgroup
+
+@group account
+@endpoint DELETE /account/{AwsAccountId}
+@required {AwsAccountId: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endgroup
+
+@group accounts
+@endpoint DELETE /accounts/{AwsAccountId}/analyses/{AnalysisId}
+@required {AwsAccountId: str, AnalysisId: str}
+@optional {recovery-window-in-days: int(i64), force-delete-without-recovery: bool}
+@returns(200) {Status: int?, Arn: str?, AnalysisId: str?, DeletionTime: str(timestamp)?, RequestId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/dashboards/{DashboardId}
+@required {AwsAccountId: str, DashboardId: str}
+@optional {version-number: int(i64)}
+@returns(200) {Status: int?, Arn: str?, DashboardId: str?, RequestId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}
+@required {AwsAccountId: str, DataSetId: str}
+@returns(200) {Arn: str?, DataSetId: str?, RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-properties
+@required {AwsAccountId: str, DataSetId: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/data-sources/{DataSourceId}
+@required {AwsAccountId: str, DataSourceId: str}
+@returns(200) {Arn: str?, DataSourceId: str?, RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/folders/{FolderId}
+@required {AwsAccountId: str, FolderId: str}
+@returns(200) {Status: int?, Arn: str?, FolderId: str?, RequestId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/folders/{FolderId}/members/{MemberType}/{MemberId}
+@required {AwsAccountId: str, FolderId: str, MemberId: str, MemberType: str}
+@returns(200) {Status: int?, RequestId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}
+@required {GroupName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
+@required {MemberName: str, GroupName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespace/{Namespace}/iam-policy-assignments/{AssignmentName}
+@required {AwsAccountId: str, AssignmentName: str, Namespace: str}
+@returns(200) {AssignmentName: str?, RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/identity-propagation-config/{Service}
+@required {AwsAccountId: str, Service: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}
+@required {AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules/{ScheduleId}
+@required {DataSetId: str, AwsAccountId: str, ScheduleId: str}
+@returns(200) {Status: int?, RequestId: str?, ScheduleId: str?, Arn: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/custom-permission
+@required {Role: str, AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/members/{MemberName}
+@required {MemberName: str, Role: str, AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/templates/{TemplateId}
+@required {AwsAccountId: str, TemplateId: str}
+@optional {version-number: int(i64)}
+@returns(200) {RequestId: str?, Arn: str?, TemplateId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+@required {AwsAccountId: str, TemplateId: str, AliasName: str}
+@returns(200) {Status: int?, TemplateId: str?, AliasName: str?, Arn: str?, RequestId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/themes/{ThemeId}
+@required {AwsAccountId: str, ThemeId: str}
+@optional {version-number: int(i64)}
+@returns(200) {Arn: str?, RequestId: str?, Status: int?, ThemeId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+@required {AwsAccountId: str, ThemeId: str, AliasName: str}
+@returns(200) {AliasName: str?, Arn: str?, RequestId: str?, Status: int?, ThemeId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/topics/{TopicId}
+@required {AwsAccountId: str, TopicId: str}
+@returns(200) {Arn: str?, TopicId: str?, RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/topics/{TopicId}/schedules/{DatasetId}
+@required {AwsAccountId: str, TopicId: str, DatasetId: str}
+@returns(200) {TopicId: str?, TopicArn: str?, DatasetArn: str?, Status: int?, RequestId: str?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}
+@required {UserName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/user-principals/{PrincipalId}
+@required {PrincipalId: str, AwsAccountId: str, Namespace: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /accounts/{AwsAccountId}/vpc-connections/{VPCConnectionId}
+@required {AwsAccountId: str, VPCConnectionId: str}
+@returns(200) {Arn: str?, VPCConnectionId: str?, DeletionStatus: str?, AvailabilityStatus: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/customizations
+@required {AwsAccountId: str}
+@optional {namespace: str, resolved: bool}
+@returns(200) {Arn: str?, AwsAccountId: str?, Namespace: str?, AccountCustomization: AccountCustomization?{DefaultTheme: str?, DefaultEmailCustomizationTemplate: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/settings
+@required {AwsAccountId: str}
+@returns(200) {AccountSettings: AccountSettings?{AccountName: str?, Edition: str?, DefaultNamespace: str?, NotificationEmail: str?, PublicSharingEnabled: bool?, TerminationProtectionEnabled: bool?}, RequestId: str?, Status: int?}
+
+@endgroup
+
+@group account
+@endpoint GET /account/{AwsAccountId}
+@required {AwsAccountId: str}
+@returns(200) {AccountInfo: AccountInfo?{AccountName: str?, Edition: str?, NotificationEmail: str?, AuthenticationType: str?, AccountSubscriptionStatus: str?, IAMIdentityCenterInstanceArn: str?}, Status: int?, RequestId: str?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{AwsAccountId}/analyses/{AnalysisId}
+@required {AwsAccountId: str, AnalysisId: str}
+@returns(200) {Analysis: Analysis?{AnalysisId: str?, Arn: str?, Name: str?, Status: str?, Errors: [AnalysisError]?, DataSetArns: [str]?, ThemeArn: str?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, Sheets: [Sheet]?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/analyses/{AnalysisId}/definition
+@required {AwsAccountId: str, AnalysisId: str}
+@returns(200) {AnalysisId: str?, Name: str?, Errors: [AnalysisError]?, ResourceStatus: str?, ThemeArn: str?, Definition: AnalysisDefinition?{DataSetIdentifierDeclarations: [DataSetIdentifierDeclaration], Sheets: [SheetDefinition]?, CalculatedFields: [CalculatedField]?, ParameterDeclarations: [ParameterDeclaration]?, FilterGroups: [FilterGroup]?, ColumnConfigurations: [ColumnConfiguration]?, AnalysisDefaults: AnalysisDefaults?{DefaultNewSheetConfiguration: DefaultNewSheetConfiguration{InteractiveLayoutConfiguration: DefaultInteractiveLayoutConfiguration?, PaginatedLayoutConfiguration: DefaultPaginatedLayoutConfiguration?, SheetContentType: str?}}, Options: AssetOptions?{Timezone: str?, WeekStart: str?}, QueryExecutionOptions: QueryExecutionOptions?{QueryExecutionMode: str?}}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/analyses/{AnalysisId}/permissions
+@required {AwsAccountId: str, AnalysisId: str}
+@returns(200) {AnalysisId: str?, AnalysisArn: str?, Permissions: [ResourcePermission]?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/asset-bundle-export-jobs/{AssetBundleExportJobId}
+@required {AwsAccountId: str, AssetBundleExportJobId: str}
+@returns(200) {JobStatus: str?, DownloadUrl: str?, Errors: [AssetBundleExportJobError]?, Arn: str?, CreatedTime: str(timestamp)?, AssetBundleExportJobId: str?, AwsAccountId: str?, ResourceArns: [str]?, IncludeAllDependencies: bool?, ExportFormat: str?, CloudFormationOverridePropertyConfiguration: AssetBundleCloudFormationOverridePropertyConfiguration?{ResourceIdOverrideConfiguration: AssetBundleExportJobResourceIdOverrideConfiguration?{PrefixForAllResources: bool?}, VPCConnections: [AssetBundleExportJobVPCConnectionOverrideProperties]?, RefreshSchedules: [AssetBundleExportJobRefreshScheduleOverrideProperties]?, DataSources: [AssetBundleExportJobDataSourceOverrideProperties]?, DataSets: [AssetBundleExportJobDataSetOverrideProperties]?, Themes: [AssetBundleExportJobThemeOverrideProperties]?, Analyses: [AssetBundleExportJobAnalysisOverrideProperties]?, Dashboards: [AssetBundleExportJobDashboardOverrideProperties]?}, RequestId: str?, Status: int?, IncludePermissions: bool?, IncludeTags: bool?, ValidationStrategy: AssetBundleExportJobValidationStrategy?{StrictModeForAllResources: bool?}, Warnings: [AssetBundleExportJobWarning]?}
+
+@endpoint GET /accounts/{AwsAccountId}/asset-bundle-import-jobs/{AssetBundleImportJobId}
+@required {AwsAccountId: str, AssetBundleImportJobId: str}
+@returns(200) {JobStatus: str?, Errors: [AssetBundleImportJobError]?, RollbackErrors: [AssetBundleImportJobError]?, Arn: str?, CreatedTime: str(timestamp)?, AssetBundleImportJobId: str?, AwsAccountId: str?, AssetBundleImportSource: AssetBundleImportSourceDescription?{Body: str?, S3Uri: str?}, OverrideParameters: AssetBundleImportJobOverrideParameters?{ResourceIdOverrideConfiguration: AssetBundleImportJobResourceIdOverrideConfiguration?{PrefixForAllResources: str?}, VPCConnections: [AssetBundleImportJobVPCConnectionOverrideParameters]?, RefreshSchedules: [AssetBundleImportJobRefreshScheduleOverrideParameters]?, DataSources: [AssetBundleImportJobDataSourceOverrideParameters]?, DataSets: [AssetBundleImportJobDataSetOverrideParameters]?, Themes: [AssetBundleImportJobThemeOverrideParameters]?, Analyses: [AssetBundleImportJobAnalysisOverrideParameters]?, Dashboards: [AssetBundleImportJobDashboardOverrideParameters]?}, FailureAction: str?, RequestId: str?, Status: int?, OverridePermissions: AssetBundleImportJobOverridePermissions?{DataSources: [AssetBundleImportJobDataSourceOverridePermissions]?, DataSets: [AssetBundleImportJobDataSetOverridePermissions]?, Themes: [AssetBundleImportJobThemeOverridePermissions]?, Analyses: [AssetBundleImportJobAnalysisOverridePermissions]?, Dashboards: [AssetBundleImportJobDashboardOverridePermissions]?}, OverrideTags: AssetBundleImportJobOverrideTags?{VPCConnections: [AssetBundleImportJobVPCConnectionOverrideTags]?, DataSources: [AssetBundleImportJobDataSourceOverrideTags]?, DataSets: [AssetBundleImportJobDataSetOverrideTags]?, Themes: [AssetBundleImportJobThemeOverrideTags]?, Analyses: [AssetBundleImportJobAnalysisOverrideTags]?, Dashboards: [AssetBundleImportJobDashboardOverrideTags]?}, OverrideValidationStrategy: AssetBundleImportJobOverrideValidationStrategy?{StrictModeForAllResources: bool?}, Warnings: [AssetBundleImportJobWarning]?}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}
+@required {AwsAccountId: str, DashboardId: str}
+@optional {version-number: int(i64), alias-name: str}
+@returns(200) {Dashboard: Dashboard?{DashboardId: str?, Arn: str?, Name: str?, Version: DashboardVersion?{CreatedTime: str(timestamp)?, Errors: [DashboardError]?, VersionNumber: int(i64)?, Status: str?, Arn: str?, SourceEntityArn: str?, DataSetArns: [str]?, Description: str?, ThemeArn: str?, Sheets: [Sheet]?}, CreatedTime: str(timestamp)?, LastPublishedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, LinkEntities: [str]?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/definition
+@required {AwsAccountId: str, DashboardId: str}
+@optional {version-number: int(i64), alias-name: str}
+@returns(200) {DashboardId: str?, Errors: [DashboardError]?, Name: str?, ResourceStatus: str?, ThemeArn: str?, Definition: DashboardVersionDefinition?{DataSetIdentifierDeclarations: [DataSetIdentifierDeclaration], Sheets: [SheetDefinition]?, CalculatedFields: [CalculatedField]?, ParameterDeclarations: [ParameterDeclaration]?, FilterGroups: [FilterGroup]?, ColumnConfigurations: [ColumnConfiguration]?, AnalysisDefaults: AnalysisDefaults?{DefaultNewSheetConfiguration: DefaultNewSheetConfiguration{InteractiveLayoutConfiguration: DefaultInteractiveLayoutConfiguration?, PaginatedLayoutConfiguration: DefaultPaginatedLayoutConfiguration?, SheetContentType: str?}}, Options: AssetOptions?{Timezone: str?, WeekStart: str?}}, Status: int?, RequestId: str?, DashboardPublishOptions: DashboardPublishOptions?{AdHocFilteringOption: AdHocFilteringOption?{AvailabilityStatus: str?}, ExportToCSVOption: ExportToCSVOption?{AvailabilityStatus: str?}, SheetControlsOption: SheetControlsOption?{VisibilityState: str?}, VisualPublishOptions: DashboardVisualPublishOptions?{ExportHiddenFieldsOption: ExportHiddenFieldsOption?{AvailabilityStatus: str?}}, SheetLayoutElementMaximizationOption: SheetLayoutElementMaximizationOption?{AvailabilityStatus: str?}, VisualMenuOption: VisualMenuOption?{AvailabilityStatus: str?}, VisualAxisSortOption: VisualAxisSortOption?{AvailabilityStatus: str?}, ExportWithHiddenFieldsOption: ExportWithHiddenFieldsOption?{AvailabilityStatus: str?}, DataPointDrillUpDownOption: DataPointDrillUpDownOption?{AvailabilityStatus: str?}, DataPointMenuLabelOption: DataPointMenuLabelOption?{AvailabilityStatus: str?}, DataPointTooltipOption: DataPointTooltipOption?{AvailabilityStatus: str?}}}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/permissions
+@required {AwsAccountId: str, DashboardId: str}
+@returns(200) {DashboardId: str?, DashboardArn: str?, Permissions: [ResourcePermission]?, Status: int?, RequestId: str?, LinkSharingConfiguration: LinkSharingConfiguration?{Permissions: [ResourcePermission]?}}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs/{SnapshotJobId}
+@required {AwsAccountId: str, DashboardId: str, SnapshotJobId: str}
+@returns(200) {AwsAccountId: str?, DashboardId: str?, SnapshotJobId: str?, UserConfiguration: SnapshotUserConfigurationRedacted?{AnonymousUsers: [SnapshotAnonymousUserRedacted]?}, SnapshotConfiguration: SnapshotConfiguration?{FileGroups: [SnapshotFileGroup], DestinationConfiguration: SnapshotDestinationConfiguration?{S3Destinations: [SnapshotS3DestinationConfiguration]?}, Parameters: Parameters?{StringParameters: [StringParameter]?, IntegerParameters: [IntegerParameter]?, DecimalParameters: [DecimalParameter]?, DateTimeParameters: [DateTimeParameter]?}}, Arn: str?, JobStatus: str?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs/{SnapshotJobId}/result
+@required {AwsAccountId: str, DashboardId: str, SnapshotJobId: str}
+@returns(200) {Arn: str?, JobStatus: str?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, Result: SnapshotJobResult?{AnonymousUsers: [AnonymousUserSnapshotJobResult]?}, ErrorInfo: SnapshotJobErrorInfo?{ErrorMessage: str?, ErrorType: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}
+@required {AwsAccountId: str, DataSetId: str}
+@returns(200) {DataSet: DataSet?{Arn: str?, DataSetId: str?, Name: str?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, PhysicalTableMap: map<str,PhysicalTable>?, LogicalTableMap: map<str,LogicalTable>?, OutputColumns: [OutputColumn]?, ImportMode: str?, ConsumedSpiceCapacityInBytes: int(i64)?, ColumnGroups: [ColumnGroup]?, FieldFolders: map<str,FieldFolder>?, RowLevelPermissionDataSet: RowLevelPermissionDataSet?{Namespace: str?, Arn: str, PermissionPolicy: str, FormatVersion: str?, Status: str?}, RowLevelPermissionTagConfiguration: RowLevelPermissionTagConfiguration?{Status: str?, TagRules: [RowLevelPermissionTagRule], TagRuleConfigurations: [[str]]?}, ColumnLevelPermissionRules: [ColumnLevelPermissionRule]?, DataSetUsageConfiguration: DataSetUsageConfiguration?{DisableUseAsDirectQuerySource: bool?, DisableUseAsImportedSource: bool?}, DatasetParameters: [DatasetParameter]?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/permissions
+@required {AwsAccountId: str, DataSetId: str}
+@returns(200) {DataSetArn: str?, DataSetId: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-properties
+@required {AwsAccountId: str, DataSetId: str}
+@returns(200) {RequestId: str?, Status: int?, DataSetRefreshProperties: DataSetRefreshProperties?{RefreshConfiguration: RefreshConfiguration{IncrementalRefresh: IncrementalRefresh{LookbackWindow: LookbackWindow}}}}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sources/{DataSourceId}
+@required {AwsAccountId: str, DataSourceId: str}
+@returns(200) {DataSource: DataSource?{Arn: str?, DataSourceId: str?, Name: str?, Type: str?, Status: str?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, DataSourceParameters: DataSourceParameters?{AmazonElasticsearchParameters: AmazonElasticsearchParameters?{Domain: str}, AthenaParameters: AthenaParameters?{WorkGroup: str?, RoleArn: str?}, AuroraParameters: AuroraParameters?{Host: str, Port: int, Database: str}, AuroraPostgreSqlParameters: AuroraPostgreSqlParameters?{Host: str, Port: int, Database: str}, AwsIotAnalyticsParameters: AwsIotAnalyticsParameters?{DataSetName: str}, JiraParameters: JiraParameters?{SiteBaseUrl: str}, MariaDbParameters: MariaDbParameters?{Host: str, Port: int, Database: str}, MySqlParameters: MySqlParameters?{Host: str, Port: int, Database: str}, OracleParameters: OracleParameters?{Host: str, Port: int, Database: str}, PostgreSqlParameters: PostgreSqlParameters?{Host: str, Port: int, Database: str}, PrestoParameters: PrestoParameters?{Host: str, Port: int, Catalog: str}, RdsParameters: RdsParameters?{InstanceId: str, Database: str}, RedshiftParameters: RedshiftParameters?{Host: str?, Port: int?, Database: str, ClusterId: str?, IAMParameters: RedshiftIAMParameters?, IdentityCenterConfiguration: IdentityCenterConfiguration?}, S3Parameters: S3Parameters?{ManifestFileLocation: ManifestFileLocation, RoleArn: str?}, ServiceNowParameters: ServiceNowParameters?{SiteBaseUrl: str}, SnowflakeParameters: SnowflakeParameters?{Host: str, Database: str, Warehouse: str}, SparkParameters: SparkParameters?{Host: str, Port: int}, SqlServerParameters: SqlServerParameters?{Host: str, Port: int, Database: str}, TeradataParameters: TeradataParameters?{Host: str, Port: int, Database: str}, TwitterParameters: TwitterParameters?{Query: str, MaxRows: int}, AmazonOpenSearchParameters: AmazonOpenSearchParameters?{Domain: str}, ExasolParameters: ExasolParameters?{Host: str, Port: int}, DatabricksParameters: DatabricksParameters?{Host: str, Port: int, SqlEndpointPath: str}, StarburstParameters: StarburstParameters?{Host: str, Port: int, Catalog: str, ProductType: str?}, TrinoParameters: TrinoParameters?{Host: str, Port: int, Catalog: str}, BigQueryParameters: BigQueryParameters?{ProjectId: str, DataSetRegion: str?}}, AlternateDataSourceParameters: [DataSourceParameters]?, VpcConnectionProperties: VpcConnectionProperties?{VpcConnectionArn: str}, SslProperties: SslProperties?{DisableSsl: bool?}, ErrorInfo: DataSourceErrorInfo?{Type: str?, Message: str?}, SecretArn: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sources/{DataSourceId}/permissions
+@required {AwsAccountId: str, DataSourceId: str}
+@returns(200) {DataSourceArn: str?, DataSourceId: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/folders/{FolderId}
+@required {AwsAccountId: str, FolderId: str}
+@returns(200) {Status: int?, Folder: Folder?{FolderId: str?, Arn: str?, Name: str?, FolderType: str?, FolderPath: [str]?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, SharingModel: str?}, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/folders/{FolderId}/permissions
+@required {AwsAccountId: str, FolderId: str}
+@optional {namespace: str, max-results: int, next-token: str}
+@returns(200) {Status: int?, FolderId: str?, Arn: str?, Permissions: [ResourcePermission]?, RequestId: str?, NextToken: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/folders/{FolderId}/resolved-permissions
+@required {AwsAccountId: str, FolderId: str}
+@optional {namespace: str, max-results: int, next-token: str}
+@returns(200) {Status: int?, FolderId: str?, Arn: str?, Permissions: [ResourcePermission]?, RequestId: str?, NextToken: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}
+@required {GroupName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {Group: Group?{Arn: str?, GroupName: str?, Description: str?, PrincipalId: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
+@required {MemberName: str, GroupName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {GroupMember: GroupMember?{Arn: str?, MemberName: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/{AssignmentName}
+@required {AwsAccountId: str, AssignmentName: str, Namespace: str}
+@returns(200) {IAMPolicyAssignment: IAMPolicyAssignment?{AwsAccountId: str?, AssignmentId: str?, AssignmentName: str?, PolicyArn: str?, Identities: map<str,[str]>?, AssignmentStatus: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
+@required {AwsAccountId: str, DataSetId: str, IngestionId: str}
+@returns(200) {Ingestion: Ingestion?{Arn: str, IngestionId: str?, IngestionStatus: str, ErrorInfo: ErrorInfo?{Type: str?, Message: str?}, RowInfo: RowInfo?{RowsIngested: int(i64)?, RowsDropped: int(i64)?, TotalRowsInDataset: int(i64)?}, QueueInfo: QueueInfo?{WaitingOnIngestion: str, QueuedIngestion: str}, CreatedTime: str(timestamp), IngestionTimeInSeconds: int(i64)?, IngestionSizeInBytes: int(i64)?, RequestSource: str?, RequestType: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/ip-restriction
+@required {AwsAccountId: str}
+@returns(200) {AwsAccountId: str?, IpRestrictionRuleMap: map<str,str>?, VpcIdRestrictionRuleMap: map<str,str>?, VpcEndpointIdRestrictionRuleMap: map<str,str>?, Enabled: bool?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/key-registration
+@required {AwsAccountId: str}
+@optional {default-key-only: bool}
+@returns(200) {AwsAccountId: str?, KeyRegistration: [RegisteredCustomerManagedKey]?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}
+@required {AwsAccountId: str, Namespace: str}
+@returns(200) {Namespace: NamespaceInfoV2?{Name: str?, Arn: str?, CapacityRegion: str?, CreationStatus: str?, IdentityStore: str?, NamespaceError: NamespaceError?{Type: str?, Message: str?}}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules/{ScheduleId}
+@required {AwsAccountId: str, DataSetId: str, ScheduleId: str}
+@returns(200) {RefreshSchedule: RefreshSchedule?{ScheduleId: str, ScheduleFrequency: RefreshFrequency{Interval: str, RefreshOnDay: ScheduleRefreshOnEntity?{DayOfWeek: str?, DayOfMonth: str?}, Timezone: str?, TimeOfTheDay: str?}, StartAfterDateTime: str(timestamp)?, RefreshType: str, Arn: str?}, Status: int?, RequestId: str?, Arn: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/custom-permission
+@required {Role: str, AwsAccountId: str, Namespace: str}
+@returns(200) {CustomPermissionsName: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/templates/{TemplateId}
+@required {AwsAccountId: str, TemplateId: str}
+@optional {version-number: int(i64), alias-name: str}
+@returns(200) {Template: Template?{Arn: str?, Name: str?, Version: TemplateVersion?{CreatedTime: str(timestamp)?, Errors: [TemplateError]?, VersionNumber: int(i64)?, Status: str?, DataSetConfigurations: [DataSetConfiguration]?, Description: str?, SourceEntityArn: str?, ThemeArn: str?, Sheets: [Sheet]?}, TemplateId: str?, LastUpdatedTime: str(timestamp)?, CreatedTime: str(timestamp)?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+@required {AwsAccountId: str, TemplateId: str, AliasName: str}
+@returns(200) {TemplateAlias: TemplateAlias?{AliasName: str?, Arn: str?, TemplateVersionNumber: int(i64)?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/templates/{TemplateId}/definition
+@required {AwsAccountId: str, TemplateId: str}
+@optional {version-number: int(i64), alias-name: str}
+@returns(200) {Name: str?, TemplateId: str?, Errors: [TemplateError]?, ResourceStatus: str?, ThemeArn: str?, Definition: TemplateVersionDefinition?{DataSetConfigurations: [DataSetConfiguration], Sheets: [SheetDefinition]?, CalculatedFields: [CalculatedField]?, ParameterDeclarations: [ParameterDeclaration]?, FilterGroups: [FilterGroup]?, ColumnConfigurations: [ColumnConfiguration]?, AnalysisDefaults: AnalysisDefaults?{DefaultNewSheetConfiguration: DefaultNewSheetConfiguration{InteractiveLayoutConfiguration: DefaultInteractiveLayoutConfiguration?, PaginatedLayoutConfiguration: DefaultPaginatedLayoutConfiguration?, SheetContentType: str?}}, Options: AssetOptions?{Timezone: str?, WeekStart: str?}, QueryExecutionOptions: QueryExecutionOptions?{QueryExecutionMode: str?}}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/templates/{TemplateId}/permissions
+@required {AwsAccountId: str, TemplateId: str}
+@returns(200) {TemplateId: str?, TemplateArn: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/themes/{ThemeId}
+@required {AwsAccountId: str, ThemeId: str}
+@optional {version-number: int(i64), alias-name: str}
+@returns(200) {Theme: Theme?{Arn: str?, Name: str?, ThemeId: str?, Version: ThemeVersion?{VersionNumber: int(i64)?, Arn: str?, Description: str?, BaseThemeId: str?, CreatedTime: str(timestamp)?, Configuration: ThemeConfiguration?{DataColorPalette: DataColorPalette?, UIColorPalette: UIColorPalette?, Sheet: SheetStyle?, Typography: Typography?}, Errors: [ThemeError]?, Status: str?}, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?, Type: str?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+@required {AwsAccountId: str, ThemeId: str, AliasName: str}
+@returns(200) {ThemeAlias: ThemeAlias?{Arn: str?, AliasName: str?, ThemeVersionNumber: int(i64)?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/themes/{ThemeId}/permissions
+@required {AwsAccountId: str, ThemeId: str}
+@returns(200) {ThemeId: str?, ThemeArn: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics/{TopicId}
+@required {AwsAccountId: str, TopicId: str}
+@returns(200) {Arn: str?, TopicId: str?, Topic: TopicDetails?{Name: str?, Description: str?, UserExperienceVersion: str?, DataSets: [DatasetMetadata]?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics/{TopicId}/permissions
+@required {AwsAccountId: str, TopicId: str}
+@returns(200) {TopicId: str?, TopicArn: str?, Permissions: [ResourcePermission]?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics/{TopicId}/refresh/{RefreshId}
+@required {AwsAccountId: str, TopicId: str, RefreshId: str}
+@returns(200) {RefreshDetails: TopicRefreshDetails?{RefreshArn: str?, RefreshId: str?, RefreshStatus: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics/{TopicId}/schedules/{DatasetId}
+@required {AwsAccountId: str, TopicId: str, DatasetId: str}
+@returns(200) {TopicId: str?, TopicArn: str?, DatasetArn: str?, RefreshSchedule: TopicRefreshSchedule?{IsEnabled: bool, BasedOnSpiceSchedule: bool, StartingAt: str(timestamp)?, Timezone: str?, RepeatAt: str?, TopicScheduleType: str?}, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}
+@required {UserName: str, AwsAccountId: str, Namespace: str}
+@returns(200) {User: User?{Arn: str?, UserName: str?, Email: str?, Role: str?, IdentityType: str?, Active: bool?, PrincipalId: str?, CustomPermissionsName: str?, ExternalLoginFederationProviderType: str?, ExternalLoginFederationProviderUrl: str?, ExternalLoginId: str?}, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/vpc-connections/{VPCConnectionId}
+@required {AwsAccountId: str, VPCConnectionId: str}
+@returns(200) {VPCConnection: VPCConnection?{VPCConnectionId: str?, Arn: str?, Name: str?, VPCId: str?, SecurityGroupIds: [str]?, DnsResolvers: [str]?, Status: str?, AvailabilityStatus: str?, NetworkInterfaces: [NetworkInterface]?, RoleArn: str?, CreatedTime: str(timestamp)?, LastUpdatedTime: str(timestamp)?}, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/embed-url/anonymous-user
+@required {AwsAccountId: str, Namespace: str, AuthorizedResourceArns: [str], ExperienceConfiguration: AnonymousUserEmbeddingExperienceConfiguration}
+@optional {SessionLifetimeInMinutes: int(i64), SessionTags: [SessionTag], AllowedDomains: [str]}
+@returns(200) {EmbedUrl: str, Status: int, RequestId: str, AnonymousUserArn: str}
+
+@endpoint POST /accounts/{AwsAccountId}/embed-url/registered-user
+@required {AwsAccountId: str, UserArn: str, ExperienceConfiguration: RegisteredUserEmbeddingExperienceConfiguration}
+@optional {SessionLifetimeInMinutes: int(i64), AllowedDomains: [str]}
+@returns(200) {EmbedUrl: str, Status: int, RequestId: str}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/embed-url
+@required {AwsAccountId: str, DashboardId: str, creds-type: str}
+@optional {session-lifetime: int(i64), undo-redo-disabled: bool, reset-disabled: bool, state-persistence-enabled: bool, user-arn: str, namespace: str, additional-dashboard-ids: [str]}
+@returns(200) {EmbedUrl: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/session-embed-url
+@required {AwsAccountId: str}
+@optional {entry-point: str, session-lifetime: int(i64), user-arn: str}
+@returns(200) {EmbedUrl: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/analyses
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {AnalysisSummaryList: [AnalysisSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/asset-bundle-export-jobs
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {AssetBundleExportJobSummaryList: [AssetBundleExportJobSummary]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/asset-bundle-import-jobs
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {AssetBundleImportJobSummaryList: [AssetBundleImportJobSummary]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/versions
+@required {AwsAccountId: str, DashboardId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {DashboardVersionSummaryList: [DashboardVersionSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/dashboards
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {DashboardSummaryList: [DashboardSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {DataSetSummaries: [DataSetSummary]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sources
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {DataSources: [DataSource]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/folders/{FolderId}/members
+@required {AwsAccountId: str, FolderId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Status: int?, FolderMemberList: [MemberIdArnPair]?, NextToken: str?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/folders
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Status: int?, FolderSummaryList: [FolderSummary]?, NextToken: str?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members
+@required {GroupName: str, AwsAccountId: str, Namespace: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {GroupMemberList: [GroupMember]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups
+@required {AwsAccountId: str, Namespace: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {GroupList: [Group]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/v2/iam-policy-assignments
+@required {AwsAccountId: str, Namespace: str}
+@optional {assignment-status: str, next-token: str, max-results: int}
+@returns(200) {IAMPolicyAssignments: [IAMPolicyAssignmentSummary]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}/iam-policy-assignments
+@required {AwsAccountId: str, UserName: str, Namespace: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {ActiveAssignments: [ActiveIAMPolicyAssignment]?, RequestId: str?, NextToken: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/identity-propagation-config
+@required {AwsAccountId: str}
+@optional {max-results: int, next-token: str}
+@returns(200) {Services: [AuthorizedTargetsByService]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions
+@required {DataSetId: str, AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Ingestions: [Ingestion]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {Namespaces: [NamespaceInfoV2]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules
+@required {AwsAccountId: str, DataSetId: str}
+@returns(200) {RefreshSchedules: [RefreshSchedule]?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/members
+@required {Role: str, AwsAccountId: str, Namespace: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {MembersList: [str]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endgroup
+
+@group resources
+@endpoint GET /resources/{ResourceArn}/tags
+@required {ResourceArn: str}
+@returns(200) {Tags: [Tag]?, RequestId: str?, Status: int?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts/{AwsAccountId}/templates/{TemplateId}/aliases
+@required {AwsAccountId: str, TemplateId: str}
+@optional {next-token: str, max-result: int}
+@returns(200) {TemplateAliasList: [TemplateAlias]?, Status: int?, RequestId: str?, NextToken: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/templates/{TemplateId}/versions
+@required {AwsAccountId: str, TemplateId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {TemplateVersionSummaryList: [TemplateVersionSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/templates
+@required {AwsAccountId: str}
+@optional {next-token: str, max-result: int}
+@returns(200) {TemplateSummaryList: [TemplateSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/themes/{ThemeId}/aliases
+@required {AwsAccountId: str, ThemeId: str}
+@optional {next-token: str, max-result: int}
+@returns(200) {ThemeAliasList: [ThemeAlias]?, Status: int?, RequestId: str?, NextToken: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/themes/{ThemeId}/versions
+@required {AwsAccountId: str, ThemeId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {ThemeVersionSummaryList: [ThemeVersionSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/themes
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int, type: str}
+@returns(200) {ThemeSummaryList: [ThemeSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics/{TopicId}/schedules
+@required {AwsAccountId: str, TopicId: str}
+@returns(200) {TopicId: str?, TopicArn: str?, RefreshSchedules: [TopicRefreshScheduleSummary]?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics/{TopicId}/reviewed-answers
+@required {AwsAccountId: str, TopicId: str}
+@returns(200) {TopicId: str?, TopicArn: str?, Answers: [TopicReviewedAnswer]?, Status: int?, RequestId: str?}
+
+@endpoint GET /accounts/{AwsAccountId}/topics
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {TopicsSummaries: [TopicSummary]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}/groups
+@required {UserName: str, AwsAccountId: str, Namespace: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {GroupList: [Group]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users
+@required {AwsAccountId: str, Namespace: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {UserList: [User]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint GET /accounts/{AwsAccountId}/vpc-connections
+@required {AwsAccountId: str}
+@optional {next-token: str, max-results: int}
+@returns(200) {VPCConnectionSummaries: [VPCConnectionSummary]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-properties
+@required {AwsAccountId: str, DataSetId: str, DataSetRefreshProperties: DataSetRefreshProperties}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/namespaces/{Namespace}/users
+@required {AwsAccountId: str, Namespace: str, IdentityType: str, Email: str, UserRole: str}
+@optional {IamArn: str, SessionName: str, UserName: str, CustomPermissionsName: str, ExternalLoginFederationProviderType: str, CustomFederationProviderUrl: str, ExternalLoginId: str, Tags: [Tag]}
+@returns(200) {User: User?{Arn: str?, UserName: str?, Email: str?, Role: str?, IdentityType: str?, Active: bool?, PrincipalId: str?, CustomPermissionsName: str?, ExternalLoginFederationProviderType: str?, ExternalLoginFederationProviderUrl: str?, ExternalLoginId: str?}, UserInvitationUrl: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/restore/analyses/{AnalysisId}
+@required {AwsAccountId: str, AnalysisId: str}
+@returns(200) {Status: int?, Arn: str?, AnalysisId: str?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/search/analyses
+@required {AwsAccountId: str, Filters: [AnalysisSearchFilter]}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {AnalysisSummaryList: [AnalysisSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/search/dashboards
+@required {AwsAccountId: str, Filters: [DashboardSearchFilter]}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {DashboardSummaryList: [DashboardSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/search/data-sets
+@required {AwsAccountId: str, Filters: [DataSetSearchFilter]}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {DataSetSummaries: [DataSetSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/search/data-sources
+@required {AwsAccountId: str, Filters: [DataSourceSearchFilter]}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {DataSourceSummaries: [DataSourceSummary]?, NextToken: str?, Status: int?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/search/folders
+@required {AwsAccountId: str, Filters: [FolderSearchFilter]}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Status: int?, FolderSummaryList: [FolderSummary]?, NextToken: str?, RequestId: str?}
+
+@endpoint POST /accounts/{AwsAccountId}/namespaces/{Namespace}/groups-search
+@required {AwsAccountId: str, Namespace: str, Filters: [GroupSearchFilter]}
+@optional {next-token: str, max-results: int}
+@returns(200) {GroupList: [Group]?, NextToken: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/asset-bundle-export-jobs/export
+@required {AwsAccountId: str, AssetBundleExportJobId: str, ResourceArns: [str], ExportFormat: str}
+@optional {IncludeAllDependencies: bool, CloudFormationOverridePropertyConfiguration: AssetBundleCloudFormationOverridePropertyConfiguration, IncludePermissions: bool, IncludeTags: bool, ValidationStrategy: AssetBundleExportJobValidationStrategy}
+@returns(200) {Arn: str?, AssetBundleExportJobId: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/asset-bundle-import-jobs/import
+@required {AwsAccountId: str, AssetBundleImportJobId: str, AssetBundleImportSource: AssetBundleImportSource}
+@optional {OverrideParameters: AssetBundleImportJobOverrideParameters, FailureAction: str, OverridePermissions: AssetBundleImportJobOverridePermissions, OverrideTags: AssetBundleImportJobOverrideTags, OverrideValidationStrategy: AssetBundleImportJobOverrideValidationStrategy}
+@returns(200) {Arn: str?, AssetBundleImportJobId: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs
+@required {AwsAccountId: str, DashboardId: str, SnapshotJobId: str, UserConfiguration: SnapshotUserConfiguration, SnapshotConfiguration: SnapshotConfiguration}
+@returns(200) {Arn: str?, SnapshotJobId: str?, RequestId: str?, Status: int?}
+
+@endgroup
+
+@group resources
+@endpoint POST /resources/{ResourceArn}/tags
+@required {ResourceArn: str, Tags: [Tag]}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint DELETE /resources/{ResourceArn}/tags
+@required {ResourceArn: str, keys: [str]}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endgroup
+
+@group accounts
+@endpoint PUT /accounts/{AwsAccountId}/customizations
+@required {AwsAccountId: str, AccountCustomization: AccountCustomization}
+@optional {namespace: str}
+@returns(200) {Arn: str?, AwsAccountId: str?, Namespace: str?, AccountCustomization: AccountCustomization?{DefaultTheme: str?, DefaultEmailCustomizationTemplate: str?}, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/settings
+@required {AwsAccountId: str, DefaultNamespace: str}
+@optional {NotificationEmail: str, TerminationProtectionEnabled: bool}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/analyses/{AnalysisId}
+@required {AwsAccountId: str, AnalysisId: str, Name: str}
+@optional {Parameters: Parameters, SourceEntity: AnalysisSourceEntity, ThemeArn: str, Definition: AnalysisDefinition, ValidationStrategy: ValidationStrategy}
+@returns(200) {Arn: str?, AnalysisId: str?, UpdateStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/analyses/{AnalysisId}/permissions
+@required {AwsAccountId: str, AnalysisId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {AnalysisArn: str?, AnalysisId: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}
+@required {AwsAccountId: str, DashboardId: str, Name: str}
+@optional {SourceEntity: DashboardSourceEntity, Parameters: Parameters, VersionDescription: str, DashboardPublishOptions: DashboardPublishOptions, ThemeArn: str, Definition: DashboardVersionDefinition, ValidationStrategy: ValidationStrategy}
+@returns(200) {Arn: str?, VersionArn: str?, DashboardId: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}/linked-entities
+@required {AwsAccountId: str, DashboardId: str, LinkEntities: [str]}
+@returns(200) {RequestId: str?, Status: int?, DashboardArn: str?, LinkEntities: [str]?}
+
+@endpoint PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}/permissions
+@required {AwsAccountId: str, DashboardId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission], GrantLinkPermissions: [ResourcePermission], RevokeLinkPermissions: [ResourcePermission]}
+@returns(200) {DashboardArn: str?, DashboardId: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?, LinkSharingConfiguration: LinkSharingConfiguration?{Permissions: [ResourcePermission]?}}
+
+@endpoint PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}/versions/{VersionNumber}
+@required {AwsAccountId: str, DashboardId: str, VersionNumber: int(i64)}
+@returns(200) {DashboardId: str?, DashboardArn: str?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}
+@required {AwsAccountId: str, DataSetId: str, Name: str, PhysicalTableMap: map<str,PhysicalTable>, ImportMode: str}
+@optional {LogicalTableMap: map<str,LogicalTable>, ColumnGroups: [ColumnGroup], FieldFolders: map<str,FieldFolder>, RowLevelPermissionDataSet: RowLevelPermissionDataSet, RowLevelPermissionTagConfiguration: RowLevelPermissionTagConfiguration, ColumnLevelPermissionRules: [ColumnLevelPermissionRule], DataSetUsageConfiguration: DataSetUsageConfiguration, DatasetParameters: [DatasetParameter]}
+@returns(200) {Arn: str?, DataSetId: str?, IngestionArn: str?, IngestionId: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/data-sets/{DataSetId}/permissions
+@required {AwsAccountId: str, DataSetId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {DataSetArn: str?, DataSetId: str?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/data-sources/{DataSourceId}
+@required {AwsAccountId: str, DataSourceId: str, Name: str}
+@optional {DataSourceParameters: DataSourceParameters, Credentials: DataSourceCredentials, VpcConnectionProperties: VpcConnectionProperties, SslProperties: SslProperties}
+@returns(200) {Arn: str?, DataSourceId: str?, UpdateStatus: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/data-sources/{DataSourceId}/permissions
+@required {AwsAccountId: str, DataSourceId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {DataSourceArn: str?, DataSourceId: str?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/folders/{FolderId}
+@required {AwsAccountId: str, FolderId: str, Name: str}
+@returns(200) {Status: int?, Arn: str?, FolderId: str?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/folders/{FolderId}/permissions
+@required {AwsAccountId: str, FolderId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {Status: int?, Arn: str?, FolderId: str?, Permissions: [ResourcePermission]?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}
+@required {GroupName: str, AwsAccountId: str, Namespace: str}
+@optional {Description: str}
+@returns(200) {Group: Group?{Arn: str?, GroupName: str?, Description: str?, PrincipalId: str?}, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/{AssignmentName}
+@required {AwsAccountId: str, AssignmentName: str, Namespace: str}
+@optional {AssignmentStatus: str, PolicyArn: str, Identities: map<str,[str]>}
+@returns(200) {AssignmentName: str?, AssignmentId: str?, PolicyArn: str?, Identities: map<str,[str]>?, AssignmentStatus: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/identity-propagation-config/{Service}
+@required {AwsAccountId: str, Service: str}
+@optional {AuthorizedTargets: [str]}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/ip-restriction
+@required {AwsAccountId: str}
+@optional {IpRestrictionRuleMap: map<str,str>, VpcIdRestrictionRuleMap: map<str,str>, VpcEndpointIdRestrictionRuleMap: map<str,str>, Enabled: bool}
+@returns(200) {AwsAccountId: str?, RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/key-registration
+@required {AwsAccountId: str, KeyRegistration: [RegisteredCustomerManagedKey]}
+@returns(200) {FailedKeyRegistration: [FailedKeyRegistrationEntry]?, SuccessfulKeyRegistration: [SuccessfulKeyRegistrationEntry]?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/public-sharing-settings
+@required {AwsAccountId: str}
+@optional {PublicSharingEnabled: bool}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules
+@required {DataSetId: str, AwsAccountId: str, Schedule: RefreshSchedule}
+@returns(200) {Status: int?, RequestId: str?, ScheduleId: str?, Arn: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/custom-permission
+@required {Role: str, AwsAccountId: str, Namespace: str, CustomPermissionsName: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint POST /accounts/{AwsAccountId}/spice-capacity-configuration
+@required {AwsAccountId: str, PurchaseMode: str}
+@returns(200) {RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/templates/{TemplateId}
+@required {AwsAccountId: str, TemplateId: str}
+@optional {SourceEntity: TemplateSourceEntity, VersionDescription: str, Name: str, Definition: TemplateVersionDefinition, ValidationStrategy: ValidationStrategy}
+@returns(200) {TemplateId: str?, Arn: str?, VersionArn: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+@required {AwsAccountId: str, TemplateId: str, AliasName: str, TemplateVersionNumber: int(i64)}
+@returns(200) {TemplateAlias: TemplateAlias?{AliasName: str?, Arn: str?, TemplateVersionNumber: int(i64)?}, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/templates/{TemplateId}/permissions
+@required {AwsAccountId: str, TemplateId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {TemplateId: str?, TemplateArn: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/themes/{ThemeId}
+@required {AwsAccountId: str, ThemeId: str, BaseThemeId: str}
+@optional {Name: str, VersionDescription: str, Configuration: ThemeConfiguration}
+@returns(200) {ThemeId: str?, Arn: str?, VersionArn: str?, CreationStatus: str?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+@required {AwsAccountId: str, ThemeId: str, AliasName: str, ThemeVersionNumber: int(i64)}
+@returns(200) {ThemeAlias: ThemeAlias?{Arn: str?, AliasName: str?, ThemeVersionNumber: int(i64)?}, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/themes/{ThemeId}/permissions
+@required {AwsAccountId: str, ThemeId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {ThemeId: str?, ThemeArn: str?, Permissions: [ResourcePermission]?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/topics/{TopicId}
+@required {AwsAccountId: str, TopicId: str, Topic: TopicDetails}
+@returns(200) {TopicId: str?, Arn: str?, RefreshArn: str?, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/topics/{TopicId}/permissions
+@required {AwsAccountId: str, TopicId: str}
+@optional {GrantPermissions: [ResourcePermission], RevokePermissions: [ResourcePermission]}
+@returns(200) {TopicId: str?, TopicArn: str?, Permissions: [ResourcePermission]?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/topics/{TopicId}/schedules/{DatasetId}
+@required {AwsAccountId: str, TopicId: str, DatasetId: str, RefreshSchedule: TopicRefreshSchedule}
+@returns(200) {TopicId: str?, TopicArn: str?, DatasetArn: str?, Status: int?, RequestId: str?}
+
+@endpoint PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}
+@required {UserName: str, AwsAccountId: str, Namespace: str, Email: str, Role: str}
+@optional {CustomPermissionsName: str, UnapplyCustomPermissions: bool, ExternalLoginFederationProviderType: str, CustomFederationProviderUrl: str, ExternalLoginId: str}
+@returns(200) {User: User?{Arn: str?, UserName: str?, Email: str?, Role: str?, IdentityType: str?, Active: bool?, PrincipalId: str?, CustomPermissionsName: str?, ExternalLoginFederationProviderType: str?, ExternalLoginFederationProviderUrl: str?, ExternalLoginId: str?}, RequestId: str?, Status: int?}
+
+@endpoint PUT /accounts/{AwsAccountId}/vpc-connections/{VPCConnectionId}
+@required {AwsAccountId: str, VPCConnectionId: str, Name: str, SubnetIds: [str], SecurityGroupIds: [str], RoleArn: str}
+@optional {DnsResolvers: [str]}
+@returns(200) {Arn: str?, VPCConnectionId: str?, UpdateStatus: str?, AvailabilityStatus: str?, RequestId: str?, Status: int?}
+
+@endgroup
+
+@end

@@ -1,0 +1,403 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Public Api
+@base /v2
+@version v2
+@auth ApiKey (inferred from docs)
+@endpoints 75
+@hint download_for_search
+@toc accounts(3), dns(5), domains(6), linuxhostings(23), mailboxes(7), mailzones(10), mysqldatabases(9), provisioningjobs(1), servicepacks(1), ssh(1), sslcertificaterequests(4), sslcertificates(3), windowshostings(2)
+
+@group accounts
+@endpoint GET /accounts
+@optional {skip: int(int32), take: int(int32), asset_type: str, identifier: str}
+@returns(200)
+
+@endpoint POST /accounts
+@optional {identifier: str, servicepack_id: int(int32), ftp_password: str}
+@returns(202)
+@errors {400}
+
+@endpoint GET /accounts/{accountId}
+@required {account_id: int(int32)}
+@returns(200) {id: int(int32), identifier: str, servicepack: map{id: int(int32), name: str}, addons: [map]}
+
+@endgroup
+
+@group dns
+@endpoint GET /dns/{domainName}/records
+@required {domain_name: str}
+@optional {skip: int(int32), take: int(int32), type: str, record_name: str, service: str}
+@returns(200)
+
+@endpoint POST /dns/{domainName}/records
+@required {domain_name: str}
+@optional {id: str, type: str, record_name: str, ttl: int(int32)=3600, content: str, priority: int(int32)=10, service: str, weight: int(int32)=0, target: str, protocol: str=TCP, port: int(int32)}
+@returns(201)
+
+@endpoint GET /dns/{domainName}/records/{recordId}
+@required {domain_name: str, record_id: str}
+@returns(200) {id: str, type: str, record_name: str, ttl: int(int32), content: str, priority: int(int32), service: str, weight: int(int32), target: str, protocol: str, port: int(int32)}
+
+@endpoint PUT /dns/{domainName}/records/{recordId}
+@required {domain_name: str, record_id: str}
+@optional {id: str, type: str, record_name: str, ttl: int(int32)=3600, content: str, priority: int(int32)=10, service: str, weight: int(int32)=0, target: str, protocol: str=TCP, port: int(int32)}
+@returns(200)
+
+@endpoint DELETE /dns/{domainName}/records/{recordId}
+@required {domain_name: str, record_id: str}
+@returns(204)
+
+@endgroup
+
+@group domains
+@endpoint GET /domains
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endpoint GET /domains/{domainName}
+@required {domain_name: str}
+@returns(200) {domain_name: str, expiration_date: str(date-time), will_renew: bool, name_servers: [map], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str}, can_toggle_renew: bool}
+
+@endpoint POST /domains/registrations
+@optional {domain_name: str, name_servers: [str], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str, extra_fields: [map{name: str, value: str}]}}
+@returns(202)
+
+@endpoint POST /domains/transfers
+@optional {domain_name: str, auth_code: str, name_servers: [str], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str, extra_fields: [map{name: str, value: str}]}}
+@returns(202)
+
+@endpoint PUT /domains/{domainName}/nameservers
+@required {domain_name: str}
+@optional {domain_name: str, name_servers: [str]}
+@returns(204)
+
+@endpoint PUT /domains/{domainName}/renew
+@required {domain_name: str}
+@optional {will_renew: bool}
+@returns(204)
+
+@endgroup
+
+@group linuxhostings
+@endpoint GET /linuxhostings
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endpoint GET /linuxhostings/{domainName}
+@required {domain_name: str}
+@returns(200) {domain_name: str, servicepack_id: int(int32), max_webspace_size: int(int32), max_size: int(int32), webspace_usage: int(int32), actual_size: int(int32), ip: str, ip_type: str, ftp_enabled: bool, ftp_username: str, ssh_host: str, ssh_username: str, php_version: str, sites: [map], mysql_database_names: [str]}
+
+@endpoint GET /linuxhostings/{domainName}/phpsettings/availableversions
+@required {domain_name: str}
+@returns(200)
+
+@endpoint PUT /linuxhostings/{domainName}/phpsettings/version
+@required {domain_name: str}
+@optional {version: str}
+@returns(204)
+
+@endpoint PUT /linuxhostings/{domainName}/settings/gzipcompression
+@required {domain_name: str}
+@optional {enabled: bool}
+@returns(204)
+
+@endpoint POST /linuxhostings/{domainName}/subsites
+@required {domain_name: str}
+@optional {domain_name: str, path: str}
+@returns(201)
+
+@endpoint DELETE /linuxhostings/{domainName}/subsites/{siteName}
+@required {domain_name: str, site_name: str}
+@returns(204)
+@errors {400}
+
+@endpoint POST /linuxhostings/{domainName}/sites/{siteName}/hostheaders
+@required {domain_name: str, site_name: str}
+@optional {domain_name: str}
+@returns(201)
+
+@endpoint PUT /linuxhostings/{domainName}/sites/{siteName}/http2/configuration
+@required {domain_name: str, site_name: str}
+@optional {enabled: bool}
+@returns(204)
+@errors {400}
+
+@endpoint PUT /linuxhostings/{domainName}/ftp/configuration
+@required {domain_name: str}
+@optional {enabled: bool}
+@returns(204)
+@errors {400}
+
+@endpoint PUT /linuxhostings/{domainName}/sslsettings/{hostname}/letsencrypt
+@required {domain_name: str, hostname: str}
+@optional {enabled: bool}
+@returns(204)
+
+@endpoint PUT /linuxhostings/{domainName}/sslsettings/{hostname}/autoredirect
+@required {domain_name: str, hostname: str}
+@optional {enabled: bool}
+@returns(204)
+
+@endpoint PUT /linuxhostings/{domainName}/phpsettings/memorylimit
+@required {domain_name: str}
+@optional {memory_limit: int(int32)}
+@returns(204)
+
+@endpoint PUT /linuxhostings/{domainName}/phpsettings/apcu
+@required {domain_name: str}
+@optional {apcu_size: int(int32), enabled: bool}
+@returns(204)
+
+@endpoint GET /linuxhostings/{domainName}/scheduledtasks
+@required {domain_name: str}
+@returns(200)
+
+@endpoint POST /linuxhostings/{domainName}/scheduledtasks
+@required {domain_name: str}
+@optional {id: str, enabled: bool, cron_expression: str, script_location: str}
+@returns(201)
+
+@endpoint GET /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
+@required {domain_name: str, scheduled_task_id: str}
+@returns(200) {id: str, enabled: bool, cron_expression: str, script_location: str}
+
+@endpoint PUT /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
+@required {domain_name: str, scheduled_task_id: str}
+@optional {id: str, enabled: bool, cron_expression: str, script_location: str}
+@returns(204)
+@errors {400}
+
+@endpoint DELETE /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
+@required {domain_name: str, scheduled_task_id: str}
+@returns(204)
+@errors {400}
+
+@endpoint GET /linuxhostings/{domainName}/ssh/keys
+@required {domain_name: str}
+@returns(200)
+
+@endpoint POST /linuxhostings/{domainName}/ssh/keys
+@required {domain_name: str}
+@optional {public_key: str}
+@returns(201)
+
+@endpoint PUT /linuxhostings/{domainName}/ssh/configuration
+@required {domain_name: str}
+@optional {enabled: bool}
+@returns(204)
+@errors {400}
+
+@endpoint DELETE /linuxhostings/{domainName}/ssh/keys/{fingerprint}
+@required {domain_name: str, fingerprint: str}
+@returns(204)
+@errors {400}
+
+@endgroup
+
+@group mailboxes
+@endpoint GET /mailboxes
+@optional {domain_name: str}
+@returns(200)
+
+@endpoint POST /mailboxes
+@optional {email_address: str, account_id: int(int32), password: str}
+@returns(201)
+
+@endpoint GET /mailboxes/{mailboxName}
+@required {mailbox_name: str}
+@returns(200) {name: str, login: str, max_size: int(int32), actual_size: int(int32), auto_reply: map{enabled: bool, subject: str, message: str}, auto_forward: map{enabled: bool, email_addresses: [str], copy_to_myself: bool}}
+
+@endpoint DELETE /mailboxes/{mailboxName}
+@required {mailbox_name: str}
+@returns(204)
+@errors {400}
+
+@endpoint PUT /mailboxes/{mailboxName}/password
+@required {mailbox_name: str}
+@optional {password: str}
+@returns(204)
+
+@endpoint PUT /mailboxes/{mailboxName}/autoreply
+@required {mailbox_name: str}
+@optional {enabled: bool, subject: str, message: str}
+@returns(204)
+
+@endpoint PUT /mailboxes/{mailboxName}/autoforward
+@required {mailbox_name: str}
+@optional {enabled: bool, email_addresses: [str], copy_to_myself: bool}
+@returns(204)
+
+@endgroup
+
+@group mailzones
+@endpoint GET /mailzones/{domainName}
+@required {domain_name: str}
+@returns(200) {name: str, enabled: bool, available_accounts: [map], aliases: [map], anti_spam: map{type: str, allowed_types: [str]}, catch_all: map{email_addresses: [str]}, smtp_domains: [map]}
+
+@endpoint POST /mailzones/{domainName}/catchall
+@required {domain_name: str}
+@optional {email_address: str}
+@returns(201)
+
+@endpoint DELETE /mailzones/{domainName}/catchall/{emailAddress}
+@required {domain_name: str, email_address: str}
+@returns(204)
+
+@endpoint PUT /mailzones/{domainName}/antispam
+@required {domain_name: str}
+@optional {type: str(none/advanced/basic)}
+@returns(204)
+
+@endpoint POST /mailzones/{domainName}/aliases
+@required {domain_name: str}
+@optional {email_address: str, destinations: [str]}
+@returns(201)
+@errors {400}
+
+@endpoint PUT /mailzones/{domainName}/aliases/{emailAddress}
+@required {domain_name: str, email_address: str}
+@optional {destinations: [str]}
+@returns(202)
+@errors {400}
+
+@endpoint DELETE /mailzones/{domainName}/aliases/{emailAddress}
+@required {domain_name: str, email_address: str}
+@returns(204)
+@errors {400}
+
+@endpoint POST /mailzones/{domainName}/smtpdomains
+@required {domain_name: str}
+@optional {hostname: str}
+@returns(201)
+@errors {400}
+
+@endpoint PUT /mailzones/{domainName}/smtpdomains/{hostname}
+@required {domain_name: str, hostname: str}
+@optional {enabled: bool}
+@returns(202)
+@errors {400}
+
+@endpoint DELETE /mailzones/{domainName}/smtpdomains/{hostname}
+@required {domain_name: str, hostname: str}
+@returns(204)
+@errors {400}
+
+@endgroup
+
+@group mysqldatabases
+@endpoint GET /mysqldatabases
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endpoint POST /mysqldatabases
+@optional {database_name: str, account_id: int(int32), password: str}
+@returns(202)
+@errors {400}
+
+@endpoint GET /mysqldatabases/{databaseName}
+@required {database_name: str}
+@returns(200) {name: str, hostname: str, user_count: int(int32), max_size: int(int32), actual_size: int(int32), account_id: int(int32)}
+
+@endpoint DELETE /mysqldatabases/{databaseName}
+@required {database_name: str}
+@returns(204)
+@errors {400}
+
+@endpoint GET /mysqldatabases/{databaseName}/users
+@required {database_name: str}
+@returns(200)
+
+@endpoint POST /mysqldatabases/{databaseName}/users
+@required {database_name: str}
+@optional {name: str, password: str}
+@returns(202)
+@errors {400}
+
+@endpoint PUT /mysqldatabases/{databaseName}/users/{userName}/status
+@required {database_name: str, user_name: str}
+@optional {enabled: bool}
+@returns(204)
+
+@endpoint PUT /mysqldatabases/{databaseName}/users/{userName}/password
+@required {database_name: str, user_name: str}
+@optional {password: str}
+@returns(204)
+
+@endpoint DELETE /mysqldatabases/{databaseName}/users/{userName}
+@required {database_name: str, user_name: str}
+@returns(204)
+@errors {400}
+
+@endgroup
+
+@group provisioningjobs
+@endpoint GET /provisioningjobs/{jobId}
+@required {job_id: str(uuid)}
+@returns(200) {id: str, status: str, completion: map{estimate: str(date-time)}}
+@returns(201) {id: str, resource_links: [str]}
+
+@endgroup
+
+@group servicepacks
+@endpoint GET /servicepacks
+@returns(200)
+
+@endgroup
+
+@group ssh
+@endpoint GET /ssh
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endgroup
+
+@group sslcertificaterequests
+@endpoint GET /sslcertificaterequests
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endpoint POST /sslcertificaterequests
+@optional {csr: str, certificate_type: str(standard/multi_domain/wildcard), validation_level: str(domain_validated/organization_validated/extended_validated), additional_validation_attributes: [map{name: str, value: str}]}
+@returns(201)
+
+@endpoint GET /sslcertificaterequests/{id}
+@required {id: int(int32)}
+@returns(200) {id: int(int32), certificate_type: str, validation_level: str, vendor: str, common_name: str, order_code: str, subject_alt_names: [map], validations: [map], provider_portal_url: str}
+@errors {303, 410}
+
+@endpoint PUT /sslcertificaterequests/{id}
+@required {id: int(int32)}
+@returns(202)
+@errors {303, 410}
+
+@endgroup
+
+@group sslcertificates
+@endpoint GET /sslcertificates
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endpoint GET /sslcertificates/{sha1Fingerprint}
+@required {sha1_fingerprint: str}
+@returns(200) {sha1_fingerprint: str, common_name: str, expires_after: str(date-time), validation_level: str, type: str, subject_alt_names: [map]}
+
+@endpoint GET /sslcertificates/{sha1Fingerprint}/download
+@required {sha1_fingerprint: str, file_format: str, password: str}
+@returns(200)
+@errors {400}
+
+@endgroup
+
+@group windowshostings
+@endpoint GET /windowshostings
+@optional {skip: int(int32), take: int(int32)}
+@returns(200)
+
+@endpoint GET /windowshostings/{domainName}
+@required {domain_name: str}
+@returns(200) {domain_name: str, servicepack_id: int(int32), max_size: int(int32), actual_size: int(int32), ip: str, ip_type: str, ftp_username: str, application_pool: map{runtime: str, pipeline_mode: str, installed_net_core_runtimes: [str]}, sites: [map], mssql_database_names: [str]}
+
+@endgroup
+
+@end

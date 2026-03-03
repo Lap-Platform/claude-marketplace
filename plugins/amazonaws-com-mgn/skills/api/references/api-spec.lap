@@ -1,0 +1,531 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Application Migration Service
+@version 2020-02-26
+@auth AWS SigV4
+@endpoints 70
+@hint download_for_search
+@toc ArchiveApplication(1), ArchiveWave(1), AssociateApplications(1), AssociateSourceServers(1), ChangeServerLifeCycleState(1), CreateApplication(1), CreateConnector(1), CreateLaunchConfigurationTemplate(1), CreateReplicationConfigurationTemplate(1), CreateWave(1), DeleteApplication(1), DeleteConnector(1), DeleteJob(1), DeleteLaunchConfigurationTemplate(1), DeleteReplicationConfigurationTemplate(1), DeleteSourceServer(1), DeleteVcenterClient(1), DeleteWave(1), DescribeJobLogItems(1), DescribeJobs(1), DescribeLaunchConfigurationTemplates(1), DescribeReplicationConfigurationTemplates(1), DescribeSourceServers(1), DescribeVcenterClients(1), DisassociateApplications(1), DisassociateSourceServers(1), DisconnectFromService(1), FinalizeCutover(1), GetLaunchConfiguration(1), GetReplicationConfiguration(1), InitializeService(1), ListApplications(1), ListConnectors(1), ListExportErrors(1), ListExports(1), ListImportErrors(1), ListImports(1), ListManagedAccounts(1), ListSourceServerActions(1), tags(3), ListTemplateActions(1), ListWaves(1), MarkAsArchived(1), PauseReplication(1), PutSourceServerAction(1), PutTemplateAction(1), RemoveSourceServerAction(1), RemoveTemplateAction(1), ResumeReplication(1), RetryDataReplication(1), StartCutover(1), StartExport(1), StartImport(1), StartReplication(1), StartTest(1), StopReplication(1), TerminateTargetInstances(1), UnarchiveApplication(1), UnarchiveWave(1), UpdateApplication(1), UpdateConnector(1), UpdateLaunchConfiguration(1), UpdateLaunchConfigurationTemplate(1), UpdateReplicationConfiguration(1), UpdateReplicationConfigurationTemplate(1), UpdateSourceServer(1), UpdateSourceServerReplicationType(1), UpdateWave(1)
+
+@group ArchiveApplication
+@endpoint POST /ArchiveApplication
+@required {applicationID: str}
+@optional {accountID: str}
+@returns(200) {applicationAggregatedStatus: ApplicationAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, totalSourceServers: int(i64)?}, applicationID: str?, arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveID: str?}
+
+@endgroup
+
+@group ArchiveWave
+@endpoint POST /ArchiveWave
+@required {waveID: str}
+@optional {accountID: str}
+@returns(200) {arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveAggregatedStatus: WaveAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, replicationStartedDateTime: str?, totalApplications: int(i64)?}, waveID: str?}
+
+@endgroup
+
+@group AssociateApplications
+@endpoint POST /AssociateApplications
+@required {applicationIDs: [str], waveID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group AssociateSourceServers
+@endpoint POST /AssociateSourceServers
+@required {applicationID: str, sourceServerIDs: [str]}
+@optional {accountID: str}
+
+@endgroup
+
+@group ChangeServerLifeCycleState
+@endpoint POST /ChangeServerLifeCycleState
+@required {lifeCycle: ChangeServerLifeCycleStateSourceServerLifecycle, sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group CreateApplication
+@endpoint POST /CreateApplication
+@required {name: str}
+@optional {accountID: str, description: str, tags: map<str,str>}
+@returns(200) {applicationAggregatedStatus: ApplicationAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, totalSourceServers: int(i64)?}, applicationID: str?, arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveID: str?}
+
+@endgroup
+
+@group CreateConnector
+@endpoint POST /CreateConnector
+@required {name: str, ssmInstanceID: str}
+@optional {ssmCommandConfig: ConnectorSsmCommandConfig, tags: map<str,str>}
+@returns(200) {arn: str?, connectorID: str?, name: str?, ssmCommandConfig: ConnectorSsmCommandConfig?{cloudWatchLogGroupName: str?, cloudWatchOutputEnabled: bool, outputS3BucketName: str?, s3OutputEnabled: bool}, ssmInstanceID: str?, tags: map<str,str>?}
+
+@endgroup
+
+@group CreateLaunchConfigurationTemplate
+@endpoint POST /CreateLaunchConfigurationTemplate
+@optional {associatePublicIpAddress: bool, bootMode: str, copyPrivateIp: bool, copyTags: bool, enableMapAutoTagging: bool, largeVolumeConf: LaunchTemplateDiskConf, launchDisposition: str, licensing: Licensing, mapAutoTaggingMpeID: str, postLaunchActions: PostLaunchActions, smallVolumeConf: LaunchTemplateDiskConf, smallVolumeMaxSize: int(i64), tags: map<str,str>, targetInstanceTypeRightSizingMethod: str}
+@returns(200) {arn: str?, associatePublicIpAddress: bool?, bootMode: str?, copyPrivateIp: bool?, copyTags: bool?, ec2LaunchTemplateID: str?, enableMapAutoTagging: bool?, largeVolumeConf: LaunchTemplateDiskConf?{iops: int(i64)?, throughput: int(i64)?, volumeType: str?}, launchConfigurationTemplateID: str, launchDisposition: str?, licensing: Licensing?{osByol: bool?}, mapAutoTaggingMpeID: str?, postLaunchActions: PostLaunchActions?{cloudWatchLogGroupName: str?, deployment: str?, s3LogBucket: str?, s3OutputKeyPrefix: str?, ssmDocuments: [SsmDocument]?}, smallVolumeConf: LaunchTemplateDiskConf?{iops: int(i64)?, throughput: int(i64)?, volumeType: str?}, smallVolumeMaxSize: int(i64)?, tags: map<str,str>?, targetInstanceTypeRightSizingMethod: str?}
+
+@endgroup
+
+@group CreateReplicationConfigurationTemplate
+@endpoint POST /CreateReplicationConfigurationTemplate
+@required {associateDefaultSecurityGroup: bool, bandwidthThrottling: int(i64), createPublicIP: bool, dataPlaneRouting: str, defaultLargeStagingDiskType: str, ebsEncryption: str, replicationServerInstanceType: str, replicationServersSecurityGroupsIDs: [str], stagingAreaSubnetId: str, stagingAreaTags: map<str,str>, useDedicatedReplicationServer: bool}
+@optional {ebsEncryptionKeyArn: str, tags: map<str,str>, useFipsEndpoint: bool}
+@returns(200) {arn: str?, associateDefaultSecurityGroup: bool?, bandwidthThrottling: int(i64)?, createPublicIP: bool?, dataPlaneRouting: str?, defaultLargeStagingDiskType: str?, ebsEncryption: str?, ebsEncryptionKeyArn: str?, replicationConfigurationTemplateID: str, replicationServerInstanceType: str?, replicationServersSecurityGroupsIDs: [str]?, stagingAreaSubnetId: str?, stagingAreaTags: map<str,str>?, tags: map<str,str>?, useDedicatedReplicationServer: bool?, useFipsEndpoint: bool?}
+
+@endgroup
+
+@group CreateWave
+@endpoint POST /CreateWave
+@required {name: str}
+@optional {accountID: str, description: str, tags: map<str,str>}
+@returns(200) {arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveAggregatedStatus: WaveAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, replicationStartedDateTime: str?, totalApplications: int(i64)?}, waveID: str?}
+
+@endgroup
+
+@group DeleteApplication
+@endpoint POST /DeleteApplication
+@required {applicationID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group DeleteConnector
+@endpoint POST /DeleteConnector
+@required {connectorID: str}
+
+@endgroup
+
+@group DeleteJob
+@endpoint POST /DeleteJob
+@required {jobID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group DeleteLaunchConfigurationTemplate
+@endpoint POST /DeleteLaunchConfigurationTemplate
+@required {launchConfigurationTemplateID: str}
+
+@endgroup
+
+@group DeleteReplicationConfigurationTemplate
+@endpoint POST /DeleteReplicationConfigurationTemplate
+@required {replicationConfigurationTemplateID: str}
+
+@endgroup
+
+@group DeleteSourceServer
+@endpoint POST /DeleteSourceServer
+@required {sourceServerID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group DeleteVcenterClient
+@endpoint POST /DeleteVcenterClient
+@required {vcenterClientID: str}
+
+@endgroup
+
+@group DeleteWave
+@endpoint POST /DeleteWave
+@required {waveID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group DescribeJobLogItems
+@endpoint POST /DescribeJobLogItems
+@required {jobID: str}
+@optional {accountID: str, maxResults: int, nextToken: str}
+@returns(200) {items: [JobLog]?, nextToken: str?}
+
+@endgroup
+
+@group DescribeJobs
+@endpoint POST /DescribeJobs
+@optional {accountID: str, filters: DescribeJobsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [Job]?, nextToken: str?}
+
+@endgroup
+
+@group DescribeLaunchConfigurationTemplates
+@endpoint POST /DescribeLaunchConfigurationTemplates
+@optional {launchConfigurationTemplateIDs: [str], maxResults: int, nextToken: str}
+@returns(200) {items: [LaunchConfigurationTemplate]?, nextToken: str?}
+
+@endgroup
+
+@group DescribeReplicationConfigurationTemplates
+@endpoint POST /DescribeReplicationConfigurationTemplates
+@optional {maxResults: int, nextToken: str, replicationConfigurationTemplateIDs: [str]}
+@returns(200) {items: [ReplicationConfigurationTemplate]?, nextToken: str?}
+
+@endgroup
+
+@group DescribeSourceServers
+@endpoint POST /DescribeSourceServers
+@optional {accountID: str, filters: DescribeSourceServersRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [SourceServer]?, nextToken: str?}
+
+@endgroup
+
+@group DescribeVcenterClients
+@endpoint GET /DescribeVcenterClients
+@optional {maxResults: int, nextToken: str}
+@returns(200) {items: [VcenterClient]?, nextToken: str?}
+
+@endgroup
+
+@group DisassociateApplications
+@endpoint POST /DisassociateApplications
+@required {applicationIDs: [str], waveID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group DisassociateSourceServers
+@endpoint POST /DisassociateSourceServers
+@required {applicationID: str, sourceServerIDs: [str]}
+@optional {accountID: str}
+
+@endgroup
+
+@group DisconnectFromService
+@endpoint POST /DisconnectFromService
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group FinalizeCutover
+@endpoint POST /FinalizeCutover
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group GetLaunchConfiguration
+@endpoint POST /GetLaunchConfiguration
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {bootMode: str?, copyPrivateIp: bool?, copyTags: bool?, ec2LaunchTemplateID: str?, enableMapAutoTagging: bool?, launchDisposition: str?, licensing: Licensing?{osByol: bool?}, mapAutoTaggingMpeID: str?, name: str?, postLaunchActions: PostLaunchActions?{cloudWatchLogGroupName: str?, deployment: str?, s3LogBucket: str?, s3OutputKeyPrefix: str?, ssmDocuments: [SsmDocument]?}, sourceServerID: str?, targetInstanceTypeRightSizingMethod: str?}
+
+@endgroup
+
+@group GetReplicationConfiguration
+@endpoint POST /GetReplicationConfiguration
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {associateDefaultSecurityGroup: bool?, bandwidthThrottling: int(i64)?, createPublicIP: bool?, dataPlaneRouting: str?, defaultLargeStagingDiskType: str?, ebsEncryption: str?, ebsEncryptionKeyArn: str?, name: str?, replicatedDisks: [ReplicationConfigurationReplicatedDisk]?, replicationServerInstanceType: str?, replicationServersSecurityGroupsIDs: [str]?, sourceServerID: str?, stagingAreaSubnetId: str?, stagingAreaTags: map<str,str>?, useDedicatedReplicationServer: bool?, useFipsEndpoint: bool?}
+
+@endgroup
+
+@group InitializeService
+@endpoint POST /InitializeService
+
+@endgroup
+
+@group ListApplications
+@endpoint POST /ListApplications
+@optional {accountID: str, filters: ListApplicationsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [Application]?, nextToken: str?}
+
+@endgroup
+
+@group ListConnectors
+@endpoint POST /ListConnectors
+@optional {filters: ListConnectorsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [Connector]?, nextToken: str?}
+
+@endgroup
+
+@group ListExportErrors
+@endpoint POST /ListExportErrors
+@required {exportID: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {items: [ExportTaskError]?, nextToken: str?}
+
+@endgroup
+
+@group ListExports
+@endpoint POST /ListExports
+@optional {filters: ListExportsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [ExportTask]?, nextToken: str?}
+
+@endgroup
+
+@group ListImportErrors
+@endpoint POST /ListImportErrors
+@required {importID: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {items: [ImportTaskError]?, nextToken: str?}
+
+@endgroup
+
+@group ListImports
+@endpoint POST /ListImports
+@optional {filters: ListImportsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [ImportTask]?, nextToken: str?}
+
+@endgroup
+
+@group ListManagedAccounts
+@endpoint POST /ListManagedAccounts
+@optional {maxResults: int, nextToken: str}
+@returns(200) {items: [ManagedAccount], nextToken: str?}
+
+@endgroup
+
+@group ListSourceServerActions
+@endpoint POST /ListSourceServerActions
+@required {sourceServerID: str}
+@optional {accountID: str, filters: SourceServerActionsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [SourceServerActionDocument]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {resourceArn: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group ListTemplateActions
+@endpoint POST /ListTemplateActions
+@required {launchConfigurationTemplateID: str}
+@optional {filters: TemplateActionsRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [TemplateActionDocument]?, nextToken: str?}
+
+@endgroup
+
+@group ListWaves
+@endpoint POST /ListWaves
+@optional {accountID: str, filters: ListWavesRequestFilters, maxResults: int, nextToken: str}
+@returns(200) {items: [Wave]?, nextToken: str?}
+
+@endgroup
+
+@group MarkAsArchived
+@endpoint POST /MarkAsArchived
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group PauseReplication
+@endpoint POST /PauseReplication
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group PutSourceServerAction
+@endpoint POST /PutSourceServerAction
+@required {actionID: str, actionName: str, documentIdentifier: str, order: int, sourceServerID: str}
+@optional {accountID: str, active: bool, category: str, description: str, documentVersion: str, externalParameters: map<str,SsmExternalParameter>, mustSucceedForCutover: bool, parameters: map<str,[SsmParameterStoreParameter]>, timeoutSeconds: int}
+@returns(200) {actionID: str?, actionName: str?, active: bool?, category: str?, description: str?, documentIdentifier: str?, documentVersion: str?, externalParameters: map<str,SsmExternalParameter>?, mustSucceedForCutover: bool?, order: int?, parameters: map<str,[SsmParameterStoreParameter]>?, timeoutSeconds: int?}
+
+@endgroup
+
+@group PutTemplateAction
+@endpoint POST /PutTemplateAction
+@required {actionID: str, actionName: str, documentIdentifier: str, launchConfigurationTemplateID: str, order: int}
+@optional {active: bool, category: str, description: str, documentVersion: str, externalParameters: map<str,SsmExternalParameter>, mustSucceedForCutover: bool, operatingSystem: str, parameters: map<str,[SsmParameterStoreParameter]>, timeoutSeconds: int}
+@returns(200) {actionID: str?, actionName: str?, active: bool?, category: str?, description: str?, documentIdentifier: str?, documentVersion: str?, externalParameters: map<str,SsmExternalParameter>?, mustSucceedForCutover: bool?, operatingSystem: str?, order: int?, parameters: map<str,[SsmParameterStoreParameter]>?, timeoutSeconds: int?}
+
+@endgroup
+
+@group RemoveSourceServerAction
+@endpoint POST /RemoveSourceServerAction
+@required {actionID: str, sourceServerID: str}
+@optional {accountID: str}
+
+@endgroup
+
+@group RemoveTemplateAction
+@endpoint POST /RemoveTemplateAction
+@required {actionID: str, launchConfigurationTemplateID: str}
+
+@endgroup
+
+@group ResumeReplication
+@endpoint POST /ResumeReplication
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group RetryDataReplication
+@endpoint POST /RetryDataReplication
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group StartCutover
+@endpoint POST /StartCutover
+@required {sourceServerIDs: [str]}
+@optional {accountID: str, tags: map<str,str>}
+@returns(200) {job: Job?{arn: str?, creationDateTime: str?, endDateTime: str?, initiatedBy: str?, jobID: str, participatingServers: [ParticipatingServer]?, status: str?, tags: map<str,str>?, type: str?}}
+
+@endgroup
+
+@group StartExport
+@endpoint POST /StartExport
+@required {s3Bucket: str, s3Key: str}
+@optional {s3BucketOwner: str}
+@returns(200) {exportTask: ExportTask?{creationDateTime: str?, endDateTime: str?, exportID: str?, progressPercentage: num(f32)?, s3Bucket: str?, s3BucketOwner: str?, s3Key: str?, status: str?, summary: ExportTaskSummary?{applicationsCount: int(i64)?, serversCount: int(i64)?, wavesCount: int(i64)?}}}
+
+@endgroup
+
+@group StartImport
+@endpoint POST /StartImport
+@required {s3BucketSource: S3BucketSource}
+@optional {clientToken: str}
+@returns(200) {importTask: ImportTask?{creationDateTime: str?, endDateTime: str?, importID: str?, progressPercentage: num(f32)?, s3BucketSource: S3BucketSource?{s3Bucket: str, s3BucketOwner: str?, s3Key: str}, status: str?, summary: ImportTaskSummary?{applications: ImportTaskSummaryApplications?{createdCount: int(i64)?, modifiedCount: int(i64)?}, servers: ImportTaskSummaryServers?{createdCount: int(i64)?, modifiedCount: int(i64)?}, waves: ImportTaskSummaryWaves?{createdCount: int(i64)?, modifiedCount: int(i64)?}}}}
+
+@endgroup
+
+@group StartReplication
+@endpoint POST /StartReplication
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group StartTest
+@endpoint POST /StartTest
+@required {sourceServerIDs: [str]}
+@optional {accountID: str, tags: map<str,str>}
+@returns(200) {job: Job?{arn: str?, creationDateTime: str?, endDateTime: str?, initiatedBy: str?, jobID: str, participatingServers: [ParticipatingServer]?, status: str?, tags: map<str,str>?, type: str?}}
+
+@endgroup
+
+@group StopReplication
+@endpoint POST /StopReplication
+@required {sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {resourceArn: str, tags: map<str,str>}
+
+@endgroup
+
+@group TerminateTargetInstances
+@endpoint POST /TerminateTargetInstances
+@required {sourceServerIDs: [str]}
+@optional {accountID: str, tags: map<str,str>}
+@returns(200) {job: Job?{arn: str?, creationDateTime: str?, endDateTime: str?, initiatedBy: str?, jobID: str, participatingServers: [ParticipatingServer]?, status: str?, tags: map<str,str>?, type: str?}}
+
+@endgroup
+
+@group UnarchiveApplication
+@endpoint POST /UnarchiveApplication
+@required {applicationID: str}
+@optional {accountID: str}
+@returns(200) {applicationAggregatedStatus: ApplicationAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, totalSourceServers: int(i64)?}, applicationID: str?, arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveID: str?}
+
+@endgroup
+
+@group UnarchiveWave
+@endpoint POST /UnarchiveWave
+@required {waveID: str}
+@optional {accountID: str}
+@returns(200) {arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveAggregatedStatus: WaveAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, replicationStartedDateTime: str?, totalApplications: int(i64)?}, waveID: str?}
+
+@endgroup
+
+@group tags
+@endpoint DELETE /tags/{resourceArn}
+@required {resourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group UpdateApplication
+@endpoint POST /UpdateApplication
+@required {applicationID: str}
+@optional {accountID: str, description: str, name: str}
+@returns(200) {applicationAggregatedStatus: ApplicationAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, totalSourceServers: int(i64)?}, applicationID: str?, arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveID: str?}
+
+@endgroup
+
+@group UpdateConnector
+@endpoint POST /UpdateConnector
+@required {connectorID: str}
+@optional {name: str, ssmCommandConfig: ConnectorSsmCommandConfig}
+@returns(200) {arn: str?, connectorID: str?, name: str?, ssmCommandConfig: ConnectorSsmCommandConfig?{cloudWatchLogGroupName: str?, cloudWatchOutputEnabled: bool, outputS3BucketName: str?, s3OutputEnabled: bool}, ssmInstanceID: str?, tags: map<str,str>?}
+
+@endgroup
+
+@group UpdateLaunchConfiguration
+@endpoint POST /UpdateLaunchConfiguration
+@required {sourceServerID: str}
+@optional {accountID: str, bootMode: str, copyPrivateIp: bool, copyTags: bool, enableMapAutoTagging: bool, launchDisposition: str, licensing: Licensing, mapAutoTaggingMpeID: str, name: str, postLaunchActions: PostLaunchActions, targetInstanceTypeRightSizingMethod: str}
+@returns(200) {bootMode: str?, copyPrivateIp: bool?, copyTags: bool?, ec2LaunchTemplateID: str?, enableMapAutoTagging: bool?, launchDisposition: str?, licensing: Licensing?{osByol: bool?}, mapAutoTaggingMpeID: str?, name: str?, postLaunchActions: PostLaunchActions?{cloudWatchLogGroupName: str?, deployment: str?, s3LogBucket: str?, s3OutputKeyPrefix: str?, ssmDocuments: [SsmDocument]?}, sourceServerID: str?, targetInstanceTypeRightSizingMethod: str?}
+
+@endgroup
+
+@group UpdateLaunchConfigurationTemplate
+@endpoint POST /UpdateLaunchConfigurationTemplate
+@required {launchConfigurationTemplateID: str}
+@optional {associatePublicIpAddress: bool, bootMode: str, copyPrivateIp: bool, copyTags: bool, enableMapAutoTagging: bool, largeVolumeConf: LaunchTemplateDiskConf, launchDisposition: str, licensing: Licensing, mapAutoTaggingMpeID: str, postLaunchActions: PostLaunchActions, smallVolumeConf: LaunchTemplateDiskConf, smallVolumeMaxSize: int(i64), targetInstanceTypeRightSizingMethod: str}
+@returns(200) {arn: str?, associatePublicIpAddress: bool?, bootMode: str?, copyPrivateIp: bool?, copyTags: bool?, ec2LaunchTemplateID: str?, enableMapAutoTagging: bool?, largeVolumeConf: LaunchTemplateDiskConf?{iops: int(i64)?, throughput: int(i64)?, volumeType: str?}, launchConfigurationTemplateID: str, launchDisposition: str?, licensing: Licensing?{osByol: bool?}, mapAutoTaggingMpeID: str?, postLaunchActions: PostLaunchActions?{cloudWatchLogGroupName: str?, deployment: str?, s3LogBucket: str?, s3OutputKeyPrefix: str?, ssmDocuments: [SsmDocument]?}, smallVolumeConf: LaunchTemplateDiskConf?{iops: int(i64)?, throughput: int(i64)?, volumeType: str?}, smallVolumeMaxSize: int(i64)?, tags: map<str,str>?, targetInstanceTypeRightSizingMethod: str?}
+
+@endgroup
+
+@group UpdateReplicationConfiguration
+@endpoint POST /UpdateReplicationConfiguration
+@required {sourceServerID: str}
+@optional {accountID: str, associateDefaultSecurityGroup: bool, bandwidthThrottling: int(i64), createPublicIP: bool, dataPlaneRouting: str, defaultLargeStagingDiskType: str, ebsEncryption: str, ebsEncryptionKeyArn: str, name: str, replicatedDisks: [ReplicationConfigurationReplicatedDisk], replicationServerInstanceType: str, replicationServersSecurityGroupsIDs: [str], stagingAreaSubnetId: str, stagingAreaTags: map<str,str>, useDedicatedReplicationServer: bool, useFipsEndpoint: bool}
+@returns(200) {associateDefaultSecurityGroup: bool?, bandwidthThrottling: int(i64)?, createPublicIP: bool?, dataPlaneRouting: str?, defaultLargeStagingDiskType: str?, ebsEncryption: str?, ebsEncryptionKeyArn: str?, name: str?, replicatedDisks: [ReplicationConfigurationReplicatedDisk]?, replicationServerInstanceType: str?, replicationServersSecurityGroupsIDs: [str]?, sourceServerID: str?, stagingAreaSubnetId: str?, stagingAreaTags: map<str,str>?, useDedicatedReplicationServer: bool?, useFipsEndpoint: bool?}
+
+@endgroup
+
+@group UpdateReplicationConfigurationTemplate
+@endpoint POST /UpdateReplicationConfigurationTemplate
+@required {replicationConfigurationTemplateID: str}
+@optional {arn: str, associateDefaultSecurityGroup: bool, bandwidthThrottling: int(i64), createPublicIP: bool, dataPlaneRouting: str, defaultLargeStagingDiskType: str, ebsEncryption: str, ebsEncryptionKeyArn: str, replicationServerInstanceType: str, replicationServersSecurityGroupsIDs: [str], stagingAreaSubnetId: str, stagingAreaTags: map<str,str>, useDedicatedReplicationServer: bool, useFipsEndpoint: bool}
+@returns(200) {arn: str?, associateDefaultSecurityGroup: bool?, bandwidthThrottling: int(i64)?, createPublicIP: bool?, dataPlaneRouting: str?, defaultLargeStagingDiskType: str?, ebsEncryption: str?, ebsEncryptionKeyArn: str?, replicationConfigurationTemplateID: str, replicationServerInstanceType: str?, replicationServersSecurityGroupsIDs: [str]?, stagingAreaSubnetId: str?, stagingAreaTags: map<str,str>?, tags: map<str,str>?, useDedicatedReplicationServer: bool?, useFipsEndpoint: bool?}
+
+@endgroup
+
+@group UpdateSourceServer
+@endpoint POST /UpdateSourceServer
+@required {sourceServerID: str}
+@optional {accountID: str, connectorAction: SourceServerConnectorAction}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group UpdateSourceServerReplicationType
+@endpoint POST /UpdateSourceServerReplicationType
+@required {replicationType: str, sourceServerID: str}
+@optional {accountID: str}
+@returns(200) {applicationID: str?, arn: str?, connectorAction: SourceServerConnectorAction?{connectorArn: str?, credentialsSecretArn: str?}, dataReplicationInfo: DataReplicationInfo?{dataReplicationError: DataReplicationError?{error: str?, rawError: str?}, dataReplicationInitiation: DataReplicationInitiation?{nextAttemptDateTime: str?, startDateTime: str?, steps: [DataReplicationInitiationStep]?}, dataReplicationState: str?, etaDateTime: str?, lagDuration: str?, lastSnapshotDateTime: str?, replicatedDisks: [DataReplicationInfoReplicatedDisk]?}, fqdnForActionFramework: str?, isArchived: bool?, launchedInstance: LaunchedInstance?{ec2InstanceID: str?, firstBoot: str?, jobID: str?}, lifeCycle: LifeCycle?{addedToServiceDateTime: str?, elapsedReplicationDuration: str?, firstByteDateTime: str?, lastCutover: LifeCycleLastCutover?{finalized: LifeCycleLastCutoverFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastCutoverInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastCutoverReverted?{apiCallDateTime: str?}}, lastSeenByServiceDateTime: str?, lastTest: LifeCycleLastTest?{finalized: LifeCycleLastTestFinalized?{apiCallDateTime: str?}, initiated: LifeCycleLastTestInitiated?{apiCallDateTime: str?, jobID: str?}, reverted: LifeCycleLastTestReverted?{apiCallDateTime: str?}}, state: str?}, replicationType: str?, sourceProperties: SourceProperties?{cpus: [CPU]?, disks: [Disk]?, identificationHints: IdentificationHints?{awsInstanceID: str?, fqdn: str?, hostname: str?, vmPath: str?, vmWareUuid: str?}, lastUpdatedDateTime: str?, networkInterfaces: [NetworkInterface]?, os: OS?{fullString: str?}, ramBytes: int(i64)?, recommendedInstanceType: str?}, sourceServerID: str?, tags: map<str,str>?, userProvidedID: str?, vcenterClientID: str?}
+
+@endgroup
+
+@group UpdateWave
+@endpoint POST /UpdateWave
+@required {waveID: str}
+@optional {accountID: str, description: str, name: str}
+@returns(200) {arn: str?, creationDateTime: str?, description: str?, isArchived: bool?, lastModifiedDateTime: str?, name: str?, tags: map<str,str>?, waveAggregatedStatus: WaveAggregatedStatus?{healthStatus: str?, lastUpdateDateTime: str?, progressStatus: str?, replicationStartedDateTime: str?, totalApplications: int(i64)?}, waveID: str?}
+
+@endgroup
+
+@end

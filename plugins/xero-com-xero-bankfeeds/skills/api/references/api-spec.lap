@@ -1,0 +1,51 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Xero Bank Feeds API
+@base https://api.xero.com/bankfeeds.xro/1.0
+@version 11.1.0
+@auth OAuth2
+@endpoints 7
+@toc FeedConnections(4), Statements(3)
+
+@group FeedConnections
+@endpoint GET /FeedConnections
+@optional {page: int, pageSize: int}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
+@errors {400}
+
+@endpoint POST /FeedConnections
+@optional {Idempotency-Key: str, pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}]}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
+@errors {400}
+
+@endpoint GET /FeedConnections/{id}
+@required {id: str(uuid)}
+@returns(200) {id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}
+@errors {400}
+
+@endpoint POST /FeedConnections/DeleteRequests
+@optional {Idempotency-Key: str, pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}]}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
+@errors {400}
+
+@endgroup
+
+@group Statements
+@endpoint GET /Statements
+@optional {page: int(int32), pageSize: int(int32), Xero-Application-Id: str=00000000-0000-0000-0000-0000000010000, Xero-User-Id: str=00000000-0000-0000-0000-0000030000000}
+@returns(200) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
+@errors {400}
+
+@endpoint POST /Statements
+@optional {Idempotency-Key: str, pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), feedConnectionId: str(uuid), status: any, startDate: str(date), endDate: str(date), startBalance: map{amount: num(double), creditDebitIndicator: str}, endBalance: map{amount: num(double), creditDebitIndicator: str}, statementLines: [map{postedDate: str(date), description: str, amount: num(double), creditDebitIndicator: str, transactionId: str, payeeName: str, reference: str, chequeNumber: str, transactionType: str}], errors: [map{title: str, status: int, detail: str, type: str}], statementLineCount: int}]}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
+@errors {400, 403, 409, 413, 422, 500}
+
+@endpoint GET /Statements/{statementId}
+@required {statementId: str(uuid)}
+@returns(200) {id: str(uuid), feedConnectionId: str(uuid), status: any, startDate: str(date), endDate: str(date), startBalance: map{amount: num(double), creditDebitIndicator: str}, endBalance: map{amount: num(double), creditDebitIndicator: str}, statementLines: [map], errors: [map], statementLineCount: int}
+@errors {404}
+
+@endgroup
+
+@end

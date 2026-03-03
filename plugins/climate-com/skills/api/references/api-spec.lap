@@ -1,0 +1,192 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Climate FieldView Platform APIs
+@base https://platform.climate.com/
+@version 4.0.11
+@auth OAuth2 | ApiKey X-Api-Key in header
+@endpoints 28
+@hint download_for_search
+@toc fields(2), farmOrganizations(1), operations(1), resourceOwners(1), boundaries(3), uploads(4), exports(3), layers(13)
+
+@group fields
+@endpoint GET /v4/fields
+@optional {X-Next-Token: str, X-Limit: int(int32), fieldName: str}
+@returns(200) {results: [any]}
+@returns(206) {results: [any]}
+@errors {304, 400, 401, 403, 429, 500, 503}
+
+@endpoint GET /v4/fields/{fieldId}
+@required {fieldId: str(uuid)}
+@returns(200) {id: str(uuid), name: str, boundaryId: str(uuid), resourceOwnerId: str(uuid), parent: any}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group farmOrganizations
+@endpoint GET /v4/farmOrganizations/{farmOrganizationType}/{farmOrganizationId}
+@required {farmOrganizationType: str, farmOrganizationId: str(uuid)}
+@returns(200) {id: str(uuid), name: str, type: str}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group operations
+@endpoint GET /v4/operations/all
+@optional {resourceOwnerId: str}
+@returns(200) {results: [map]}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group resourceOwners
+@endpoint GET /v4/resourceOwners/{resourceOwnerId}
+@required {resourceOwnerId: str(uuid)}
+@returns(200) {id: str(uuid), name: str, email: str}
+@errors {400, 404, 500}
+
+@endgroup
+
+@group boundaries
+@endpoint GET /v4/boundaries/{boundaryId}
+@required {boundaryId: str(uuid)}
+@returns(200) {id: str(uuid), type: str, geometry: any, properties: any}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint POST /v4/boundaries/query
+@required {ids: [str(uuid)]}
+@returns(200) {type: str, features: [any]}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint POST /v4/boundaries
+@required {geometry: any}
+@returns(200) {id: str(uuid)}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group uploads
+@endpoint POST /v4/uploads
+@required {contentType: str(mime-type)(image/vnd.climate.thermal.geotiff/image/vnd.climate.ndvi.geotiff/image/vnd.climate.rgb.geotiff/image/vnd.climate.rgb-nir.geotiff/image/vnd.climate.rgb-cir.geotiff/image/vnd.climate.waterstress.geotiff/image/vnd.climate.elevation.geotiff/image/vnd.climate.raw.geotiff/application/vnd.climate.field.geojson/application/vnd.climate.rx.planting.shp/application/vnd.climate.prescription.zones.shp/application/vnd.climate.modus.xml/application/vnd.climate.as-applied.zip/application/vnd.climate.as-planted.zip/application/vnd.climate.as-harvested.zip), md5: str, length: int(int64)}
+@optional {X-Recipient-Email: str, metadata: map}
+@returns(201)
+@errors {400, 401, 403, 429, 500, 503}
+
+@endpoint PUT /v4/uploads/{uploadId}
+@required {Content-Range: str, uploadId: str(uuid), Content-Type: str}
+@returns(204)
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint GET /v4/uploads/{uploadId}/status
+@required {uploadId: str(uuid)}
+@returns(200) {id: str(uuid), status: str}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint POST /v4/uploads/status/query
+@required {ids: [str(uuid)]}
+@returns(200) {results: [map]}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endgroup
+
+@group exports
+@endpoint POST /v4/exports
+@required {contentType: str(mime-type)(application/vnd.climate.acrsi.geojson/application/vnd.climate.harvest.geojson)}
+@optional {definition: map}
+@returns(201) {id: str(uuid)}
+@errors {400, 401, 403, 429, 500, 503}
+
+@endpoint GET /v4/exports/{exportId}/status
+@required {exportId: str(uuid)}
+@returns(200) {status: str, error: str, size: int(int64), checksum: str, xNextToken: str}
+@errors {400, 401, 403, 404, 429, 500, 503}
+
+@endpoint GET /v4/exports/{exportId}/contents
+@required {Accept: str, exportId: str(uuid), Range: str}
+@returns(204)
+@returns(206)
+@errors {304, 400, 401, 403, 404, 409, 410, 416, 429, 500, 503}
+
+@endgroup
+
+@group layers
+@endpoint GET /v4/layers/scoutingObservations
+@optional {X-Next-Token: str, X-Limit: int(int32), occurredAfter: str(date-time), occurredBefore: str(date-time)}
+@returns(200) {results: [map]}
+@returns(206) {results: [map]}
+@errors {304, 400}
+
+@endpoint GET /v4/layers/scoutingObservations/{scoutingObservationId}
+@required {scoutingObservationId: str(uuid)}
+@returns(200) {id: str(uuid), title: str, note: str, location: any, startTime: str(date-time), endTime: str(date-time), updatedAt: str(date-time), fieldIds: [str], tags: [map], timespan: str, locationDisplayColor: str, status: str}
+@errors {400, 403, 404}
+
+@endpoint GET /v4/layers/scoutingObservations/{scoutingObservationId}/attachments
+@required {scoutingObservationId: str(uuid)}
+@optional {X-Next-Token: str, X-Limit: int(int32)}
+@returns(200) {results: [map]}
+@returns(206) {results: [map]}
+@errors {304, 400, 403, 404}
+
+@endpoint GET /v4/layers/scoutingObservations/{scoutingObservationId}/attachments/{attachmentId}/contents
+@required {Accept: str, scoutingObservationId: str(uuid), attachmentId: str(uuid), Range: str}
+@returns(200)
+@returns(206)
+@errors {400, 401, 403, 404, 416, 500, 503}
+
+@endpoint GET /v4/layers/asPlanted
+@required {Accept: str}
+@optional {X-Next-Token: str, X-Limit: int(int32), resourceOwnerId: str(uuid), occurredAfter: str(date-time), occurredBefore: str(date-time), updatedAfter: str(date-time)}
+@returns(200) {results: [map]}
+@returns(206) {results: [map]}
+@errors {304, 400}
+
+@endpoint GET /v4/layers/asPlanted/{activityId}/contents
+@required {Accept: str, activityId: str(uuid), Range: str}
+@returns(200)
+@returns(206)
+@errors {304, 400, 401, 403, 404, 416, 500, 503}
+
+@endpoint GET /v4/layers/asPlanted/{activityId}
+@required {Accept: str, activityId: str(uuid)}
+@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), moisturePct: num(float), originalCropName: str, actualPopAvg: num(float), speedAvg: num(float), excessDfPct: num(float), goodSpacingPct: num(float), lossGcPct: num(float), newSeeds: int(int64), popUnit: str, singulationPct: num(float), split: bool, targetPopAvg: num(float)}
+@errors {400, 401, 403, 404, 500, 503}
+
+@endpoint GET /v4/layers/asApplied
+@required {Accept: str}
+@optional {X-Next-Token: str, X-Limit: int(int32), resourceOwnerId: str(uuid), occurredAfter: str(date-time), occurredBefore: str(date-time), updatedAfter: str(date-time)}
+@returns(200) {results: [map]}
+@returns(206) {results: [map]}
+@errors {304, 400}
+
+@endpoint GET /v4/layers/asApplied/{activityId}/contents
+@required {Accept: str, activityId: str(uuid), Range: str}
+@returns(200)
+@returns(206)
+@errors {304, 400, 401, 403, 404, 416, 500, 503}
+
+@endpoint GET /v4/layers/asApplied/{activityId}
+@required {Accept: str, activityId: str(uuid)}
+@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), passName: str}
+@errors {400, 401, 403, 404, 500, 503}
+
+@endpoint GET /v4/layers/asHarvested
+@required {Accept: str}
+@optional {X-Next-Token: str, X-Limit: int(int32), resourceOwnerId: str(uuid), occurredAfter: str(date-time), occurredBefore: str(date-time), updatedAfter: str(date-time)}
+@returns(200) {results: [map]}
+@returns(206) {results: [map]}
+@errors {304, 400}
+
+@endpoint GET /v4/layers/asHarvested/{activityId}/contents
+@required {Accept: str, activityId: str(uuid), Range: str}
+@returns(200)
+@returns(206)
+@errors {304, 400, 401, 403, 404, 416, 500, 503}
+
+@endpoint GET /v4/layers/asHarvested/{activityId}
+@required {Accept: str, activityId: str(uuid)}
+@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), moisturePct: num(float), originalCropName: str, wetMass: num(float), loadNumber: int(int32)}
+@errors {400, 401, 403, 404, 500, 503}
+
+@endgroup
+
+@end

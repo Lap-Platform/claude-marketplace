@@ -1,0 +1,1802 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api DRACOON API
+@base /api
+@version 5.47.0
+@auth OAuth2
+@endpoints 314
+@hint download_for_search
+@toc public(19), downloads(4), users(15), user(43), uploads(3), system(47), shares(18), settings(16), provisioning(17), nodes(71), groups(11), config(14), auth(4), roles(7), datev(19), resources(2), eventlog(4)
+
+@group public
+@endpoint GET /v4/public/shares/downloads/{access_key}/{token}
+@required {access_key: str, token: str}
+@optional {Range: str, generic_mimetype: bool, inline: bool}
+@returns(200)
+@returns(206)
+@errors {400, 404, 406, 416}
+
+@endpoint HEAD /v4/public/shares/downloads/{access_key}/{token}
+@required {access_key: str, token: str}
+@optional {Range: str, generic_mimetype: bool, inline: bool}
+@returns(200)
+@returns(206)
+@errors {400, 404, 406, 416}
+
+@endgroup
+
+@group downloads
+@endpoint GET /v4/downloads/{token}
+@required {token: str}
+@optional {Range: str, generic_mimetype: bool, inline: bool}
+@returns(200)
+@returns(206)
+@errors {400, 401, 403, 404, 406, 416}
+
+@endpoint HEAD /v4/downloads/{token}
+@required {token: str}
+@optional {Range: str, generic_mimetype: bool, inline: bool}
+@returns(200)
+@returns(206)
+@errors {400, 401, 403, 404, 406, 416}
+
+@endgroup
+
+@group users
+@endpoint GET /v4/users/{user_id}
+@required {user_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), effective_roles: bool}
+@returns(200) {id: int(int64), userName: str, firstName: str, lastName: str, isLocked: bool, avatarUuid: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, email: str, phone: str, expireAt: str(date-time), hasManageableRooms: bool, isEncryptionEnabled: bool, lastLoginSuccessAt: str(date-time), homeRoomId: int(int64), publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}, userRoles: map{items: [map]}, isMfaEnabled: bool, isMfaEnforced: bool, userAttributes: map{items: [map]}, title: str, lockStatus: int(int32), login: str, authMethods: [map], gender: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/users/{user_id}
+@required {user_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), firstName: str, lastName: str, userName: str, email: str, isLocked: bool=False, phone: str, receiverLanguage: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, authData: map{method: str, login: str, adConfigId: int(int32), oidConfigId: int(int32)}, mfaConfig: map{mfaEnforced: bool}, title: str, lockStatus: int(int32), gender: str=n, authMethods: [map{authId!: str, isEnabled!: bool, options: [map{key!: str, value!: str}]}]}
+@returns(200) {id: int(int64), userName: str, firstName: str, lastName: str, isLocked: bool, avatarUuid: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, email: str, phone: str, expireAt: str(date-time), hasManageableRooms: bool, isEncryptionEnabled: bool, lastLoginSuccessAt: str(date-time), homeRoomId: int(int64), publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}, userRoles: map{items: [map]}, isMfaEnabled: bool, isMfaEnforced: bool, userAttributes: map{items: [map]}, title: str, lockStatus: int(int32), login: str, authMethods: [map], gender: str}
+@errors {400, 401, 402, 403, 404, 406, 409, 412}
+
+@endpoint DELETE /v4/users/{user_id}
+@required {user_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/users/{user_id}/userAttributes
+@required {user_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/users/{user_id}/userAttributes
+@required {user_id: int(int64), items: [map{key!: str, value!: str}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/users/{user_id}/userAttributes
+@required {user_id: int(int64), items: [map{key!: str, value!: str}]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(201) {id: int(int64), userName: str, firstName: str, lastName: str, isLocked: bool, avatarUuid: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, email: str, phone: str, expireAt: str(date-time), hasManageableRooms: bool, isEncryptionEnabled: bool, lastLoginSuccessAt: str(date-time), homeRoomId: int(int64), publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}, userRoles: map{items: [map]}, isMfaEnabled: bool, isMfaEnforced: bool, userAttributes: map{items: [map]}, title: str, lockStatus: int(int32), login: str, authMethods: [map], gender: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group user
+@endpoint GET /v4/user/subscriptions/upload_shares
+@optional {filter: str, limit: int(int32), offset: int(int32), sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/user/subscriptions/upload_shares
+@required {isSubscribed: bool, objectIds: [int(int64)]}
+@returns(204)
+@returns(201)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/user/subscriptions/nodes
+@optional {filter: str, limit: int(int32), offset: int(int32), sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/user/subscriptions/nodes
+@required {isSubscribed: bool, objectIds: [int(int64)]}
+@returns(204)
+@returns(201)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/user/subscriptions/download_shares
+@optional {filter: str, limit: int(int32), offset: int(int32), sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/user/subscriptions/download_shares
+@required {isSubscribed: bool, objectIds: [int(int64)]}
+@returns(204)
+@returns(201)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/user/profileAttributes
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {401, 406, 412}
+
+@endpoint PUT /v4/user/profileAttributes
+@required {items: [map{key!: str, value!: str}]}
+@returns(204)
+@errors {400, 401, 406, 412}
+
+@endpoint POST /v4/user/profileAttributes
+@required {items: [map{key!: str, value!: str}]}
+@returns(201) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/user/notifications/config/{id}
+@required {id: int(int64), channelIds: [int(int32)]}
+@returns(200) {id: int(int64), scopeId: int(int32), eventTypeName: str, channelIds: [int(int32)]}
+@errors {400, 401, 406, 412}
+
+@endpoint GET /v4/user/account
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), more_info: bool}
+@returns(200) {id: int(int64), userName: str, firstName: str, lastName: str, isLocked: bool, hasManageableRooms: bool, userRoles: map{items: [map]}, language: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, mustSetEmail: bool, needsToAcceptEULA: bool, expireAt: str(date-time), isEncryptionEnabled: bool, lastLoginSuccessAt: str(date-time), lastLoginFailAt: str(date-time), email: str, phone: str, homeRoomId: int(int64), createdAt: str(date-time), automaticallySubscribeDatarooms: bool, userGroups: [map], userAttributes: map{items: [map]}, title: str, lastLoginSuccessIp: str, lastLoginFailIp: str, gender: str, needsToChangeUserName: bool, authMethods: [map], login: str, lockStatus: int(int32), needsToChangePassword: bool}
+@errors {401, 406}
+
+@endpoint PUT /v4/user/account
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), userName: str, acceptEULA: bool, firstName: str, lastName: str, email: str, phone: str, language: str, automaticallySubscribeDatarooms: bool, title: str, login: str, gender: str=n}
+@returns(200) {id: int(int64), userName: str, firstName: str, lastName: str, isLocked: bool, hasManageableRooms: bool, userRoles: map{items: [map]}, language: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, mustSetEmail: bool, needsToAcceptEULA: bool, expireAt: str(date-time), isEncryptionEnabled: bool, lastLoginSuccessAt: str(date-time), lastLoginFailAt: str(date-time), email: str, phone: str, homeRoomId: int(int64), createdAt: str(date-time), automaticallySubscribeDatarooms: bool, userGroups: [map], userAttributes: map{items: [map]}, title: str, lastLoginSuccessIp: str, lastLoginFailIp: str, gender: str, needsToChangeUserName: bool, authMethods: [map], login: str, lockStatus: int(int32), needsToChangePassword: bool}
+@errors {400, 401, 404, 406, 409, 412}
+
+@endpoint PUT /v4/user/account/password
+@required {oldPassword: str, newPassword: str}
+@returns(204)
+@errors {400, 401, 406}
+
+@endpoint GET /v4/user/account/customer
+@returns(200) {id: int(int64), name: str, isProviderCustomer: bool, spaceLimit: int(int64), spaceUsed: int(int64), accountsLimit: int(int32), accountsUsed: int(int32), cntInternalUser: int(int32), cntGuestUser: int(int32), customerEncryptionEnabled: bool}
+@errors {401, 406, 412}
+
+@endpoint PUT /v4/user/account/customer
+@required {enableCustomerEncryption: bool, dataSpaceRescueKey: map{privateKeyContainer!: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer!: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}}}
+@returns(200) {id: int(int64), name: str, isProviderCustomer: bool, spaceLimit: int(int64), spaceUsed: int(int64), accountsLimit: int(int32), accountsUsed: int(int32), cntInternalUser: int(int32), cntGuestUser: int(int32), customerEncryptionEnabled: bool}
+@errors {400, 401, 403, 406, 412}
+
+@endgroup
+
+@group uploads
+@endpoint PUT /v4/uploads/{token}
+@required {token: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), resolutionStrategy: str(autorename/overwrite/fail)=autorename, keepShareLinks: bool=False, fileName: str, fileKey: map{key!: str, iv!: str, version!: str, tag!: str}, userFileKeyList: map{items: [map{userId!: int(int64), fileKey!: map}]}}
+@returns(201) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@returns(202) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 507}
+
+@endpoint POST /v4/uploads/{token}
+@required {token: str}
+@optional {Content-Range: str}
+@returns(200) {size: int(int64), hash: str}
+@returns(201) {size: int(int64), hash: str}
+@errors {400, 401, 403, 404, 406, 507}
+
+@endpoint DELETE /v4/uploads/{token}
+@required {token: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 507}
+
+@endgroup
+
+@group system
+@endpoint GET /v4/system/config/storage/s3
+@returns(200) {bucketUrl: str, accessKeyDefined: bool, secretKeyDefined: bool, region: str}
+@errors {401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/system/config/storage/s3
+@optional {bucketUrl: str, accessKey: str, secretKey: str, region: str}
+@returns(200) {bucketUrl: str, accessKeyDefined: bool, secretKeyDefined: bool, region: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/system/config/storage/s3
+@required {accessKey: str, secretKey: str}
+@optional {bucketUrl: str, region: str}
+@returns(201) {bucketUrl: str, accessKeyDefined: bool, secretKeyDefined: bool, region: str}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/settings/syslog
+@returns(200) {enabled: bool, host: str, port: int(int32), protocol: str, logIpEnabled: bool}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/settings/syslog
+@optional {enabled: bool, host: str, port: int(int32), protocol: str(TCP/UDP), logIpEnabled: bool}
+@returns(200) {enabled: bool, host: str, port: int(int32), protocol: str, logIpEnabled: bool}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/settings/general
+@returns(200) {sharePasswordSmsEnabled: bool, cryptoEnabled: bool, emailNotificationButtonEnabled: bool, eulaEnabled: bool, useS3Storage: bool, s3TagsEnabled: bool, hideLoginInputFields: bool, authTokenRestrictions: map{restrictionEnabled: bool, accessTokenValidity: int(int32), refreshTokenValidity: int(int32)}, mediaServerEnabled: bool, weakPasswordEnabled: bool}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/settings/general
+@optional {sharePasswordSmsEnabled: bool, cryptoEnabled: bool, emailNotificationButtonEnabled: bool, eulaEnabled: bool, s3TagsEnabled: bool, authTokenRestrictions: map{overwriteEnabled!: bool, accessTokenValidity: int(int32), refreshTokenValidity: int(int32)}, hideLoginInputFields: bool, mediaServerEnabled: bool, weakPasswordEnabled: bool}
+@returns(200) {sharePasswordSmsEnabled: bool, cryptoEnabled: bool, emailNotificationButtonEnabled: bool, eulaEnabled: bool, useS3Storage: bool, s3TagsEnabled: bool, hideLoginInputFields: bool, authTokenRestrictions: map{restrictionEnabled: bool, accessTokenValidity: int(int32), refreshTokenValidity: int(int32)}, mediaServerEnabled: bool, weakPasswordEnabled: bool}
+@errors {400, 401, 402, 403, 404, 406, 412}
+
+@endpoint GET /v4/system/config/settings/eventlog
+@returns(200) {enabled: bool, retentionPeriod: int(int32), logIpEnabled: bool}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/settings/eventlog
+@optional {enabled: bool, retentionPeriod: int(int32), logIpEnabled: bool}
+@returns(200) {enabled: bool, retentionPeriod: int(int32), logIpEnabled: bool}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/settings/defaults
+@returns(200) {languageDefault: str, downloadShareDefaultExpirationPeriod: int(int32), uploadShareDefaultExpirationPeriod: int(int32), fileDefaultExpirationPeriod: int(int32), globalRecycleBinRetentionPeriod: int(int32), globalRecycleBinRetentionPeriodLegacy: int(int32), nonmemberViewerDefault: bool, hideLoginInputFields: bool}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/settings/defaults
+@optional {languageDefault: str, downloadShareDefaultExpirationPeriod: int(int32), uploadShareDefaultExpirationPeriod: int(int32), fileDefaultExpirationPeriod: int(int32), globalRecycleBinRetentionPeriod: int(int32), nonmemberViewerDefault: bool}
+@returns(200) {languageDefault: str, downloadShareDefaultExpirationPeriod: int(int32), uploadShareDefaultExpirationPeriod: int(int32), fileDefaultExpirationPeriod: int(int32), globalRecycleBinRetentionPeriod: int(int32), globalRecycleBinRetentionPeriodLegacy: int(int32), nonmemberViewerDefault: bool, hideLoginInputFields: bool}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/settings/auth
+@returns(200) {authMethods: [map]}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/settings/auth
+@required {authMethods: [map{name!: str, isEnabled!: bool, priority!: int(int32)}]}
+@returns(200) {authMethods: [map]}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/policies/virus_protection
+@returns(200) {isVirusProtectionEnabled: bool}
+@errors {401, 402, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/policies/virus_protection
+@optional {isVirusProtectionEnabled: bool}
+@returns(200) {isVirusProtectionEnabled: bool}
+@errors {400, 401, 402, 403, 406, 412}
+
+@endpoint GET /v4/system/config/policies/passwords
+@returns(200) {loginPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, numberOfArchivedPasswords: int(int32), passwordExpiration: map{enabled: bool, maxPasswordAge: int(int32)}, userLockout: map{enabled: bool, maxNumberOfLoginFailures: int(int32), lockoutPeriod: int(int32)}, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, sharesPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, encryptionPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/policies/passwords
+@optional {loginPasswordPolicies: map{characterRules: map{mustContainCharacters!: [str], numberOfCharacteristicsToEnforce!: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, numberOfArchivedPasswords: int(int32), passwordExpiration: map{enabled!: bool, maxPasswordAge: int(int32)}, userLockout: map{enabled!: bool, maxNumberOfLoginFailures: int(int32), lockoutPeriod: int(int32)}}, sharesPasswordPolicies: map{characterRules: map{mustContainCharacters!: [str], numberOfCharacteristicsToEnforce!: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool}, encryptionPasswordPolicies: map{characterRules: map{mustContainCharacters!: [str], numberOfCharacteristicsToEnforce!: int(int32)}, minLength: int(int32), rejectUserInfo: bool, rejectKeyboardPatterns: bool}}
+@returns(200) {loginPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, numberOfArchivedPasswords: int(int32), passwordExpiration: map{enabled: bool, maxPasswordAge: int(int32)}, userLockout: map{enabled: bool, maxNumberOfLoginFailures: int(int32), lockoutPeriod: int(int32)}, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, sharesPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, encryptionPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/policies/mfa
+@returns(200) {isMfaEnforced: bool, enforcedUserTypes: [str]}
+@errors {401, 402, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/policies/mfa
+@required {isMfaEnforced: bool}
+@returns(200) {isMfaEnforced: bool, enforcedUserTypes: [str]}
+@errors {400, 401, 402, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/policies/mfa/{user_type}
+@required {user_type: str(guest/internal), isMfaEnforced: bool}
+@returns(200) {isMfaEnforced: bool, enforcedUserTypes: [str]}
+@errors {400, 401, 402, 403, 406, 412}
+
+@endpoint GET /v4/system/config/policies/guest_users
+@returns(200) {isInviteUsersEnabled: bool}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/policies/guest_users
+@required {isInviteUsersEnabled: bool}
+@returns(200) {isInviteUsersEnabled: bool}
+@errors {400, 401, 402, 403, 406, 412}
+
+@endpoint GET /v4/system/config/policies/classifications
+@returns(200) {shareClassificationPolicies: map{classificationRequiresSharePassword: int(int32)}}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/system/config/policies/classifications
+@optional {shareClassificationPolicies: map{classificationRequiresSharePassword: int(int32)}}
+@returns(200) {shareClassificationPolicies: map{classificationRequiresSharePassword: int(int32)}}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/oauth/clients/{client_id}
+@required {client_id: str}
+@returns(200) {clientId: str, clientSecret: str, clientName: str, clientType: str, isStandard: bool, isExternal: bool, isEnabled: bool, grantTypes: [str], redirectUris: [str], accessTokenValidity: int(int32), refreshTokenValidity: int(int32), approvalValidity: int(int32)}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/system/config/oauth/clients/{client_id}
+@required {client_id: str, grantTypes: [str](authorization_code/client_credentials/implicit/password/refresh_token)}
+@optional {clientSecret: str, clientName: str, clientType: str(confidential/public), isEnabled: bool, redirectUris: [str], accessTokenValidity: int(int32), refreshTokenValidity: int(int32), approvalValidity: int(int32)}
+@returns(200) {clientId: str, clientSecret: str, clientName: str, clientType: str, isStandard: bool, isExternal: bool, isEnabled: bool, grantTypes: [str], redirectUris: [str], accessTokenValidity: int(int32), refreshTokenValidity: int(int32), approvalValidity: int(int32)}
+@errors {400, 401, 402, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/system/config/oauth/clients/{client_id}
+@required {client_id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/system/config/auth/openid/idps/{idp_id}
+@required {idp_id: int(int32)}
+@returns(200) {id: int(int32), name: str, isStandard: bool, isEnabled: bool, issuer: str, authorizationEndPointUrl: str, tokenEndPointUrl: str, userInfoEndPointUrl: str, jwksEndPointUrl: str, clientId: str, clientSecret: str, flow: str, scopes: [str], redirectUris: [str], pkceEnabled: bool, pkceChallengeMethod: str, mappingClaim: str, fallbackMappingClaim: str, userInfoSource: str, userImportEnabled: bool, userImportGroup: int(int64), userUpdateEnabled: bool, userManagementUrl: str, useAuthProxyEnabled: bool}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/system/config/auth/openid/idps/{idp_id}
+@required {idp_id: int(int32)}
+@optional {name: str, isEnabled: bool, issuer: str, authorizationEndPointUrl: str, tokenEndPointUrl: str, userInfoEndPointUrl: str, jwksEndPointUrl: str, clientId: str, clientSecret: str, flow: str(authorization_code/hybrid), scopes: [str], redirectUris: [str], pkceEnabled: bool=False, pkceChallengeMethod: str, mappingClaim: str, fallbackMappingClaim: str, resetFallbackMappingClaim: bool, userInfoSource: str(user_info_endpoint/id_token), userImportEnabled: bool=False, userImportGroup: int(int64), userUpdateEnabled: bool=False, userManagementUrl: str, useAuthProxyEnabled: bool=False}
+@returns(200) {id: int(int32), name: str, isStandard: bool, isEnabled: bool, issuer: str, authorizationEndPointUrl: str, tokenEndPointUrl: str, userInfoEndPointUrl: str, jwksEndPointUrl: str, clientId: str, clientSecret: str, flow: str, scopes: [str], redirectUris: [str], pkceEnabled: bool, pkceChallengeMethod: str, mappingClaim: str, fallbackMappingClaim: str, userInfoSource: str, userImportEnabled: bool, userImportGroup: int(int64), userUpdateEnabled: bool, userManagementUrl: str, useAuthProxyEnabled: bool}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint DELETE /v4/system/config/auth/openid/idps/{idp_id}
+@required {idp_id: int(int32)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint GET /v4/system/config/auth/ads/{ad_id}
+@required {ad_id: int(int32)}
+@returns(200) {id: int(int32), alias: str, serverIp: str, serverPort: int(int32), serverAdminName: str, ldapUsersDomain: str, userFilter: str, userImport: bool, adExportGroup: str, useLdaps: bool, sdsImportGroup: int(int64), sslFingerPrint: str, homeFolderParent: int(int64), createHomeFolder: bool}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/system/config/auth/ads/{ad_id}
+@required {ad_id: int(int32)}
+@optional {alias: str, serverIp: str, serverPort: int(int32), serverAdminName: str, serverAdminPassword: str, ldapUsersDomain: str, userFilter: str, userImport: bool, adExportGroup: str, sdsImportGroup: int(int64), createHomeFolder: bool=False, homeFolderParent: int(int64), useLdaps: bool, sslFingerPrint: str}
+@returns(200) {id: int(int32), alias: str, serverIp: str, serverPort: int(int32), serverAdminName: str, ldapUsersDomain: str, userFilter: str, userImport: bool, adExportGroup: str, useLdaps: bool, sdsImportGroup: int(int64), sslFingerPrint: str, homeFolderParent: int(int64), createHomeFolder: bool}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint DELETE /v4/system/config/auth/ads/{ad_id}
+@required {ad_id: int(int32)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endgroup
+
+@group shares
+@endpoint GET /v4/shares/uploads
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), filter: str, sort: str, offset: int(int32), limit: int(int32)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/shares/uploads
+@required {objectIds: [int(int64)]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, showCreatorName: bool, showCreatorUsername: bool, showUploadedFiles: bool, maxSlots: int(int32), resetMaxSlots: bool, maxSize: int(int64), resetMaxSize: bool, filesExpiryPeriod: int(int32), resetFilesExpiryPeriod: bool}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 412, 502}
+
+@endpoint POST /v4/shares/uploads
+@required {targetId: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, password: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, filesExpiryPeriod: int(int32), notes: str, internalNotes: str, showUploadedFiles: bool=False, maxSlots: int(int32), maxSize: int(int64), receiverLanguage: str, textMessageRecipients: [str], showCreatorName: bool=False, showCreatorUsername: bool=False, notifyCreator: bool=False, creatorLanguage: str, sendMail: bool=False, mailRecipients: str, mailSubject: str, mailBody: str, sendSms: bool=False, smsRecipients: str}
+@returns(201) {id: int(int64), name: str, targetId: int(int64), isProtected: bool, accessKey: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), targetPath: str, isEncrypted: bool, notes: str, internalNotes: str, filesExpiryPeriod: int(int32), cntFiles: int(int32), cntUploads: int(int32), showUploadedFiles: bool, dataUrl: str, maxSlots: int(int32), maxSize: int(int64), targetType: str, showCreatorName: bool, showCreatorUsername: bool, notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412, 502}
+
+@endpoint DELETE /v4/shares/uploads
+@required {shareIds: [int(int64)]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/shares/uploads/{share_id}
+@required {share_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, targetId: int(int64), isProtected: bool, accessKey: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), targetPath: str, isEncrypted: bool, notes: str, internalNotes: str, filesExpiryPeriod: int(int32), cntFiles: int(int32), cntUploads: int(int32), showUploadedFiles: bool, dataUrl: str, maxSlots: int(int32), maxSize: int(int64), targetType: str, showCreatorName: bool, showCreatorUsername: bool, notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/shares/uploads/{share_id}
+@required {share_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, password: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, filesExpiryPeriod: int(int32), notes: str, internalNotes: str, showCreatorName: bool, showCreatorUsername: bool, showUploadedFiles: bool, maxSlots: int(int32), maxSize: int(int64), textMessageRecipients: [str], receiverLanguage: str, defaultCountry: str, resetPassword: bool, resetFilesExpiryPeriod: bool, resetMaxSlots: bool, resetMaxSize: bool, notifyCreator: bool}
+@returns(200) {id: int(int64), name: str, targetId: int(int64), isProtected: bool, accessKey: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), targetPath: str, isEncrypted: bool, notes: str, internalNotes: str, filesExpiryPeriod: int(int32), cntFiles: int(int32), cntUploads: int(int32), showUploadedFiles: bool, dataUrl: str, maxSlots: int(int32), maxSize: int(int64), targetType: str, showCreatorName: bool, showCreatorUsername: bool, notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412, 502}
+
+@endpoint DELETE /v4/shares/uploads/{share_id}
+@required {share_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/shares/downloads
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), filter: str, sort: str, offset: int(int32), limit: int(int32)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/shares/downloads
+@required {objectIds: [int(int64)]}
+@optional {expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, showCreatorName: bool, showCreatorUsername: bool, maxDownloads: int(int32), resetMaxDownloads: bool}
+@returns(200)
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412, 502}
+
+@endpoint POST /v4/shares/downloads
+@required {nodeId: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, password: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, notes: str, internalNotes: str, showCreatorName: bool=False, showCreatorUsername: bool=False, maxDownloads: int(int32), keyPair: map{privateKeyContainer!: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer!: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}}, fileKey: map{key!: str, iv!: str, version!: str, tag!: str}, receiverLanguage: str, textMessageRecipients: [str], hideDownload: bool=False, notifyCreator: bool=False, creatorLanguage: str, sendMail: bool=False, mailRecipients: str, mailSubject: str, mailBody: str, sendSms: bool=False, smsRecipients: str}
+@returns(201) {id: int(int64), name: str, nodeId: int(int64), accessKey: str, cntDownloads: int(int32), createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, notes: str, internalNotes: str, showCreatorName: bool, showCreatorUsername: bool, isProtected: bool, expireAt: str(date-time), maxDownloads: int(int32), nodePath: str, dataUrl: str, isEncrypted: bool, nodeType: str, hideDownload: bool, classification: int(int32), notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412, 502}
+
+@endpoint DELETE /v4/shares/downloads
+@required {shareIds: [int(int64)]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/shares/downloads/{share_id}
+@required {share_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, nodeId: int(int64), accessKey: str, cntDownloads: int(int32), createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, notes: str, internalNotes: str, showCreatorName: bool, showCreatorUsername: bool, isProtected: bool, expireAt: str(date-time), maxDownloads: int(int32), nodePath: str, dataUrl: str, isEncrypted: bool, nodeType: str, hideDownload: bool, classification: int(int32), notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/shares/downloads/{share_id}
+@required {share_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, password: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, notes: str, internalNotes: str, showCreatorName: bool, showCreatorUsername: bool, maxDownloads: int(int32), textMessageRecipients: [str], receiverLanguage: str, defaultCountry: str, resetPassword: bool, resetMaxDownloads: bool, hideDownload: bool, notifyCreator: bool}
+@returns(200) {id: int(int64), name: str, nodeId: int(int64), accessKey: str, cntDownloads: int(int32), createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, notes: str, internalNotes: str, showCreatorName: bool, showCreatorUsername: bool, isProtected: bool, expireAt: str(date-time), maxDownloads: int(int32), nodePath: str, dataUrl: str, isEncrypted: bool, nodeType: str, hideDownload: bool, classification: int(int32), notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412, 502}
+
+@endpoint DELETE /v4/shares/downloads/{share_id}
+@required {share_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group settings
+@endpoint GET /v4/settings
+@returns(200) {homeRoomsActive: bool, homeRoomParentId: int(int64), homeRoomParentName: str, homeRoomQuota: int(int64)}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/settings
+@optional {homeRoomParentName: str, homeRoomQuota: int(int64), homeRoomsActive: bool}
+@returns(200) {homeRoomsActive: bool, homeRoomParentId: int(int64), homeRoomParentName: str, homeRoomQuota: int(int64)}
+@errors {400, 401, 403, 406, 409, 412}
+
+@endpoint GET /v4/settings/webhooks/{webhook_id}
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/settings/webhooks/{webhook_id}
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, eventTypeNames: [str], url: str, secret: str, isEnabled: bool, triggerExampleEvent: bool}
+@returns(200) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/settings/webhooks/{webhook_id}
+@required {webhook_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/settings/notifications/channels
+@returns(200) {items: [map]}
+@errors {401, 403, 406, 412}
+
+@endpoint PUT /v4/settings/notifications/channels
+@required {channelId: int(int32), isEnabled: bool}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 406, 412}
+
+@endgroup
+
+@group public
+@endpoint GET /v4/public/shares/uploads/{access_key}/{upload_id}
+@required {access_key: str, upload_id: str}
+@returns(200) {status: str, fileName: str, size: int(int64), errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 404, 406, 412}
+
+@endpoint PUT /v4/public/shares/uploads/{access_key}/{upload_id}
+@required {access_key: str, upload_id: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), items: [map{userId!: int(int64), fileKey!: map{key!: str, iv!: str, version!: str, tag!: str}}]}
+@returns(201) {name: str, size: int(int64), createdAt: str(date-time), hash: str}
+@returns(202) {name: str, size: int(int64), createdAt: str(date-time), hash: str}
+@errors {400, 403, 404, 406, 412, 504, 507}
+
+@endpoint POST /v4/public/shares/uploads/{access_key}/{upload_id}
+@required {access_key: str, upload_id: str}
+@optional {Content-Range: str, X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {size: int(int64), hash: str}
+@returns(201) {size: int(int64), hash: str}
+@errors {400, 404, 406, 412, 507}
+
+@endpoint DELETE /v4/public/shares/uploads/{access_key}/{upload_id}
+@required {access_key: str, upload_id: str}
+@returns(204)
+@errors {400, 404, 406, 504, 507}
+
+@endpoint PUT /v4/public/shares/uploads/{access_key}/{upload_id}/s3
+@required {access_key: str, upload_id: str, parts: [map{partNumber!: int(int32), partEtag!: str}]}
+@optional {userFileKeyList: [map{userId!: int(int64), fileKey!: map{key!: str, iv!: str, version!: str, tag!: str}}]}
+@returns(202)
+@errors {400, 404, 406, 412}
+
+@endgroup
+
+@group provisioning
+@endpoint GET /v4/provisioning/webhooks/{webhook_id}
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str}
+@returns(200) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 404, 406}
+
+@endpoint PUT /v4/provisioning/webhooks/{webhook_id}
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str, name: str, eventTypeNames: [str], url: str, secret: str, isEnabled: bool, triggerExampleEvent: bool}
+@returns(200) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 404, 406}
+
+@endpoint DELETE /v4/provisioning/webhooks/{webhook_id}
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Service-Token: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406}
+
+@endpoint GET /v4/provisioning/customers/{customer_id}
+@required {customer_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), include_attributes: bool, X-Sds-Service-Token: str}
+@returns(200) {id: int(int64), companyName: str, customerContractType: str, quotaMax: int(int64), quotaUsed: int(int64), userMax: int(int32), userUsed: int(int32), cntInternalUser: int(int32), cntGuestUser: int(int32), createdAt: str(date-time), isLocked: bool, trialDaysLeft: int(int32), updatedAt: str(date-time), lastLoginAt: str(date-time), customerAttributes: map{items: [map]}, providerCustomerId: str, webhooksMax: int(int64), activationCode: str, lockStatus: bool, customerUuid: str}
+@errors {400, 401, 404, 406}
+
+@endpoint PUT /v4/provisioning/customers/{customer_id}
+@required {customer_id: int(int64), customerContractType: str(demo/free/pay)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str, companyName: str, quotaMax: int(int64), userMax: int(int32), isLocked: bool=False, providerCustomerId: str, webhooksMax: int(int64), lockStatus: bool=False}
+@returns(200) {id: int(int64), companyName: str, customerContractType: str, quotaMax: int(int64), userMax: int(int32), customerUuid: str, isLocked: bool, trialDays: int(int32), createdAt: str(date-time), updatedAt: str(date-time), customerAttributes: map{items: [map]}, providerCustomerId: str, webhooksMax: int(int64), activationCode: str, lockStatus: bool}
+@errors {400, 401, 402, 404, 406}
+
+@endpoint DELETE /v4/provisioning/customers/{customer_id}
+@required {customer_id: int(int64)}
+@optional {X-Sds-Service-Token: str}
+@returns(204)
+@errors {400, 401, 404, 406}
+
+@endpoint GET /v4/provisioning/customers/{customer_id}/customerAttributes
+@required {customer_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str, X-Sds-Service-Token: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 404, 406}
+
+@endpoint PUT /v4/provisioning/customers/{customer_id}/customerAttributes
+@required {customer_id: int(int64), items: [map{key!: str, value!: str}]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str}
+@returns(204)
+@errors {400, 401, 404, 406}
+
+@endpoint POST /v4/provisioning/customers/{customer_id}/customerAttributes
+@required {customer_id: int(int64), items: [map{key!: str, value!: str}]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str}
+@returns(201) {id: int(int64), companyName: str, customerContractType: str, quotaMax: int(int64), quotaUsed: int(int64), userMax: int(int32), userUsed: int(int32), cntInternalUser: int(int32), cntGuestUser: int(int32), createdAt: str(date-time), isLocked: bool, trialDaysLeft: int(int32), updatedAt: str(date-time), lastLoginAt: str(date-time), customerAttributes: map{items: [map]}, providerCustomerId: str, webhooksMax: int(int64), activationCode: str, lockStatus: bool, customerUuid: str}
+@errors {400, 401, 404, 406}
+
+@endgroup
+
+@group nodes
+@endpoint GET /v4/nodes/{node_id}/node_attributes
+@required {node_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/{node_id}/node_attributes
+@required {node_id: int(int64), items: [map{key!: str, value!: str}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}
+@required {room_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, quota: int(int64), notes: str, timestampCreation: str(date-time), timestampModification: str(date-time)}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/webhooks
+@required {room_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/webhooks
+@required {room_id: int(int64), items: [map{webhookId!: int(int64), isAssigned!: bool}]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/users
+@required {room_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/users
+@required {room_id: int(int64), items: [map{id!: int(int64), permissions!: map{manage!: bool, read!: bool, create!: bool, change!: bool, delete!: bool, manageDownloadShare!: bool, manageUploadShare!: bool, readRecycleBin!: bool, restoreRecycleBin!: bool, deleteRecycleBin!: bool}}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/rooms/{room_id}/users
+@required {room_id: int(int64), ids: [int(int64)]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/policies
+@required {room_id: int(int64)}
+@returns(200) {defaultExpirationPeriod: int(int32), isVirusProtectionEnabled: bool}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/policies
+@required {room_id: int(int64)}
+@optional {defaultExpirationPeriod: int(int32), virusProtectionEnabled: bool}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/guest_users
+@required {room_id: int(int64), roomGuestInvitations: [map{firstName!: str, lastName!: str, email!: str}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/groups
+@required {room_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/groups
+@required {room_id: int(int64), items: [map{id!: int(int64), permissions!: map{manage!: bool, read!: bool, create!: bool, change!: bool, delete!: bool, manageDownloadShare!: bool, manageUploadShare!: bool, readRecycleBin!: bool, restoreRecycleBin!: bool, deleteRecycleBin!: bool}, newGroupMemberAcceptance: str}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/rooms/{room_id}/groups
+@required {room_id: int(int64), ids: [int(int64)]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/encrypt
+@required {room_id: int(int64), isEncrypted: bool}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), useDataSpaceRescueKey: bool, dataRoomRescueKey: map{privateKeyContainer!: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer!: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}}}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/{room_id}/config
+@required {room_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), recycleBinRetentionPeriod: int(int32), inheritPermissions: bool, takeOverPermissions: bool, adminIds: [int(int64)], adminGroupIds: [int(int64)], newGroupMemberAcceptance: str(autoallow/pending)=autoallow, hasActivitiesLog: bool=True, classification: int(int32)(1/2/3/4)=2}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint GET /v4/nodes/rooms/pending
+@optional {offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 406, 412}
+
+@endpoint PUT /v4/nodes/rooms/pending
+@required {items: [map{userId!: int(int64), groupId!: int(int64), roomId!: int(int64), roomName!: str, state!: str}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/folders/{folder_id}
+@required {folder_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, notes: str, classification: int(int32)(1/2/3/4), timestampCreation: str(date-time), timestampModification: str(date-time)}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint PUT /v4/nodes/files
+@required {objectIds: [int(int64)]}
+@optional {classification: int(int32), expiration: map{enableExpiration!: bool, expireAt: str(date-time)}}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint PUT /v4/nodes/files/{file_id}
+@required {file_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, classification: int(int32), notes: str, timestampCreation: str(date-time), timestampModification: str(date-time)}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint GET /v4/nodes/files/uploads/{upload_id}
+@required {upload_id: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {status: str, node: map{id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}, errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/files/uploads/{upload_id}
+@required {upload_id: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), resolutionStrategy: str(autorename/overwrite/fail)=autorename, keepShareLinks: bool=False, fileName: str, fileKey: map{key!: str, iv!: str, version!: str, tag!: str}, userFileKeyList: map{items: [map{userId!: int(int64), fileKey!: map}]}}
+@returns(201) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@returns(202) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412, 507}
+
+@endpoint POST /v4/nodes/files/uploads/{upload_id}
+@required {upload_id: str}
+@optional {Content-Range: str}
+@returns(201) {size: int(int64), hash: str}
+@errors {400, 401, 403, 404, 406, 412, 507}
+
+@endpoint DELETE /v4/nodes/files/uploads/{upload_id}
+@required {upload_id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412, 504}
+
+@endpoint PUT /v4/nodes/files/uploads/{upload_id}/s3
+@required {upload_id: str, parts: [map{partNumber!: int(int32), partEtag!: str}]}
+@optional {resolutionStrategy: str(autorename/overwrite/fail)=autorename, keepShareLinks: bool=False, fileName: str, fileKey: map{key!: str, iv!: str, version!: str, tag!: str}, isPrioritisedVirusScan: bool=False}
+@returns(202)
+@errors {400, 401, 403, 404, 406, 409, 412, 504}
+
+@endpoint PUT /v4/nodes/favorites
+@required {isFavorite: bool, objectIds: [int(int64)]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/nodes/comments/{comment_id}
+@required {comment_id: int(int64), text: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), text: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, isChanged: bool, isDeleted: bool}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/comments/{comment_id}
+@required {comment_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group groups
+@endpoint GET /v4/groups/{group_id}
+@required {group_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, cntUsers: int(int32), updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), groupRoles: map{items: [map]}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint PUT /v4/groups/{group_id}
+@required {group_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), name: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}}
+@returns(200) {id: int(int64), name: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, cntUsers: int(int32), updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), groupRoles: map{items: [map]}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint DELETE /v4/groups/{group_id}
+@required {group_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group config
+@endpoint GET /v4/config/settings
+@returns(200) {items: [map]}
+@errors {401, 406, 412}
+
+@endpoint PUT /v4/config/settings
+@required {items: [map{key!: str, value!: str}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group auth
+@endpoint GET /v4/auth/reset_password/{token}
+@required {token: str}
+@returns(200) {firstName: str, lastName: str, loginPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, numberOfArchivedPasswords: int(int32), passwordExpiration: map{enabled: bool, maxPasswordAge: int(int32)}, userLockout: map{enabled: bool, maxNumberOfLoginFailures: int(int32), lockoutPeriod: int(int32)}, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, title: str, gender: str, allowSystemGlobalWeakPassword: bool}
+@errors {400, 404, 406}
+
+@endpoint PUT /v4/auth/reset_password/{token}
+@required {token: str, password: str}
+@returns(204)
+@errors {400, 404, 406}
+
+@endgroup
+
+@group users
+@endpoint GET /v4/users
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str, include_attributes: bool, include_roles: bool, include_manageable_rooms: bool}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint POST /v4/users
+@required {firstName: str, lastName: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), userName: str, phone: str, expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, receiverLanguage: str, email: str, notifyUser: bool, authData: map{method!: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, isNonmemberViewer: bool, mfaConfig: map{mfaEnforced: bool}, title: str, password: str, login: str, authMethods: [map{authId!: str, isEnabled!: bool, options: [map{key!: str, value!: str}]}], needsToChangePassword: bool, gender: str=n}
+@returns(201) {id: int(int64), userName: str, firstName: str, lastName: str, isLocked: bool, avatarUuid: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, email: str, phone: str, expireAt: str(date-time), hasManageableRooms: bool, isEncryptionEnabled: bool, lastLoginSuccessAt: str(date-time), homeRoomId: int(int64), publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}, userRoles: map{items: [map]}, isMfaEnabled: bool, isMfaEnforced: bool, userAttributes: map{items: [map]}, title: str, lockStatus: int(int32), login: str, authMethods: [map], gender: str}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint POST /v4/users/{user_id}/mfa/emergency_code
+@required {user_id: int(int64)}
+@returns(200) {code: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group user
+@endpoint POST /v4/user/subscriptions/upload_shares/{share_id}
+@required {share_id: int(int64)}
+@returns(201) {id: int(int64), targetNodeId: int(int64)}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/user/subscriptions/upload_shares/{share_id}
+@required {share_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/user/subscriptions/nodes/{node_id}
+@required {node_id: int(int64)}
+@returns(201) {id: int(int64), type: str, authParentId: int(int64), name: str, parentPath: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/user/subscriptions/nodes/{node_id}
+@required {node_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/user/subscriptions/download_shares/{share_id}
+@required {share_id: int(int64)}
+@returns(201) {id: int(int64), authParentId: int(int64)}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/user/subscriptions/download_shares/{share_id}
+@required {share_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/user/account/mfa/totp
+@returns(201) {id: int(int64), qrCode: str, otpUri: str, secret: str}
+@errors {401, 402, 406, 409, 412}
+
+@endpoint POST /v4/user/account/mfa/totp
+@required {id: int(int64), otp: str}
+@returns(204)
+@errors {400, 401, 402, 406, 412}
+
+@endpoint GET /v4/user/account/keypairs
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200)
+@errors {401, 404, 406, 412}
+
+@endpoint POST /v4/user/account/keypairs
+@required {privateKeyContainer: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}, previousPrivateKey: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}}
+@returns(204)
+@errors {400, 401, 406, 409, 412}
+
+@endpoint GET /v4/user/account/keypair
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), version: str}
+@returns(200) {privateKeyContainer: map{version: str, privateKey: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}}
+@errors {400, 401, 404, 406, 412}
+
+@endpoint POST /v4/user/account/keypair
+@required {privateKeyContainer: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}}
+@returns(204)
+@errors {400, 401, 406, 409, 412}
+
+@endpoint DELETE /v4/user/account/keypair
+@optional {version: str}
+@returns(204)
+@errors {400, 401, 404, 406, 412}
+
+@endpoint GET /v4/user/account/avatar
+@returns(200) {avatarUri: str, avatarUuid: str, isCustomAvatar: bool}
+@errors {401, 406, 412}
+
+@endpoint POST /v4/user/account/avatar
+@returns(201) {avatarUri: str, avatarUuid: str, isCustomAvatar: bool}
+@errors {400, 401, 406, 412}
+
+@endpoint DELETE /v4/user/account/avatar
+@returns(200) {avatarUri: str, avatarUuid: str, isCustomAvatar: bool}
+@errors {401, 406, 412}
+
+@endgroup
+
+@group system
+@endpoint GET /v4/system/config/storage/s3/tags
+@returns(200) {items: [map]}
+@errors {401, 403, 406, 412}
+
+@endpoint POST /v4/system/config/storage/s3/tags
+@required {key: str, value: str}
+@optional {isMandatory: bool=False}
+@returns(201) {id: int(int64), key: str, value: str, isMandatory: bool}
+@errors {400, 401, 403, 406, 409, 412}
+
+@endpoint POST /v4/system/config/policies/passwords/enforce_change
+@returns(204)
+@returns(200)
+@errors {401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/oauth/clients
+@optional {filter: str, sort: str}
+@returns(200)
+@errors {401, 403, 406, 412}
+
+@endpoint POST /v4/system/config/oauth/clients
+@required {clientName: str, grantTypes: [str](authorization_code/client_credentials/implicit/password/refresh_token), redirectUris: [str]}
+@optional {clientId: str, clientSecret: str, clientType: str(confidential/public)=confidential, accessTokenValidity: int(int32), refreshTokenValidity: int(int32), approvalValidity: int(int32)}
+@returns(201) {clientId: str, clientSecret: str, clientName: str, clientType: str, isStandard: bool, isExternal: bool, isEnabled: bool, grantTypes: [str], redirectUris: [str], accessTokenValidity: int(int32), refreshTokenValidity: int(int32), approvalValidity: int(int32)}
+@errors {400, 401, 402, 403, 406, 409, 412}
+
+@endpoint GET /v4/system/config/auth/openid/idps
+@optional {filter: str, sort: str}
+@returns(200)
+@errors {401, 403, 406, 412}
+
+@endpoint POST /v4/system/config/auth/openid/idps
+@required {name: str, issuer: str, authorizationEndPointUrl: str, tokenEndPointUrl: str, userInfoEndPointUrl: str, jwksEndPointUrl: str, clientId: str, clientSecret: str, scopes: [str], redirectUris: [str], mappingClaim: str}
+@optional {flow: str(authorization_code/hybrid), pkceEnabled: bool=False, pkceChallengeMethod: str=plain, fallbackMappingClaim: str, userInfoSource: str(user_info_endpoint/id_token), userImportEnabled: bool=False, userImportGroup: int(int64), userUpdateEnabled: bool=False, userManagementUrl: str, useAuthProxyEnabled: bool=False}
+@returns(201) {id: int(int32), name: str, isStandard: bool, isEnabled: bool, issuer: str, authorizationEndPointUrl: str, tokenEndPointUrl: str, userInfoEndPointUrl: str, jwksEndPointUrl: str, clientId: str, clientSecret: str, flow: str, scopes: [str], redirectUris: [str], pkceEnabled: bool, pkceChallengeMethod: str, mappingClaim: str, fallbackMappingClaim: str, userInfoSource: str, userImportEnabled: bool, userImportGroup: int(int64), userUpdateEnabled: bool, userManagementUrl: str, useAuthProxyEnabled: bool}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint GET /v4/system/config/auth/ads
+@returns(200) {items: [map]}
+@errors {401, 403, 406, 412}
+
+@endpoint POST /v4/system/config/auth/ads
+@required {alias: str, serverIp: str, serverPort: int(int32), serverAdminName: str, serverAdminPassword: str, ldapUsersDomain: str, userFilter: str}
+@optional {userImport: bool=False, useLdaps: bool=False, adExportGroup: str, sdsImportGroup: int(int64), createHomeFolder: bool=False, homeFolderParent: int(int64), sslFingerPrint: str}
+@returns(201) {id: int(int32), alias: str, serverIp: str, serverPort: int(int32), serverAdminName: str, ldapUsersDomain: str, userFilter: str, userImport: bool, adExportGroup: str, useLdaps: bool, sdsImportGroup: int(int64), sslFingerPrint: str, homeFolderParent: int(int64), createHomeFolder: bool}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint POST /v4/system/config/actions/test/ad
+@required {serverIp: str, serverPort: int(int32), serverAdminName: str, serverAdminPassword: str, ldapUsersDomain: str}
+@optional {useLdaps: bool=False, sslFingerPrint: str}
+@returns(200) {serverIp: str, serverPort: int(int32), serverAdminName: str, ldapUsersDomain: str, useLdaps: bool, sslFingerPrint: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group shares
+@endpoint POST /v4/shares/uploads/{share_id}/email
+@required {share_id: int(int64), recipients: [str], body: str}
+@optional {receiverLanguage: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/shares/downloads/{share_id}/email
+@required {share_id: int(int64), recipients: [str], body: str}
+@optional {receiverLanguage: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group settings
+@endpoint GET /v4/settings/webhooks
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint POST /v4/settings/webhooks
+@required {name: str, eventTypeNames: [str], url: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), secret: str, isEnabled: bool, triggerExampleEvent: bool}
+@returns(201) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint POST /v4/settings/webhooks/{webhook_id}/reset_lifetime
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/settings/keypairs
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200)
+@errors {401, 403, 406, 412}
+
+@endpoint POST /v4/settings/keypairs
+@required {privateKeyContainer: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}, previousPrivateKey: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}}
+@returns(204)
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/settings/keypair
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), version: str}
+@returns(200) {privateKeyContainer: map{version: str, privateKey: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}}
+@errors {400, 401, 406, 412}
+
+@endpoint POST /v4/settings/keypair
+@required {privateKeyContainer: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}}
+@returns(204)
+@errors {400, 401, 403, 406, 412}
+
+@endpoint DELETE /v4/settings/keypair
+@optional {version: str}
+@returns(204)
+@errors {400, 401, 403, 406, 412}
+
+@endgroup
+
+@group roles
+@endpoint GET /v4/roles/{role_id}/users
+@required {role_id: int(int32)}
+@optional {offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/roles/{role_id}/users
+@required {role_id: int(int32), ids: [int(int64)]}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 409, 406, 412}
+
+@endpoint DELETE /v4/roles/{role_id}/users
+@required {role_id: int(int32), ids: [int(int64)]}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/roles/{role_id}/groups
+@required {role_id: int(int32)}
+@optional {offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/roles/{role_id}/groups
+@required {role_id: int(int32), ids: [int(int64)]}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/roles/{role_id}/groups
+@required {role_id: int(int32), ids: [int(int64)]}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group public
+@endpoint GET /v4/public/shares/uploads/{access_key}
+@required {access_key: str}
+@optional {X-Sds-Share-Password: str, X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {isProtected: bool, createdAt: str(date-time), name: str, isEncrypted: bool, expireAt: str(date-time), notes: str, uploadedFiles: [map], userUserPublicKeyList: map{items: [map]}, showUploadedFiles: bool, remainingSize: int(int64), remainingSlots: int(int32), creatorName: str, creatorUsername: str}
+@errors {400, 401, 403, 404, 406}
+
+@endpoint POST /v4/public/shares/uploads/{access_key}
+@required {access_key: str, name: str}
+@optional {size: int(int64), password: str, directS3Upload: bool=False, timestampCreation: str(date-time), timestampModification: str(date-time)}
+@returns(201) {uploadId: str, uploadUrl: str}
+@errors {400, 401, 403, 404, 406, 412, 504, 507}
+
+@endpoint POST /v4/public/shares/uploads/{access_key}/{upload_id}/s3_urls
+@required {access_key: str, upload_id: str, size: int(int64), firstPartNumber: int(int32), lastPartNumber: int(int32)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(201) {urls: [map]}
+@errors {400, 403, 404, 406, 412, 504, 507}
+
+@endpoint GET /v4/public/shares/downloads/{access_key}
+@required {access_key: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {isProtected: bool, fileName: str, size: int(int64), limitReached: bool, creatorName: str, createdAt: str(date-time), hasDownloadLimit: bool, mediaType: str, name: str, creatorUsername: str, expireAt: str(date-time), notes: str, isEncrypted: bool, fileKey: map{key: str, iv: str, version: str, tag: str}, privateKeyContainer: map{version: str, privateKey: str, createdAt: str(date-time), createdBy: int(int64)}, virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}, hideDownload: bool}
+@errors {400, 404, 406}
+
+@endpoint POST /v4/public/shares/downloads/{access_key}
+@required {access_key: str}
+@optional {password: str}
+@returns(201) {downloadUrl: str}
+@errors {400, 401, 403, 404, 406}
+
+@endpoint HEAD /v4/public/shares/downloads/{access_key}
+@required {access_key: str}
+@optional {password: str}
+@returns(200)
+@errors {400, 401, 403, 404, 406}
+
+@endgroup
+
+@group provisioning
+@endpoint GET /v4/provisioning/webhooks
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str, X-Sds-Service-Token: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 406}
+
+@endpoint POST /v4/provisioning/webhooks
+@required {name: str, eventTypeNames: [str], url: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str, secret: str, isEnabled: bool, triggerExampleEvent: bool}
+@returns(201) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 406}
+
+@endpoint POST /v4/provisioning/webhooks/{webhook_id}/reset_lifetime
+@required {webhook_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str}
+@returns(200) {id: int(int64), name: str, url: str, secret: str, isEnabled: bool, expireAt: str(date-time), eventTypeNames: [str], createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, failStatus: int(int32)}
+@errors {400, 401, 403, 404, 406}
+
+@endpoint GET /v4/provisioning/customers
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str, include_attributes: bool, X-Sds-Service-Token: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 404, 406}
+
+@endpoint POST /v4/provisioning/customers
+@required {customerContractType: str(demo/free/pay), quotaMax: int(int64), userMax: int(int32), firstAdminUser: map{firstName!: str, lastName!: str, userName: str, authData: map{method!: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, receiverLanguage: str, notifyUser: bool, email: str, phone: str, title: str, language: str, authMethods: [map{authId!: str, isEnabled!: bool, options: [map]}], needsToChangeUserName: bool, password: str, needsToChangePassword: bool, login: str, gender: str}}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), X-Sds-Service-Token: str, companyName: str, trialDays: int(int32), isLocked: bool=False, customerAttributes: map{items!: [map{key!: str, value!: str}]}, providerCustomerId: str, webhooksMax: int(int64), lockStatus: bool=False, activationCode: str}
+@returns(201) {id: int(int64), companyName: str, customerContractType: str, quotaMax: int(int64), userMax: int(int32), isLocked: bool, trialDays: int(int32), createdAt: str(date-time), firstAdminUser: map{firstName: str, lastName: str, userName: str, authData: map{method: str, login: str, password: str, mustChangePassword: bool, adConfigId: int(int32), oidConfigId: int(int32)}, receiverLanguage: str, notifyUser: bool, email: str, phone: str, title: str, language: str, authMethods: [map], needsToChangeUserName: bool, password: str, needsToChangePassword: bool, login: str, gender: str}, customerAttributes: map{items: [map]}, providerCustomerId: str, webhooksMax: int(int64), customerUuid: str, activationCode: str, lockStatus: bool}
+@errors {400, 401, 402, 404, 406, 409}
+
+@endgroup
+
+@group nodes
+@endpoint POST /v4/nodes/{node_id}/move_to
+@required {node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), items: [map{id!: int(int64), name: str, timestampCreation: str(date-time), timestampModification: str(date-time)}], resolutionStrategy: str(autorename/overwrite/fail)=autorename, keepShareLinks: bool=False, nodeIds: [int(int64)]}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412, 507}
+
+@endpoint POST /v4/nodes/{node_id}/favorite
+@required {node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(201) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/{node_id}/favorite
+@required {node_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/{node_id}/copy_to
+@required {node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), items: [map{id!: int(int64), name: str, timestampCreation: str(date-time), timestampModification: str(date-time)}], resolutionStrategy: str(autorename/overwrite/fail)=autorename, keepShareLinks: bool=False, nodeIds: [int(int64)]}
+@returns(201) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412, 507}
+
+@endpoint GET /v4/nodes/{node_id}/comments
+@required {node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), hide_deleted: bool}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/{node_id}/comments
+@required {node_id: int(int64), text: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(201) {id: int(int64), text: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, isChanged: bool, isDeleted: bool}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/zip
+@required {nodeIds: [int(int64)]}
+@returns(200) {downloadUrl: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/zip/download
+@required {nodeIds: [int(int64)]}
+@returns(200)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/rooms
+@required {name: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), parentId: int(int64), recycleBinRetentionPeriod: int(int32), quota: int(int64), inheritPermissions: bool, adminIds: [int(int64)], adminGroupIds: [int(int64)], newGroupMemberAcceptance: str(autoallow/pending)=autoallow, notes: str, hasActivitiesLog: bool=True, classification: int(int32)(1/2/3/4)=2, timestampCreation: str(date-time), timestampModification: str(date-time), hasRecycleBin: bool}
+@returns(201) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/s3_tags
+@required {room_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/rooms/{room_id}/s3_tags
+@required {room_id: int(int64), ids: [int(int64)]}
+@returns(201) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/keypairs
+@required {room_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(204)
+@returns(200)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/rooms/{room_id}/keypairs
+@required {room_id: int(int64), privateKeyContainer: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}, previousPrivateKey: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/keypair
+@required {room_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), version: str}
+@returns(200) {privateKeyContainer: map{version: str, privateKey: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/rooms/{room_id}/keypair
+@required {room_id: int(int64), privateKeyContainer: map{version!: str, privateKey!: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version!: str, publicKey!: str, createdAt: str(date-time), createdBy: int(int64)}}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint DELETE /v4/nodes/rooms/{room_id}/keypair
+@required {room_id: int(int64)}
+@optional {version: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/folders
+@required {parentId: int(int64), name: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), notes: str, classification: int(int32)(1/2/3/4), timestampCreation: str(date-time), timestampModification: str(date-time)}
+@returns(201) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 409, 412}
+
+@endpoint POST /v4/nodes/files/{file_id}/downloads
+@required {file_id: int(int64)}
+@returns(200) {downloadUrl: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/files/uploads
+@required {parentId: int(int64), name: str}
+@optional {classification: int(int32)(1/2/3/4), size: int(int64), expiration: map{enableExpiration!: bool, expireAt: str(date-time)}, notes: str, directS3Upload: bool=False, timestampCreation: str(date-time), timestampModification: str(date-time)}
+@returns(201) {uploadUrl: str, uploadId: str, token: str}
+@errors {400, 401, 403, 404, 406, 412, 504, 507}
+
+@endpoint POST /v4/nodes/files/uploads/{upload_id}/s3_urls
+@required {upload_id: str, size: int(int64), firstPartNumber: int(int32), lastPartNumber: int(int32)}
+@returns(201) {urls: [map]}
+@errors {400, 401, 403, 404, 406, 412, 504, 507}
+
+@endpoint POST /v4/nodes/files/keys
+@required {items: [map{fileId!: int(int64), userId!: int(int64), fileKey!: map{key!: str, iv!: str, version!: str, tag!: str}}]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/nodes/files/generate_verdict_info
+@required {nodeIds: [int(int64)]}
+@returns(200)
+@errors {400, 401, 402, 403, 404, 412}
+
+@endpoint POST /v4/nodes/deleted_nodes/actions/restore
+@required {deletedNodeIds: [int(int64)]}
+@optional {resolutionStrategy: str(autorename/overwrite/fail)=autorename, keepShareLinks: bool=False, parentId: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 409, 412, 507}
+
+@endgroup
+
+@group groups
+@endpoint GET /v4/groups
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint POST /v4/groups
+@required {name: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), expiration: map{enableExpiration!: bool, expireAt: str(date-time)}}
+@returns(201) {id: int(int64), name: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, cntUsers: int(int32), updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), groupRoles: map{items: [map]}}
+@errors {400, 401, 403, 406, 409, 412}
+
+@endpoint GET /v4/groups/{group_id}/users
+@required {group_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/groups/{group_id}/users
+@required {group_id: int(int64), ids: [int(int64)]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, cntUsers: int(int32), updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), groupRoles: map{items: [map]}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/groups/{group_id}/users
+@required {group_id: int(int64), ids: [int(int64)]}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, cntUsers: int(int32), updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), groupRoles: map{items: [map]}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group datev
+@endpoint GET /v4/datev/mst/{config_id}/taxyears
+@required {config_id: int(int64)}
+@returns(200) {years: [str]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/datev/mst/{config_id}/taxyears
+@required {config_id: int(int64), taxYear: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/datev/mst/{config_id}/sync
+@required {config_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/datev/mst/authorization/start
+@required {roomId: int(int64), consultantId: int(int64), clientId: int(int64), baseId: int(int64)}
+@returns(200) {url: str}
+@errors {400, 401, 403, 404, 406, 409, 412, 502}
+
+@endpoint POST /v4/datev/mst/authorization/complete
+@required {state: str, code: str}
+@returns(200) {id: int(int64), datevIntegration: int(int32), roomId: int(int64), consultantId: int(int64), clientId: int(int64), baseId: int(int64), authorizingUserId: int(int64), authorizingUserName: str, refreshTokenExpireAt: str(date-time), errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 409, 412, 502}
+
+@endpoint POST /v4/datev/duo/{config_id}/sync
+@required {config_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint POST /v4/datev/duo/authorization/start
+@required {roomId: int(int64), consultantId: int(int64), clientId: int(int64)}
+@returns(200) {url: str}
+@errors {400, 401, 403, 404, 406, 409, 412, 502}
+
+@endpoint POST /v4/datev/duo/authorization/complete
+@required {state: str, code: str}
+@returns(200) {id: int(int64), datevIntegration: int(int32), roomId: int(int64), consultantId: int(int64), clientId: int(int64), baseId: int(int64), authorizingUserId: int(int64), authorizingUserName: str, refreshTokenExpireAt: str(date-time), errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 409, 412, 502}
+
+@endgroup
+
+@group auth
+@endpoint POST /v4/auth/reset_password
+@optional {userName: str, creatorLanguage: str, language: str, login: str}
+@returns(204)
+@errors {400, 406}
+
+@endpoint POST /v4/auth/recover_username
+@required {email: str}
+@optional {creatorLanguage: str}
+@returns(204)
+@errors {400, 404, 406}
+
+@endgroup
+
+@group users
+@endpoint GET /v4/users/{user_id}/rooms
+@required {user_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/users/{user_id}/roles
+@required {user_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/users/{user_id}/last_admin_rooms
+@required {user_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/users/{user_id}/groups
+@required {user_id: int(int64)}
+@optional {offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group user
+@endpoint GET /v4/user/ping
+@returns(200)
+@errors {401, 406}
+
+@endpoint GET /v4/user/oauth/authorizations
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), filter: str, sort: str}
+@returns(200)
+@errors {401, 406, 412}
+
+@endpoint GET /v4/user/oauth/approvals
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), sort: str}
+@returns(200)
+@errors {401, 406, 412}
+
+@endpoint GET /v4/user/notifications/config
+@returns(200) {items: [map]}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/user/account/mfa
+@returns(200) {mfaEnforced: bool, mfaSetups: [map]}
+@errors {401, 406, 412}
+
+@endpoint DELETE /v4/user/account/mfa
+@required {emergency_code: str}
+@returns(200)
+@returns(204)
+@errors {400, 401, 406, 412}
+
+@endpoint GET /v4/user/account/customer/keypair
+@returns(200) {privateKeyContainer: map{version: str, privateKey: str, createdAt: str(date-time), createdBy: int(int64)}, publicKeyContainer: map{version: str, publicKey: str, createdAt: str(date-time), createdBy: int(int64)}}
+@errors {401, 404, 406, 412}
+
+@endgroup
+
+@group system
+@endpoint GET /v4/system/config/storage/s3/tags/{id}
+@required {id: int(int64)}
+@returns(200) {id: int(int64), key: str, value: str, isMandatory: bool}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/system/config/storage/s3/tags/{id}
+@required {id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/system/config/settings/infrastructure
+@returns(200) {smsConfigEnabled: bool, mediaServerConfigEnabled: bool, s3DefaultRegion: str, s3EnforceDirectUpload: bool, isDracoonCloud: bool, tenantUuid: str}
+@errors {401, 403, 406, 412}
+
+@endpoint GET /v4/system/config/policies/passwords/{password_type}
+@required {password_type: str(login/encryption/shares)}
+@returns(200) {loginPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, numberOfArchivedPasswords: int(int32), passwordExpiration: map{enabled: bool, maxPasswordAge: int(int32)}, userLockout: map{enabled: bool, maxNumberOfLoginFailures: int(int32), lockoutPeriod: int(int32)}, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, sharesPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, encryptionPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}}
+@errors {400, 401, 403, 406, 412}
+
+@endgroup
+
+@group shares
+@endpoint GET /v4/shares/uploads/{share_id}/qr
+@required {share_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, targetId: int(int64), isProtected: bool, accessKey: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), targetPath: str, isEncrypted: bool, notes: str, internalNotes: str, filesExpiryPeriod: int(int32), cntFiles: int(int32), cntUploads: int(int32), showUploadedFiles: bool, dataUrl: str, maxSlots: int(int32), maxSize: int(int64), targetType: str, showCreatorName: bool, showCreatorUsername: bool, notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/shares/downloads/{share_id}/qr
+@required {share_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), name: str, nodeId: int(int64), accessKey: str, cntDownloads: int(int32), createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, notes: str, internalNotes: str, showCreatorName: bool, showCreatorUsername: bool, isProtected: bool, expireAt: str(date-time), maxDownloads: int(int32), nodePath: str, dataUrl: str, isEncrypted: bool, nodeType: str, hideDownload: bool, classification: int(int32), notifyCreator: bool, recipients: str, smsRecipients: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group settings
+@endpoint GET /v4/settings/webhooks/event_types
+@returns(200) {items: [map]}
+@errors {401, 403, 404, 406, 412}
+
+@endgroup
+
+@group roles
+@endpoint GET /v4/roles
+@returns(200) {items: [map]}
+@errors {401, 403, 406, 412}
+
+@endgroup
+
+@group resources
+@endpoint GET /v4/resources/users/{user_id}/avatar/{uuid}
+@required {uuid: str, user_id: int(int64)}
+@returns(200) {avatarUri: str, avatarUuid: str, isCustomAvatar: bool}
+@errors {400, 404, 406}
+
+@endpoint GET /v4/resources/user/notifications/scopes
+@returns(200) {items: [map]}
+@errors {406}
+
+@endgroup
+
+@group public
+@endpoint GET /v4/public/time
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {time: str(date-time)}
+@errors {406}
+
+@endpoint GET /v4/public/system/info
+@optional {is_enabled: bool}
+@returns(200) {languageDefault: str, hideLoginInputFields: bool, s3Hosts: [str], s3EnforceDirectUpload: bool, useS3Storage: bool, authMethods: [map]}
+@errors {400, 406}
+
+@endpoint GET /v4/public/system/info/auth/openid
+@optional {is_global_available: bool}
+@returns(200) {items: [map]}
+@errors {400, 406}
+
+@endpoint GET /v4/public/system/info/auth/ad
+@optional {is_global_available: bool}
+@returns(200) {items: [map]}
+@errors {400, 406}
+
+@endpoint GET /v4/public/software/version
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {restApiVersion: str, sdsServerVersion: str, version: str, buildDate: str(date-time), scmRevisionNumber: str, isDracoonCloud: bool}
+@errors {406}
+
+@endpoint GET /v4/public/software/third_party_dependencies
+@returns(200)
+@errors {406}
+
+@endgroup
+
+@group provisioning
+@endpoint GET /v4/provisioning/webhooks/event_types
+@optional {X-Sds-Service-Token: str}
+@returns(200) {items: [map]}
+@errors {401, 403, 404, 406}
+
+@endpoint GET /v4/provisioning/customers/{customer_id}/users
+@required {customer_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str, include_attributes: bool, include_roles: bool, include_manageable_rooms: bool, X-Sds-Service-Token: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 404, 406}
+
+@endgroup
+
+@group nodes
+@endpoint GET /v4/nodes
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), depth_level: int(int32), parent_id: int(int64), room_manager: bool, filter: str, sort: str, offset: int(int32), limit: int(int32), show_subscription: bool}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes
+@required {nodeIds: [int(int64)]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/{node_id}
+@required {node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), referenceId: int(int64), type: str, name: str, timestampCreation: str(date-time), timestampModification: str(date-time), parentId: int(int64), parentPath: str, createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, expireAt: str(date-time), hash: str, fileType: str, mediaType: str, size: int(int64), classification: int(int32), notes: str, permissions: map{manage: bool, read: bool, create: bool, change: bool, delete: bool, manageDownloadShare: bool, manageUploadShare: bool, readRecycleBin: bool, restoreRecycleBin: bool, deleteRecycleBin: bool}, inheritPermissions: bool, isEncrypted: bool, encryptionInfo: map{userKeyState: str, roomKeyState: str, dataSpaceKeyState: str}, cntDeletedVersions: int(int32), cntComments: int(int32), cntDownloadShares: int(int32), cntUploadShares: int(int32), recycleBinRetentionPeriod: int(int32), hasActivitiesLog: bool, quota: int(int64), isFavorite: bool, isSubscribed: bool, branchVersion: int(int64), mediaToken: str, isBrowsable: bool, cntRooms: int(int32), cntFolders: int(int32), cntFiles: int(int32), authParentId: int(int64), cntChildren: int(int32), children: [map], virusProtectionInfo: map{verdict: str, lastCheckedAt: str(date-time), sha256: str}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/{node_id}
+@required {node_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/{node_id}/parents
+@required {node_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/{node_id}/deleted_nodes
+@required {node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), filter: str, sort: str, offset: int(int32), limit: int(int32)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/{node_id}/deleted_nodes
+@required {node_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412, 507}
+
+@endpoint GET /v4/nodes/{node_id}/deleted_nodes/versions
+@required {node_id: int(int64), type: str, name: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), sort: str, offset: int(int32), limit: int(int32)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/search
+@required {search_string: str}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), depth_level: int(int32), parent_id: int(int64), filter: str, sort: str, offset: int(int32), limit: int(int32), show_subscription: bool}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 404, 406, 412}
+
+@endpoint GET /v4/nodes/rooms/{room_id}/events
+@required {room_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), sort: str, offset: int(int32), limit: int(int32), date_start: str, date_end: str, type: int(int32), user_id: int(int64), status: int(int32)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/missingFileKeys
+@optional {offset: int(int32), limit: int(int32), room_id: int(int64), file_id: int(int64), user_id: int(int64), use_key: str(room_rescue_key/system_rescue_key/previous_user_key/previous_room_rescue_key/previous_system_rescue_key)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map], users: [map], files: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/files/{file_id}/user_file_key
+@required {file_id: int(int64)}
+@optional {version: str}
+@returns(200) {key: str, iv: str, version: str, tag: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/files/{file_id}/data_space_file_key
+@required {file_id: int(int64)}
+@optional {version: str}
+@returns(200) {key: str, iv: str, version: str, tag: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/files/{file_id}/data_room_file_key
+@required {file_id: int(int64)}
+@optional {version: str}
+@returns(200) {key: str, iv: str, version: str, tag: str}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/nodes/files/versions/{reference_id}
+@required {reference_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32)}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {401, 412}
+
+@endpoint GET /v4/nodes/deleted_nodes/{deleted_node_id}
+@required {deleted_node_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET)}
+@returns(200) {id: int(int64), referenceId: int(int64), parentId: int(int64), parentPath: str, type: str, name: str, expireAt: str(date-time), accessedAt: str(date-time), isEncrypted: bool, notes: str, size: int(int64), classification: int(int32), createdAt: str(date-time), createdBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, updatedAt: str(date-time), updatedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}, deletedAt: str(date-time), deletedBy: map{id: int(int64), userType: str, avatarUuid: str, userName: str, firstName: str, lastName: str, email: str, title: str, displayName: str}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group groups
+@endpoint GET /v4/groups/{group_id}/rooms
+@required {group_id: int(int64)}
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/groups/{group_id}/roles
+@required {group_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/groups/{group_id}/last_admin_rooms
+@required {group_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group eventlog
+@endpoint GET /v4/eventlog/operations
+@optional {is_deprecated: bool}
+@returns(200) {operationList: [map]}
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/eventlog/events
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), sort: str, offset: int(int32), limit: int(int32), date_start: str, date_end: str, type: int(int32), user_id: int(int64), status: str(0/2), user_client: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/eventlog/audits/nodes
+@optional {X-Sds-Date-Format: str(UTC/LOCAL/OFFSET/EPOCH/LEET), offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200)
+@errors {400, 401, 403, 406, 412}
+
+@endpoint GET /v4/eventlog/audits/node_info
+@optional {parent_id: int(int64), offset: int(int32), limit: int(int32), filter: str, sort: str}
+@returns(200) {range: map{offset: int(int64), limit: int(int64), total: int(int64)}, items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group downloads
+@endpoint GET /v4/downloads/zip/{token}
+@required {token: str}
+@returns(200)
+@errors {400, 401, 403, 404, 406}
+
+@endpoint GET /v4/downloads/avatar/{user_id}/{uuid}
+@required {user_id: int(int64), uuid: str}
+@returns(200)
+@errors {400, 404, 406}
+
+@endgroup
+
+@group datev
+@endpoint GET /v4/datev
+@required {room_id: int(int64)}
+@returns(200) {id: int(int64), datevIntegration: int(int32), roomId: int(int64), consultantId: int(int64), clientId: int(int64), baseId: int(int64), authorizingUserId: int(int64), authorizingUserName: str, refreshTokenExpireAt: str(date-time), errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/mst
+@optional {room_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/mst/{config_id}
+@required {config_id: int(int64)}
+@returns(200) {id: int(int64), datevIntegration: int(int32), roomId: int(int64), consultantId: int(int64), clientId: int(int64), baseId: int(int64), authorizingUserId: int(int64), authorizingUserName: str, refreshTokenExpireAt: str(date-time), errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/datev/mst/{config_id}
+@required {config_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/mst/{config_id}/files
+@required {config_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/mst/{config_id}/files/{file_id}
+@required {config_id: int(int64), file_id: int(int64)}
+@returns(200) {syncConfigId: int(int64), fileId: int(int64), datevFileId: str, uploadStatus: str, uploadStartedAt: str(date-time), uploadCompletedAt: str(date-time), uploadErrorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/duo
+@optional {room_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/duo/{config_id}
+@required {config_id: int(int64)}
+@returns(200) {id: int(int64), datevIntegration: int(int32), roomId: int(int64), consultantId: int(int64), clientId: int(int64), baseId: int(int64), authorizingUserId: int(int64), authorizingUserName: str, refreshTokenExpireAt: str(date-time), errorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/datev/duo/{config_id}
+@required {config_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/duo/{config_id}/files
+@required {config_id: int(int64)}
+@returns(200) {items: [map]}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint GET /v4/datev/duo/{config_id}/files/{file_id}
+@required {config_id: int(int64), file_id: int(int64)}
+@returns(200) {syncConfigId: int(int64), fileId: int(int64), datevFileId: str, uploadStatus: str, uploadStartedAt: str(date-time), uploadCompletedAt: str(date-time), uploadErrorDetails: map{code: int(int32), message: str, debugInfo: str, errorCode: int(int32)}}
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group config
+@endpoint GET /v4/config/info/s3_tags
+@returns(200) {items: [map]}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/product_packages
+@returns(200) {packages: [map]}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/product_packages/current
+@returns(200) {packages: [map]}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/policies/virus_protection
+@returns(200) {isVirusProtectionEnabled: bool}
+@errors {401, 406}
+
+@endpoint GET /v4/config/info/policies/passwords
+@returns(200) {loginPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, numberOfArchivedPasswords: int(int32), passwordExpiration: map{enabled: bool, maxPasswordAge: int(int32)}, userLockout: map{enabled: bool, maxNumberOfLoginFailures: int(int32), lockoutPeriod: int(int32)}, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, sharesPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectDictionaryWords: bool, rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}, encryptionPasswordPolicies: map{characterRules: map{mustContainCharacters: [str], numberOfCharacteristicsToEnforce: int(int32)}, minLength: int(int32), rejectUserInfo: bool, rejectKeyboardPatterns: bool, updatedAt: str(date-time), updatedBy: map{id: int(int64)}}}
+@errors {401, 406}
+
+@endpoint GET /v4/config/info/policies/guest_users
+@returns(200) {isInviteUsersEnabled: bool}
+@errors {401, 406}
+
+@endpoint GET /v4/config/info/policies/classifications
+@returns(200) {shareClassificationPolicies: map{classificationRequiresSharePassword: int(int32)}}
+@errors {401, 406}
+
+@endpoint GET /v4/config/info/policies/algorithms
+@returns(200) {fileKeyAlgorithms: [map], keyPairAlgorithms: [map]}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/notifications/channels
+@returns(200) {items: [map]}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/infrastructure
+@returns(200) {smsConfigEnabled: bool, mediaServerConfigEnabled: bool, s3DefaultRegion: str, s3EnforceDirectUpload: bool, isDracoonCloud: bool, tenantUuid: str}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/general
+@returns(200) {sharePasswordSmsEnabled: bool, cryptoEnabled: bool, emailNotificationButtonEnabled: bool, eulaEnabled: bool, useS3Storage: bool, s3TagsEnabled: bool, hideLoginInputFields: bool, authTokenRestrictions: map{restrictionEnabled: bool, accessTokenValidity: int(int32), refreshTokenValidity: int(int32)}, mediaServerEnabled: bool, weakPasswordEnabled: bool, homeRoomsActive: bool, homeRoomParentId: int(int64), subscriptionPlan: int(int32)}
+@errors {401, 406, 412}
+
+@endpoint GET /v4/config/info/defaults
+@returns(200) {languageDefault: str, downloadShareDefaultExpirationPeriod: int(int32), uploadShareDefaultExpirationPeriod: int(int32), fileDefaultExpirationPeriod: int(int32), globalRecycleBinRetentionPeriod: int(int32), globalRecycleBinRetentionPeriodLegacy: int(int32), nonmemberViewerDefault: bool, hideLoginInputFields: bool}
+@errors {401, 406, 412}
+
+@endgroup
+
+@group users
+@endpoint DELETE /v4/users/{user_id}/userAttributes/{key}
+@required {user_id: int(int64), key: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/users/{user_id}/mfa
+@required {user_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@group user
+@endpoint DELETE /v4/user/profileAttributes/{key}
+@required {key: str}
+@returns(204)
+@errors {400, 401, 404, 406, 412}
+
+@endpoint DELETE /v4/user/oauth/authorizations/{client_id}
+@required {client_id: str}
+@returns(204)
+@errors {401, 404, 406, 412}
+
+@endpoint DELETE /v4/user/oauth/authorizations/{client_id}/{authorization_id}
+@required {client_id: str, authorization_id: int(int64)}
+@returns(204)
+@errors {401, 404, 406, 412}
+
+@endpoint DELETE /v4/user/oauth/approvals/{client_id}
+@required {client_id: str}
+@returns(204)
+@errors {401, 404, 406, 412}
+
+@endpoint DELETE /v4/user/account/mfa/totp/{id}
+@required {id: int(int64), valid_otp: str}
+@returns(204)
+@errors {400, 401, 406, 412}
+
+@endgroup
+
+@group provisioning
+@endpoint DELETE /v4/provisioning/customers/{customer_id}/customerAttributes/{key}
+@required {customer_id: int(int64), key: str}
+@optional {X-Sds-Service-Token: str}
+@returns(204)
+@errors {400, 401, 404, 406}
+
+@endgroup
+
+@group nodes
+@endpoint DELETE /v4/nodes/{node_id}/node_attributes/{key}
+@required {node_id: int(int64), key: str}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/malicious_files/{malicious_file_id}
+@required {malicious_file_id: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endpoint DELETE /v4/nodes/deleted_nodes
+@required {deletedNodeIds: [int(int64)]}
+@returns(204)
+@errors {400, 401, 403, 404, 406, 412}
+
+@endgroup
+
+@end

@@ -1,0 +1,605 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Lex Model Building V2
+@version 2020-08-07
+@auth AWS SigV4
+@endpoints 102
+@hint download_for_search
+@toc bots(67), exports(5), policy(6), testsets(7), createuploadurl(1), imports(4), testexecutions(4), testsetdiscrepancy(1), testsetgenerations(2), builtins(2), tags(3)
+
+@group bots
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/batchcreate
+@required {botId: str, botVersion: str, localeId: str, customVocabularyItemList: [NewCustomVocabularyItem]}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, errors: [FailedCustomVocabularyItem]?, resources: [CustomVocabularyItem]?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/batchdelete
+@required {botId: str, botVersion: str, localeId: str, customVocabularyItemList: [CustomVocabularyEntryId]}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, errors: [FailedCustomVocabularyItem]?, resources: [CustomVocabularyItem]?}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/batchupdate
+@required {botId: str, botVersion: str, localeId: str, customVocabularyItemList: [CustomVocabularyItem]}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, errors: [FailedCustomVocabularyItem]?, resources: [CustomVocabularyItem]?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+@required {botId: str, botVersion: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botLocaleStatus: str?, lastBuildSubmittedDateTime: str(timestamp)?}
+
+@endpoint PUT /bots/
+@required {botName: str, roleArn: str, dataPrivacy: DataPrivacy, idleSessionTTLInSeconds: int}
+@optional {description: str, botTags: map<str,str>, testBotAliasTags: map<str,str>, botType: str, botMembers: [BotMember]}
+@returns(200) {botId: str?, botName: str?, description: str?, roleArn: str?, dataPrivacy: DataPrivacy?{childDirected: bool}, idleSessionTTLInSeconds: int?, botStatus: str?, creationDateTime: str(timestamp)?, botTags: map<str,str>?, testBotAliasTags: map<str,str>?, botType: str?, botMembers: [BotMember]?}
+
+@endpoint PUT /bots/{botId}/botaliases/
+@required {botId: str, botAliasName: str}
+@optional {description: str, botVersion: str, botAliasLocaleSettings: map<str,BotAliasLocaleSettings>, conversationLogSettings: ConversationLogSettings, sentimentAnalysisSettings: SentimentAnalysisSettings, tags: map<str,str>}
+@returns(200) {botAliasId: str?, botAliasName: str?, description: str?, botVersion: str?, botAliasLocaleSettings: map<str,BotAliasLocaleSettings>?, conversationLogSettings: ConversationLogSettings?{textLogSettings: [TextLogSetting]?, audioLogSettings: [AudioLogSetting]?}, sentimentAnalysisSettings: SentimentAnalysisSettings?{detectSentiment: bool}, botAliasStatus: str?, botId: str?, creationDateTime: str(timestamp)?, tags: map<str,str>?}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/
+@required {botId: str, botVersion: str, localeId: str, nluIntentConfidenceThreshold: num(f64)}
+@optional {description: str, voiceSettings: VoiceSettings, generativeAISettings: GenerativeAISettings}
+@returns(200) {botId: str?, botVersion: str?, localeName: str?, localeId: str?, description: str?, nluIntentConfidenceThreshold: num(f64)?, voiceSettings: VoiceSettings?{voiceId: str, engine: str?}, botLocaleStatus: str?, creationDateTime: str(timestamp)?, generativeAISettings: GenerativeAISettings?{runtimeSettings: RuntimeSettings?{slotResolutionImprovement: SlotResolutionImprovementSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}}, buildtimeSettings: BuildtimeSettings?{descriptiveBotBuilder: DescriptiveBotBuilderSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}, sampleUtteranceGeneration: SampleUtteranceGenerationSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}}}}
+
+@endpoint PUT /bots/{botId}/replicas/
+@required {botId: str, replicaRegion: str}
+@returns(200) {botId: str?, replicaRegion: str?, sourceRegion: str?, creationDateTime: str(timestamp)?, botReplicaStatus: str?}
+
+@endpoint PUT /bots/{botId}/botversions/
+@required {botId: str, botVersionLocaleSpecification: map<str,BotVersionLocaleDetails>}
+@optional {description: str}
+@returns(200) {botId: str?, description: str?, botVersion: str?, botVersionLocaleSpecification: map<str,BotVersionLocaleDetails>?, botStatus: str?, creationDateTime: str(timestamp)?}
+
+@endgroup
+
+@group exports
+@endpoint PUT /exports/
+@required {resourceSpecification: ExportResourceSpecification, fileFormat: str}
+@optional {filePassword: str}
+@returns(200) {exportId: str?, resourceSpecification: ExportResourceSpecification?{botExportSpecification: BotExportSpecification?{botId: str, botVersion: str}, botLocaleExportSpecification: BotLocaleExportSpecification?{botId: str, botVersion: str, localeId: str}, customVocabularyExportSpecification: CustomVocabularyExportSpecification?{botId: str, botVersion: str, localeId: str}, testSetExportSpecification: TestSetExportSpecification?{testSetId: str}}, fileFormat: str?, exportStatus: str?, creationDateTime: str(timestamp)?}
+
+@endgroup
+
+@group bots
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/
+@required {botId: str, botVersion: str, localeId: str, intentName: str}
+@optional {description: str, parentIntentSignature: str, sampleUtterances: [SampleUtterance], dialogCodeHook: DialogCodeHookSettings, fulfillmentCodeHook: FulfillmentCodeHookSettings, intentConfirmationSetting: IntentConfirmationSetting, intentClosingSetting: IntentClosingSetting, inputContexts: [InputContext], outputContexts: [OutputContext], kendraConfiguration: KendraConfiguration, initialResponseSetting: InitialResponseSetting, qnAIntentConfiguration: QnAIntentConfiguration}
+@returns(200) {intentId: str?, intentName: str?, description: str?, parentIntentSignature: str?, sampleUtterances: [SampleUtterance]?, dialogCodeHook: DialogCodeHookSettings?{enabled: bool}, fulfillmentCodeHook: FulfillmentCodeHookSettings?{enabled: bool, postFulfillmentStatusSpecification: PostFulfillmentStatusSpecification?{successResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, timeoutResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, successNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, successConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, failureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, timeoutNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, timeoutConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}}, fulfillmentUpdatesSpecification: FulfillmentUpdatesSpecification?{active: bool, startResponse: FulfillmentStartResponseSpecification?{delayInSeconds: int, messageGroups: [MessageGroup], allowInterrupt: bool?}, updateResponse: FulfillmentUpdateResponseSpecification?{frequencyInSeconds: int, messageGroups: [MessageGroup], allowInterrupt: bool?}, timeoutInSeconds: int?}, active: bool?}, intentConfirmationSetting: IntentConfirmationSetting?{promptSpecification: PromptSpecification{messageGroups: [MessageGroup], maxRetries: int, allowInterrupt: bool?, messageSelectionStrategy: str?, promptAttemptsSpecification: map<str,PromptAttemptSpecification>?}, declinationResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, active: bool?, confirmationResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, confirmationNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, confirmationConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, declinationNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, declinationConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification{successResponse: ResponseSpecification?, successNextStep: DialogState?, successConditional: ConditionalSpecification?, failureResponse: ResponseSpecification?, failureNextStep: DialogState?, failureConditional: ConditionalSpecification?, timeoutResponse: ResponseSpecification?, timeoutNextStep: DialogState?, timeoutConditional: ConditionalSpecification?}}, elicitationCodeHook: ElicitationCodeHookInvocationSetting?{enableCodeHookInvocation: bool, invocationLabel: str?}}, intentClosingSetting: IntentClosingSetting?{closingResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, active: bool?, nextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, conditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}}, inputContexts: [InputContext]?, outputContexts: [OutputContext]?, kendraConfiguration: KendraConfiguration?{kendraIndex: str, queryFilterStringEnabled: bool?, queryFilterString: str?}, botId: str?, botVersion: str?, localeId: str?, creationDateTime: str(timestamp)?, initialResponseSetting: InitialResponseSetting?{initialResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, nextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, conditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification{successResponse: ResponseSpecification?, successNextStep: DialogState?, successConditional: ConditionalSpecification?, failureResponse: ResponseSpecification?, failureNextStep: DialogState?, failureConditional: ConditionalSpecification?, timeoutResponse: ResponseSpecification?, timeoutNextStep: DialogState?, timeoutConditional: ConditionalSpecification?}}}, qnAIntentConfiguration: QnAIntentConfiguration?{dataSourceConfiguration: DataSourceConfiguration?{opensearchConfiguration: OpensearchConfiguration?{domainEndpoint: str, indexName: str, exactResponse: bool?, exactResponseFields: ExactResponseFields?, includeFields: [str]?}, kendraConfiguration: QnAKendraConfiguration?{kendraIndex: str, queryFilterStringEnabled: bool?, queryFilterString: str?, exactResponse: bool?}, bedrockKnowledgeStoreConfiguration: BedrockKnowledgeStoreConfiguration?{bedrockKnowledgeBaseArn: str, exactResponse: bool?, exactResponseFields: BedrockKnowledgeStoreExactResponseFields?}}, bedrockModelConfiguration: BedrockModelSpecification?{modelArn: str, guardrail: BedrockGuardrailConfiguration?{identifier: str, version: str}, traceStatus: str?, customPrompt: str?}}}
+
+@endgroup
+
+@group policy
+@endpoint POST /policy/{resourceArn}/
+@required {resourceArn: str, policy: str}
+@returns(200) {resourceArn: str?, revisionId: str?}
+
+@endpoint POST /policy/{resourceArn}/statements/
+@required {resourceArn: str, statementId: str, effect: str, principal: [Principal], action: [str]}
+@optional {expectedRevisionId: str, condition: map<str,map<str,str>>}
+@returns(200) {resourceArn: str?, revisionId: str?}
+
+@endgroup
+
+@group bots
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/
+@required {botId: str, botVersion: str, localeId: str, intentId: str, slotName: str, valueElicitationSetting: SlotValueElicitationSetting}
+@optional {description: str, slotTypeId: str, obfuscationSetting: ObfuscationSetting, multipleValuesSetting: MultipleValuesSetting, subSlotSetting: SubSlotSetting}
+@returns(200) {slotId: str?, slotName: str?, description: str?, slotTypeId: str?, valueElicitationSetting: SlotValueElicitationSetting?{defaultValueSpecification: SlotDefaultValueSpecification?{defaultValueList: [SlotDefaultValue]}, slotConstraint: str, promptSpecification: PromptSpecification?{messageGroups: [MessageGroup], maxRetries: int, allowInterrupt: bool?, messageSelectionStrategy: str?, promptAttemptsSpecification: map<str,PromptAttemptSpecification>?}, sampleUtterances: [SampleUtterance]?, waitAndContinueSpecification: WaitAndContinueSpecification?{waitingResponse: ResponseSpecification{messageGroups: [MessageGroup], allowInterrupt: bool?}, continueResponse: ResponseSpecification{messageGroups: [MessageGroup], allowInterrupt: bool?}, stillWaitingResponse: StillWaitingResponseSpecification?{messageGroups: [MessageGroup], frequencyInSeconds: int, timeoutInSeconds: int, allowInterrupt: bool?}, active: bool?}, slotCaptureSetting: SlotCaptureSetting?{captureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, captureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, captureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification}, elicitationCodeHook: ElicitationCodeHookInvocationSetting?{enableCodeHookInvocation: bool, invocationLabel: str?}}, slotResolutionSetting: SlotResolutionSetting?{slotResolutionStrategy: str}}, obfuscationSetting: ObfuscationSetting?{obfuscationSettingType: str}, botId: str?, botVersion: str?, localeId: str?, intentId: str?, creationDateTime: str(timestamp)?, multipleValuesSetting: MultipleValuesSetting?{allowMultipleValues: bool?}, subSlotSetting: SubSlotSetting?{expression: str?, slotSpecifications: map<str,Specifications>?}}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/
+@required {botId: str, botVersion: str, localeId: str, slotTypeName: str}
+@optional {description: str, slotTypeValues: [SlotTypeValue], valueSelectionSetting: SlotValueSelectionSetting, parentSlotTypeSignature: str, externalSourceSetting: ExternalSourceSetting, compositeSlotTypeSetting: CompositeSlotTypeSetting}
+@returns(200) {slotTypeId: str?, slotTypeName: str?, description: str?, slotTypeValues: [SlotTypeValue]?, valueSelectionSetting: SlotValueSelectionSetting?{resolutionStrategy: str, regexFilter: SlotValueRegexFilter?{pattern: str}, advancedRecognitionSetting: AdvancedRecognitionSetting?{audioRecognitionStrategy: str?}}, parentSlotTypeSignature: str?, botId: str?, botVersion: str?, localeId: str?, creationDateTime: str(timestamp)?, externalSourceSetting: ExternalSourceSetting?{grammarSlotTypeSetting: GrammarSlotTypeSetting?{source: GrammarSlotTypeSource?{s3BucketName: str, s3ObjectKey: str, kmsKeyArn: str?}}}, compositeSlotTypeSetting: CompositeSlotTypeSetting?{subSlots: [SubSlotTypeComposition]?}}
+
+@endgroup
+
+@group testsets
+@endpoint POST /testsets/{testSetId}/testsetdiscrepancy
+@required {testSetId: str, target: TestSetDiscrepancyReportResourceTarget}
+@returns(200) {testSetDiscrepancyReportId: str?, creationDateTime: str(timestamp)?, testSetId: str?, target: TestSetDiscrepancyReportResourceTarget?{botAliasTarget: TestSetDiscrepancyReportBotAliasTarget?{botId: str, botAliasId: str, localeId: str}}}
+
+@endgroup
+
+@group createuploadurl
+@endpoint POST /createuploadurl/
+@returns(200) {importId: str?, uploadUrl: str?}
+
+@endgroup
+
+@group bots
+@endpoint DELETE /bots/{botId}/
+@required {botId: str}
+@optional {skipResourceInUseCheck: bool}
+@returns(200) {botId: str?, botStatus: str?}
+
+@endpoint DELETE /bots/{botId}/botaliases/{botAliasId}/
+@required {botAliasId: str, botId: str}
+@optional {skipResourceInUseCheck: bool}
+@returns(200) {botAliasId: str?, botId: str?, botAliasStatus: str?}
+
+@endpoint DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+@required {botId: str, botVersion: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botLocaleStatus: str?}
+
+@endpoint DELETE /bots/{botId}/replicas/{replicaRegion}/
+@required {botId: str, replicaRegion: str}
+@returns(200) {botId: str?, replicaRegion: str?, botReplicaStatus: str?}
+
+@endpoint DELETE /bots/{botId}/botversions/{botVersion}/
+@required {botId: str, botVersion: str}
+@optional {skipResourceInUseCheck: bool}
+@returns(200) {botId: str?, botVersion: str?, botStatus: str?}
+
+@endpoint DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary
+@required {botId: str, botVersion: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, customVocabularyStatus: str?}
+
+@endgroup
+
+@group exports
+@endpoint DELETE /exports/{exportId}/
+@required {exportId: str}
+@returns(200) {exportId: str?, exportStatus: str?}
+
+@endgroup
+
+@group imports
+@endpoint DELETE /imports/{importId}/
+@required {importId: str}
+@returns(200) {importId: str?, importStatus: str?}
+
+@endgroup
+
+@group bots
+@endpoint DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/
+@required {intentId: str, botId: str, botVersion: str, localeId: str}
+
+@endgroup
+
+@group policy
+@endpoint DELETE /policy/{resourceArn}/
+@required {resourceArn: str}
+@optional {expectedRevisionId: str}
+@returns(200) {resourceArn: str?, revisionId: str?}
+
+@endpoint DELETE /policy/{resourceArn}/statements/{statementId}/
+@required {resourceArn: str, statementId: str}
+@optional {expectedRevisionId: str}
+@returns(200) {resourceArn: str?, revisionId: str?}
+
+@endgroup
+
+@group bots
+@endpoint DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/{slotId}/
+@required {slotId: str, botId: str, botVersion: str, localeId: str, intentId: str}
+
+@endpoint DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/{slotTypeId}/
+@required {slotTypeId: str, botId: str, botVersion: str, localeId: str}
+@optional {skipResourceInUseCheck: bool}
+
+@endgroup
+
+@group testsets
+@endpoint DELETE /testsets/{testSetId}
+@required {testSetId: str}
+
+@endgroup
+
+@group bots
+@endpoint DELETE /bots/{botId}/utterances/
+@required {botId: str}
+@optional {localeId: str, sessionId: str}
+
+@endpoint GET /bots/{botId}/
+@required {botId: str}
+@returns(200) {botId: str?, botName: str?, description: str?, roleArn: str?, dataPrivacy: DataPrivacy?{childDirected: bool}, idleSessionTTLInSeconds: int?, botStatus: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, botType: str?, botMembers: [BotMember]?, failureReasons: [str]?}
+
+@endpoint GET /bots/{botId}/botaliases/{botAliasId}/
+@required {botAliasId: str, botId: str}
+@returns(200) {botAliasId: str?, botAliasName: str?, description: str?, botVersion: str?, botAliasLocaleSettings: map<str,BotAliasLocaleSettings>?, conversationLogSettings: ConversationLogSettings?{textLogSettings: [TextLogSetting]?, audioLogSettings: [AudioLogSetting]?}, sentimentAnalysisSettings: SentimentAnalysisSettings?{detectSentiment: bool}, botAliasHistoryEvents: [BotAliasHistoryEvent]?, botAliasStatus: str?, botId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, parentBotNetworks: [ParentBotNetwork]?}
+
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+@required {botId: str, botVersion: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, localeName: str?, description: str?, nluIntentConfidenceThreshold: num(f64)?, voiceSettings: VoiceSettings?{voiceId: str, engine: str?}, intentsCount: int?, slotTypesCount: int?, botLocaleStatus: str?, failureReasons: [str]?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, lastBuildSubmittedDateTime: str(timestamp)?, botLocaleHistoryEvents: [BotLocaleHistoryEvent]?, recommendedActions: [str]?, generativeAISettings: GenerativeAISettings?{runtimeSettings: RuntimeSettings?{slotResolutionImprovement: SlotResolutionImprovementSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}}, buildtimeSettings: BuildtimeSettings?{descriptiveBotBuilder: DescriptiveBotBuilderSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}, sampleUtteranceGeneration: SampleUtteranceGenerationSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}}}}
+
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/
+@required {botId: str, botVersion: str, localeId: str, botRecommendationId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationStatus: str?, botRecommendationId: str?, failureReasons: [str]?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, transcriptSourceSetting: TranscriptSourceSetting?{s3BucketTranscriptSource: S3BucketTranscriptSource?{s3BucketName: str, pathFormat: PathFormat?{objectPrefixes: [str]?}, transcriptFormat: str, transcriptFilter: TranscriptFilter?{lexTranscriptFilter: LexTranscriptFilter?}, kmsKeyArn: str?}}, encryptionSetting: EncryptionSetting?{kmsKeyArn: str?, botLocaleExportPassword: str?, associatedTranscriptsPassword: str?}, botRecommendationResults: BotRecommendationResults?{botLocaleExportUrl: str?, associatedTranscriptsUrl: str?, statistics: BotRecommendationResultStatistics?{intents: IntentStatistics?{discoveredIntentCount: int?}, slotTypes: SlotTypeStatistics?{discoveredSlotTypeCount: int?}}}}
+
+@endpoint GET /bots/{botId}/replicas/{replicaRegion}/
+@required {botId: str, replicaRegion: str}
+@returns(200) {botId: str?, replicaRegion: str?, sourceRegion: str?, creationDateTime: str(timestamp)?, botReplicaStatus: str?, failureReasons: [str]?}
+
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/generations/{generationId}
+@required {botId: str, botVersion: str, localeId: str, generationId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, generationId: str?, failureReasons: [str]?, generationStatus: str?, generationInputPrompt: str?, generatedBotLocaleUrl: str?, creationDateTime: str(timestamp)?, modelArn: str?, lastUpdatedDateTime: str(timestamp)?}
+
+@endpoint GET /bots/{botId}/botversions/{botVersion}/
+@required {botId: str, botVersion: str}
+@returns(200) {botId: str?, botName: str?, botVersion: str?, description: str?, roleArn: str?, dataPrivacy: DataPrivacy?{childDirected: bool}, idleSessionTTLInSeconds: int?, botStatus: str?, failureReasons: [str]?, creationDateTime: str(timestamp)?, parentBotNetworks: [ParentBotNetwork]?, botType: str?, botMembers: [BotMember]?}
+
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/metadata
+@required {botId: str, botVersion: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, customVocabularyStatus: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@group exports
+@endpoint GET /exports/{exportId}/
+@required {exportId: str}
+@returns(200) {exportId: str?, resourceSpecification: ExportResourceSpecification?{botExportSpecification: BotExportSpecification?{botId: str, botVersion: str}, botLocaleExportSpecification: BotLocaleExportSpecification?{botId: str, botVersion: str, localeId: str}, customVocabularyExportSpecification: CustomVocabularyExportSpecification?{botId: str, botVersion: str, localeId: str}, testSetExportSpecification: TestSetExportSpecification?{testSetId: str}}, fileFormat: str?, exportStatus: str?, failureReasons: [str]?, downloadUrl: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@group imports
+@endpoint GET /imports/{importId}/
+@required {importId: str}
+@returns(200) {importId: str?, resourceSpecification: ImportResourceSpecification?{botImportSpecification: BotImportSpecification?{botName: str, roleArn: str, dataPrivacy: DataPrivacy{childDirected: bool}, idleSessionTTLInSeconds: int?, botTags: map<str,str>?, testBotAliasTags: map<str,str>?}, botLocaleImportSpecification: BotLocaleImportSpecification?{botId: str, botVersion: str, localeId: str, nluIntentConfidenceThreshold: num(f64)?, voiceSettings: VoiceSettings?{voiceId: str, engine: str?}}, customVocabularyImportSpecification: CustomVocabularyImportSpecification?{botId: str, botVersion: str, localeId: str}, testSetImportResourceSpecification: TestSetImportResourceSpecification?{testSetName: str, description: str?, roleArn: str, storageLocation: TestSetStorageLocation{s3BucketName: str, s3Path: str, kmsKeyArn: str?}, importInputLocation: TestSetImportInputLocation{s3BucketName: str, s3Path: str}, modality: str, testSetTags: map<str,str>?}}, importedResourceId: str?, importedResourceName: str?, mergeStrategy: str?, importStatus: str?, failureReasons: [str]?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@group bots
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/
+@required {intentId: str, botId: str, botVersion: str, localeId: str}
+@returns(200) {intentId: str?, intentName: str?, description: str?, parentIntentSignature: str?, sampleUtterances: [SampleUtterance]?, dialogCodeHook: DialogCodeHookSettings?{enabled: bool}, fulfillmentCodeHook: FulfillmentCodeHookSettings?{enabled: bool, postFulfillmentStatusSpecification: PostFulfillmentStatusSpecification?{successResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, timeoutResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, successNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, successConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, failureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, timeoutNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, timeoutConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}}, fulfillmentUpdatesSpecification: FulfillmentUpdatesSpecification?{active: bool, startResponse: FulfillmentStartResponseSpecification?{delayInSeconds: int, messageGroups: [MessageGroup], allowInterrupt: bool?}, updateResponse: FulfillmentUpdateResponseSpecification?{frequencyInSeconds: int, messageGroups: [MessageGroup], allowInterrupt: bool?}, timeoutInSeconds: int?}, active: bool?}, slotPriorities: [SlotPriority]?, intentConfirmationSetting: IntentConfirmationSetting?{promptSpecification: PromptSpecification{messageGroups: [MessageGroup], maxRetries: int, allowInterrupt: bool?, messageSelectionStrategy: str?, promptAttemptsSpecification: map<str,PromptAttemptSpecification>?}, declinationResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, active: bool?, confirmationResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, confirmationNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, confirmationConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, declinationNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, declinationConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification{successResponse: ResponseSpecification?, successNextStep: DialogState?, successConditional: ConditionalSpecification?, failureResponse: ResponseSpecification?, failureNextStep: DialogState?, failureConditional: ConditionalSpecification?, timeoutResponse: ResponseSpecification?, timeoutNextStep: DialogState?, timeoutConditional: ConditionalSpecification?}}, elicitationCodeHook: ElicitationCodeHookInvocationSetting?{enableCodeHookInvocation: bool, invocationLabel: str?}}, intentClosingSetting: IntentClosingSetting?{closingResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, active: bool?, nextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, conditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}}, inputContexts: [InputContext]?, outputContexts: [OutputContext]?, kendraConfiguration: KendraConfiguration?{kendraIndex: str, queryFilterStringEnabled: bool?, queryFilterString: str?}, botId: str?, botVersion: str?, localeId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, initialResponseSetting: InitialResponseSetting?{initialResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, nextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, conditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification{successResponse: ResponseSpecification?, successNextStep: DialogState?, successConditional: ConditionalSpecification?, failureResponse: ResponseSpecification?, failureNextStep: DialogState?, failureConditional: ConditionalSpecification?, timeoutResponse: ResponseSpecification?, timeoutNextStep: DialogState?, timeoutConditional: ConditionalSpecification?}}}, qnAIntentConfiguration: QnAIntentConfiguration?{dataSourceConfiguration: DataSourceConfiguration?{opensearchConfiguration: OpensearchConfiguration?{domainEndpoint: str, indexName: str, exactResponse: bool?, exactResponseFields: ExactResponseFields?, includeFields: [str]?}, kendraConfiguration: QnAKendraConfiguration?{kendraIndex: str, queryFilterStringEnabled: bool?, queryFilterString: str?, exactResponse: bool?}, bedrockKnowledgeStoreConfiguration: BedrockKnowledgeStoreConfiguration?{bedrockKnowledgeBaseArn: str, exactResponse: bool?, exactResponseFields: BedrockKnowledgeStoreExactResponseFields?}}, bedrockModelConfiguration: BedrockModelSpecification?{modelArn: str, guardrail: BedrockGuardrailConfiguration?{identifier: str, version: str}, traceStatus: str?, customPrompt: str?}}}
+
+@endgroup
+
+@group policy
+@endpoint GET /policy/{resourceArn}/
+@required {resourceArn: str}
+@returns(200) {resourceArn: str?, policy: str?, revisionId: str?}
+
+@endgroup
+
+@group bots
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/{slotId}/
+@required {slotId: str, botId: str, botVersion: str, localeId: str, intentId: str}
+@returns(200) {slotId: str?, slotName: str?, description: str?, slotTypeId: str?, valueElicitationSetting: SlotValueElicitationSetting?{defaultValueSpecification: SlotDefaultValueSpecification?{defaultValueList: [SlotDefaultValue]}, slotConstraint: str, promptSpecification: PromptSpecification?{messageGroups: [MessageGroup], maxRetries: int, allowInterrupt: bool?, messageSelectionStrategy: str?, promptAttemptsSpecification: map<str,PromptAttemptSpecification>?}, sampleUtterances: [SampleUtterance]?, waitAndContinueSpecification: WaitAndContinueSpecification?{waitingResponse: ResponseSpecification{messageGroups: [MessageGroup], allowInterrupt: bool?}, continueResponse: ResponseSpecification{messageGroups: [MessageGroup], allowInterrupt: bool?}, stillWaitingResponse: StillWaitingResponseSpecification?{messageGroups: [MessageGroup], frequencyInSeconds: int, timeoutInSeconds: int, allowInterrupt: bool?}, active: bool?}, slotCaptureSetting: SlotCaptureSetting?{captureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, captureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, captureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification}, elicitationCodeHook: ElicitationCodeHookInvocationSetting?{enableCodeHookInvocation: bool, invocationLabel: str?}}, slotResolutionSetting: SlotResolutionSetting?{slotResolutionStrategy: str}}, obfuscationSetting: ObfuscationSetting?{obfuscationSettingType: str}, botId: str?, botVersion: str?, localeId: str?, intentId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, multipleValuesSetting: MultipleValuesSetting?{allowMultipleValues: bool?}, subSlotSetting: SubSlotSetting?{expression: str?, slotSpecifications: map<str,Specifications>?}}
+
+@endpoint GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/{slotTypeId}/
+@required {slotTypeId: str, botId: str, botVersion: str, localeId: str}
+@returns(200) {slotTypeId: str?, slotTypeName: str?, description: str?, slotTypeValues: [SlotTypeValue]?, valueSelectionSetting: SlotValueSelectionSetting?{resolutionStrategy: str, regexFilter: SlotValueRegexFilter?{pattern: str}, advancedRecognitionSetting: AdvancedRecognitionSetting?{audioRecognitionStrategy: str?}}, parentSlotTypeSignature: str?, botId: str?, botVersion: str?, localeId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, externalSourceSetting: ExternalSourceSetting?{grammarSlotTypeSetting: GrammarSlotTypeSetting?{source: GrammarSlotTypeSource?{s3BucketName: str, s3ObjectKey: str, kmsKeyArn: str?}}}, compositeSlotTypeSetting: CompositeSlotTypeSetting?{subSlots: [SubSlotTypeComposition]?}}
+
+@endgroup
+
+@group testexecutions
+@endpoint GET /testexecutions/{testExecutionId}
+@required {testExecutionId: str}
+@returns(200) {testExecutionId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, testExecutionStatus: str?, testSetId: str?, testSetName: str?, target: TestExecutionTarget?{botAliasTarget: BotAliasTestExecutionTarget?{botId: str, botAliasId: str, localeId: str}}, apiMode: str?, testExecutionModality: str?, failureReasons: [str]?}
+
+@endgroup
+
+@group testsets
+@endpoint GET /testsets/{testSetId}
+@required {testSetId: str}
+@returns(200) {testSetId: str?, testSetName: str?, description: str?, modality: str?, status: str?, roleArn: str?, numTurns: int?, storageLocation: TestSetStorageLocation?{s3BucketName: str, s3Path: str, kmsKeyArn: str?}, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@group testsetdiscrepancy
+@endpoint GET /testsetdiscrepancy/{testSetDiscrepancyReportId}
+@required {testSetDiscrepancyReportId: str}
+@returns(200) {testSetDiscrepancyReportId: str?, testSetId: str?, creationDateTime: str(timestamp)?, target: TestSetDiscrepancyReportResourceTarget?{botAliasTarget: TestSetDiscrepancyReportBotAliasTarget?{botId: str, botAliasId: str, localeId: str}}, testSetDiscrepancyReportStatus: str?, lastUpdatedDataTime: str(timestamp)?, testSetDiscrepancyTopErrors: TestSetDiscrepancyErrors?{intentDiscrepancies: [TestSetIntentDiscrepancyItem], slotDiscrepancies: [TestSetSlotDiscrepancyItem]}, testSetDiscrepancyRawOutputUrl: str?, failureReasons: [str]?}
+
+@endgroup
+
+@group testsetgenerations
+@endpoint GET /testsetgenerations/{testSetGenerationId}
+@required {testSetGenerationId: str}
+@returns(200) {testSetGenerationId: str?, testSetGenerationStatus: str?, failureReasons: [str]?, testSetId: str?, testSetName: str?, description: str?, storageLocation: TestSetStorageLocation?{s3BucketName: str, s3Path: str, kmsKeyArn: str?}, generationDataSource: TestSetGenerationDataSource?{conversationLogsDataSource: ConversationLogsDataSource?{botId: str, botAliasId: str, localeId: str, filter: ConversationLogsDataSourceFilterBy{startTime: str(timestamp), endTime: str(timestamp), inputMode: str}}}, roleArn: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@group bots
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/generate
+@required {botId: str, botVersion: str, localeId: str, intentId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, intentId: str?, sampleUtterances: [SampleUtterance]?}
+
+@endgroup
+
+@group testexecutions
+@endpoint GET /testexecutions/{testExecutionId}/artifacturl
+@required {testExecutionId: str}
+@returns(200) {testExecutionId: str?, downloadArtifactsUrl: str?}
+
+@endgroup
+
+@group bots
+@endpoint POST /bots/{botId}/aggregatedutterances/
+@required {botId: str, localeId: str, aggregationDuration: UtteranceAggregationDuration}
+@optional {botAliasId: str, botVersion: str, sortBy: AggregatedUtterancesSortBy, filters: [AggregatedUtterancesFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botAliasId: str?, botVersion: str?, localeId: str?, aggregationDuration: UtteranceAggregationDuration?{relativeAggregationDuration: RelativeAggregationDuration{timeDimension: str, timeValue: int}}, aggregationWindowStartTime: str(timestamp)?, aggregationWindowEndTime: str(timestamp)?, aggregationLastRefreshedDateTime: str(timestamp)?, aggregatedUtterancesSummaries: [AggregatedUtterancesSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/replicas/{replicaRegion}/botaliases/
+@required {botId: str, replicaRegion: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {botId: str?, sourceRegion: str?, replicaRegion: str?, botAliasReplicaSummaries: [BotAliasReplicaSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botaliases/
+@required {botId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {botAliasSummaries: [BotAliasSummary]?, nextToken: str?, botId: str?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/
+@required {botId: str, botVersion: str}
+@optional {sortBy: BotLocaleSortBy, filters: [BotLocaleFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, nextToken: str?, botLocaleSummaries: [BotLocaleSummary]?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/
+@required {botId: str, botVersion: str, localeId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationSummaries: [BotRecommendationSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/replicas/
+@required {botId: str}
+@returns(200) {botId: str?, sourceRegion: str?, botReplicaSummaries: [BotReplicaSummary]?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/generations
+@required {botId: str, botVersion: str, localeId: str}
+@optional {sortBy: GenerationSortBy, maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, generationSummaries: [GenerationSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/replicas/{replicaRegion}/botversions/
+@required {botId: str, replicaRegion: str}
+@optional {maxResults: int, nextToken: str, sortBy: BotVersionReplicaSortBy}
+@returns(200) {botId: str?, sourceRegion: str?, replicaRegion: str?, botVersionReplicaSummaries: [BotVersionReplicaSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botversions/
+@required {botId: str}
+@optional {sortBy: BotVersionSortBy, maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersionSummaries: [BotVersionSummary]?, nextToken: str?}
+
+@endpoint POST /bots/
+@optional {sortBy: BotSortBy, filters: [BotFilter], maxResults: int, nextToken: str}
+@returns(200) {botSummaries: [BotSummary]?, nextToken: str?}
+
+@endgroup
+
+@group builtins
+@endpoint POST /builtins/locales/{localeId}/intents/
+@required {localeId: str}
+@optional {sortBy: BuiltInIntentSortBy, maxResults: int, nextToken: str}
+@returns(200) {builtInIntentSummaries: [BuiltInIntentSummary]?, nextToken: str?, localeId: str?}
+
+@endpoint POST /builtins/locales/{localeId}/slottypes/
+@required {localeId: str}
+@optional {sortBy: BuiltInSlotTypeSortBy, maxResults: int, nextToken: str}
+@returns(200) {builtInSlotTypeSummaries: [BuiltInSlotTypeSummary]?, nextToken: str?, localeId: str?}
+
+@endgroup
+
+@group bots
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/list
+@required {botId: str, botVersion: str, localeId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, customVocabularyItems: [CustomVocabularyItem]?, nextToken: str?}
+
+@endgroup
+
+@group exports
+@endpoint POST /exports/
+@optional {botId: str, botVersion: str, sortBy: ExportSortBy, filters: [ExportFilter], maxResults: int, nextToken: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, exportSummaries: [ExportSummary]?, nextToken: str?, localeId: str?}
+
+@endgroup
+
+@group imports
+@endpoint POST /imports/
+@optional {botId: str, botVersion: str, sortBy: ImportSortBy, filters: [ImportFilter], maxResults: int, nextToken: str, localeId: str}
+@returns(200) {botId: str?, botVersion: str?, importSummaries: [ImportSummary]?, nextToken: str?, localeId: str?}
+
+@endgroup
+
+@group bots
+@endpoint POST /bots/{botId}/analytics/intentmetrics
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp), metrics: [AnalyticsIntentMetric]}
+@optional {binBy: [AnalyticsBinBySpecification], groupBy: [AnalyticsIntentGroupBySpecification], filters: [AnalyticsIntentFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, results: [AnalyticsIntentResult]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/analytics/intentpaths
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp), intentPath: str}
+@optional {filters: [AnalyticsPathFilter]}
+@returns(200) {nodeSummaries: [AnalyticsIntentNodeSummary]?}
+
+@endpoint POST /bots/{botId}/analytics/intentstagemetrics
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp), metrics: [AnalyticsIntentStageMetric]}
+@optional {binBy: [AnalyticsBinBySpecification], groupBy: [AnalyticsIntentStageGroupBySpecification], filters: [AnalyticsIntentStageFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, results: [AnalyticsIntentStageResult]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/
+@required {botId: str, botVersion: str, localeId: str}
+@optional {sortBy: IntentSortBy, filters: [IntentFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, intentSummaries: [IntentSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/intents
+@required {botId: str, botVersion: str, localeId: str, botRecommendationId: str}
+@optional {nextToken: str, maxResults: int}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationId: str?, summaryList: [RecommendedIntentSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/analytics/sessions
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp)}
+@optional {sortBy: SessionDataSortBy, filters: [AnalyticsSessionFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, nextToken: str?, sessions: [SessionSpecification]?}
+
+@endpoint POST /bots/{botId}/analytics/sessionmetrics
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp), metrics: [AnalyticsSessionMetric]}
+@optional {binBy: [AnalyticsBinBySpecification], groupBy: [AnalyticsSessionGroupBySpecification], filters: [AnalyticsSessionFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, results: [AnalyticsSessionResult]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/
+@required {botId: str, botVersion: str, localeId: str}
+@optional {sortBy: SlotTypeSortBy, filters: [SlotTypeFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, slotTypeSummaries: [SlotTypeSummary]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/
+@required {botId: str, botVersion: str, localeId: str, intentId: str}
+@optional {sortBy: SlotSortBy, filters: [SlotFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, intentId: str?, slotSummaries: [SlotSummary]?, nextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceARN}
+@required {resourceARN: str}
+@returns(200) {tags: map<str,str>?}
+
+@endgroup
+
+@group testexecutions
+@endpoint POST /testexecutions/{testExecutionId}/results
+@required {testExecutionId: str, resultFilterBy: TestExecutionResultFilterBy}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {testExecutionResults: TestExecutionResultItems?{overallTestResults: OverallTestResults?{items: [OverallTestResultItem]}, conversationLevelTestResults: ConversationLevelTestResults?{items: [ConversationLevelTestResultItem]}, intentClassificationTestResults: IntentClassificationTestResults?{items: [IntentClassificationTestResultItem]}, intentLevelSlotResolutionTestResults: IntentLevelSlotResolutionTestResults?{items: [IntentLevelSlotResolutionTestResultItem]}, utteranceLevelTestResults: UtteranceLevelTestResults?{items: [UtteranceLevelTestResultItem]}}, nextToken: str?}
+
+@endpoint POST /testexecutions
+@optional {sortBy: TestExecutionSortBy, maxResults: int, nextToken: str}
+@returns(200) {testExecutions: [TestExecutionSummary]?, nextToken: str?}
+
+@endgroup
+
+@group testsets
+@endpoint POST /testsets/{testSetId}/records
+@required {testSetId: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {testSetRecords: [TestSetTurnRecord]?, nextToken: str?}
+
+@endpoint POST /testsets
+@optional {sortBy: TestSetSortBy, maxResults: int, nextToken: str}
+@returns(200) {testSets: [TestSetSummary]?, nextToken: str?}
+
+@endgroup
+
+@group bots
+@endpoint POST /bots/{botId}/analytics/utterances
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp)}
+@optional {sortBy: UtteranceDataSortBy, filters: [AnalyticsUtteranceFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, nextToken: str?, utterances: [UtteranceSpecification]?}
+
+@endpoint POST /bots/{botId}/analytics/utterancemetrics
+@required {botId: str, startDateTime: str(timestamp), endDateTime: str(timestamp), metrics: [AnalyticsUtteranceMetric]}
+@optional {binBy: [AnalyticsBinBySpecification], groupBy: [AnalyticsUtteranceGroupBySpecification], attributes: [AnalyticsUtteranceAttribute], filters: [AnalyticsUtteranceFilter], maxResults: int, nextToken: str}
+@returns(200) {botId: str?, results: [AnalyticsUtteranceResult]?, nextToken: str?}
+
+@endpoint POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/associatedtranscripts
+@required {botId: str, botVersion: str, localeId: str, botRecommendationId: str, filters: [AssociatedTranscriptFilter]}
+@optional {searchOrder: str, maxResults: int, nextIndex: int}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationId: str?, nextIndex: int?, associatedTranscripts: [AssociatedTranscript]?, totalResults: int?}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/
+@required {botId: str, botVersion: str, localeId: str, transcriptSourceSetting: TranscriptSourceSetting}
+@optional {encryptionSetting: EncryptionSetting}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationStatus: str?, botRecommendationId: str?, creationDateTime: str(timestamp)?, transcriptSourceSetting: TranscriptSourceSetting?{s3BucketTranscriptSource: S3BucketTranscriptSource?{s3BucketName: str, pathFormat: PathFormat?{objectPrefixes: [str]?}, transcriptFormat: str, transcriptFilter: TranscriptFilter?{lexTranscriptFilter: LexTranscriptFilter?}, kmsKeyArn: str?}}, encryptionSetting: EncryptionSetting?{kmsKeyArn: str?, botLocaleExportPassword: str?, associatedTranscriptsPassword: str?}}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/startgeneration
+@required {botId: str, botVersion: str, localeId: str, generationInputPrompt: str}
+@returns(200) {generationInputPrompt: str?, generationId: str?, botId: str?, botVersion: str?, localeId: str?, generationStatus: str?, creationDateTime: str(timestamp)?}
+
+@endgroup
+
+@group imports
+@endpoint PUT /imports/
+@required {importId: str, resourceSpecification: ImportResourceSpecification, mergeStrategy: str}
+@optional {filePassword: str}
+@returns(200) {importId: str?, resourceSpecification: ImportResourceSpecification?{botImportSpecification: BotImportSpecification?{botName: str, roleArn: str, dataPrivacy: DataPrivacy{childDirected: bool}, idleSessionTTLInSeconds: int?, botTags: map<str,str>?, testBotAliasTags: map<str,str>?}, botLocaleImportSpecification: BotLocaleImportSpecification?{botId: str, botVersion: str, localeId: str, nluIntentConfidenceThreshold: num(f64)?, voiceSettings: VoiceSettings?{voiceId: str, engine: str?}}, customVocabularyImportSpecification: CustomVocabularyImportSpecification?{botId: str, botVersion: str, localeId: str}, testSetImportResourceSpecification: TestSetImportResourceSpecification?{testSetName: str, description: str?, roleArn: str, storageLocation: TestSetStorageLocation{s3BucketName: str, s3Path: str, kmsKeyArn: str?}, importInputLocation: TestSetImportInputLocation{s3BucketName: str, s3Path: str}, modality: str, testSetTags: map<str,str>?}}, mergeStrategy: str?, importStatus: str?, creationDateTime: str(timestamp)?}
+
+@endgroup
+
+@group testsets
+@endpoint POST /testsets/{testSetId}/testexecutions
+@required {testSetId: str, target: TestExecutionTarget, apiMode: str}
+@optional {testExecutionModality: str}
+@returns(200) {testExecutionId: str?, creationDateTime: str(timestamp)?, testSetId: str?, target: TestExecutionTarget?{botAliasTarget: BotAliasTestExecutionTarget?{botId: str, botAliasId: str, localeId: str}}, apiMode: str?, testExecutionModality: str?}
+
+@endgroup
+
+@group testsetgenerations
+@endpoint PUT /testsetgenerations
+@required {testSetName: str, storageLocation: TestSetStorageLocation, generationDataSource: TestSetGenerationDataSource, roleArn: str}
+@optional {description: str, testSetTags: map<str,str>}
+@returns(200) {testSetGenerationId: str?, creationDateTime: str(timestamp)?, testSetGenerationStatus: str?, testSetName: str?, description: str?, storageLocation: TestSetStorageLocation?{s3BucketName: str, s3Path: str, kmsKeyArn: str?}, generationDataSource: TestSetGenerationDataSource?{conversationLogsDataSource: ConversationLogsDataSource?{botId: str, botAliasId: str, localeId: str, filter: ConversationLogsDataSourceFilterBy{startTime: str(timestamp), endTime: str(timestamp), inputMode: str}}}, roleArn: str?, testSetTags: map<str,str>?}
+
+@endgroup
+
+@group bots
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/stopbotrecommendation
+@required {botId: str, botVersion: str, localeId: str, botRecommendationId: str}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationStatus: str?, botRecommendationId: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceARN}
+@required {resourceARN: str, tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceARN}
+@required {resourceARN: str, tagKeys: [str]}
+
+@endgroup
+
+@group bots
+@endpoint PUT /bots/{botId}/
+@required {botId: str, botName: str, roleArn: str, dataPrivacy: DataPrivacy, idleSessionTTLInSeconds: int}
+@optional {description: str, botType: str, botMembers: [BotMember]}
+@returns(200) {botId: str?, botName: str?, description: str?, roleArn: str?, dataPrivacy: DataPrivacy?{childDirected: bool}, idleSessionTTLInSeconds: int?, botStatus: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, botType: str?, botMembers: [BotMember]?}
+
+@endpoint PUT /bots/{botId}/botaliases/{botAliasId}/
+@required {botAliasId: str, botId: str, botAliasName: str}
+@optional {description: str, botVersion: str, botAliasLocaleSettings: map<str,BotAliasLocaleSettings>, conversationLogSettings: ConversationLogSettings, sentimentAnalysisSettings: SentimentAnalysisSettings}
+@returns(200) {botAliasId: str?, botAliasName: str?, description: str?, botVersion: str?, botAliasLocaleSettings: map<str,BotAliasLocaleSettings>?, conversationLogSettings: ConversationLogSettings?{textLogSettings: [TextLogSetting]?, audioLogSettings: [AudioLogSetting]?}, sentimentAnalysisSettings: SentimentAnalysisSettings?{detectSentiment: bool}, botAliasStatus: str?, botId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+@required {botId: str, botVersion: str, localeId: str, nluIntentConfidenceThreshold: num(f64)}
+@optional {description: str, voiceSettings: VoiceSettings, generativeAISettings: GenerativeAISettings}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, localeName: str?, description: str?, nluIntentConfidenceThreshold: num(f64)?, voiceSettings: VoiceSettings?{voiceId: str, engine: str?}, botLocaleStatus: str?, failureReasons: [str]?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, recommendedActions: [str]?, generativeAISettings: GenerativeAISettings?{runtimeSettings: RuntimeSettings?{slotResolutionImprovement: SlotResolutionImprovementSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}}, buildtimeSettings: BuildtimeSettings?{descriptiveBotBuilder: DescriptiveBotBuilderSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}, sampleUtteranceGeneration: SampleUtteranceGenerationSpecification?{enabled: bool, bedrockModelSpecification: BedrockModelSpecification?}}}}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/
+@required {botId: str, botVersion: str, localeId: str, botRecommendationId: str, encryptionSetting: EncryptionSetting}
+@returns(200) {botId: str?, botVersion: str?, localeId: str?, botRecommendationStatus: str?, botRecommendationId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, transcriptSourceSetting: TranscriptSourceSetting?{s3BucketTranscriptSource: S3BucketTranscriptSource?{s3BucketName: str, pathFormat: PathFormat?{objectPrefixes: [str]?}, transcriptFormat: str, transcriptFilter: TranscriptFilter?{lexTranscriptFilter: LexTranscriptFilter?}, kmsKeyArn: str?}}, encryptionSetting: EncryptionSetting?{kmsKeyArn: str?, botLocaleExportPassword: str?, associatedTranscriptsPassword: str?}}
+
+@endgroup
+
+@group exports
+@endpoint PUT /exports/{exportId}/
+@required {exportId: str}
+@optional {filePassword: str}
+@returns(200) {exportId: str?, resourceSpecification: ExportResourceSpecification?{botExportSpecification: BotExportSpecification?{botId: str, botVersion: str}, botLocaleExportSpecification: BotLocaleExportSpecification?{botId: str, botVersion: str, localeId: str}, customVocabularyExportSpecification: CustomVocabularyExportSpecification?{botId: str, botVersion: str, localeId: str}, testSetExportSpecification: TestSetExportSpecification?{testSetId: str}}, fileFormat: str?, exportStatus: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@group bots
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/
+@required {intentId: str, botId: str, botVersion: str, localeId: str, intentName: str}
+@optional {description: str, parentIntentSignature: str, sampleUtterances: [SampleUtterance], dialogCodeHook: DialogCodeHookSettings, fulfillmentCodeHook: FulfillmentCodeHookSettings, slotPriorities: [SlotPriority], intentConfirmationSetting: IntentConfirmationSetting, intentClosingSetting: IntentClosingSetting, inputContexts: [InputContext], outputContexts: [OutputContext], kendraConfiguration: KendraConfiguration, initialResponseSetting: InitialResponseSetting, qnAIntentConfiguration: QnAIntentConfiguration}
+@returns(200) {intentId: str?, intentName: str?, description: str?, parentIntentSignature: str?, sampleUtterances: [SampleUtterance]?, dialogCodeHook: DialogCodeHookSettings?{enabled: bool}, fulfillmentCodeHook: FulfillmentCodeHookSettings?{enabled: bool, postFulfillmentStatusSpecification: PostFulfillmentStatusSpecification?{successResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, timeoutResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, successNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, successConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, failureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, timeoutNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, timeoutConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}}, fulfillmentUpdatesSpecification: FulfillmentUpdatesSpecification?{active: bool, startResponse: FulfillmentStartResponseSpecification?{delayInSeconds: int, messageGroups: [MessageGroup], allowInterrupt: bool?}, updateResponse: FulfillmentUpdateResponseSpecification?{frequencyInSeconds: int, messageGroups: [MessageGroup], allowInterrupt: bool?}, timeoutInSeconds: int?}, active: bool?}, slotPriorities: [SlotPriority]?, intentConfirmationSetting: IntentConfirmationSetting?{promptSpecification: PromptSpecification{messageGroups: [MessageGroup], maxRetries: int, allowInterrupt: bool?, messageSelectionStrategy: str?, promptAttemptsSpecification: map<str,PromptAttemptSpecification>?}, declinationResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, active: bool?, confirmationResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, confirmationNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, confirmationConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, declinationNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, declinationConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureNextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification{successResponse: ResponseSpecification?, successNextStep: DialogState?, successConditional: ConditionalSpecification?, failureResponse: ResponseSpecification?, failureNextStep: DialogState?, failureConditional: ConditionalSpecification?, timeoutResponse: ResponseSpecification?, timeoutNextStep: DialogState?, timeoutConditional: ConditionalSpecification?}}, elicitationCodeHook: ElicitationCodeHookInvocationSetting?{enableCodeHookInvocation: bool, invocationLabel: str?}}, intentClosingSetting: IntentClosingSetting?{closingResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, active: bool?, nextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, conditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}}, inputContexts: [InputContext]?, outputContexts: [OutputContext]?, kendraConfiguration: KendraConfiguration?{kendraIndex: str, queryFilterStringEnabled: bool?, queryFilterString: str?}, botId: str?, botVersion: str?, localeId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, initialResponseSetting: InitialResponseSetting?{initialResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, nextStep: DialogState?{dialogAction: DialogAction?{type: str, slotToElicit: str?, suppressNextMessage: bool?}, intent: IntentOverride?{name: str?, slots: map<str,SlotValueOverride>?}, sessionAttributes: map<str,str>?}, conditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch{nextStep: DialogState?, response: ResponseSpecification?}}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification{successResponse: ResponseSpecification?, successNextStep: DialogState?, successConditional: ConditionalSpecification?, failureResponse: ResponseSpecification?, failureNextStep: DialogState?, failureConditional: ConditionalSpecification?, timeoutResponse: ResponseSpecification?, timeoutNextStep: DialogState?, timeoutConditional: ConditionalSpecification?}}}, qnAIntentConfiguration: QnAIntentConfiguration?{dataSourceConfiguration: DataSourceConfiguration?{opensearchConfiguration: OpensearchConfiguration?{domainEndpoint: str, indexName: str, exactResponse: bool?, exactResponseFields: ExactResponseFields?, includeFields: [str]?}, kendraConfiguration: QnAKendraConfiguration?{kendraIndex: str, queryFilterStringEnabled: bool?, queryFilterString: str?, exactResponse: bool?}, bedrockKnowledgeStoreConfiguration: BedrockKnowledgeStoreConfiguration?{bedrockKnowledgeBaseArn: str, exactResponse: bool?, exactResponseFields: BedrockKnowledgeStoreExactResponseFields?}}, bedrockModelConfiguration: BedrockModelSpecification?{modelArn: str, guardrail: BedrockGuardrailConfiguration?{identifier: str, version: str}, traceStatus: str?, customPrompt: str?}}}
+
+@endgroup
+
+@group policy
+@endpoint PUT /policy/{resourceArn}/
+@required {resourceArn: str, policy: str}
+@optional {expectedRevisionId: str}
+@returns(200) {resourceArn: str?, revisionId: str?}
+
+@endgroup
+
+@group bots
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/{slotId}/
+@required {slotId: str, botId: str, botVersion: str, localeId: str, intentId: str, slotName: str, valueElicitationSetting: SlotValueElicitationSetting}
+@optional {description: str, slotTypeId: str, obfuscationSetting: ObfuscationSetting, multipleValuesSetting: MultipleValuesSetting, subSlotSetting: SubSlotSetting}
+@returns(200) {slotId: str?, slotName: str?, description: str?, slotTypeId: str?, valueElicitationSetting: SlotValueElicitationSetting?{defaultValueSpecification: SlotDefaultValueSpecification?{defaultValueList: [SlotDefaultValue]}, slotConstraint: str, promptSpecification: PromptSpecification?{messageGroups: [MessageGroup], maxRetries: int, allowInterrupt: bool?, messageSelectionStrategy: str?, promptAttemptsSpecification: map<str,PromptAttemptSpecification>?}, sampleUtterances: [SampleUtterance]?, waitAndContinueSpecification: WaitAndContinueSpecification?{waitingResponse: ResponseSpecification{messageGroups: [MessageGroup], allowInterrupt: bool?}, continueResponse: ResponseSpecification{messageGroups: [MessageGroup], allowInterrupt: bool?}, stillWaitingResponse: StillWaitingResponseSpecification?{messageGroups: [MessageGroup], frequencyInSeconds: int, timeoutInSeconds: int, allowInterrupt: bool?}, active: bool?}, slotCaptureSetting: SlotCaptureSetting?{captureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, captureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, captureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, failureResponse: ResponseSpecification?{messageGroups: [MessageGroup], allowInterrupt: bool?}, failureNextStep: DialogState?{dialogAction: DialogAction?, intent: IntentOverride?, sessionAttributes: map<str,str>?}, failureConditional: ConditionalSpecification?{active: bool, conditionalBranches: [ConditionalBranch], defaultBranch: DefaultConditionalBranch}, codeHook: DialogCodeHookInvocationSetting?{enableCodeHookInvocation: bool, active: bool, invocationLabel: str?, postCodeHookSpecification: PostDialogCodeHookInvocationSpecification}, elicitationCodeHook: ElicitationCodeHookInvocationSetting?{enableCodeHookInvocation: bool, invocationLabel: str?}}, slotResolutionSetting: SlotResolutionSetting?{slotResolutionStrategy: str}}, obfuscationSetting: ObfuscationSetting?{obfuscationSettingType: str}, botId: str?, botVersion: str?, localeId: str?, intentId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, multipleValuesSetting: MultipleValuesSetting?{allowMultipleValues: bool?}, subSlotSetting: SubSlotSetting?{expression: str?, slotSpecifications: map<str,Specifications>?}}
+
+@endpoint PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/{slotTypeId}/
+@required {slotTypeId: str, botId: str, botVersion: str, localeId: str, slotTypeName: str}
+@optional {description: str, slotTypeValues: [SlotTypeValue], valueSelectionSetting: SlotValueSelectionSetting, parentSlotTypeSignature: str, externalSourceSetting: ExternalSourceSetting, compositeSlotTypeSetting: CompositeSlotTypeSetting}
+@returns(200) {slotTypeId: str?, slotTypeName: str?, description: str?, slotTypeValues: [SlotTypeValue]?, valueSelectionSetting: SlotValueSelectionSetting?{resolutionStrategy: str, regexFilter: SlotValueRegexFilter?{pattern: str}, advancedRecognitionSetting: AdvancedRecognitionSetting?{audioRecognitionStrategy: str?}}, parentSlotTypeSignature: str?, botId: str?, botVersion: str?, localeId: str?, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?, externalSourceSetting: ExternalSourceSetting?{grammarSlotTypeSetting: GrammarSlotTypeSetting?{source: GrammarSlotTypeSource?{s3BucketName: str, s3ObjectKey: str, kmsKeyArn: str?}}}, compositeSlotTypeSetting: CompositeSlotTypeSetting?{subSlots: [SubSlotTypeComposition]?}}
+
+@endgroup
+
+@group testsets
+@endpoint PUT /testsets/{testSetId}
+@required {testSetId: str, testSetName: str}
+@optional {description: str}
+@returns(200) {testSetId: str?, testSetName: str?, description: str?, modality: str?, status: str?, roleArn: str?, numTurns: int?, storageLocation: TestSetStorageLocation?{s3BucketName: str, s3Path: str, kmsKeyArn: str?}, creationDateTime: str(timestamp)?, lastUpdatedDateTime: str(timestamp)?}
+
+@endgroup
+
+@end

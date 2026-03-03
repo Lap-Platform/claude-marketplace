@@ -1,0 +1,293 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS MediaTailor
+@version 2018-04-23
+@auth AWS SigV4
+@endpoints 44
+@hint download_for_search
+@toc configureLogs(2), channel(14), sourceLocation(14), prefetchSchedule(4), playbackConfiguration(3), alerts(1), channels(1), playbackConfigurations(1), sourceLocations(1), tags(3)
+
+@group configureLogs
+@endpoint PUT /configureLogs/channel
+@required {ChannelName: str, LogTypes: [str]}
+@returns(200) {ChannelName: str?, LogTypes: [str]?}
+
+@endpoint PUT /configureLogs/playbackConfiguration
+@required {PercentEnabled: int, PlaybackConfigurationName: str}
+@returns(200) {PercentEnabled: int, PlaybackConfigurationName: str?}
+
+@endgroup
+
+@group channel
+@endpoint POST /channel/{ChannelName}
+@required {ChannelName: str, Outputs: [RequestOutputItem], PlaybackMode: str}
+@optional {Audiences: [str], FillerSlate: SlateSource, Tags: map<str,str>, Tier: str, TimeShiftConfiguration: TimeShiftConfiguration}
+@returns(200) {Arn: str?, Audiences: [str]?, ChannelName: str?, ChannelState: str?, CreationTime: str(timestamp)?, FillerSlate: SlateSource?{SourceLocationName: str?, VodSourceName: str?}, LastModifiedTime: str(timestamp)?, Outputs: [ResponseOutputItem]?, PlaybackMode: str?, Tags: map<str,str>?, Tier: str?, TimeShiftConfiguration: TimeShiftConfiguration?{MaxTimeDelaySeconds: int}}
+
+@endgroup
+
+@group sourceLocation
+@endpoint POST /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+@required {LiveSourceName: str, SourceLocationName: str, HttpPackageConfigurations: [HttpPackageConfiguration]}
+@optional {Tags: map<str,str>}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, HttpPackageConfigurations: [HttpPackageConfiguration]?, LastModifiedTime: str(timestamp)?, LiveSourceName: str?, SourceLocationName: str?, Tags: map<str,str>?}
+
+@endgroup
+
+@group prefetchSchedule
+@endpoint POST /prefetchSchedule/{PlaybackConfigurationName}/{Name}
+@required {Name: str, PlaybackConfigurationName: str, Consumption: PrefetchConsumption, Retrieval: PrefetchRetrieval}
+@optional {StreamId: str}
+@returns(200) {Arn: str?, Consumption: PrefetchConsumption?{AvailMatchingCriteria: [AvailMatchingCriteria]?, EndTime: str(timestamp), StartTime: str(timestamp)?}, Name: str?, PlaybackConfigurationName: str?, Retrieval: PrefetchRetrieval?{DynamicVariables: map<str,str>?, EndTime: str(timestamp), StartTime: str(timestamp)?}, StreamId: str?}
+
+@endgroup
+
+@group channel
+@endpoint POST /channel/{ChannelName}/program/{ProgramName}
+@required {ChannelName: str, ProgramName: str, ScheduleConfiguration: ScheduleConfiguration, SourceLocationName: str}
+@optional {AdBreaks: [AdBreak], AudienceMedia: [AudienceMedia], LiveSourceName: str, VodSourceName: str}
+@returns(200) {AdBreaks: [AdBreak]?, Arn: str?, AudienceMedia: [AudienceMedia]?, ChannelName: str?, ClipRange: ClipRange?{EndOffsetMillis: int(i64)?, StartOffsetMillis: int(i64)?}, CreationTime: str(timestamp)?, DurationMillis: int(i64)?, LiveSourceName: str?, ProgramName: str?, ScheduledStartTime: str(timestamp)?, SourceLocationName: str?, VodSourceName: str?}
+
+@endgroup
+
+@group sourceLocation
+@endpoint POST /sourceLocation/{SourceLocationName}
+@required {SourceLocationName: str, HttpConfiguration: HttpConfiguration}
+@optional {AccessConfiguration: AccessConfiguration, DefaultSegmentDeliveryConfiguration: DefaultSegmentDeliveryConfiguration, SegmentDeliveryConfigurations: [SegmentDeliveryConfiguration], Tags: map<str,str>}
+@returns(200) {AccessConfiguration: AccessConfiguration?{AccessType: str?, SecretsManagerAccessTokenConfiguration: SecretsManagerAccessTokenConfiguration?{HeaderName: str?, SecretArn: str?, SecretStringKey: str?}}, Arn: str?, CreationTime: str(timestamp)?, DefaultSegmentDeliveryConfiguration: DefaultSegmentDeliveryConfiguration?{BaseUrl: str?}, HttpConfiguration: HttpConfiguration?{BaseUrl: str}, LastModifiedTime: str(timestamp)?, SegmentDeliveryConfigurations: [SegmentDeliveryConfiguration]?, SourceLocationName: str?, Tags: map<str,str>?}
+
+@endpoint POST /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+@required {SourceLocationName: str, VodSourceName: str, HttpPackageConfigurations: [HttpPackageConfiguration]}
+@optional {Tags: map<str,str>}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, HttpPackageConfigurations: [HttpPackageConfiguration]?, LastModifiedTime: str(timestamp)?, SourceLocationName: str?, Tags: map<str,str>?, VodSourceName: str?}
+
+@endgroup
+
+@group channel
+@endpoint DELETE /channel/{ChannelName}
+@required {ChannelName: str}
+
+@endpoint DELETE /channel/{ChannelName}/policy
+@required {ChannelName: str}
+
+@endgroup
+
+@group sourceLocation
+@endpoint DELETE /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+@required {LiveSourceName: str, SourceLocationName: str}
+
+@endgroup
+
+@group playbackConfiguration
+@endpoint DELETE /playbackConfiguration/{Name}
+@required {Name: str}
+
+@endgroup
+
+@group prefetchSchedule
+@endpoint DELETE /prefetchSchedule/{PlaybackConfigurationName}/{Name}
+@required {Name: str, PlaybackConfigurationName: str}
+
+@endgroup
+
+@group channel
+@endpoint DELETE /channel/{ChannelName}/program/{ProgramName}
+@required {ChannelName: str, ProgramName: str}
+
+@endgroup
+
+@group sourceLocation
+@endpoint DELETE /sourceLocation/{SourceLocationName}
+@required {SourceLocationName: str}
+
+@endpoint DELETE /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+@required {SourceLocationName: str, VodSourceName: str}
+
+@endgroup
+
+@group channel
+@endpoint GET /channel/{ChannelName}
+@required {ChannelName: str}
+@returns(200) {Arn: str?, Audiences: [str]?, ChannelName: str?, ChannelState: str?, CreationTime: str(timestamp)?, FillerSlate: SlateSource?{SourceLocationName: str?, VodSourceName: str?}, LastModifiedTime: str(timestamp)?, LogConfiguration: LogConfigurationForChannel{LogTypes: [str]?}, Outputs: [ResponseOutputItem]?, PlaybackMode: str?, Tags: map<str,str>?, Tier: str?, TimeShiftConfiguration: TimeShiftConfiguration?{MaxTimeDelaySeconds: int}}
+
+@endgroup
+
+@group sourceLocation
+@endpoint GET /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+@required {LiveSourceName: str, SourceLocationName: str}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, HttpPackageConfigurations: [HttpPackageConfiguration]?, LastModifiedTime: str(timestamp)?, LiveSourceName: str?, SourceLocationName: str?, Tags: map<str,str>?}
+
+@endgroup
+
+@group channel
+@endpoint GET /channel/{ChannelName}/program/{ProgramName}
+@required {ChannelName: str, ProgramName: str}
+@returns(200) {AdBreaks: [AdBreak]?, Arn: str?, AudienceMedia: [AudienceMedia]?, ChannelName: str?, ClipRange: ClipRange?{EndOffsetMillis: int(i64)?, StartOffsetMillis: int(i64)?}, CreationTime: str(timestamp)?, DurationMillis: int(i64)?, LiveSourceName: str?, ProgramName: str?, ScheduledStartTime: str(timestamp)?, SourceLocationName: str?, VodSourceName: str?}
+
+@endgroup
+
+@group sourceLocation
+@endpoint GET /sourceLocation/{SourceLocationName}
+@required {SourceLocationName: str}
+@returns(200) {AccessConfiguration: AccessConfiguration?{AccessType: str?, SecretsManagerAccessTokenConfiguration: SecretsManagerAccessTokenConfiguration?{HeaderName: str?, SecretArn: str?, SecretStringKey: str?}}, Arn: str?, CreationTime: str(timestamp)?, DefaultSegmentDeliveryConfiguration: DefaultSegmentDeliveryConfiguration?{BaseUrl: str?}, HttpConfiguration: HttpConfiguration?{BaseUrl: str}, LastModifiedTime: str(timestamp)?, SegmentDeliveryConfigurations: [SegmentDeliveryConfiguration]?, SourceLocationName: str?, Tags: map<str,str>?}
+
+@endpoint GET /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+@required {SourceLocationName: str, VodSourceName: str}
+@returns(200) {AdBreakOpportunities: [AdBreakOpportunity]?, Arn: str?, CreationTime: str(timestamp)?, HttpPackageConfigurations: [HttpPackageConfiguration]?, LastModifiedTime: str(timestamp)?, SourceLocationName: str?, Tags: map<str,str>?, VodSourceName: str?}
+
+@endgroup
+
+@group channel
+@endpoint GET /channel/{ChannelName}/policy
+@required {ChannelName: str}
+@returns(200) {Policy: str?}
+
+@endpoint GET /channel/{ChannelName}/schedule
+@required {ChannelName: str}
+@optional {audience: str, durationMinutes: str, maxResults: int, nextToken: str}
+@returns(200) {Items: [ScheduleEntry]?, NextToken: str?}
+
+@endgroup
+
+@group playbackConfiguration
+@endpoint GET /playbackConfiguration/{Name}
+@required {Name: str}
+@returns(200) {AdDecisionServerUrl: str?, AvailSuppression: AvailSuppression?{FillPolicy: str?, Mode: str?, Value: str?}, Bumper: Bumper?{EndUrl: str?, StartUrl: str?}, CdnConfiguration: CdnConfiguration?{AdSegmentUrlPrefix: str?, ContentSegmentUrlPrefix: str?}, ConfigurationAliases: map<str,map<str,str>>?, DashConfiguration: DashConfiguration?{ManifestEndpointPrefix: str?, MpdLocation: str?, OriginManifestType: str?}, HlsConfiguration: HlsConfiguration?{ManifestEndpointPrefix: str?}, InsertionMode: str?, LivePreRollConfiguration: LivePreRollConfiguration?{AdDecisionServerUrl: str?, MaxDurationSeconds: int?}, LogConfiguration: LogConfiguration?{PercentEnabled: int}, ManifestProcessingRules: ManifestProcessingRules?{AdMarkerPassthrough: AdMarkerPassthrough?{Enabled: bool?}}, Name: str?, PersonalizationThresholdSeconds: int?, PlaybackConfigurationArn: str?, PlaybackEndpointPrefix: str?, SessionInitializationEndpointPrefix: str?, SlateAdUrl: str?, Tags: map<str,str>?, TranscodeProfileName: str?, VideoContentSourceUrl: str?}
+
+@endgroup
+
+@group prefetchSchedule
+@endpoint GET /prefetchSchedule/{PlaybackConfigurationName}/{Name}
+@required {Name: str, PlaybackConfigurationName: str}
+@returns(200) {Arn: str?, Consumption: PrefetchConsumption?{AvailMatchingCriteria: [AvailMatchingCriteria]?, EndTime: str(timestamp), StartTime: str(timestamp)?}, Name: str?, PlaybackConfigurationName: str?, Retrieval: PrefetchRetrieval?{DynamicVariables: map<str,str>?, EndTime: str(timestamp), StartTime: str(timestamp)?}, StreamId: str?}
+
+@endgroup
+
+@group alerts
+@endpoint GET /alerts
+@required {resourceArn: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Items: [Alert]?, NextToken: str?}
+
+@endgroup
+
+@group channels
+@endpoint GET /channels
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Items: [Channel]?, NextToken: str?}
+
+@endgroup
+
+@group sourceLocation
+@endpoint GET /sourceLocation/{SourceLocationName}/liveSources
+@required {SourceLocationName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Items: [LiveSource]?, NextToken: str?}
+
+@endgroup
+
+@group playbackConfigurations
+@endpoint GET /playbackConfigurations
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Items: [PlaybackConfiguration]?, NextToken: str?}
+
+@endgroup
+
+@group prefetchSchedule
+@endpoint POST /prefetchSchedule/{PlaybackConfigurationName}
+@required {PlaybackConfigurationName: str}
+@optional {MaxResults: int, NextToken: str, StreamId: str}
+@returns(200) {Items: [PrefetchSchedule]?, NextToken: str?}
+
+@endgroup
+
+@group sourceLocations
+@endpoint GET /sourceLocations
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Items: [SourceLocation]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group sourceLocation
+@endpoint GET /sourceLocation/{SourceLocationName}/vodSources
+@required {SourceLocationName: str}
+@optional {maxResults: int, nextToken: str}
+@returns(200) {Items: [VodSource]?, NextToken: str?}
+
+@endgroup
+
+@group channel
+@endpoint PUT /channel/{ChannelName}/policy
+@required {ChannelName: str, Policy: str}
+
+@endgroup
+
+@group playbackConfiguration
+@endpoint PUT /playbackConfiguration
+@required {Name: str}
+@optional {AdDecisionServerUrl: str, AvailSuppression: AvailSuppression, Bumper: Bumper, CdnConfiguration: CdnConfiguration, ConfigurationAliases: map<str,map<str,str>>, DashConfiguration: DashConfigurationForPut, InsertionMode: str, LivePreRollConfiguration: LivePreRollConfiguration, ManifestProcessingRules: ManifestProcessingRules, PersonalizationThresholdSeconds: int, SlateAdUrl: str, Tags: map<str,str>, TranscodeProfileName: str, VideoContentSourceUrl: str}
+@returns(200) {AdDecisionServerUrl: str?, AvailSuppression: AvailSuppression?{FillPolicy: str?, Mode: str?, Value: str?}, Bumper: Bumper?{EndUrl: str?, StartUrl: str?}, CdnConfiguration: CdnConfiguration?{AdSegmentUrlPrefix: str?, ContentSegmentUrlPrefix: str?}, ConfigurationAliases: map<str,map<str,str>>?, DashConfiguration: DashConfiguration?{ManifestEndpointPrefix: str?, MpdLocation: str?, OriginManifestType: str?}, HlsConfiguration: HlsConfiguration?{ManifestEndpointPrefix: str?}, InsertionMode: str?, LivePreRollConfiguration: LivePreRollConfiguration?{AdDecisionServerUrl: str?, MaxDurationSeconds: int?}, LogConfiguration: LogConfiguration?{PercentEnabled: int}, ManifestProcessingRules: ManifestProcessingRules?{AdMarkerPassthrough: AdMarkerPassthrough?{Enabled: bool?}}, Name: str?, PersonalizationThresholdSeconds: int?, PlaybackConfigurationArn: str?, PlaybackEndpointPrefix: str?, SessionInitializationEndpointPrefix: str?, SlateAdUrl: str?, Tags: map<str,str>?, TranscodeProfileName: str?, VideoContentSourceUrl: str?}
+
+@endgroup
+
+@group channel
+@endpoint PUT /channel/{ChannelName}/start
+@required {ChannelName: str}
+
+@endpoint PUT /channel/{ChannelName}/stop
+@required {ChannelName: str}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group channel
+@endpoint PUT /channel/{ChannelName}
+@required {ChannelName: str, Outputs: [RequestOutputItem]}
+@optional {Audiences: [str], FillerSlate: SlateSource, TimeShiftConfiguration: TimeShiftConfiguration}
+@returns(200) {Arn: str?, Audiences: [str]?, ChannelName: str?, ChannelState: str?, CreationTime: str(timestamp)?, FillerSlate: SlateSource?{SourceLocationName: str?, VodSourceName: str?}, LastModifiedTime: str(timestamp)?, Outputs: [ResponseOutputItem]?, PlaybackMode: str?, Tags: map<str,str>?, Tier: str?, TimeShiftConfiguration: TimeShiftConfiguration?{MaxTimeDelaySeconds: int}}
+
+@endgroup
+
+@group sourceLocation
+@endpoint PUT /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+@required {LiveSourceName: str, SourceLocationName: str, HttpPackageConfigurations: [HttpPackageConfiguration]}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, HttpPackageConfigurations: [HttpPackageConfiguration]?, LastModifiedTime: str(timestamp)?, LiveSourceName: str?, SourceLocationName: str?, Tags: map<str,str>?}
+
+@endgroup
+
+@group channel
+@endpoint PUT /channel/{ChannelName}/program/{ProgramName}
+@required {ChannelName: str, ProgramName: str, ScheduleConfiguration: UpdateProgramScheduleConfiguration}
+@optional {AdBreaks: [AdBreak], AudienceMedia: [AudienceMedia]}
+@returns(200) {AdBreaks: [AdBreak]?, Arn: str?, AudienceMedia: [AudienceMedia]?, ChannelName: str?, ClipRange: ClipRange?{EndOffsetMillis: int(i64)?, StartOffsetMillis: int(i64)?}, CreationTime: str(timestamp)?, DurationMillis: int(i64)?, LiveSourceName: str?, ProgramName: str?, ScheduledStartTime: str(timestamp)?, SourceLocationName: str?, VodSourceName: str?}
+
+@endgroup
+
+@group sourceLocation
+@endpoint PUT /sourceLocation/{SourceLocationName}
+@required {SourceLocationName: str, HttpConfiguration: HttpConfiguration}
+@optional {AccessConfiguration: AccessConfiguration, DefaultSegmentDeliveryConfiguration: DefaultSegmentDeliveryConfiguration, SegmentDeliveryConfigurations: [SegmentDeliveryConfiguration]}
+@returns(200) {AccessConfiguration: AccessConfiguration?{AccessType: str?, SecretsManagerAccessTokenConfiguration: SecretsManagerAccessTokenConfiguration?{HeaderName: str?, SecretArn: str?, SecretStringKey: str?}}, Arn: str?, CreationTime: str(timestamp)?, DefaultSegmentDeliveryConfiguration: DefaultSegmentDeliveryConfiguration?{BaseUrl: str?}, HttpConfiguration: HttpConfiguration?{BaseUrl: str}, LastModifiedTime: str(timestamp)?, SegmentDeliveryConfigurations: [SegmentDeliveryConfiguration]?, SourceLocationName: str?, Tags: map<str,str>?}
+
+@endpoint PUT /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+@required {SourceLocationName: str, VodSourceName: str, HttpPackageConfigurations: [HttpPackageConfiguration]}
+@returns(200) {Arn: str?, CreationTime: str(timestamp)?, HttpPackageConfigurations: [HttpPackageConfiguration]?, LastModifiedTime: str(timestamp)?, SourceLocationName: str?, Tags: map<str,str>?, VodSourceName: str?}
+
+@endgroup
+
+@end

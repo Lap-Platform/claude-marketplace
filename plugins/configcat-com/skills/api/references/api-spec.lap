@@ -1,0 +1,703 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api ConfigCat Public Management API
+@base https://api.configcat.com
+@version v1
+@auth Bearer basic
+@endpoints 105
+@hint download_for_search
+@toc proxy-profiles(8), organizations(11), products(25), configs(12), settings(13), environments(11), permissions(3), integrations(3), integrationLink(1), me(1), segments(3), tags(4), webhooks(5), jira(2), code-references(2), invitations(1)
+
+@group proxy-profiles
+@endpoint GET /v1/proxy-profiles/{proxyProfileId}
+@required {proxyProfileId: str(uuid)}
+@returns(200) {proxyProfileId: str(uuid), name: str, description: str?, lastAccessedAt: str(date-time)?, connectionPreferences: map{sdkPollInterval: int(int32), webhookNotification: any?}, sdkKeySelectionRules: [map]}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/proxy-profiles/{proxyProfileId}
+@required {proxyProfileId: str(uuid), name: str}
+@optional {description: str, connectionPreferences: any, sdkKeySelectionRules: [map{kind: str, productIdFilter: str(uuid), configIdFilter: str(uuid), environmentIdFilter: str(uuid), productNameMatchFilter: str, configNameMatchFilter: str, environmentNameMatchFilter: str}]}
+@returns(200) {proxyProfileId: str(uuid), name: str, description: str?, lastAccessedAt: str(date-time)?, connectionPreferences: map{sdkPollInterval: int(int32), webhookNotification: any?}, sdkKeySelectionRules: [map]}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v1/proxy-profiles/{proxyProfileId}
+@required {proxyProfileId: str(uuid)}
+@returns(200) {proxyProfileId: str(uuid), name: str, description: str?, lastAccessedAt: str(date-time)?, connectionPreferences: map{sdkPollInterval: int(int32), webhookNotification: any?}, sdkKeySelectionRules: [map]}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/proxy-profiles/{proxyProfileId}
+@required {proxyProfileId: str(uuid)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations
+@returns(200)
+@errors {429}
+
+@endgroup
+
+@group products
+@endpoint GET /v1/products
+@returns(200)
+@errors {429}
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations/{organizationId}/proxy-profiles
+@required {organizationId: str(uuid)}
+@returns(200) {profiles: [map]}
+@errors {400, 404, 429}
+
+@endpoint POST /v1/organizations/{organizationId}/proxy-profiles
+@required {organizationId: str(uuid), name: str}
+@optional {description: str, connectionPreferences: any, sdkKeySelectionRules: [map{kind: str, productIdFilter: str(uuid), configIdFilter: str(uuid), environmentIdFilter: str(uuid), productNameMatchFilter: str, configNameMatchFilter: str, environmentNameMatchFilter: str}]}
+@returns(201) {proxyProfileId: str(uuid), name: str, description: str?, lastAccessedAt: str(date-time)?, connectionPreferences: map{sdkPollInterval: int(int32), webhookNotification: any?}, sdkKeySelectionRules: [map]}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group products
+@endpoint GET /v1/products/{productId}/tags
+@required {productId: str(uuid)}
+@returns(200)
+@errors {429}
+
+@endpoint POST /v1/products/{productId}/tags
+@required {productId: str(uuid), name: str}
+@optional {color: str}
+@returns(201) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, tagId: int(int64), name: str, color: str?}
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/webhooks
+@required {productId: str(uuid)}
+@returns(200)
+@errors {429}
+
+@endpoint GET /v1/products/{productId}/configs
+@required {productId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint POST /v1/products/{productId}/configs
+@required {productId: str(uuid), name: str}
+@optional {description: str, order: int(int32), evaluationVersion: str(v1/v2)}
+@returns(201) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/environments
+@required {productId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint POST /v1/products/{productId}/environments
+@required {productId: str(uuid), name: str}
+@optional {color: str, description: str, order: int(int32)}
+@returns(201) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/permissions
+@required {productId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint POST /v1/products/{productId}/permissions
+@required {productId: str(uuid), name: str}
+@optional {canManageMembers: bool, canCreateOrUpdateConfig: bool, canDeleteConfig: bool, canCreateOrUpdateEnvironment: bool, canDeleteEnvironment: bool, canCreateOrUpdateSetting: bool, canTagSetting: bool, canDeleteSetting: bool, canCreateOrUpdateTag: bool, canDeleteTag: bool, canManageWebhook: bool, canUseExportImport: bool, canManageProductPreferences: bool, canManageIntegrations: bool, canViewSdkKey: bool, canRotateSdkKey: bool, canCreateOrUpdateSegments: bool, canDeleteSegments: bool, canViewProductAuditLog: bool, canViewProductStatistics: bool, accessType: str(readOnly/full/custom), newEnvironmentAccessType: str(full/readOnly/none), environmentAccesses: [map{environmentId: str(uuid), environmentAccessType: str}], canDisable2FA: bool}
+@returns(201) {permissionGroupId: int(int64), name: str, canManageMembers: bool, canCreateOrUpdateConfig: bool, canDeleteConfig: bool, canCreateOrUpdateEnvironment: bool, canDeleteEnvironment: bool, canCreateOrUpdateSetting: bool, canTagSetting: bool, canDeleteSetting: bool, canCreateOrUpdateTag: bool, canDeleteTag: bool, canManageWebhook: bool, canUseExportImport: bool, canManageProductPreferences: bool, canManageIntegrations: bool, canViewSdkKey: bool, canRotateSdkKey: bool, canCreateOrUpdateSegments: bool, canDeleteSegments: bool, canViewProductAuditLog: bool, canViewProductStatistics: bool, canDisable2FA: bool, accessType: str, newEnvironmentAccessType: str, environmentAccesses: [map], product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}}
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/integrations
+@required {productId: str(uuid)}
+@returns(200) {integrations: [map]}
+@errors {400, 404, 429}
+
+@endpoint POST /v1/products/{productId}/integrations
+@required {productId: str(uuid), integrationType: str(dataDog/slack/amplitude/mixPanel/segment/pubNub), name: str, parameters: map, environmentIds: [str(uuid)], configIds: [str(uuid)]}
+@returns(201) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, integrationId: str(uuid), name: str, integrationType: str, parameters: map?, environmentIds: [str(uuid)], configIds: [str(uuid)]}
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/segments
+@required {productId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint POST /v1/products/{productId}/segments
+@required {productId: str(uuid), name: str, comparisonAttribute: str, comparator: str(isOneOf/isNotOneOf/contains/doesNotContain/semVerIsOneOf/semVerIsNotOneOf/semVerLess/semVerLessOrEquals/semVerGreater/semVerGreaterOrEquals/numberEquals/numberDoesNotEqual/numberLess/numberLessOrEquals/numberGreater/numberGreaterOrEquals/sensitiveIsOneOf/sensitiveIsNotOneOf), comparisonValue: str}
+@optional {description: str}
+@returns(201) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, segmentId: str(uuid), name: str, description: str?, creatorEmail: str?, creatorFullName: str?, createdAt: str(date-time), lastUpdaterEmail: str?, lastUpdaterFullName: str?, updatedAt: str(date-time), comparisonAttribute: str, comparator: str, comparisonValue: str}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group configs
+@endpoint GET /v1/configs/{configId}/settings
+@required {configId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint POST /v1/configs/{configId}/settings
+@required {configId: str(uuid), name: str, key: str, settingType: str(boolean/string/int/double)}
+@optional {hint: str, tags: [int(int64)], order: int(int32), predefinedVariations: [map{value!: map{boolValue: bool, stringValue: str, intValue: int(int32), doubleValue: num(double)}, name: str, hint: str}], initialValues: [map{environmentId: str(uuid), value!: any}], settingIdToInitFrom: int(int32)}
+@returns(201) {settingId: int(int32), key: str, name: str, hint: str?, order: int(int32), settingType: str, configId: str(uuid), configName: str, createdAt: str(date-time)?, tags: [map], predefinedVariations: [map]}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group products
+@endpoint GET /v1/products/{productId}/auditlogs
+@required {productId: str(uuid)}
+@optional {configId: str(uuid), environmentId: str(uuid), auditLogType: any, fromUtcDateTime: str(date-time), toUtcDateTime: str(date-time)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/staleflags
+@required {productId: str(uuid)}
+@optional {scope: str, staleFlagAgeDays: int(int32), staleFlagStaleInEnvironmentsType: str, ignoredEnvironmentIds: [str(uuid)], ignoredTagIds: [int(int64)]}
+@returns(200) {productId: str(uuid), name: str, configs: [map], environments: [map]}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group settings
+@endpoint GET /v1/settings/{settingId}/code-references
+@required {settingId: int(int32)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group configs
+@endpoint GET /v1/configs/{configId}
+@required {configId: str(uuid)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/configs/{configId}
+@required {configId: str(uuid)}
+@optional {name: str, description: str, order: int(int32)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/configs/{configId}
+@required {configId: str(uuid)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endpoint GET /v1/configs/{configId}/deleted-settings
+@required {configId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group environments
+@endpoint GET /v1/environments/{environmentId}
+@required {environmentId: str(uuid)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/environments/{environmentId}
+@required {environmentId: str(uuid)}
+@optional {name: str, color: str, description: str, order: int(int32)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/environments/{environmentId}
+@required {environmentId: str(uuid)}
+@optional {cleanupAuditLogs: bool}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group permissions
+@endpoint GET /v1/permissions/{permissionGroupId}
+@required {permissionGroupId: int(int64)}
+@returns(200) {permissionGroupId: int(int64), name: str, canManageMembers: bool, canCreateOrUpdateConfig: bool, canDeleteConfig: bool, canCreateOrUpdateEnvironment: bool, canDeleteEnvironment: bool, canCreateOrUpdateSetting: bool, canTagSetting: bool, canDeleteSetting: bool, canCreateOrUpdateTag: bool, canDeleteTag: bool, canManageWebhook: bool, canUseExportImport: bool, canManageProductPreferences: bool, canManageIntegrations: bool, canViewSdkKey: bool, canRotateSdkKey: bool, canCreateOrUpdateSegments: bool, canDeleteSegments: bool, canViewProductAuditLog: bool, canViewProductStatistics: bool, canDisable2FA: bool, accessType: str, newEnvironmentAccessType: str, environmentAccesses: [map], product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/permissions/{permissionGroupId}
+@required {permissionGroupId: int(int64)}
+@optional {name: str, canManageMembers: bool, canCreateOrUpdateConfig: bool, canDeleteConfig: bool, canCreateOrUpdateEnvironment: bool, canDeleteEnvironment: bool, canCreateOrUpdateSetting: bool, canTagSetting: bool, canDeleteSetting: bool, canCreateOrUpdateTag: bool, canDeleteTag: bool, canManageWebhook: bool, canUseExportImport: bool, canManageProductPreferences: bool, canManageIntegrations: bool, canViewSdkKey: bool, canRotateSdkKey: bool, canCreateOrUpdateSegments: bool, canDeleteSegments: bool, canViewProductAuditLog: bool, canViewProductStatistics: bool, canDisable2FA: bool, accessType: any, newEnvironmentAccessType: any, environmentAccesses: [map{environmentId: str(uuid), environmentAccessType: str}]}
+@returns(200) {permissionGroupId: int(int64), name: str, canManageMembers: bool, canCreateOrUpdateConfig: bool, canDeleteConfig: bool, canCreateOrUpdateEnvironment: bool, canDeleteEnvironment: bool, canCreateOrUpdateSetting: bool, canTagSetting: bool, canDeleteSetting: bool, canCreateOrUpdateTag: bool, canDeleteTag: bool, canManageWebhook: bool, canUseExportImport: bool, canManageProductPreferences: bool, canManageIntegrations: bool, canViewSdkKey: bool, canRotateSdkKey: bool, canCreateOrUpdateSegments: bool, canDeleteSegments: bool, canViewProductAuditLog: bool, canViewProductStatistics: bool, canDisable2FA: bool, accessType: str, newEnvironmentAccessType: str, environmentAccesses: [map], product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/permissions/{permissionGroupId}
+@required {permissionGroupId: int(int64)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group integrations
+@endpoint GET /v1/integrations/{integrationId}
+@required {integrationId: str(uuid)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, integrationId: str(uuid), name: str, integrationType: str, parameters: map?, environmentIds: [str(uuid)], configIds: [str(uuid)]}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/integrations/{integrationId}
+@required {integrationId: str(uuid), name: str, parameters: map, environmentIds: [str(uuid)], configIds: [str(uuid)]}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, integrationId: str(uuid), name: str, integrationType: str, parameters: map?, environmentIds: [str(uuid)], configIds: [str(uuid)]}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/integrations/{integrationId}
+@required {integrationId: str(uuid)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group integrationLink
+@endpoint GET /v1/integrationLink/{integrationLinkType}/{key}/details
+@required {integrationLinkType: str, key: str}
+@returns(200) {details: [map]?, allIntegrationLinkCount: int(int32)}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group configs
+@endpoint GET /v1/configs/{configId}/environments/{environmentId}
+@required {configId: str(uuid), environmentId: str(uuid)}
+@returns(200) {primary: str, secondary: str?}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group me
+@endpoint GET /v1/me
+@returns(200) {email: str, fullName: str}
+@errors {429}
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations/{organizationId}/auditlogs
+@required {organizationId: str(uuid)}
+@optional {productId: str(uuid), configId: str(uuid), environmentId: str(uuid), auditLogType: any, fromUtcDateTime: str(date-time), toUtcDateTime: str(date-time)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint GET /v1/organizations/{organizationId}/organization-limitations
+@required {organizationId: str(uuid)}
+@returns(200) {maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32), maxPredefinedVariations: int(int32)}
+@errors {429}
+
+@endpoint GET /v1/organizations/{organizationId}/members
+@required {organizationId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint GET /v2/organizations/{organizationId}/members
+@required {organizationId: str(uuid)}
+@returns(200) {admins: [map], billingManagers: [map], members: [map]}
+@errors {400, 404, 429}
+
+@endpoint GET /v1/organizations/{organizationId}/invitations
+@required {organizationId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group products
+@endpoint GET /v1/products/{productId}/invitations
+@required {productId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group settings
+@endpoint GET /v1/settings/{settingId}/predefined-variations
+@required {settingId: int(int32)}
+@returns(200) {settingKey: str, settingType: str, predefinedVariations: [map], environments: [map], maxPredefinedVariations: int(int32)}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/settings/{settingId}/predefined-variations
+@required {settingId: int(int32), predefinedVariations: [map{value!: map{boolValue: bool, stringValue: str, intValue: int(int32), doubleValue: num(double)}, name: str, hint: str, predefinedVariationId: str(uuid)}]}
+@returns(200) {predefinedVariations: [map], maxPredefinedVariations: int(int32)}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group products
+@endpoint GET /v1/products/{productId}
+@required {productId: str(uuid)}
+@returns(200) {organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/products/{productId}
+@required {productId: str(uuid)}
+@optional {name: str, description: str, order: int(int32)}
+@returns(200) {organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/products/{productId}
+@required {productId: str(uuid)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/members
+@required {productId: str(uuid)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint GET /v1/products/{productId}/preferences
+@required {productId: str(uuid)}
+@returns(200) {reasonRequired: bool, keyGenerationMode: str, showVariationId: bool, reasonRequiredEnvironments: [map]?, mandatorySettingHint: bool}
+@errors {400, 404, 429}
+
+@endpoint POST /v1/products/{productId}/preferences
+@required {productId: str(uuid)}
+@optional {reasonRequired: bool, keyGenerationMode: any, showVariationId: bool, mandatorySettingHint: bool, reasonRequiredEnvironments: [map{environmentId: str(uuid), reasonRequired: bool}]}
+@returns(200) {reasonRequired: bool, keyGenerationMode: str, showVariationId: bool, reasonRequiredEnvironments: [map]?, mandatorySettingHint: bool}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group segments
+@endpoint GET /v1/segments/{segmentId}
+@required {segmentId: str(uuid)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, segmentId: str(uuid), name: str, description: str?, creatorEmail: str?, creatorFullName: str?, createdAt: str(date-time), lastUpdaterEmail: str?, lastUpdaterFullName: str?, updatedAt: str(date-time), comparisonAttribute: str, comparator: str, comparisonValue: str}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/segments/{segmentId}
+@required {segmentId: str(uuid)}
+@optional {name: str, description: str, comparisonAttribute: str, comparator: any, comparisonValue: str}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, segmentId: str(uuid), name: str, description: str?, creatorEmail: str?, creatorFullName: str?, createdAt: str(date-time), lastUpdaterEmail: str?, lastUpdaterFullName: str?, updatedAt: str(date-time), comparisonAttribute: str, comparator: str, comparisonValue: str}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/segments/{segmentId}
+@required {segmentId: str(uuid)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group settings
+@endpoint GET /v1/settings/{settingId}
+@required {settingId: int(int32)}
+@returns(200) {settingId: int(int32), key: str, name: str, hint: str?, order: int(int32), settingType: str, configId: str(uuid), configName: str, createdAt: str(date-time)?, tags: [map], predefinedVariations: [map]}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/settings/{settingId}
+@required {settingId: int(int32), name: str}
+@optional {hint: str, tags: [int(int64)], order: int(int32)}
+@returns(200) {settingId: int(int32), key: str, name: str, hint: str?, order: int(int32), settingType: str, configId: str(uuid), configName: str, createdAt: str(date-time)?, tags: [map], predefinedVariations: [map]}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v1/settings/{settingId}
+@required {settingId: int(int32)}
+@returns(200) {settingId: int(int32), key: str, name: str, hint: str?, order: int(int32), settingType: str, configId: str(uuid), configName: str, createdAt: str(date-time)?, tags: [map], predefinedVariations: [map]}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/settings/{settingId}
+@required {settingId: int(int32)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group tags
+@endpoint GET /v1/tags/{tagId}/settings
+@required {tagId: int(int64)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group settings
+@endpoint GET /v1/settings/{settingKeyOrId}/value
+@required {settingKeyOrId: str}
+@optional {X-CONFIGCAT-SDKKEY: str}
+@returns(200) {setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, isWatching: bool}, updatedAt: str(date-time)?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], rolloutRules: [map], rolloutPercentageItems: [map], value: any, config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}, readOnly: bool}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/settings/{settingKeyOrId}/value
+@required {settingKeyOrId: str, value: any}
+@optional {reason: str, X-CONFIGCAT-SDKKEY: str, rolloutRules: [map{comparisonAttribute: str, comparator: any, comparisonValue: str, value!: any, segmentComparator: any, segmentId: str(uuid)}], rolloutPercentageItems: [map{percentage!: int(int64), value!: any}]}
+@returns(200) {setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, isWatching: bool}, updatedAt: str(date-time)?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], rolloutRules: [map], rolloutPercentageItems: [map], value: any, config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}, readOnly: bool}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v1/settings/{settingKeyOrId}/value
+@required {settingKeyOrId: str}
+@optional {reason: str, X-CONFIGCAT-SDKKEY: str}
+@returns(200) {setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, isWatching: bool}, updatedAt: str(date-time)?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], rolloutRules: [map], rolloutPercentageItems: [map], value: any, config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}, readOnly: bool}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group environments
+@endpoint GET /v1/environments/{environmentId}/settings/{settingId}/value
+@required {environmentId: str(uuid), settingId: int(int32)}
+@returns(200) {setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, isWatching: bool}, updatedAt: str(date-time)?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], rolloutRules: [map], rolloutPercentageItems: [map], value: any, config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}, readOnly: bool}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/environments/{environmentId}/settings/{settingId}/value
+@required {environmentId: str(uuid), settingId: int(int32), value: any}
+@optional {reason: str, rolloutRules: [map{comparisonAttribute: str, comparator: any, comparisonValue: str, value!: any, segmentComparator: any, segmentId: str(uuid)}], rolloutPercentageItems: [map{percentage!: int(int64), value!: any}]}
+@returns(200) {setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, isWatching: bool}, updatedAt: str(date-time)?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], rolloutRules: [map], rolloutPercentageItems: [map], value: any, config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}, readOnly: bool}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v1/environments/{environmentId}/settings/{settingId}/value
+@required {environmentId: str(uuid), settingId: int(int32)}
+@optional {reason: str}
+@returns(200) {setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, isWatching: bool}, updatedAt: str(date-time)?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], rolloutRules: [map], rolloutPercentageItems: [map], value: any, config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}, readOnly: bool}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group settings
+@endpoint GET /v2/settings/{settingKeyOrId}/value
+@required {settingKeyOrId: str}
+@optional {X-CONFIGCAT-SDKKEY: str}
+@returns(200) {lastVersionId: str(uuid), defaultValue: map{boolValue: bool?, stringValue: str?, intValue: int(int32)?, doubleValue: num(double)?, predefinedVariationId: str(uuid)?}, targetingRules: [map], setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, predefinedVariations: [map], isWatching: bool}, updatedAt: str(date-time)?, percentageEvaluationAttribute: str?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], settingIdsWherePrerequisite: [int(int32)], config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint PUT /v2/settings/{settingKeyOrId}/value
+@required {settingKeyOrId: str, defaultValue: map{boolValue: bool, stringValue: str, intValue: int(int32), doubleValue: num(double), predefinedVariationId: str(uuid)}}
+@optional {reason: str, X-CONFIGCAT-SDKKEY: str, targetingRules: [map{conditions: [map{userCondition: any, segmentCondition: any, prerequisiteFlagCondition: any}], percentageOptions: [map{percentage!: int(int32), value!: map}], value: any}], percentageEvaluationAttribute: str}
+@returns(200) {lastVersionId: str(uuid), defaultValue: map{boolValue: bool?, stringValue: str?, intValue: int(int32)?, doubleValue: num(double)?, predefinedVariationId: str(uuid)?}, targetingRules: [map], setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, predefinedVariations: [map], isWatching: bool}, updatedAt: str(date-time)?, percentageEvaluationAttribute: str?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], settingIdsWherePrerequisite: [int(int32)], config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v2/settings/{settingKeyOrId}/value
+@required {settingKeyOrId: str}
+@optional {reason: str, X-CONFIGCAT-SDKKEY: str}
+@returns(200) {lastVersionId: str(uuid), defaultValue: map{boolValue: bool?, stringValue: str?, intValue: int(int32)?, doubleValue: num(double)?, predefinedVariationId: str(uuid)?}, targetingRules: [map], setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, predefinedVariations: [map], isWatching: bool}, updatedAt: str(date-time)?, percentageEvaluationAttribute: str?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], settingIdsWherePrerequisite: [int(int32)], config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group environments
+@endpoint GET /v2/environments/{environmentId}/settings/{settingId}/value
+@required {environmentId: str(uuid), settingId: int(int32)}
+@returns(200) {lastVersionId: str(uuid), defaultValue: map{boolValue: bool?, stringValue: str?, intValue: int(int32)?, doubleValue: num(double)?, predefinedVariationId: str(uuid)?}, targetingRules: [map], setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, predefinedVariations: [map], isWatching: bool}, updatedAt: str(date-time)?, percentageEvaluationAttribute: str?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], settingIdsWherePrerequisite: [int(int32)], config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint PUT /v2/environments/{environmentId}/settings/{settingId}/value
+@required {environmentId: str(uuid), settingId: int(int32), defaultValue: map{boolValue: bool, stringValue: str, intValue: int(int32), doubleValue: num(double), predefinedVariationId: str(uuid)}}
+@optional {reason: str, targetingRules: [map{conditions: [map{userCondition: any, segmentCondition: any, prerequisiteFlagCondition: any}], percentageOptions: [map{percentage!: int(int32), value!: map}], value: any}], percentageEvaluationAttribute: str}
+@returns(200) {lastVersionId: str(uuid), defaultValue: map{boolValue: bool?, stringValue: str?, intValue: int(int32)?, doubleValue: num(double)?, predefinedVariationId: str(uuid)?}, targetingRules: [map], setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, predefinedVariations: [map], isWatching: bool}, updatedAt: str(date-time)?, percentageEvaluationAttribute: str?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], settingIdsWherePrerequisite: [int(int32)], config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v2/environments/{environmentId}/settings/{settingId}/value
+@required {environmentId: str(uuid), settingId: int(int32)}
+@optional {reason: str}
+@returns(200) {lastVersionId: str(uuid), defaultValue: map{boolValue: bool?, stringValue: str?, intValue: int(int32)?, doubleValue: num(double)?, predefinedVariationId: str(uuid)?}, targetingRules: [map], setting: map{settingId: int(int32), key: str, name: str, hint: str?, settingType: str, order: int(int32), createdAt: str(date-time)?, creatorEmail: str?, creatorFullName: str?, predefinedVariations: [map], isWatching: bool}, updatedAt: str(date-time)?, percentageEvaluationAttribute: str?, lastUpdaterUserEmail: str?, lastUpdaterUserFullName: str?, integrationLinks: [map], settingTags: [map], settingIdsWherePrerequisite: [int(int32)], config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group configs
+@endpoint GET /v1/configs/{configId}/environments/{environmentId}/values
+@required {configId: str(uuid), environmentId: str(uuid)}
+@returns(200) {config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, settingValues: [map], featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint POST /v1/configs/{configId}/environments/{environmentId}/values
+@required {configId: str(uuid), environmentId: str(uuid)}
+@optional {reason: str, settingValues: [map{rolloutRules: [map{comparisonAttribute: str, comparator: any, comparisonValue: str, value!: any, segmentComparator: any, segmentId: str(uuid)}], rolloutPercentageItems: [map{percentage!: int(int64), value!: any}], value!: any, settingId: int(int32)}]}
+@returns(200) {config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, settingValues: [map], featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint GET /v2/configs/{configId}/environments/{environmentId}/values
+@required {configId: str(uuid), environmentId: str(uuid)}
+@returns(200) {config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, settingFormulas: [map], featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endpoint POST /v2/configs/{configId}/environments/{environmentId}/values
+@required {configId: str(uuid), environmentId: str(uuid)}
+@optional {reason: str, updateFormulas: [map{defaultValue!: map{boolValue: bool, stringValue: str, intValue: int(int32), doubleValue: num(double), predefinedVariationId: str(uuid)}, targetingRules: [map{conditions: [map], percentageOptions: [map], value: any}], percentageEvaluationAttribute: str, settingId: int(int32)}]}
+@returns(200) {config: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, configId: str(uuid), name: str, description: str?, order: int(int32), migratedConfigId: str(uuid)?, evaluationVersion: str}, environment: map{product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, environmentId: str(uuid), name: str, color: str?, description: str?, order: int(int32), reasonRequired: bool}, readOnly: bool, settingFormulas: [map], featureFlagLimitations: map{maxPercentageOptionCount: int(int32), maxTargetingRuleCount: int(int32), maxComparisonValueLength: int(int32), maxComparisonValueListLength: int(int32), maxComparisonValueListItemLength: int(int32), maxStringFlagValueLength: int(int32), maxConditionPerTargetingRuleCount: int(int32)}}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group tags
+@endpoint GET /v1/tags/{tagId}
+@required {tagId: int(int64)}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, tagId: int(int64), name: str, color: str?}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/tags/{tagId}
+@required {tagId: int(int64)}
+@optional {name: str, color: str}
+@returns(200) {product: map{organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}, tagId: int(int64), name: str, color: str?}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/tags/{tagId}
+@required {tagId: int(int64)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group webhooks
+@endpoint GET /v1/webhooks/{webhookId}
+@required {webhookId: int(int32)}
+@returns(200) {webhookId: int(int32), url: str, httpMethod: str, content: str?, webHookHeaders: [map], config: map{name: str, configId: str(uuid)}, environment: map{name: str, environmentId: str(uuid)}}
+@errors {400, 404, 429}
+
+@endpoint PUT /v1/webhooks/{webhookId}
+@required {webhookId: int(int32), url: str}
+@optional {content: str, httpMethod: any, webHookHeaders: [map{key!: str, value!: str, isSecure: bool}]}
+@returns(200) {webhookId: int(int32), url: str, httpMethod: str, content: str?, webHookHeaders: [map], config: map{name: str, configId: str(uuid)}, environment: map{name: str, environmentId: str(uuid)}}
+@errors {400, 404, 429}
+
+@endpoint PATCH /v1/webhooks/{webhookId}
+@required {webhookId: int(int32)}
+@returns(200) {webhookId: int(int32), url: str, httpMethod: str, content: str?, webHookHeaders: [map], config: map{name: str, configId: str(uuid)}, environment: map{name: str, environmentId: str(uuid)}}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/webhooks/{webhookId}
+@required {webhookId: int(int32)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endpoint GET /v1/webhooks/{webhookId}/keys
+@required {webhookId: int(int32)}
+@returns(200) {key1: str?, key2: str?}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group proxy-profiles
+@endpoint GET /v1/proxy-profiles/{proxyProfileId}/sdk-keys
+@required {proxyProfileId: str(uuid)}
+@returns(200) {items: [map]}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group environments
+@endpoint POST /v1/environments/{environmentId}/settings/{settingId}/integrationLinks/{integrationLinkType}/{key}
+@required {environmentId: str(uuid), settingId: int(int32), integrationLinkType: str, key: str}
+@optional {description: str, url: str}
+@returns(200) {key: str?, description: str?, integrationLinkType: str, url: str?}
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/environments/{environmentId}/settings/{settingId}/integrationLinks/{integrationLinkType}/{key}
+@required {environmentId: str(uuid), settingId: int(int32), integrationLinkType: str, key: str}
+@returns(200) {hasRemainingIntegrationLink: bool}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group jira
+@endpoint POST /v1/jira/environments/{environmentId}/settings/{settingId}/integrationLinks/{key}
+@required {environmentId: str(uuid), settingId: int(int32), key: str, jiraJwtToken: str, clientKey: str}
+@optional {description: str, url: str}
+@returns(200) {key: str?, description: str?, integrationLinkType: str, url: str?}
+@errors {400, 404, 429}
+
+@endpoint POST /v1/jira/connect
+@required {clientKey: str, jiraJwtToken: str}
+@returns(200)
+@errors {429}
+
+@endgroup
+
+@group organizations
+@endpoint POST /v1/organizations/{organizationId}/products
+@required {organizationId: str(uuid), name: str}
+@optional {description: str, order: int(int32)}
+@returns(201) {organization: map{organizationId: str(uuid), name: str}, productId: str(uuid), name: str, description: str?, order: int(int32), reasonRequired: bool}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group configs
+@endpoint POST /v1/configs/{configId}/environments/{environmentId}/webhooks
+@required {configId: str(uuid), environmentId: str(uuid), url: str}
+@optional {content: str, httpMethod: any, webHookHeaders: [map{key!: str, value!: str, isSecure: bool}]}
+@returns(201) {webhookId: int(int32), url: str, httpMethod: str, content: str?, webHookHeaders: [map], config: map{name: str, configId: str(uuid)}, environment: map{name: str, environmentId: str(uuid)}}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group code-references
+@endpoint POST /v1/code-references/delete-reports
+@required {configId: str(uuid), repository: str}
+@optional {branch: str, settingId: int(int32)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group proxy-profiles
+@endpoint POST /v1/proxy-profiles/{proxyProfileId}/sdk-keys/deselect
+@required {proxyProfileId: str(uuid), items: [map{configId: str(uuid), environmentId: str(uuid)}]}
+@returns(200) {items: [map]}
+@errors {400, 404, 403, 429}
+
+@endpoint POST /v1/proxy-profiles/{proxyProfileId}/secret
+@required {proxyProfileId: str(uuid)}
+@returns(200) {secretToken: str}
+@errors {400, 404, 429}
+
+@endgroup
+
+@group products
+@endpoint POST /v1/products/{productId}/members/invite
+@required {productId: str(uuid), emails: [str], permissionGroupId: int(int64)}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group code-references
+@endpoint POST /v1/code-references
+@required {configId: str(uuid), repository: str, branch: str}
+@optional {commitUrl: str, commitHash: str, uploader: str, activeBranches: [str], flagReferences: [map{settingId!: int(int32), references!: [map{file!: str, fileUrl: str, preLines: [map], postLines: [map], referenceLine!: map}]}]}
+@returns(200)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group proxy-profiles
+@endpoint POST /v1/proxy-profiles/{proxyProfileId}/sdk-keys/select
+@required {proxyProfileId: str(uuid), items: [map{configId: str(uuid), environmentId: str(uuid)}]}
+@returns(200) {items: [map]}
+@errors {400, 404, 403, 429}
+
+@endgroup
+
+@group organizations
+@endpoint POST /v1/organizations/{organizationId}/members/{userId}
+@required {organizationId: str(uuid), userId: str}
+@optional {permissionGroupIds: [int(int64)], isAdmin: bool, isBillingManager: bool, removeFromPermissionGroupsWhereIdNotSet: bool}
+@returns(200)
+@errors {400, 404, 429}
+
+@endpoint DELETE /v1/organizations/{organizationId}/members/{userId}
+@required {organizationId: str(uuid), userId: str}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group invitations
+@endpoint DELETE /v1/invitations/{invitationId}
+@required {invitationId: str(uuid)}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@group products
+@endpoint DELETE /v1/products/{productId}/members/{userId}
+@required {productId: str(uuid), userId: str}
+@returns(204)
+@errors {400, 404, 429}
+
+@endgroup
+
+@end

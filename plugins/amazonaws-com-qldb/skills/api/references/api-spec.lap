@@ -1,0 +1,115 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon QLDB
+@version 2019-01-02
+@auth AWS SigV4
+@endpoints 20
+@toc ledgers(16), journal-s3-exports(1), tags(3)
+
+@group ledgers
+@endpoint DELETE /ledgers/{name}/journal-kinesis-streams/{streamId}
+@required {LedgerName: str, StreamId: str}
+@returns(200) {StreamId: str?}
+
+@endpoint POST /ledgers
+@required {Name: str, PermissionsMode: str}
+@optional {Tags: map<str,str>, DeletionProtection: bool, KmsKey: str}
+@returns(200) {Name: str?, Arn: str?, State: str?, CreationDateTime: str(timestamp)?, PermissionsMode: str?, DeletionProtection: bool?, KmsKeyArn: str?}
+
+@endpoint DELETE /ledgers/{name}
+@required {Name: str}
+
+@endpoint GET /ledgers/{name}/journal-kinesis-streams/{streamId}
+@required {LedgerName: str, StreamId: str}
+@returns(200) {Stream: JournalKinesisStreamDescription?{LedgerName: str, CreationTime: str(timestamp)?, InclusiveStartTime: str(timestamp)?, ExclusiveEndTime: str(timestamp)?, RoleArn: str, StreamId: str, Arn: str?, Status: str, KinesisConfiguration: KinesisConfiguration{StreamArn: str, AggregationEnabled: bool?}, ErrorCause: str?, StreamName: str}}
+
+@endpoint GET /ledgers/{name}/journal-s3-exports/{exportId}
+@required {Name: str, ExportId: str}
+@returns(200) {ExportDescription: JournalS3ExportDescription{LedgerName: str, ExportId: str, ExportCreationTime: str(timestamp), Status: str, InclusiveStartTime: str(timestamp), ExclusiveEndTime: str(timestamp), S3ExportConfiguration: S3ExportConfiguration{Bucket: str, Prefix: str, EncryptionConfiguration: S3EncryptionConfiguration{ObjectEncryptionType: str, KmsKeyArn: str?}}, RoleArn: str, OutputFormat: str?}}
+
+@endpoint GET /ledgers/{name}
+@required {Name: str}
+@returns(200) {Name: str?, Arn: str?, State: str?, CreationDateTime: str(timestamp)?, PermissionsMode: str?, DeletionProtection: bool?, EncryptionDescription: LedgerEncryptionDescription?{KmsKeyArn: str, EncryptionStatus: str, InaccessibleKmsKeyDateTime: str(timestamp)?}}
+
+@endpoint POST /ledgers/{name}/journal-s3-exports
+@required {Name: str, InclusiveStartTime: str(timestamp), ExclusiveEndTime: str(timestamp), S3ExportConfiguration: S3ExportConfiguration, RoleArn: str}
+@optional {OutputFormat: str}
+@returns(200) {ExportId: str}
+
+@endpoint POST /ledgers/{name}/block
+@required {Name: str, BlockAddress: ValueHolder}
+@optional {DigestTipAddress: ValueHolder}
+@returns(200) {Block: ValueHolder{IonText: str?}, Proof: ValueHolder?{IonText: str?}}
+
+@endpoint POST /ledgers/{name}/digest
+@required {Name: str}
+@returns(200) {Digest: bytes, DigestTipAddress: ValueHolder{IonText: str?}}
+
+@endpoint POST /ledgers/{name}/revision
+@required {Name: str, BlockAddress: ValueHolder, DocumentId: str}
+@optional {DigestTipAddress: ValueHolder}
+@returns(200) {Proof: ValueHolder?{IonText: str?}, Revision: ValueHolder{IonText: str?}}
+
+@endpoint GET /ledgers/{name}/journal-kinesis-streams
+@required {LedgerName: str}
+@optional {max_results: int, next_token: str}
+@returns(200) {Streams: [JournalKinesisStreamDescription]?, NextToken: str?}
+
+@endgroup
+
+@group journal-s3-exports
+@endpoint GET /journal-s3-exports
+@optional {max_results: int, next_token: str}
+@returns(200) {JournalS3Exports: [JournalS3ExportDescription]?, NextToken: str?}
+
+@endgroup
+
+@group ledgers
+@endpoint GET /ledgers/{name}/journal-s3-exports
+@required {Name: str}
+@optional {max_results: int, next_token: str}
+@returns(200) {JournalS3Exports: [JournalS3ExportDescription]?, NextToken: str?}
+
+@endpoint GET /ledgers
+@optional {max_results: int, next_token: str}
+@returns(200) {Ledgers: [LedgerSummary]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group ledgers
+@endpoint POST /ledgers/{name}/journal-kinesis-streams
+@required {LedgerName: str, RoleArn: str, InclusiveStartTime: str(timestamp), KinesisConfiguration: KinesisConfiguration, StreamName: str}
+@optional {Tags: map<str,str>, ExclusiveEndTime: str(timestamp)}
+@returns(200) {StreamId: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{resourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group ledgers
+@endpoint PATCH /ledgers/{name}
+@required {Name: str}
+@optional {DeletionProtection: bool, KmsKey: str}
+@returns(200) {Name: str?, Arn: str?, State: str?, CreationDateTime: str(timestamp)?, DeletionProtection: bool?, EncryptionDescription: LedgerEncryptionDescription?{KmsKeyArn: str, EncryptionStatus: str, InaccessibleKmsKeyDateTime: str(timestamp)?}}
+
+@endpoint PATCH /ledgers/{name}/permissions-mode
+@required {Name: str, PermissionsMode: str}
+@returns(200) {Name: str?, Arn: str?, PermissionsMode: str?}
+
+@endgroup
+
+@end

@@ -1,0 +1,104 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Xero Files API
+@base https://api.xero.com/files.xro/1.0/
+@version 11.1.0
+@auth OAuth2
+@endpoints 18
+@toc Files(10), Associations(2), Folders(5), Inbox(1)
+
+@group Files
+@endpoint GET /Files
+@optional {pagesize: int, page: int, sort: str(Name/Size/CreatedDateUTC), direction: str(ASC/DESC)}
+@returns(200) {TotalCount: int, Page: int, PerPage: int, Items: [map]}
+
+@endpoint POST /Files
+@optional {Idempotency-Key: str}
+@returns(201) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
+@errors {400}
+
+@endpoint GET /Files/{FileId}
+@required {FileId: str(uuid)}
+@returns(200) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
+
+@endpoint PUT /Files/{FileId}
+@required {FileId: str(uuid)}
+@optional {Idempotency-Key: str, Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id!: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
+@returns(200) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
+@errors {400}
+
+@endpoint DELETE /Files/{FileId}
+@required {FileId: str(uuid)}
+@returns(204)
+
+@endpoint POST /Files/{FolderId}
+@required {FolderId: str(uuid)}
+@optional {Idempotency-Key: str}
+@returns(201) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
+@errors {400}
+
+@endpoint GET /Files/{FileId}/Content
+@required {FileId: str(uuid)}
+@returns(200)
+
+@endpoint GET /Files/{FileId}/Associations
+@required {FileId: str(uuid)}
+@returns(200)
+
+@endpoint POST /Files/{FileId}/Associations
+@required {FileId: str(uuid)}
+@optional {Idempotency-Key: str, SendWithObject: bool, Name: str, Size: int, FileId: str(uuid), ObjectId: str(uuid), ObjectGroup: str(Account/BankTransaction/Contact/CreditNote/Invoice/Item/ManualJournal/Overpayment/Payment/Prepayment/Quote/Receipt), ObjectType: str(Unknown/Accpay/AccPayCredit/AccPayPayment/AccRec/AccRecCredit/AccRecPayment/Adjustment/ApCreditPayment/ApOverPayment/ApOverPaymentPayment/ApOverPaymentSourcePayment/ApPrepayment/ApPrepaymentPayment/ApPrepaymentSourcePayment/ArCreditPayment/ArOverPayment/ArOverpaymentPayment/ArOverpaymentSourcePayment/ArPrepayment/ArPrepaymentPayment/ArPrepaymentSourcePayment/CashPaid/CashRec/ExpPayment/ManJournal/PurchaseOrder/Receipt/Transfer/Account/Contact/Business/Employee/Person/User/Org/FixedAsset/PayRun/PriceListItem/Bank/Current/Equity/Expense/Fixed/Liability/Prepayment/Revenue/Sales/Overheads/Depreciatn/OtherIncome/DirectCosts/Currliab/Termliab/NonCurrent/SalesQuote)}
+@returns(201) {SendWithObject: bool, Name: str, Size: int, FileId: str(uuid), ObjectId: str(uuid), ObjectGroup: str, ObjectType: str}
+@errors {400}
+
+@endpoint DELETE /Files/{FileId}/Associations/{ObjectId}
+@required {FileId: str(uuid), ObjectId: str(uuid)}
+@returns(204)
+
+@endgroup
+
+@group Associations
+@endpoint GET /Associations/{ObjectId}
+@required {ObjectId: str(uuid)}
+@optional {pagesize: int, page: int, sort: str(Name/CreatedDateUTC), direction: str(ASC/DESC)}
+@returns(200)
+
+@endpoint GET /Associations/Count
+@required {ObjectIds: [str(uuid)]}
+@returns(200)
+
+@endgroup
+
+@group Folders
+@endpoint GET /Folders
+@optional {sort: str(Name/Size/CreatedDateUTC)}
+@returns(200)
+
+@endpoint POST /Folders
+@optional {Idempotency-Key: str, Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+@errors {400}
+
+@endpoint GET /Folders/{FolderId}
+@required {FolderId: str(uuid)}
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+
+@endpoint PUT /Folders/{FolderId}
+@required {FolderId: str(uuid)}
+@optional {Idempotency-Key: str, Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+@errors {400}
+
+@endpoint DELETE /Folders/{FolderId}
+@required {FolderId: str(uuid)}
+@returns(204)
+
+@endgroup
+
+@group Inbox
+@endpoint GET /Inbox
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+
+@endgroup
+
+@end

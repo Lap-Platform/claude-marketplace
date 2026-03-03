@@ -1,0 +1,211 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS Outposts
+@version 2019-12-03
+@auth AWS SigV4
+@endpoints 31
+@hint download_for_search
+@toc outposts(11), orders(3), sites(8), catalog(2), connections(2), capacity(1), list-orders(1), tags(3)
+
+@group outposts
+@endpoint POST /outposts/{OutpostId}/capacity/{CapacityTaskId}
+@required {CapacityTaskId: str, OutpostIdentifier: str}
+
+@endgroup
+
+@group orders
+@endpoint POST /orders/{OrderId}/cancel
+@required {OrderId: str}
+
+@endpoint POST /orders
+@required {OutpostIdentifier: str, LineItems: [LineItemRequest], PaymentOption: str}
+@optional {PaymentTerm: str}
+@returns(200) {Order: Order?{OutpostId: str?, OrderId: str?, Status: str?, LineItems: [LineItem]?, PaymentOption: str?, OrderSubmissionDate: str(timestamp)?, OrderFulfilledDate: str(timestamp)?, PaymentTerm: str?, OrderType: str?}}
+
+@endgroup
+
+@group outposts
+@endpoint POST /outposts
+@required {Name: str, SiteId: str}
+@optional {Description: str, AvailabilityZone: str, AvailabilityZoneId: str, Tags: map<str,str>, SupportedHardwareType: str}
+@returns(200) {Outpost: Outpost?{OutpostId: str?, OwnerId: str?, OutpostArn: str?, SiteId: str?, Name: str?, Description: str?, LifeCycleStatus: str?, AvailabilityZone: str?, AvailabilityZoneId: str?, Tags: map<str,str>?, SiteArn: str?, SupportedHardwareType: str?}}
+
+@endgroup
+
+@group sites
+@endpoint POST /sites
+@required {Name: str}
+@optional {Description: str, Notes: str, Tags: map<str,str>, OperatingAddress: Address, ShippingAddress: Address, RackPhysicalProperties: RackPhysicalProperties}
+@returns(200) {Site: Site?{SiteId: str?, AccountId: str?, Name: str?, Description: str?, Tags: map<str,str>?, SiteArn: str?, Notes: str?, OperatingAddressCountryCode: str?, OperatingAddressStateOrRegion: str?, OperatingAddressCity: str?, RackPhysicalProperties: RackPhysicalProperties?{PowerDrawKva: str?, PowerPhase: str?, PowerConnector: str?, PowerFeedDrop: str?, UplinkGbps: str?, UplinkCount: str?, FiberOpticCableType: str?, OpticalStandard: str?, MaximumSupportedWeightLbs: str?}}}
+
+@endgroup
+
+@group outposts
+@endpoint DELETE /outposts/{OutpostId}
+@required {OutpostId: str}
+
+@endgroup
+
+@group sites
+@endpoint DELETE /sites/{SiteId}
+@required {SiteId: str}
+
+@endgroup
+
+@group outposts
+@endpoint GET /outposts/{OutpostId}/capacity/{CapacityTaskId}
+@required {CapacityTaskId: str, OutpostIdentifier: str}
+@returns(200) {CapacityTaskId: str?, OutpostId: str?, OrderId: str?, RequestedInstancePools: [InstanceTypeCapacity]?, DryRun: bool?, CapacityTaskStatus: str?, Failed: CapacityTaskFailure?{Reason: str, Type: str?}, CreationDate: str(timestamp)?, CompletionDate: str(timestamp)?, LastModifiedDate: str(timestamp)?}
+
+@endgroup
+
+@group catalog
+@endpoint GET /catalog/item/{CatalogItemId}
+@required {CatalogItemId: str}
+@returns(200) {CatalogItem: CatalogItem?{CatalogItemId: str?, ItemStatus: str?, EC2Capacities: [EC2Capacity]?, PowerKva: num(f32)?, WeightLbs: int?, SupportedUplinkGbps: [int]?, SupportedStorage: [str]?}}
+
+@endgroup
+
+@group connections
+@endpoint GET /connections/{ConnectionId}
+@required {ConnectionId: str}
+@returns(200) {ConnectionId: str?, ConnectionDetails: ConnectionDetails?{ClientPublicKey: str?, ServerPublicKey: str?, ServerEndpoint: str?, ClientTunnelAddress: str?, ServerTunnelAddress: str?, AllowedIps: [str]?}}
+
+@endgroup
+
+@group orders
+@endpoint GET /orders/{OrderId}
+@required {OrderId: str}
+@returns(200) {Order: Order?{OutpostId: str?, OrderId: str?, Status: str?, LineItems: [LineItem]?, PaymentOption: str?, OrderSubmissionDate: str(timestamp)?, OrderFulfilledDate: str(timestamp)?, PaymentTerm: str?, OrderType: str?}}
+
+@endgroup
+
+@group outposts
+@endpoint GET /outposts/{OutpostId}
+@required {OutpostId: str}
+@returns(200) {Outpost: Outpost?{OutpostId: str?, OwnerId: str?, OutpostArn: str?, SiteId: str?, Name: str?, Description: str?, LifeCycleStatus: str?, AvailabilityZone: str?, AvailabilityZoneId: str?, Tags: map<str,str>?, SiteArn: str?, SupportedHardwareType: str?}}
+
+@endpoint GET /outposts/{OutpostId}/instanceTypes
+@required {OutpostId: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {InstanceTypes: [InstanceTypeItem]?, NextToken: str?, OutpostId: str?, OutpostArn: str?}
+
+@endpoint GET /outposts/{OutpostId}/supportedInstanceTypes
+@required {OutpostIdentifier: str, OrderId: str}
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {InstanceTypes: [InstanceTypeItem]?, NextToken: str?}
+
+@endgroup
+
+@group sites
+@endpoint GET /sites/{SiteId}
+@required {SiteId: str}
+@returns(200) {Site: Site?{SiteId: str?, AccountId: str?, Name: str?, Description: str?, Tags: map<str,str>?, SiteArn: str?, Notes: str?, OperatingAddressCountryCode: str?, OperatingAddressStateOrRegion: str?, OperatingAddressCity: str?, RackPhysicalProperties: RackPhysicalProperties?{PowerDrawKva: str?, PowerPhase: str?, PowerConnector: str?, PowerFeedDrop: str?, UplinkGbps: str?, UplinkCount: str?, FiberOpticCableType: str?, OpticalStandard: str?, MaximumSupportedWeightLbs: str?}}}
+
+@endpoint GET /sites/{SiteId}/address
+@required {SiteId: str, AddressType: str}
+@returns(200) {SiteId: str?, AddressType: str?, Address: Address?{ContactName: str?, ContactPhoneNumber: str?, AddressLine1: str, AddressLine2: str?, AddressLine3: str?, City: str, StateOrRegion: str, DistrictOrCounty: str?, PostalCode: str, CountryCode: str, Municipality: str?}}
+
+@endgroup
+
+@group outposts
+@endpoint GET /outposts/{OutpostId}/assets
+@required {OutpostIdentifier: str}
+@optional {HostIdFilter: [str], MaxResults: int, NextToken: str, StatusFilter: [str]}
+@returns(200) {Assets: [AssetInfo]?, NextToken: str?}
+
+@endgroup
+
+@group capacity
+@endpoint GET /capacity/tasks
+@optional {OutpostIdentifierFilter: str, MaxResults: int, NextToken: str, CapacityTaskStatusFilter: [str]}
+@returns(200) {CapacityTasks: [CapacityTaskSummary]?, NextToken: str?}
+
+@endgroup
+
+@group catalog
+@endpoint GET /catalog/items
+@optional {NextToken: str, MaxResults: int, ItemClassFilter: [str], SupportedStorageFilter: [str], EC2FamilyFilter: [str]}
+@returns(200) {CatalogItems: [CatalogItem]?, NextToken: str?}
+
+@endgroup
+
+@group list-orders
+@endpoint GET /list-orders
+@optional {OutpostIdentifierFilter: str, NextToken: str, MaxResults: int}
+@returns(200) {Orders: [OrderSummary]?, NextToken: str?}
+
+@endgroup
+
+@group outposts
+@endpoint GET /outposts
+@optional {NextToken: str, MaxResults: int, LifeCycleStatusFilter: [str], AvailabilityZoneFilter: [str], AvailabilityZoneIdFilter: [str]}
+@returns(200) {Outposts: [Outpost]?, NextToken: str?}
+
+@endgroup
+
+@group sites
+@endpoint GET /sites
+@optional {NextToken: str, MaxResults: int, OperatingAddressCountryCodeFilter: [str], OperatingAddressStateOrRegionFilter: [str], OperatingAddressCityFilter: [str]}
+@returns(200) {Sites: [Site]?, NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group outposts
+@endpoint POST /outposts/{OutpostId}/capacity
+@required {OutpostIdentifier: str, OrderId: str, InstancePools: [InstanceTypeCapacity]}
+@optional {DryRun: bool}
+@returns(200) {CapacityTaskId: str?, OutpostId: str?, OrderId: str?, RequestedInstancePools: [InstanceTypeCapacity]?, DryRun: bool?, CapacityTaskStatus: str?, Failed: CapacityTaskFailure?{Reason: str, Type: str?}, CreationDate: str(timestamp)?, CompletionDate: str(timestamp)?, LastModifiedDate: str(timestamp)?}
+
+@endgroup
+
+@group connections
+@endpoint POST /connections
+@required {AssetId: str, ClientPublicKey: str, NetworkInterfaceDeviceIndex: int}
+@optional {DeviceSerialNumber: str}
+@returns(200) {ConnectionId: str?, UnderlayIpAddress: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group outposts
+@endpoint PATCH /outposts/{OutpostId}
+@required {OutpostId: str}
+@optional {Name: str, Description: str, SupportedHardwareType: str}
+@returns(200) {Outpost: Outpost?{OutpostId: str?, OwnerId: str?, OutpostArn: str?, SiteId: str?, Name: str?, Description: str?, LifeCycleStatus: str?, AvailabilityZone: str?, AvailabilityZoneId: str?, Tags: map<str,str>?, SiteArn: str?, SupportedHardwareType: str?}}
+
+@endgroup
+
+@group sites
+@endpoint PATCH /sites/{SiteId}
+@required {SiteId: str}
+@optional {Name: str, Description: str, Notes: str}
+@returns(200) {Site: Site?{SiteId: str?, AccountId: str?, Name: str?, Description: str?, Tags: map<str,str>?, SiteArn: str?, Notes: str?, OperatingAddressCountryCode: str?, OperatingAddressStateOrRegion: str?, OperatingAddressCity: str?, RackPhysicalProperties: RackPhysicalProperties?{PowerDrawKva: str?, PowerPhase: str?, PowerConnector: str?, PowerFeedDrop: str?, UplinkGbps: str?, UplinkCount: str?, FiberOpticCableType: str?, OpticalStandard: str?, MaximumSupportedWeightLbs: str?}}}
+
+@endpoint PUT /sites/{SiteId}/address
+@required {SiteId: str, AddressType: str, Address: Address}
+@returns(200) {AddressType: str?, Address: Address?{ContactName: str?, ContactPhoneNumber: str?, AddressLine1: str, AddressLine2: str?, AddressLine3: str?, City: str, StateOrRegion: str, DistrictOrCounty: str?, PostalCode: str, CountryCode: str, Municipality: str?}}
+
+@endpoint PATCH /sites/{SiteId}/rackPhysicalProperties
+@required {SiteId: str}
+@optional {PowerDrawKva: str, PowerPhase: str, PowerConnector: str, PowerFeedDrop: str, UplinkGbps: str, UplinkCount: str, FiberOpticCableType: str, OpticalStandard: str, MaximumSupportedWeightLbs: str}
+@returns(200) {Site: Site?{SiteId: str?, AccountId: str?, Name: str?, Description: str?, Tags: map<str,str>?, SiteArn: str?, Notes: str?, OperatingAddressCountryCode: str?, OperatingAddressStateOrRegion: str?, OperatingAddressCity: str?, RackPhysicalProperties: RackPhysicalProperties?{PowerDrawKva: str?, PowerPhase: str?, PowerConnector: str?, PowerFeedDrop: str?, UplinkGbps: str?, UplinkCount: str?, FiberOpticCableType: str?, OpticalStandard: str?, MaximumSupportedWeightLbs: str?}}}
+
+@endgroup
+
+@end

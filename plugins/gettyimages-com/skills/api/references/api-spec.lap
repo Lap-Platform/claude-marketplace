@@ -1,0 +1,481 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Getty Images API
+@version 3
+@auth ApiKey Api-Key in header | OAuth2
+@endpoints 76
+@hint download_for_search
+@toc affiliates(2), ai(22), artists(2), asset-changes(3), asset-licensing(1), boards(14), collections(1), countries(1), customers(1), downloads(3), events(2), image-match(1), images(5), orders(1), products(1), purchased-assets(1), search(9), usage-batches(1), videos(5)
+
+@group affiliates
+@endpoint GET /v3/affiliates/search/images
+@optional {Accept-Language: str, GI-Country-Code: str, phrase: str, style: str}
+@returns(200) {images: [map]?, auto_corrections: map{phrase: str?}}
+
+@endpoint GET /v3/affiliates/search/videos
+@optional {Accept-Language: str, GI-Country-Code: str, phrase: str}
+@returns(200) {videos: [map]?, auto_corrections: map{phrase: str?}}
+
+@endgroup
+
+@group ai
+@endpoint POST /v3/ai/image-generations
+@optional {prompt: str, aspect_ratio: str, media_type: str(photography/illustration), mood: str(black_and_white/warm/cool/natural/vivid/dramatic/bold), product_id: int(int32), project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {400, 403, 409, 429}
+
+@endpoint GET /v3/ai/image-generations/{generationRequestId}
+@required {generationRequestId: str}
+@returns(202) {generation_request_id: str?}
+@returns(200) {generation_request_id: str?, seed: int(int32)?, results: [map]?, original_asset: map{id: str?}}
+@errors {404, 409, 400, 403, 429, 410}
+
+@endpoint POST /v3/ai/image-generations/{generationRequestId}/images/{index}/variations
+@required {generationRequestId: str, index: int(int32)}
+@optional {product_id: int(int32), project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {403, 404, 409, 400, 429}
+
+@endpoint POST /v3/ai/file-registrations
+@optional {url: str, rights_claimed: bool, category: str(ImageReference/CustomerProduct)}
+@returns(200) {id: str?}
+@errors {400, 403}
+
+@endpoint GET /v3/ai/file-registrations
+@optional {page: int(int32), page_size: int(int32)}
+@returns(200) {result_count: int(int32), file_registrations: [map]?}
+@errors {403}
+
+@endpoint GET /v3/ai/file-registrations/{fileRegistrationId}
+@required {fileRegistrationId: str}
+@returns(200) {id: str?, preview_urls: [map]?}
+@errors {400, 403, 404}
+
+@endpoint DELETE /v3/ai/file-registrations/{fileRegistrationId}
+@required {fileRegistrationId: str}
+@returns(200)
+@returns(204)
+@errors {404, 403}
+
+@endpoint POST /v3/ai/image-generations/refine
+@required {prompt: str, mask_url: str}
+@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {403, 404, 409, 400, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/extend
+@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, prompt: str, product_id: int(int32), project_code: str, notes: str, left_percentage: num(float), right_percentage: num(float), top_percentage: num(float), bottom_percentage: num(float)}
+@returns(202) {generation_request_id: str?}
+@errors {403, 404, 409, 400, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/background-removal
+@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {400, 403, 404, 409, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/object-removal
+@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), project_code: str, notes: str, mask_url: str}
+@returns(202) {generation_request_id: str?}
+@errors {403, 404, 409, 400, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/background-replacement
+@optional {prompt: str, reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), media_type: str(photography/illustration), negative_prompt: str, background_color: str, project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {409, 403, 400, 404, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/influence-color-by-image
+@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, reference_file_registration_id: str, prompt: str, noise_level: num(float), media_type: str(photography/illustration), product_id: int(int32), project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {400, 403, 404, 409, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/influence-composition-by-image
+@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, reference_file_registration_id: str, prompt: str, influence_level: num(float), media_type: str(photography/illustration), mood: str(black_and_white/warm/cool/natural/vivid/dramatic/bold), product_id: int(int32), project_code: str, notes: str}
+@returns(202) {generation_request_id: str?}
+@errors {403, 404, 409, 400, 410, 429}
+
+@endpoint POST /v3/ai/image-generations/background-generations
+@optional {reference_file_registration_id: str, prompt: str, product_id: int(int32), project_code: str, notes: str, left_percentage: num(float), right_percentage: num(float), top_percentage: num(float), bottom_percentage: num(float), background_file_registration_id: str, background_asset_id: str, background_reference_generation: map{generation_request_id: str, index: int(int32)}, background_reference_adherence: str(flexible/strong)}
+@returns(202) {generation_request_id: str?}
+@errors {403, 404, 409, 400, 429}
+
+@endpoint GET /v3/ai/generation-history
+@optional {date_start: str(date-time), date_end: str(date-time), media_type: str, page_size: int(int32), page: int(int32), product_ids: [int(int32)], company_generations: bool=False}
+@returns(200) {generations: [map]?, result_count: int(int32)}
+@errors {403, 409}
+
+@endpoint GET /v3/ai/generation-history/{generationRequestId}
+@required {generationRequestId: str}
+@returns(200) {generation_request_id: str?, seed: int(int32)?, generation_date: str(date-time), product_revoked_date: str(date-time)?, prompt: str?, negative_prompt: str?, product_id: int(int32), notes: str?, project_code: str?, generation_type: str, generation_options: map{media_type: str, aspect_ratio: str?, mood: str}, source_generation_request: map{source_generation_request_id: str?, source_generation_result_index: int(int32)}, original_asset: map{id: str?}, results: [map]?, user: map{username: str?, first_name: str?, middle_name: str?, last_name: str?}}
+@errors {404, 409, 403}
+
+@endpoint GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download-sizes
+@required {generationRequestId: str, index: int(int32)}
+@returns(200) {download_sizes: [map]?}
+@errors {404, 409, 403, 400, 410, 429}
+
+@endpoint PUT /v3/ai/image-generations/{generationRequestId}/images/{index}/download
+@required {generationRequestId: str, index: int(int32)}
+@optional {notes: str, project_code: str, size_name: str, product_id: int(int32)}
+@returns(202)
+@errors {409, 403, 400, 410, 404, 429}
+
+@endpoint GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download
+@required {generationRequestId: str, index: int(int32)}
+@returns(202)
+@returns(200) {url: str?, generated_asset_id: str?}
+@errors {409, 403, 400, 410, 404, 429}
+
+@endpoint POST /v3/ai/redownloads
+@optional {generated_asset_id: str, product_id: int(int32), size_name: str, project_code: str, notes: str}
+@returns(200) {url: str?, generated_asset_id: str?}
+@errors {400, 404, 403, 409, 410, 429}
+
+@endpoint POST /v3/ai/enhance-prompt
+@required {prompt: str}
+@returns(200) {enhanced_prompt: str?}
+@errors {400}
+
+@endgroup
+
+@group artists
+@endpoint GET /v3/artists/images
+@optional {Accept-Language: str, artist_name: str, fields: [str], page: int(int32)=1, page_size: int(int32)=10}
+@returns(200) {images: [map]?, result_count: int(int32)}
+@errors {400, 401}
+
+@endpoint GET /v3/artists/videos
+@optional {Accept-Language: str, artist_name: str, fields: [str], page: int(int32)=1, page_size: int(int32)=10}
+@returns(200) {videos: [map]?, result_count: int(int32)}
+@errors {400, 401}
+
+@endgroup
+
+@group asset-changes
+@endpoint PUT /v3/asset-changes/change-sets
+@optional {channel_id: int(int32), batch_size: int(int32)}
+@returns(201) {change_set_id: str?, changed_assets: [map]?}
+@returns(200) {change_set_id: str?, changed_assets: [map]?}
+@errors {403, 404, 400}
+
+@endpoint DELETE /v3/asset-changes/change-sets/{change-set-id}
+@required {change-set-id: int(int64)}
+@returns(200)
+@errors {403, 404, 400}
+
+@endpoint GET /v3/asset-changes/channels
+@returns(200)
+@errors {404, 403}
+
+@endgroup
+
+@group asset-licensing
+@endpoint POST /v3/asset-licensing/{assetId}
+@required {assetId: str, extended_licenses: [str]}
+@optional {Accept-Language: str, use_team_credits: bool}
+@returns(200) {credits_used: int(int32), acquired_licenses: [str]?}
+@errors {401, 400, 402, 404}
+
+@endgroup
+
+@group boards
+@endpoint GET /v3/boards
+@optional {Accept-Language: str, page: int(int32)=1, board_relationship: str, sort_order: str, pageSize: int(int32)=30}
+@returns(200) {boards: [map]?, board_count: int(int32)}
+@errors {400, 401}
+
+@endpoint POST /v3/boards
+@required {name: str}
+@optional {Accept-Language: str, description: str}
+@returns(201) {id: str?}
+@errors {400, 401}
+
+@endpoint GET /v3/boards/{board_id}
+@required {board_id: str}
+@optional {Accept-Language: str}
+@returns(200) {id: str?, asset_count: int(int32), assets: [map]?, date_created: str(date-time), date_last_updated: str(date-time), description: str?, name: str?, comment_count: int(int32), permissions: map{can_delete_board: bool, can_invite_to_board: bool, can_update_name: bool, can_update_description: bool, can_add_assets: bool, can_remove_assets: bool}, links: map{invitation: str?, share: str?}}
+@errors {400, 401, 404}
+
+@endpoint DELETE /v3/boards/{board_id}
+@required {board_id: str}
+@optional {Accept-Language: str}
+@returns(200)
+@returns(204)
+@errors {400, 401, 404, 403}
+
+@endpoint PUT /v3/boards/{board_id}
+@required {board_id: str, name: str}
+@optional {Accept-Language: str, description: str}
+@returns(200)
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /v3/boards/{board_id}/assets
+@required {board_id: str}
+@optional {Accept-Language: str}
+@returns(201) {assets_added: [map]?, assets_not_added: [str]?}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /v3/boards/{board_id}/assets
+@required {board_id: str}
+@optional {Accept-Language: str, asset_ids: [str]}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /v3/boards/{board_id}/assets/{asset_id}
+@required {board_id: str, asset_id: str}
+@optional {Accept-Language: str}
+@returns(201)
+@errors {403, 400, 401, 404}
+
+@endpoint DELETE /v3/boards/{board_id}/assets/{asset_id}
+@required {board_id: str, asset_id: str}
+@optional {Accept-Language: str}
+@returns(200)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v3/boards/{board_id}/assets/{asset_id}/comments
+@required {board_id: str, asset_id: str}
+@optional {Accept-Language: str, Text: str}
+@returns(200) {Id: str?}
+@errors {400, 401, 404, 403}
+
+@endpoint DELETE /v3/boards/{board_id}/assets/{asset_id}/comments/{comment_id}
+@required {board_id: str, asset_id: str, comment_id: str}
+@optional {Accept-Language: str}
+@returns(200)
+@errors {400, 401, 404, 403}
+
+@endpoint GET /v3/boards/{board_id}/comments
+@required {board_id: str}
+@optional {Accept-Language: str}
+@returns(200) {comments: [map]?, permissions: map{can_add_comment: bool}}
+@errors {400, 401, 404}
+
+@endpoint POST /v3/boards/{board_id}/comments
+@required {board_id: str}
+@optional {Accept-Language: str, text: str}
+@returns(201) {id: str?}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /v3/boards/{board_id}/comments/{comment_id}
+@required {board_id: str, comment_id: str}
+@optional {Accept-Language: str}
+@returns(200)
+@returns(204)
+@errors {400, 401, 404, 403}
+
+@endgroup
+
+@group collections
+@endpoint GET /v3/collections
+@optional {Accept-Language: str}
+@returns(200) {collections: [map]?}
+@errors {401}
+
+@endgroup
+
+@group countries
+@endpoint GET /v3/countries
+@optional {Accept-Language: str}
+@returns(200) {countries: [map]?}
+@errors {401}
+
+@endgroup
+
+@group customers
+@endpoint GET /v3/customers/current
+@optional {Accept-Language: str}
+@returns(200) {first_name: str?, middle_name: str?, last_name: str?}
+@errors {401, 400, 503}
+
+@endgroup
+
+@group downloads
+@endpoint GET /v3/downloads
+@optional {Accept-Language: str, date_from: str(date-time), date_to: str(date-time), use_time: bool=False, page: int(int32)=1, page_size: int(int32)=30, product_type: str, company_downloads: bool=False}
+@returns(200) {result_count: int(int32), downloads: [map]?}
+@errors {400, 403, 401}
+
+@endpoint POST /v3/downloads/images/{id}
+@required {id: str}
+@optional {Accept-Language: str, auto_download: bool=True, file_type: str, height: str, product_id: int(int32), product_type: str, use_team_credits: bool=False, download_notes: str, project_code: str}
+@returns(200)
+@errors {303, 401, 400, 403, 404}
+
+@endpoint POST /v3/downloads/videos/{id}
+@required {id: str}
+@optional {Accept-Language: str, auto_download: bool=False, size: str, product_id: int(int32), product_type: str, use_team_credits: bool, download_notes: str, project_code: str}
+@returns(200)
+@errors {303, 401, 400, 403, 404}
+
+@endgroup
+
+@group events
+@endpoint GET /v3/events
+@optional {Accept-Language: str, ids: [int(int32)], fields: [str]}
+@returns(200) {events: [map]?, events_not_found: [int(int32)]?}
+@errors {400, 404, 401}
+
+@endpoint GET /v3/events/{id}
+@required {id: int(int32)}
+@optional {Accept-Language: str, fields: [str]}
+@returns(200) {child_event_count: int(int32)?, child_events: [map]?, editorial_segments: [str]?, hero_image: map{id: str?, display_sizes: [map]?}, id: int(int32), image_count: int(int32)?, keywords: [map]?, location: map{city: str?, country: str?, state_province: str?, venue: str?}, name: str?, start_date: str(date-time)?, type: str?}
+@errors {400, 404, 401}
+
+@endgroup
+
+@group image-match
+@endpoint GET /v3/image-match/search
+@required {url: str}
+@returns(200) {id: str?}
+@errors {404, 400}
+
+@endgroup
+
+@group images
+@endpoint GET /v3/images
+@optional {Accept-Language: str, ids: [str], fields: [str]}
+@returns(200) {images: [map]?, images_not_found: [str]?}
+@errors {403, 400, 401, 404, 500}
+
+@endpoint GET /v3/images/{id}
+@required {id: str}
+@optional {Accept-Language: str, fields: [str]}
+@returns(200) {images: [map]?, images_not_found: [str]?}
+@errors {403, 400, 401, 404, 500}
+
+@endpoint GET /v3/images/{id}/downloadhistory
+@required {id: str}
+@optional {Accept-Language: str, company_downloads: bool}
+@returns(200) {id: str?, downloads: [map]?}
+@errors {400, 403, 401, 404, 500}
+
+@endpoint GET /v3/images/{id}/same-series
+@required {id: str}
+@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
+@errors {403, 400, 401, 404, 500}
+
+@endpoint GET /v3/images/{id}/similar
+@required {id: str}
+@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
+@errors {403, 400, 401, 404, 500}
+
+@endgroup
+
+@group orders
+@endpoint GET /v3/orders/{id}
+@required {id: str}
+@optional {Accept-Language: str}
+@returns(200) {id: str?, invoice_number: str?, order_date: str(date-time), end_client: str?, notes: map{licensee_name: str?, purchase_order_number: str?, project_title: str?, ordered_by: str?}, assets: [map]?}
+@errors {404, 401, 403}
+
+@endgroup
+
+@group products
+@endpoint GET /v3/products
+@optional {Accept-Language: str, fields: [str]}
+@returns(200) {products: [map]?}
+@errors {401, 400, 500}
+
+@endgroup
+
+@group purchased-assets
+@endpoint GET /v3/purchased-assets
+@optional {Accept-Language: str, date_to: str(date-time), page: int(int32)=1, page_size: int(int32)=75, date_from: str(date-time), company_purchases: bool=False}
+@returns(200) {result_count: int(int32), previous_purchases: [map]?}
+@errors {401, 400, 403}
+
+@endgroup
+
+@group search
+@endpoint GET /v3/search/events
+@optional {Accept-Language: str, GI-Country-Code: str, editorial_segment: str, date_from: str(date-time), date_to: str(date-time), fields: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, sort_order: str}
+@returns(200) {events: [map]?, result_count: int(int32)}
+@errors {400, 403, 401}
+
+@endpoint GET /v3/search/images/creative
+@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, collection_codes: [str], collections_filter_type: str, color: str, compositions: [str], download_product: str, embed_content_only: bool=False, enhanced_search: bool=True, ethnicity: [str], exclude_editorial_use_only: bool, exclude_keyword_ids: [int(int32)], exclude_nudity: bool=False, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], file_types: [str], graphical_styles: [str], graphical_styles_filter_type: str, include_facets: bool, include_related_searches: bool=False, keyword_ids: [int(int32)], minimum_size: str, moods: [str], number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, safe_search: bool=False, sort_order: str}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
+@errors {400, 403, 401, 500}
+
+@endpoint GET /v3/search/images/creative/by-image
+@optional {Accept-Language: str, GI-Country-Code: str, asset_id: str, exclude_editorial_use_only: bool, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], image_url: str, include_facets: bool, page: int(int32)=1, page_size: int(int32)=30, phrase: str=, product_types: [str]}
+@returns(200) {image_fingerprint: str?, related_searches: [map]?, result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}}
+@errors {400, 403, 401, 500, 404}
+
+@endpoint GET /v3/search/images/editorial
+@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, collection_codes: [str], collections_filter_type: str, compositions: [str], date_from: str(date-time), date_to: str(date-time), download_product: str, editorial_segments: [str], embed_content_only: bool=False, ethnicity: [str], event_ids: [int(int32)], exclude_keyword_ids: [int(int32)], fields: [str], file_types: [str], graphical_styles: [str], graphical_styles_filter_type: str, include_related_searches: bool=False, keyword_ids: [int(int32)], minimum_size: str, number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str, sort_order: str, specific_people: [str], minimum_quality_rank: int(int32), facet_fields: [str], include_facets: bool, facet_max_count: int(int32)=300}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
+@errors {400, 403, 401}
+
+@endpoint GET /v3/search/videos/creative
+@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, aspect_ratios: [str], collection_codes: [str], collections_filter_type: str, compositions: [str], download_product: str, enhanced_search: bool=True, ethnicity: [str], exclude_editorial_use_only: bool, exclude_keyword_ids: [int(int32)], exclude_nudity: bool=False, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], format_available: str, frame_rates: [str], image_techniques: [str], include_facets: bool, include_related_searches: bool=False, keyword_ids: [int(int32)], license_models: [str], min_clip_length: int(int32)=0, max_clip_length: int(int32)=0, number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, safe_search: bool=False, sort_order: str, release_status: str, viewpoints: [str]}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
+@errors {400, 403, 401, 500}
+
+@endpoint GET /v3/search/videos/creative/by-image
+@optional {Accept-Language: str, GI-Country-Code: str, asset_id: str, exclude_editorial_use_only: bool, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], image_url: str, include_facets: bool, page: int(int32)=1, page_size: int(int32)=30, phrase: str=, product_types: [str]}
+@returns(200) {related_searches: [map]?, videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, result_count: int(int32), auto_corrections: map{phrase: str?}}
+@errors {400, 403, 401, 500, 404}
+
+@endpoint GET /v3/search/videos/editorial
+@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, aspect_ratios: [str], collection_codes: [str], collections_filter_type: str, compositions: [str], date_from: str(date-time), date_to: str(date-time), download_product: str, editorial_video_types: [str], event_ids: [int(int32)], fields: [str], format_available: str, frame_rates: [str], image_techniques: [str], include_related_searches: bool=False, keyword_ids: [int(int32)], min_clip_length: int(int32)=0, max_clip_length: int(int32)=0, orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, sort_order: str, specific_people: [str], release_status: str, facet_fields: [str], include_facets: bool, facet_max_count: int(int32)=300, viewpoints: [str]}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
+@errors {400, 403, 401}
+
+@endpoint PUT /v3/search/by-image/uploads/{file-name}
+@required {file-name: str}
+@returns(200)
+@errors {400, 403, 401}
+
+@endpoint GET /v3/search/images
+@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, collection_codes: [str], collections_filter_type: str, color: str, compositions: [str], download_product: str, embed_content_only: bool=False, event_ids: [int(int32)], ethnicity: [str], fields: [str], file_types: [str], graphical_styles: [str], graphical_styles_filter_type: str, include_related_searches: bool=False, keyword_ids: [int(int32)], minimum_size: str, number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str, sort_order: str, specific_people: [str]}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
+@errors {400, 403, 401}
+
+@endgroup
+
+@group usage-batches
+@endpoint PUT /v3/usage-batches/{id}
+@required {id: str}
+@optional {asset_usages: [map{asset_id: str, quantity: int(int32), usage_date: str(date-time)}]}
+@returns(201) {invalid_assets: [str]?, total_asset_usages_processed: int(int32)?}
+@errors {401, 400, 409, 403}
+
+@endgroup
+
+@group videos
+@endpoint GET /v3/videos
+@optional {Accept-Language: str, ids: [str], fields: [str]}
+@returns(200) {videos: [map]?, videos_not_found: [str]?}
+@errors {403, 400, 401, 404, 500}
+
+@endpoint GET /v3/videos/{id}
+@required {id: str}
+@optional {Accept-Language: str, fields: [str]}
+@returns(200) {id: str?, allowed_use: map{how_can_i_use_it: str?, release_info: str?, usage_restrictions: [str]?, editorial_use_only: bool}, artist: str?, asset_family: str?, caption: str?, city: str?, clip_length: str?, collection_id: int(int32)?, collection_code: str?, collection_name: str?, color_type: str?, copyright: str?, country: str?, date_created: str(date-time)?, date_submitted: str(date-time)?, download_product: str?, display_sizes: [map]?, download_sizes: [map]?, editorial_segments: [str]?, era: str?, event_ids: [int(int32)]?, is_ai_editable: bool?, key_frames: [map]?, keywords: [map]?, license_model: str?, mastered_to: str?, originally_shot_on: str?, product_types: [str]?, quality_rank: int(int32)?, referral_destinations: [map]?, shot_speed: str?, source: str?, state_province: str?, title: str?, istock_licenses: [map]?, alternative_ids: map?, call_for_image: bool?, istock_sub_collection: str?, istock_collection: str?, max_dimensions: map{height: int(int32), width: int(int32)}, object_name: str?, orientation: str?, people: [str]?}
+@errors {403, 400, 401, 404, 500}
+
+@endpoint GET /v3/videos/{id}/downloadhistory
+@required {id: str}
+@optional {Accept-Language: str, company_downloads: bool}
+@returns(200) {id: str?, downloads: [map]?}
+@errors {400, 403, 401, 404, 500}
+
+@endpoint GET /v3/videos/{id}/same-series
+@required {id: str}
+@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
+@errors {403, 400, 401, 404, 500}
+
+@endpoint GET /v3/videos/{id}/similar
+@required {id: str}
+@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
+@errors {403, 400, 401, 404, 500}
+
+@endgroup
+
+@end

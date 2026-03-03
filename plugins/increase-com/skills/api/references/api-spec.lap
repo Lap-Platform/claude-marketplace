@@ -1,0 +1,1407 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Increase API
+@base https://api.increase.com
+@version 0.0.1
+@auth Bearer bearer
+@endpoints 232
+@hint download_for_search
+@toc account_numbers(4), account_statements(2), account_transfers(5), accounts(7), ach_prenotifications(3), ach_transfers(5), bookkeeping_accounts(4), bookkeeping_entries(2), bookkeeping_entry_sets(3), card_disputes(5), card_payments(2), card_purchase_supplements(2), card_push_transfers(5), card_tokens(3), card_validations(3), cards(7), check_deposits(3), check_transfers(6), declined_transactions(2), digital_card_profiles(5), digital_wallet_tokens(2), entities(11), entity_supplemental_documents(2), event_subscriptions(4), events(2), exports(3), external_accounts(4), fednow_transfers(5), file_links(1), files(3), groups(1), inbound_ach_transfers(5), inbound_check_deposits(4), inbound_fednow_transfers(2), inbound_mail_items(3), inbound_real_time_payments_transfers(2), inbound_wire_drawdown_requests(2), inbound_wire_transfers(3), intrafi_account_enrollments(4), intrafi_exclusions(4), lockboxes(4), oauth(1), oauth_applications(2), oauth_connections(2), pending_transactions(4), physical_card_profiles(5), physical_cards(4), programs(2), real_time_decisions(2), real_time_payments_transfers(5), routing_numbers(1), simulations(40), swift_transfers(5), transactions(2), wire_drawdown_requests(3), wire_transfers(5)
+
+@group account_numbers
+@endpoint GET /account_numbers
+@optional {cursor: str, limit: int, status.in: [str], ach_debit_status.in: [str], account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /account_numbers
+@required {account_id: str, name: str}
+@optional {inbound_ach: map{debit_status!: str}, inbound_checks: map{status!: str}}
+@returns(200) {account_id: str, account_number: str, created_at: str(date-time), id: str, idempotency_key: any, inbound_ach: map{debit_status: str}, inbound_checks: map{status: str}, name: str, routing_number: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /account_numbers/{account_number_id}
+@required {account_number_id: str}
+@returns(200) {account_id: str, account_number: str, created_at: str(date-time), id: str, idempotency_key: any, inbound_ach: map{debit_status: str}, inbound_checks: map{status: str}, name: str, routing_number: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /account_numbers/{account_number_id}
+@required {account_number_id: str}
+@optional {inbound_ach: map{debit_status: str}, inbound_checks: map{status!: str}, name: str, status: str(active/disabled/canceled)}
+@returns(200) {account_id: str, account_number: str, created_at: str(date-time), id: str, idempotency_key: any, inbound_ach: map{debit_status: str}, inbound_checks: map{status: str}, name: str, routing_number: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group account_statements
+@endpoint GET /account_statements
+@optional {cursor: str, limit: int, account_id: str, statement_period_start.after: str(date-time), statement_period_start.before: str(date-time), statement_period_start.on_or_after: str(date-time), statement_period_start.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /account_statements/{account_statement_id}
+@required {account_statement_id: str}
+@returns(200) {account_id: str, created_at: str(date-time), ending_balance: int, file_id: str, id: str, loan: any, starting_balance: int, statement_period_end: str(date-time), statement_period_start: str(date-time), type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group account_transfers
+@endpoint GET /account_transfers
+@optional {cursor: str, limit: int, account_id: str, idempotency_key: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /account_transfers
+@required {account_id: str, amount: int, description: str, destination_account_id: str}
+@optional {require_approval: bool}
+@returns(200) {account_id: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, currency: str, description: str, destination_account_id: str, destination_transaction_id: any, id: str, idempotency_key: any, pending_transaction_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /account_transfers/{account_transfer_id}
+@required {account_transfer_id: str}
+@returns(200) {account_id: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, currency: str, description: str, destination_account_id: str, destination_transaction_id: any, id: str, idempotency_key: any, pending_transaction_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /account_transfers/{account_transfer_id}/approve
+@required {account_transfer_id: str}
+@returns(200) {account_id: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, currency: str, description: str, destination_account_id: str, destination_transaction_id: any, id: str, idempotency_key: any, pending_transaction_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /account_transfers/{account_transfer_id}/cancel
+@required {account_transfer_id: str}
+@returns(200) {account_id: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, currency: str, description: str, destination_account_id: str, destination_transaction_id: any, id: str, idempotency_key: any, pending_transaction_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts
+@optional {cursor: str, limit: int, entity_id: str, informational_entity_id: str, program_id: str, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /accounts
+@required {name: str}
+@optional {entity_id: str, funding: str(loan/deposits), informational_entity_id: str, loan: map{credit_limit!: int, grace_period_days!: int, maturity_date: str(date), statement_day_of_month!: int, statement_payment_type!: str}, program_id: str}
+@returns(200) {account_revenue_rate: any, bank: str, closed_at: any, created_at: str(date-time), currency: str, entity_id: str, funding: str, id: str, idempotency_key: any, informational_entity_id: any, interest_accrued: str, interest_accrued_at: any, interest_rate: str, loan: any, name: str, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /accounts/{account_id}
+@required {account_id: str}
+@returns(200) {account_revenue_rate: any, bank: str, closed_at: any, created_at: str(date-time), currency: str, entity_id: str, funding: str, id: str, idempotency_key: any, informational_entity_id: any, interest_accrued: str, interest_accrued_at: any, interest_rate: str, loan: any, name: str, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /accounts/{account_id}
+@required {account_id: str}
+@optional {loan: map{credit_limit!: int}, name: str}
+@returns(200) {account_revenue_rate: any, bank: str, closed_at: any, created_at: str(date-time), currency: str, entity_id: str, funding: str, id: str, idempotency_key: any, informational_entity_id: any, interest_accrued: str, interest_accrued_at: any, interest_rate: str, loan: any, name: str, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /accounts/{account_id}/balance
+@required {account_id: str}
+@optional {at_time: str(date-time)}
+@returns(200) {account_id: str, available_balance: int, current_balance: int, loan: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /accounts/{account_id}/close
+@required {account_id: str}
+@returns(200) {account_revenue_rate: any, bank: str, closed_at: any, created_at: str(date-time), currency: str, entity_id: str, funding: str, id: str, idempotency_key: any, informational_entity_id: any, interest_accrued: str, interest_accrued_at: any, interest_rate: str, loan: any, name: str, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /accounts/{account_id}/intrafi_balance
+@required {account_id: str}
+@returns(200) {balances: [map], currency: str, effective_date: str(date), id: str, total_balance: int, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group ach_prenotifications
+@endpoint GET /ach_prenotifications
+@optional {cursor: str, limit: int, idempotency_key: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /ach_prenotifications
+@required {account_id: str, account_number: str, routing_number: str}
+@optional {addendum: str, company_descriptive_date: str, company_discretionary_data: str, company_entry_description: str, company_name: str, credit_debit_indicator: str(credit/debit), effective_date: str(date), individual_id: str, individual_name: str, standard_entry_class_code: str(corporate_credit_or_debit/corporate_trade_exchange/prearranged_payments_and_deposit/internet_initiated)}
+@returns(200) {account_id: any, account_number: str, addendum: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_name: any, created_at: str(date-time), credit_debit_indicator: any, effective_date: any, id: str, idempotency_key: any, individual_id: any, individual_name: any, notifications_of_change: [map], prenotification_return: any, routing_number: str, standard_entry_class_code: any, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /ach_prenotifications/{ach_prenotification_id}
+@required {ach_prenotification_id: str}
+@returns(200) {account_id: any, account_number: str, addendum: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_name: any, created_at: str(date-time), credit_debit_indicator: any, effective_date: any, id: str, idempotency_key: any, individual_id: any, individual_name: any, notifications_of_change: [map], prenotification_return: any, routing_number: str, standard_entry_class_code: any, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group ach_transfers
+@endpoint GET /ach_transfers
+@optional {cursor: str, limit: int, account_id: str, external_account_id: str, idempotency_key: str, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /ach_transfers
+@required {account_id: str, amount: int, statement_descriptor: str}
+@optional {account_number: str, addenda: map{category!: str, freeform: map{entries!: [map]}, payment_order_remittance_advice: map{invoices!: [map]}}, company_descriptive_date: str, company_discretionary_data: str, company_entry_description: str, company_name: str, destination_account_holder: str(business/individual/unknown), external_account_id: str, funding: str(checking/savings/general_ledger), individual_id: str, individual_name: str, preferred_effective_date: map{date: str(date), settlement_schedule: str}, require_approval: bool, routing_number: str, standard_entry_class_code: str(corporate_credit_or_debit/corporate_trade_exchange/prearranged_payments_and_deposit/internet_initiated), transaction_timing: str(synchronous/asynchronous)}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /ach_transfers/{ach_transfer_id}
+@required {ach_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /ach_transfers/{ach_transfer_id}/approve
+@required {ach_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /ach_transfers/{ach_transfer_id}/cancel
+@required {ach_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group bookkeeping_accounts
+@endpoint GET /bookkeeping_accounts
+@optional {cursor: str, limit: int, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /bookkeeping_accounts
+@required {name: str}
+@optional {account_id: str, compliance_category: str(commingled_cash/customer_balance), entity_id: str}
+@returns(200) {account_id: any, compliance_category: any, entity_id: any, id: str, idempotency_key: any, name: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /bookkeeping_accounts/{bookkeeping_account_id}
+@required {bookkeeping_account_id: str, name: str}
+@returns(200) {account_id: any, compliance_category: any, entity_id: any, id: str, idempotency_key: any, name: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /bookkeeping_accounts/{bookkeeping_account_id}/balance
+@required {bookkeeping_account_id: str}
+@optional {at_time: str(date-time)}
+@returns(200) {balance: int, bookkeeping_account_id: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group bookkeeping_entries
+@endpoint GET /bookkeeping_entries
+@optional {cursor: str, limit: int, account_id: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /bookkeeping_entries/{bookkeeping_entry_id}
+@required {bookkeeping_entry_id: str}
+@returns(200) {account_id: str, amount: int, created_at: str(date-time), entry_set_id: str, id: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group bookkeeping_entry_sets
+@endpoint GET /bookkeeping_entry_sets
+@optional {cursor: str, limit: int, transaction_id: str, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /bookkeeping_entry_sets
+@required {entries: [map{account_id!: str, amount!: int}]}
+@optional {date: str(date-time), transaction_id: str}
+@returns(200) {created_at: str(date-time), date: str(date-time), entries: [map], id: str, idempotency_key: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /bookkeeping_entry_sets/{bookkeeping_entry_set_id}
+@required {bookkeeping_entry_set_id: str}
+@returns(200) {created_at: str(date-time), date: str(date-time), entries: [map], id: str, idempotency_key: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group card_disputes
+@endpoint GET /card_disputes
+@optional {cursor: str, limit: int, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_disputes
+@required {disputed_transaction_id: str, network: str}
+@optional {amount: int, attachment_files: [map{file_id!: str}], explanation: str, visa: map{authorization: map{account_status!: str}, category!: str, consumer_canceled_merchandise: map{cardholder_cancellation: map, merchant_resolution_attempted!: str, not_returned: map, purchase_explanation!: str, received_or_expected_at!: str(date), return_attempted: map, return_outcome!: str, returned: map}, consumer_canceled_recurring_transaction: map{cancellation_target!: str, merchant_contact_methods!: map, other_form_of_payment_explanation: str, transaction_or_account_canceled_at!: str(date)}, consumer_canceled_services: map{cardholder_cancellation!: map, contracted_at!: str(date), guaranteed_reservation: map, merchant_resolution_attempted!: str, other: map, purchase_explanation!: str, service_type!: str, timeshare: map}, consumer_counterfeit_merchandise: map{counterfeit_explanation!: str, disposition_explanation!: str, order_explanation!: str, received_at!: str(date)}, consumer_credit_not_processed: map{canceled_or_returned_at: str(date), credit_expected_at: str(date)}, consumer_damaged_or_defective_merchandise: map{merchant_resolution_attempted!: str, not_returned: map, order_and_issue_explanation!: str, received_at!: str(date), return_attempted: map, return_outcome!: str, returned: map}, consumer_merchandise_misrepresentation: map{merchant_resolution_attempted!: str, misrepresentation_explanation!: str, not_returned: map, purchase_explanation!: str, received_at!: str(date), return_attempted: map, return_outcome!: str, returned: map}, consumer_merchandise_not_as_described: map{merchant_resolution_attempted!: str, received_at!: str(date), return_attempted: map, return_outcome!: str, returned: map}, consumer_merchandise_not_received: map{cancellation_outcome!: str, cardholder_cancellation_prior_to_expected_receipt: map, delayed: map, delivered_to_wrong_location: map, delivery_issue!: str, last_expected_receipt_at!: str(date), merchant_cancellation: map, merchant_resolution_attempted!: str, no_cancellation: map, purchase_info_and_explanation!: str}, consumer_non_receipt_of_cash: map, consumer_original_credit_transaction_not_accepted: map{explanation!: str, reason!: str}, consumer_quality_merchandise: map{expected_at!: str(date), merchant_resolution_attempted!: str, not_returned: map, ongoing_negotiations: map, purchase_info_and_quality_issue!: str, received_at!: str(date), return_attempted: map, return_outcome!: str, returned: map}, consumer_quality_services: map{cardholder_cancellation!: map, cardholder_paid_to_have_work_redone: str, non_fiat_currency_or_non_fungible_token_related_and_not_matching_description!: str, ongoing_negotiations: map, purchase_info_and_quality_issue!: str, restaurant_food_related: str, services_received_at!: str(date)}, consumer_services_misrepresentation: map{cardholder_cancellation!: map, merchant_resolution_attempted!: str, misrepresentation_explanation!: str, purchase_explanation!: str, received_at!: str(date)}, consumer_services_not_as_described: map{cardholder_cancellation!: map, explanation!: str, merchant_resolution_attempted!: str, received_at!: str(date)}, consumer_services_not_received: map{cancellation_outcome!: str, cardholder_cancellation_prior_to_expected_receipt: map, last_expected_receipt_at!: str(date), merchant_cancellation: map, merchant_resolution_attempted!: str, no_cancellation: map, purchase_info_and_explanation!: str}, fraud: map{fraud_type!: str}, processing_error: map{duplicate_transaction: map, error_reason!: str, incorrect_amount: map, merchant_resolution_attempted!: str, paid_by_other_means: map}}}
+@returns(200) {amount: int, card_id: str, created_at: str(date-time), disputed_transaction_id: str, id: str, idempotency_key: any, loss: any, network: str, status: str, type: str, user_submission_required_by: any, visa: any, win: any, withdrawal: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_disputes/{card_dispute_id}
+@required {card_dispute_id: str}
+@returns(200) {amount: int, card_id: str, created_at: str(date-time), disputed_transaction_id: str, id: str, idempotency_key: any, loss: any, network: str, status: str, type: str, user_submission_required_by: any, visa: any, win: any, withdrawal: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_disputes/{card_dispute_id}/submit_user_submission
+@required {card_dispute_id: str, network: str}
+@optional {amount: int, attachment_files: [map{file_id!: str}], explanation: str, visa: map{category!: str, chargeback: map{authorization: map, category!: str, consumer_canceled_merchandise: map, consumer_canceled_recurring_transaction: map, consumer_canceled_services: map, consumer_counterfeit_merchandise: map, consumer_credit_not_processed: map, consumer_damaged_or_defective_merchandise: map, consumer_merchandise_misrepresentation: map, consumer_merchandise_not_as_described: map, consumer_merchandise_not_received: map, consumer_non_receipt_of_cash: map, consumer_original_credit_transaction_not_accepted: map, consumer_quality_merchandise: map, consumer_quality_services: map, consumer_services_misrepresentation: map, consumer_services_not_as_described: map, consumer_services_not_received: map, fraud: map, processing_error: map}, merchant_prearbitration_decline: map{reason!: str}, user_prearbitration: map{category_change: map, reason!: str}}}
+@returns(200) {amount: int, card_id: str, created_at: str(date-time), disputed_transaction_id: str, id: str, idempotency_key: any, loss: any, network: str, status: str, type: str, user_submission_required_by: any, visa: any, win: any, withdrawal: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_disputes/{card_dispute_id}/withdraw
+@required {card_dispute_id: str}
+@optional {explanation: str}
+@returns(200) {amount: int, card_id: str, created_at: str(date-time), disputed_transaction_id: str, id: str, idempotency_key: any, loss: any, network: str, status: str, type: str, user_submission_required_by: any, visa: any, win: any, withdrawal: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group card_payments
+@endpoint GET /card_payments
+@optional {cursor: str, limit: int, account_id: str, card_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_payments/{card_payment_id}
+@required {card_payment_id: str}
+@returns(200) {account_id: str, card_id: str, created_at: str(date-time), digital_wallet_token_id: any, elements: [map], id: str, physical_card_id: any, scheme_fees: [map], state: map{authorized_amount: int, fuel_confirmed_amount: int, incremented_amount: int, refund_authorized_amount: int, refunded_amount: int, reversed_amount: int, settled_amount: int}, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group card_purchase_supplements
+@endpoint GET /card_purchase_supplements
+@optional {cursor: str, limit: int, card_payment_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_purchase_supplements/{card_purchase_supplement_id}
+@required {card_purchase_supplement_id: str}
+@returns(200) {card_payment_id: any, id: str, invoice: any, line_items: any, transaction_id: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group card_push_transfers
+@endpoint GET /card_push_transfers
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_push_transfers
+@required {business_application_identifier: str(account_to_account/business_to_business/money_transfer_bank_initiated/non_card_bill_payment/consumer_bill_payment/card_bill_payment/funds_disbursement/funds_transfer/loyalty_and_offers/merchant_disbursement/merchant_payment/person_to_person/top_up/wallet_transfer), card_token_id: str, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_name_prefix: str, merchant_postal_code: str, merchant_state: str, presentment_amount: map{currency!: str, value!: str}, recipient_name: str, sender_address_city: str, sender_address_line1: str, sender_address_postal_code: str, sender_address_state: str, sender_name: str, source_account_number_id: str}
+@optional {require_approval: bool}
+@returns(200) {acceptance: any, account_id: str, approval: any, business_application_identifier: str, cancellation: any, created_at: str(date-time), created_by: any, decline: any, id: str, idempotency_key: any, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_name_prefix: str, merchant_postal_code: str, merchant_state: str, presentment_amount: map{currency: str, value: str}, recipient_name: str, sender_address_city: str, sender_address_line1: str, sender_address_postal_code: str, sender_address_state: str, sender_name: str, source_account_number_id: str, status: str, submission: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_push_transfers/{card_push_transfer_id}
+@required {card_push_transfer_id: str}
+@returns(200) {acceptance: any, account_id: str, approval: any, business_application_identifier: str, cancellation: any, created_at: str(date-time), created_by: any, decline: any, id: str, idempotency_key: any, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_name_prefix: str, merchant_postal_code: str, merchant_state: str, presentment_amount: map{currency: str, value: str}, recipient_name: str, sender_address_city: str, sender_address_line1: str, sender_address_postal_code: str, sender_address_state: str, sender_name: str, source_account_number_id: str, status: str, submission: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_push_transfers/{card_push_transfer_id}/approve
+@required {card_push_transfer_id: str}
+@returns(200) {acceptance: any, account_id: str, approval: any, business_application_identifier: str, cancellation: any, created_at: str(date-time), created_by: any, decline: any, id: str, idempotency_key: any, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_name_prefix: str, merchant_postal_code: str, merchant_state: str, presentment_amount: map{currency: str, value: str}, recipient_name: str, sender_address_city: str, sender_address_line1: str, sender_address_postal_code: str, sender_address_state: str, sender_name: str, source_account_number_id: str, status: str, submission: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_push_transfers/{card_push_transfer_id}/cancel
+@required {card_push_transfer_id: str}
+@returns(200) {acceptance: any, account_id: str, approval: any, business_application_identifier: str, cancellation: any, created_at: str(date-time), created_by: any, decline: any, id: str, idempotency_key: any, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_name_prefix: str, merchant_postal_code: str, merchant_state: str, presentment_amount: map{currency: str, value: str}, recipient_name: str, sender_address_city: str, sender_address_line1: str, sender_address_postal_code: str, sender_address_state: str, sender_name: str, source_account_number_id: str, status: str, submission: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group card_tokens
+@endpoint GET /card_tokens
+@optional {cursor: str, limit: int, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_tokens/{card_token_id}
+@required {card_token_id: str}
+@returns(200) {created_at: str(date-time), expiration_date: str(date), id: str, last4: str, length: int, prefix: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_tokens/{card_token_id}/capabilities
+@required {card_token_id: str}
+@returns(200) {routes: [map], type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group card_validations
+@endpoint GET /card_validations
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /card_validations
+@required {account_id: str, card_token_id: str, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_postal_code: str, merchant_state: str}
+@optional {cardholder_first_name: str, cardholder_last_name: str, cardholder_middle_name: str, cardholder_postal_code: str, cardholder_street_address: str}
+@returns(200) {acceptance: any, account_id: str, card_token_id: str, cardholder_first_name: any, cardholder_last_name: any, cardholder_middle_name: any, cardholder_postal_code: any, cardholder_street_address: any, created_at: str(date-time), created_by: any, decline: any, id: str, idempotency_key: any, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_postal_code: str, merchant_state: str, status: str, submission: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /card_validations/{card_validation_id}
+@required {card_validation_id: str}
+@returns(200) {acceptance: any, account_id: str, card_token_id: str, cardholder_first_name: any, cardholder_last_name: any, cardholder_middle_name: any, cardholder_postal_code: any, cardholder_street_address: any, created_at: str(date-time), created_by: any, decline: any, id: str, idempotency_key: any, merchant_category_code: str, merchant_city_name: str, merchant_name: str, merchant_postal_code: str, merchant_state: str, status: str, submission: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group cards
+@endpoint GET /cards
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /cards
+@required {account_id: str}
+@optional {billing_address: map{city!: str, line1!: str, line2: str, postal_code!: str, state!: str}, description: str, digital_wallet: map{digital_card_profile_id: str, email: str(email), phone: str}, entity_id: str}
+@returns(200) {account_id: str, billing_address: map{city: any, line1: any, line2: any, postal_code: any, state: any}, created_at: str(date-time), description: any, digital_wallet: any, entity_id: any, expiration_month: int, expiration_year: int, id: str, idempotency_key: any, last4: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /cards/{card_id}
+@required {card_id: str}
+@returns(200) {account_id: str, billing_address: map{city: any, line1: any, line2: any, postal_code: any, state: any}, created_at: str(date-time), description: any, digital_wallet: any, entity_id: any, expiration_month: int, expiration_year: int, id: str, idempotency_key: any, last4: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /cards/{card_id}
+@required {card_id: str}
+@optional {billing_address: map{city!: str, line1!: str, line2: str, postal_code!: str, state!: str}, description: str, digital_wallet: map{digital_card_profile_id: str, email: str(email), phone: str}, entity_id: str, status: str(active/disabled/canceled)}
+@returns(200) {account_id: str, billing_address: map{city: any, line1: any, line2: any, postal_code: any, state: any}, created_at: str(date-time), description: any, digital_wallet: any, entity_id: any, expiration_month: int, expiration_year: int, id: str, idempotency_key: any, last4: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /cards/{card_id}/create_details_iframe
+@required {card_id: str}
+@optional {physical_card_id: str}
+@returns(200) {expires_at: str(date-time), iframe_url: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /cards/{card_id}/details
+@required {card_id: str}
+@returns(200) {card_id: str, expiration_month: int, expiration_year: int, pin: str, primary_account_number: str, type: str, verification_code: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /cards/{card_id}/update_pin
+@required {card_id: str, pin: str}
+@returns(200) {card_id: str, expiration_month: int, expiration_year: int, pin: str, primary_account_number: str, type: str, verification_code: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group check_deposits
+@endpoint GET /check_deposits
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /check_deposits
+@required {account_id: str, amount: int, back_image_file_id: str, front_image_file_id: str}
+@optional {description: str}
+@returns(200) {account_id: str, amount: int, back_image_file_id: any, created_at: str(date-time), deposit_acceptance: any, deposit_rejection: any, deposit_return: any, deposit_submission: any, description: any, front_image_file_id: str, id: str, idempotency_key: any, inbound_funds_hold: any, inbound_mail_item_id: any, lockbox_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /check_deposits/{check_deposit_id}
+@required {check_deposit_id: str}
+@returns(200) {account_id: str, amount: int, back_image_file_id: any, created_at: str(date-time), deposit_acceptance: any, deposit_rejection: any, deposit_return: any, deposit_submission: any, description: any, front_image_file_id: str, id: str, idempotency_key: any, inbound_funds_hold: any, inbound_mail_item_id: any, lockbox_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group check_transfers
+@endpoint GET /check_transfers
+@optional {cursor: str, limit: int, account_id: str, idempotency_key: str, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /check_transfers
+@required {account_id: str, amount: int, fulfillment_method: str(physical_check/third_party), source_account_number_id: str}
+@optional {balance_check: str(full/none), check_number: str, physical_check: map{attachment_file_id: str, check_voucher_image_file_id: str, mailing_address!: map{city!: str, line1!: str, line2: str, name: str, phone: str, postal_code!: str, state!: str}, memo!: str, note: str, payer: [map{contents!: str}], recipient_name!: str, return_address: map{city!: str, line1!: str, line2: str, name!: str, phone: str, postal_code!: str, state!: str}, shipping_method: str, signature_text: str}, require_approval: bool, third_party: map{recipient_name: str}, valid_until_date: str(date)}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, approved_inbound_check_deposit_id: any, balance_check: any, cancellation: any, check_number: str, created_at: str(date-time), created_by: any, currency: str, fulfillment_method: str, id: str, idempotency_key: any, mailing: any, pending_transaction_id: any, physical_check: any, routing_number: str, source_account_number_id: any, status: str, stop_payment_request: any, submission: any, third_party: any, type: str, valid_until_date: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /check_transfers/{check_transfer_id}
+@required {check_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, approved_inbound_check_deposit_id: any, balance_check: any, cancellation: any, check_number: str, created_at: str(date-time), created_by: any, currency: str, fulfillment_method: str, id: str, idempotency_key: any, mailing: any, pending_transaction_id: any, physical_check: any, routing_number: str, source_account_number_id: any, status: str, stop_payment_request: any, submission: any, third_party: any, type: str, valid_until_date: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /check_transfers/{check_transfer_id}/approve
+@required {check_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, approved_inbound_check_deposit_id: any, balance_check: any, cancellation: any, check_number: str, created_at: str(date-time), created_by: any, currency: str, fulfillment_method: str, id: str, idempotency_key: any, mailing: any, pending_transaction_id: any, physical_check: any, routing_number: str, source_account_number_id: any, status: str, stop_payment_request: any, submission: any, third_party: any, type: str, valid_until_date: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /check_transfers/{check_transfer_id}/cancel
+@required {check_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, approved_inbound_check_deposit_id: any, balance_check: any, cancellation: any, check_number: str, created_at: str(date-time), created_by: any, currency: str, fulfillment_method: str, id: str, idempotency_key: any, mailing: any, pending_transaction_id: any, physical_check: any, routing_number: str, source_account_number_id: any, status: str, stop_payment_request: any, submission: any, third_party: any, type: str, valid_until_date: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /check_transfers/{check_transfer_id}/stop_payment
+@required {check_transfer_id: str}
+@optional {reason: str(mail_delivery_failed/not_authorized/valid_until_date_passed/unknown)}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, approved_inbound_check_deposit_id: any, balance_check: any, cancellation: any, check_number: str, created_at: str(date-time), created_by: any, currency: str, fulfillment_method: str, id: str, idempotency_key: any, mailing: any, pending_transaction_id: any, physical_check: any, routing_number: str, source_account_number_id: any, status: str, stop_payment_request: any, submission: any, third_party: any, type: str, valid_until_date: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group declined_transactions
+@endpoint GET /declined_transactions
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), route_id: str, category.in: [str]}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /declined_transactions/{declined_transaction_id}
+@required {declined_transaction_id: str}
+@returns(200) {account_id: str, amount: int, created_at: str(date-time), currency: str, description: str, id: str, route_id: any, route_type: any, source: map{ach_decline: any, card_decline: any, category: str, check_decline: any, check_deposit_rejection: any, inbound_fednow_transfer_decline: any, inbound_real_time_payments_transfer_decline: any, other: any, wire_decline: any}, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group digital_card_profiles
+@endpoint GET /digital_card_profiles
+@optional {cursor: str, limit: int, status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /digital_card_profiles
+@required {app_icon_file_id: str, background_image_file_id: str, card_description: str, description: str, issuer_name: str}
+@optional {contact_email: str(email), contact_phone: str, contact_website: str, text_color: map{blue!: int, green!: int, red!: int}}
+@returns(200) {app_icon_file_id: str, background_image_file_id: str, card_description: str, contact_email: any, contact_phone: any, contact_website: any, created_at: str(date-time), description: str, id: str, idempotency_key: any, issuer_name: str, status: str, text_color: map{blue: int, green: int, red: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /digital_card_profiles/{digital_card_profile_id}
+@required {digital_card_profile_id: str}
+@returns(200) {app_icon_file_id: str, background_image_file_id: str, card_description: str, contact_email: any, contact_phone: any, contact_website: any, created_at: str(date-time), description: str, id: str, idempotency_key: any, issuer_name: str, status: str, text_color: map{blue: int, green: int, red: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /digital_card_profiles/{digital_card_profile_id}/archive
+@required {digital_card_profile_id: str}
+@returns(200) {app_icon_file_id: str, background_image_file_id: str, card_description: str, contact_email: any, contact_phone: any, contact_website: any, created_at: str(date-time), description: str, id: str, idempotency_key: any, issuer_name: str, status: str, text_color: map{blue: int, green: int, red: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /digital_card_profiles/{digital_card_profile_id}/clone
+@required {digital_card_profile_id: str}
+@optional {app_icon_file_id: str, background_image_file_id: str, card_description: str, contact_email: str(email), contact_phone: str, contact_website: str, description: str, issuer_name: str, text_color: map{blue!: int, green!: int, red!: int}}
+@returns(200) {app_icon_file_id: str, background_image_file_id: str, card_description: str, contact_email: any, contact_phone: any, contact_website: any, created_at: str(date-time), description: str, id: str, idempotency_key: any, issuer_name: str, status: str, text_color: map{blue: int, green: int, red: int}, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group digital_wallet_tokens
+@endpoint GET /digital_wallet_tokens
+@optional {cursor: str, limit: int, card_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /digital_wallet_tokens/{digital_wallet_token_id}
+@required {digital_wallet_token_id: str}
+@returns(200) {card_id: str, cardholder: map{name: any}, created_at: str(date-time), device: map{device_type: any, identifier: any, ip_address: any, name: any}, dynamic_primary_account_number: any, id: str, status: str, token_requestor: str, type: str, updates: [map]}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group entities
+@endpoint GET /entities
+@optional {cursor: str, limit: int, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities
+@required {structure: str(corporation/natural_person/joint/trust/government_authority)}
+@optional {corporation: map{address!: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, beneficial_owners!: [map{company_title: str, individual!: map, prongs!: [str]}], beneficial_ownership_exemption_reason: str, email: str(email), incorporation_state: str, industry_code: str, name!: str, tax_identifier!: str, website: str}, description: str, government_authority: map{address!: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, authorized_persons!: [map{name!: str}], category!: str, name!: str, tax_identifier!: str, website: str}, joint: map{individuals!: [map{address!: map, confirmed_no_us_tax_id: bool, date_of_birth!: str(date), identification!: map, name!: str}]}, natural_person: map{address!: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, confirmed_no_us_tax_id: bool, date_of_birth!: str(date), identification!: map{drivers_license: map, method!: str, number!: str, other: map, passport: map}, name!: str}, risk_rating: map{rated_at!: str(date-time), rating!: str}, supplemental_documents: [map{file_id!: str}], terms_agreements: [map{agreed_at!: str(date-time), ip_address!: str, terms_url!: str}], third_party_verification: map{reference!: str, vendor!: str}, trust: map{address!: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, category!: str, formation_document_file_id: str, formation_state: str, grantor: map{address!: map, confirmed_no_us_tax_id: bool, date_of_birth!: str(date), identification!: map, name!: str}, name!: str, tax_identifier: str, trustees!: [map{individual: map, structure!: str}]}}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /entities/{entity_id}
+@required {entity_id: str}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /entities/{entity_id}
+@required {entity_id: str}
+@optional {corporation: map{address: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, email: str(email), incorporation_state: str, industry_code: str, name: str, tax_identifier: str}, details_confirmed_at: str(date-time), government_authority: map{address: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, name: str}, natural_person: map{address: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, name: str}, risk_rating: map{rated_at!: str(date-time), rating!: str}, third_party_verification: map{reference!: str, vendor!: str}, trust: map{address: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}, name: str}}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/archive
+@required {entity_id: str}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/archive_beneficial_owner
+@required {entity_id: str, beneficial_owner_id: str}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/confirm
+@required {entity_id: str}
+@optional {confirmed_at: str(date-time)}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/create_beneficial_owner
+@required {entity_id: str, beneficial_owner: map{company_title: str, individual!: map{address!: map, confirmed_no_us_tax_id: bool, date_of_birth!: str(date), identification!: map, name!: str}, prongs!: [str]}}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/update_address
+@required {entity_id: str, address: map{city!: str, line1!: str, line2: str, state!: str, zip!: str}}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/update_beneficial_owner_address
+@required {entity_id: str, address: map{city!: str, country!: str, line1!: str, line2: str, state: str, zip: str}, beneficial_owner_id: str}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /entities/{entity_id}/update_industry_code
+@required {entity_id: str, industry_code: str}
+@returns(200) {corporation: any, created_at: str(date-time), description: any, details_confirmed_at: any, government_authority: any, id: str, idempotency_key: any, joint: any, natural_person: any, risk_rating: any, status: str, structure: str, supplemental_documents: [map], terms_agreements: [map], third_party_verification: any, trust: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group entity_supplemental_documents
+@endpoint GET /entity_supplemental_documents
+@required {entity_id: str}
+@optional {cursor: str, limit: int, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /entity_supplemental_documents
+@required {entity_id: str, file_id: str}
+@returns(200) {created_at: str(date-time), entity_id: str, file_id: str, idempotency_key: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group event_subscriptions
+@endpoint GET /event_subscriptions
+@optional {cursor: str, limit: int, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /event_subscriptions
+@required {url: str}
+@optional {oauth_connection_id: str, selected_event_category: str(account.created/account.updated/account_number.created/account_number.updated/account_statement.created/account_transfer.created/account_transfer.updated/ach_prenotification.created/ach_prenotification.updated/ach_transfer.created/ach_transfer.updated/blockchain_address.created/blockchain_address.updated/blockchain_offramp_transfer.created/blockchain_offramp_transfer.updated/blockchain_onramp_transfer.created/blockchain_onramp_transfer.updated/bookkeeping_account.created/bookkeeping_account.updated/bookkeeping_entry_set.updated/card.created/card.updated/card_payment.created/card_payment.updated/card_profile.created/card_profile.updated/card_dispute.created/card_dispute.updated/check_deposit.created/check_deposit.updated/check_transfer.created/check_transfer.updated/declined_transaction.created/digital_card_profile.created/digital_card_profile.updated/digital_wallet_token.created/digital_wallet_token.updated/document.created/entity.created/entity.updated/event_subscription.created/event_subscription.updated/export.created/export.updated/external_account.created/external_account.updated/fednow_transfer.created/fednow_transfer.updated/file.created/group.updated/group.heartbeat/inbound_ach_transfer.created/inbound_ach_transfer.updated/inbound_ach_transfer_return.created/inbound_ach_transfer_return.updated/inbound_check_deposit.created/inbound_check_deposit.updated/inbound_fednow_transfer.created/inbound_fednow_transfer.updated/inbound_mail_item.created/inbound_mail_item.updated/inbound_real_time_payments_transfer.created/inbound_real_time_payments_transfer.updated/inbound_wire_drawdown_request.created/inbound_wire_transfer.created/inbound_wire_transfer.updated/intrafi_account_enrollment.created/intrafi_account_enrollment.updated/intrafi_exclusion.created/intrafi_exclusion.updated/legacy_card_dispute.created/legacy_card_dispute.updated/lockbox.created/lockbox.updated/oauth_connection.created/oauth_connection.deactivated/card_push_transfer.created/card_push_transfer.updated/card_validation.created/card_validation.updated/pending_transaction.created/pending_transaction.updated/physical_card.created/physical_card.updated/physical_card_profile.created/physical_card_profile.updated/physical_check.created/physical_check.updated/program.created/program.updated/proof_of_authorization_request.created/proof_of_authorization_request.updated/real_time_decision.card_authorization_requested/real_time_decision.card_balance_inquiry_requested/real_time_decision.digital_wallet_token_requested/real_time_decision.digital_wallet_authentication_requested/real_time_decision.card_authentication_requested/real_time_decision.card_authentication_challenge_requested/real_time_payments_transfer.created/real_time_payments_transfer.updated/real_time_payments_request_for_payment.created/real_time_payments_request_for_payment.updated/swift_transfer.created/swift_transfer.updated/transaction.created/wire_drawdown_request.created/wire_drawdown_request.updated/wire_transfer.created/wire_transfer.updated), shared_secret: str, status: str(active/disabled)}
+@returns(200) {created_at: str(date-time), id: str, idempotency_key: any, oauth_connection_id: any, selected_event_category: any, status: str, type: str, url: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /event_subscriptions/{event_subscription_id}
+@required {event_subscription_id: str}
+@returns(200) {created_at: str(date-time), id: str, idempotency_key: any, oauth_connection_id: any, selected_event_category: any, status: str, type: str, url: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /event_subscriptions/{event_subscription_id}
+@required {event_subscription_id: str}
+@optional {status: str(active/disabled/deleted)}
+@returns(200) {created_at: str(date-time), id: str, idempotency_key: any, oauth_connection_id: any, selected_event_category: any, status: str, type: str, url: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@optional {cursor: str, limit: int, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), category.in: [str], associated_object_id: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /events/{event_id}
+@required {event_id: str}
+@returns(200) {associated_object_id: str, associated_object_type: str, category: str, created_at: str(date-time), id: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group exports
+@endpoint GET /exports
+@optional {cursor: str, limit: int, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), category: str(account_statement_ofx/account_statement_bai2/transaction_csv/balance_csv/bookkeeping_account_balance_csv/entity_csv/vendor_csv/dashboard_table_csv/account_verification_letter/funding_instructions/form_1099_int/form_1099_misc/fee_csv/voided_check), status.in: [str], form_1099_int.account_id: str, form_1099_misc.account_id: str, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /exports
+@required {category: str(account_statement_ofx/account_statement_bai2/transaction_csv/balance_csv/bookkeeping_account_balance_csv/entity_csv/vendor_csv/account_verification_letter/funding_instructions/voided_check)}
+@optional {account_statement_bai2: map{account_id: str, effective_date: str(date), program_id: str}, account_statement_ofx: map{account_id!: str, created_at: map{after: str(date-time), before: str(date-time), on_or_after: str(date-time), on_or_before: str(date-time)}}, account_verification_letter: map{account_number_id!: str, balance_date: str(date)}, balance_csv: map{account_id: str, created_at: map{after: str(date-time), before: str(date-time), on_or_after: str(date-time), on_or_before: str(date-time)}}, bookkeeping_account_balance_csv: map{bookkeeping_account_id: str, created_at: map{after: str(date-time), before: str(date-time), on_or_after: str(date-time), on_or_before: str(date-time)}}, entity_csv: map, funding_instructions: map{account_number_id!: str}, transaction_csv: map{account_id: str, created_at: map{after: str(date-time), before: str(date-time), on_or_after: str(date-time), on_or_before: str(date-time)}}, vendor_csv: map, voided_check: map{account_number_id!: str, payer: [map{line!: str}]}}
+@returns(200) {account_statement_bai2: any, account_statement_ofx: any, account_verification_letter: any, balance_csv: any, bookkeeping_account_balance_csv: any, category: str, created_at: str(date-time), dashboard_table_csv: any, entity_csv: any, fee_csv: any, form_1099_int: any, form_1099_misc: any, funding_instructions: any, id: str, idempotency_key: any, result: any, status: str, transaction_csv: any, type: str, vendor_csv: any, voided_check: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /exports/{export_id}
+@required {export_id: str}
+@returns(200) {account_statement_bai2: any, account_statement_ofx: any, account_verification_letter: any, balance_csv: any, bookkeeping_account_balance_csv: any, category: str, created_at: str(date-time), dashboard_table_csv: any, entity_csv: any, fee_csv: any, form_1099_int: any, form_1099_misc: any, funding_instructions: any, id: str, idempotency_key: any, result: any, status: str, transaction_csv: any, type: str, vendor_csv: any, voided_check: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group external_accounts
+@endpoint GET /external_accounts
+@optional {cursor: str, limit: int, status.in: [str], routing_number: str, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /external_accounts
+@required {account_number: str, description: str, routing_number: str}
+@optional {account_holder: str(business/individual/unknown), funding: str(checking/savings/general_ledger/other)}
+@returns(200) {account_holder: str, account_number: str, created_at: str(date-time), description: str, funding: str, id: str, idempotency_key: any, routing_number: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /external_accounts/{external_account_id}
+@required {external_account_id: str}
+@returns(200) {account_holder: str, account_number: str, created_at: str(date-time), description: str, funding: str, id: str, idempotency_key: any, routing_number: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /external_accounts/{external_account_id}
+@required {external_account_id: str}
+@optional {account_holder: str(business/individual), description: str, funding: str(checking/savings/general_ledger/other), status: str(active/archived)}
+@returns(200) {account_holder: str, account_number: str, created_at: str(date-time), description: str, funding: str, id: str, idempotency_key: any, routing_number: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group fednow_transfers
+@endpoint GET /fednow_transfers
+@optional {cursor: str, limit: int, account_id: str, external_account_id: str, idempotency_key: str, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /fednow_transfers
+@required {account_id: str, amount: int, creditor_name: str, debtor_name: str, source_account_number_id: str, unstructured_remittance_information: str}
+@optional {account_number: str, creditor_address: map{city!: str, line1: str, postal_code!: str, state!: str}, debtor_address: map{city!: str, line1: str, postal_code!: str, state!: str}, external_account_id: str, require_approval: bool, routing_number: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, amount: int, created_at: str(date-time), created_by: any, creditor_address: any, creditor_name: str, currency: str, debtor_name: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, routing_number: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /fednow_transfers/{fednow_transfer_id}
+@required {fednow_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, amount: int, created_at: str(date-time), created_by: any, creditor_address: any, creditor_name: str, currency: str, debtor_name: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, routing_number: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /fednow_transfers/{fednow_transfer_id}/approve
+@required {fednow_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, amount: int, created_at: str(date-time), created_by: any, creditor_address: any, creditor_name: str, currency: str, debtor_name: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, routing_number: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /fednow_transfers/{fednow_transfer_id}/cancel
+@required {fednow_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, amount: int, created_at: str(date-time), created_by: any, creditor_address: any, creditor_name: str, currency: str, debtor_name: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, routing_number: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group file_links
+@endpoint POST /file_links
+@required {file_id: str}
+@optional {expires_at: str(date-time)}
+@returns(200) {created_at: str(date-time), expires_at: str(date-time), file_id: str, id: str, idempotency_key: any, type: str, unauthenticated_url: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group files
+@endpoint GET /files
+@optional {cursor: str, limit: int, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), purpose.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /files
+@returns(200) {created_at: str(date-time), description: any, direction: str, filename: any, id: str, idempotency_key: any, mime_type: str, purpose: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /files/{file_id}
+@required {file_id: str}
+@returns(200) {created_at: str(date-time), description: any, direction: str, filename: any, id: str, idempotency_key: any, mime_type: str, purpose: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group groups
+@endpoint GET /groups/current
+@returns(200) {ach_debit_status: str, activation_status: str, created_at: str(date-time), id: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_ach_transfers
+@endpoint GET /inbound_ach_transfers
+@optional {cursor: str, limit: int, account_id: str, account_number_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), status.in: [str]}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_ach_transfers/{inbound_ach_transfer_id}
+@required {inbound_ach_transfer_id: str}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, addenda: any, amount: int, automatically_resolves_at: str(date-time), created_at: str(date-time), decline: any, direction: str, effective_date: str(date), id: str, international_addenda: any, notification_of_change: any, originator_company_descriptive_date: any, originator_company_discretionary_data: any, originator_company_entry_description: str, originator_company_id: str, originator_company_name: str, originator_routing_number: str, receiver_id_number: any, receiver_name: any, settlement: map{settled_at: str(date-time), settlement_schedule: str}, standard_entry_class_code: str, status: str, trace_number: str, transfer_return: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_ach_transfers/{inbound_ach_transfer_id}/create_notification_of_change
+@required {inbound_ach_transfer_id: str}
+@optional {updated_account_number: str, updated_routing_number: str}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, addenda: any, amount: int, automatically_resolves_at: str(date-time), created_at: str(date-time), decline: any, direction: str, effective_date: str(date), id: str, international_addenda: any, notification_of_change: any, originator_company_descriptive_date: any, originator_company_discretionary_data: any, originator_company_entry_description: str, originator_company_id: str, originator_company_name: str, originator_routing_number: str, receiver_id_number: any, receiver_name: any, settlement: map{settled_at: str(date-time), settlement_schedule: str}, standard_entry_class_code: str, status: str, trace_number: str, transfer_return: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_ach_transfers/{inbound_ach_transfer_id}/decline
+@required {inbound_ach_transfer_id: str}
+@optional {reason: str(insufficient_funds/returned_per_odfi_request/authorization_revoked_by_customer/payment_stopped/customer_advised_unauthorized_improper_ineligible_or_incomplete/representative_payee_deceased_or_unable_to_continue_in_that_capacity/beneficiary_or_account_holder_deceased/credit_entry_refused_by_receiver/duplicate_entry/corporate_customer_advised_not_authorized)}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, addenda: any, amount: int, automatically_resolves_at: str(date-time), created_at: str(date-time), decline: any, direction: str, effective_date: str(date), id: str, international_addenda: any, notification_of_change: any, originator_company_descriptive_date: any, originator_company_discretionary_data: any, originator_company_entry_description: str, originator_company_id: str, originator_company_name: str, originator_routing_number: str, receiver_id_number: any, receiver_name: any, settlement: map{settled_at: str(date-time), settlement_schedule: str}, standard_entry_class_code: str, status: str, trace_number: str, transfer_return: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_ach_transfers/{inbound_ach_transfer_id}/transfer_return
+@required {inbound_ach_transfer_id: str, reason: str(insufficient_funds/authorization_revoked_by_customer/payment_stopped/customer_advised_unauthorized_improper_ineligible_or_incomplete/representative_payee_deceased_or_unable_to_continue_in_that_capacity/beneficiary_or_account_holder_deceased/credit_entry_refused_by_receiver/duplicate_entry/corporate_customer_advised_not_authorized)}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, addenda: any, amount: int, automatically_resolves_at: str(date-time), created_at: str(date-time), decline: any, direction: str, effective_date: str(date), id: str, international_addenda: any, notification_of_change: any, originator_company_descriptive_date: any, originator_company_discretionary_data: any, originator_company_entry_description: str, originator_company_id: str, originator_company_name: str, originator_routing_number: str, receiver_id_number: any, receiver_name: any, settlement: map{settled_at: str(date-time), settlement_schedule: str}, standard_entry_class_code: str, status: str, trace_number: str, transfer_return: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_check_deposits
+@endpoint GET /inbound_check_deposits
+@optional {cursor: str, limit: int, account_id: str, check_transfer_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_check_deposits/{inbound_check_deposit_id}
+@required {inbound_check_deposit_id: str}
+@returns(200) {accepted_at: any, account_id: str, account_number_id: any, adjustments: [map], amount: int, back_image_file_id: any, bank_of_first_deposit_routing_number: any, check_number: any, check_transfer_id: any, created_at: str(date-time), currency: str, declined_at: any, declined_transaction_id: any, deposit_return: any, front_image_file_id: any, id: str, payee_name_analysis: str, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_check_deposits/{inbound_check_deposit_id}/decline
+@required {inbound_check_deposit_id: str}
+@returns(200) {accepted_at: any, account_id: str, account_number_id: any, adjustments: [map], amount: int, back_image_file_id: any, bank_of_first_deposit_routing_number: any, check_number: any, check_transfer_id: any, created_at: str(date-time), currency: str, declined_at: any, declined_transaction_id: any, deposit_return: any, front_image_file_id: any, id: str, payee_name_analysis: str, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_check_deposits/{inbound_check_deposit_id}/return
+@required {inbound_check_deposit_id: str, reason: str(altered_or_fictitious/not_authorized/duplicate_presentment/endorsement_missing/endorsement_irregular/refer_to_maker)}
+@returns(200) {accepted_at: any, account_id: str, account_number_id: any, adjustments: [map], amount: int, back_image_file_id: any, bank_of_first_deposit_routing_number: any, check_number: any, check_transfer_id: any, created_at: str(date-time), currency: str, declined_at: any, declined_transaction_id: any, deposit_return: any, front_image_file_id: any, id: str, payee_name_analysis: str, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_fednow_transfers
+@endpoint GET /inbound_fednow_transfers
+@optional {cursor: str, limit: int, account_id: str, account_number_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_fednow_transfers/{inbound_fednow_transfer_id}
+@required {inbound_fednow_transfer_id: str}
+@returns(200) {account_id: str, account_number_id: str, amount: int, confirmation: any, created_at: str(date-time), creditor_name: str, currency: str, debtor_account_number: str, debtor_name: str, debtor_routing_number: str, decline: any, id: str, status: str, transaction_id: any, type: str, unstructured_remittance_information: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_mail_items
+@endpoint GET /inbound_mail_items
+@optional {cursor: str, limit: int, lockbox_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_mail_items/{inbound_mail_item_id}
+@required {inbound_mail_item_id: str}
+@returns(200) {checks: [map], created_at: str(date-time), file_id: str, id: str, lockbox_id: any, recipient_name: any, rejection_reason: any, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_mail_items/{inbound_mail_item_id}/action
+@required {inbound_mail_item_id: str, checks: [map{account: str, action!: str}]}
+@returns(200) {checks: [map], created_at: str(date-time), file_id: str, id: str, lockbox_id: any, recipient_name: any, rejection_reason: any, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_real_time_payments_transfers
+@endpoint GET /inbound_real_time_payments_transfers
+@optional {cursor: str, limit: int, account_id: str, account_number_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_real_time_payments_transfers/{inbound_real_time_payments_transfer_id}
+@required {inbound_real_time_payments_transfer_id: str}
+@returns(200) {account_id: str, account_number_id: str, amount: int, confirmation: any, created_at: str(date-time), creditor_name: str, currency: str, debtor_account_number: str, debtor_name: str, debtor_routing_number: str, decline: any, id: str, remittance_information: any, status: str, transaction_identification: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_wire_drawdown_requests
+@endpoint GET /inbound_wire_drawdown_requests
+@optional {cursor: str, limit: int}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_wire_drawdown_requests/{inbound_wire_drawdown_request_id}
+@required {inbound_wire_drawdown_request_id: str}
+@returns(200) {amount: int, created_at: str(date-time), creditor_account_number: str, creditor_address_line1: any, creditor_address_line2: any, creditor_address_line3: any, creditor_name: any, creditor_routing_number: str, currency: str, debtor_address_line1: any, debtor_address_line2: any, debtor_address_line3: any, debtor_name: any, end_to_end_identification: any, id: str, input_message_accountability_data: any, instruction_identification: any, recipient_account_number_id: str, type: str, unique_end_to_end_transaction_reference: any, unstructured_remittance_information: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group inbound_wire_transfers
+@endpoint GET /inbound_wire_transfers
+@optional {cursor: str, limit: int, account_id: str, account_number_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), status.in: [str], wire_drawdown_request_id: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /inbound_wire_transfers/{inbound_wire_transfer_id}
+@required {inbound_wire_transfer_id: str}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, amount: int, created_at: str(date-time), creditor_address_line1: any, creditor_address_line2: any, creditor_address_line3: any, creditor_name: any, debtor_address_line1: any, debtor_address_line2: any, debtor_address_line3: any, debtor_name: any, description: str, end_to_end_identification: any, id: str, input_message_accountability_data: any, instructing_agent_routing_number: any, instruction_identification: any, reversal: any, status: str, type: str, unique_end_to_end_transaction_reference: any, unstructured_remittance_information: any, wire_drawdown_request_id: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /inbound_wire_transfers/{inbound_wire_transfer_id}/reverse
+@required {inbound_wire_transfer_id: str, reason: str(duplicate/creditor_request/transaction_forbidden)}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, amount: int, created_at: str(date-time), creditor_address_line1: any, creditor_address_line2: any, creditor_address_line3: any, creditor_name: any, debtor_address_line1: any, debtor_address_line2: any, debtor_address_line3: any, debtor_name: any, description: str, end_to_end_identification: any, id: str, input_message_accountability_data: any, instructing_agent_routing_number: any, instruction_identification: any, reversal: any, status: str, type: str, unique_end_to_end_transaction_reference: any, unstructured_remittance_information: any, wire_drawdown_request_id: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group intrafi_account_enrollments
+@endpoint GET /intrafi_account_enrollments
+@optional {cursor: str, limit: int, account_id: str, status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /intrafi_account_enrollments
+@required {account_id: str, email_address: str(email)}
+@returns(200) {account_id: str, created_at: str(date-time), email_address: any, id: str, idempotency_key: any, intrafi_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /intrafi_account_enrollments/{intrafi_account_enrollment_id}
+@required {intrafi_account_enrollment_id: str}
+@returns(200) {account_id: str, created_at: str(date-time), email_address: any, id: str, idempotency_key: any, intrafi_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /intrafi_account_enrollments/{intrafi_account_enrollment_id}/unenroll
+@required {intrafi_account_enrollment_id: str}
+@returns(200) {account_id: str, created_at: str(date-time), email_address: any, id: str, idempotency_key: any, intrafi_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group intrafi_exclusions
+@endpoint GET /intrafi_exclusions
+@optional {cursor: str, limit: int, entity_id: str, idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /intrafi_exclusions
+@required {entity_id: str, fdic_certificate_number: str}
+@returns(200) {bank_name: any, created_at: str(date-time), entity_id: str, excluded_at: any, fdic_certificate_number: any, id: str, idempotency_key: any, status: str, submitted_at: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /intrafi_exclusions/{intrafi_exclusion_id}
+@required {intrafi_exclusion_id: str}
+@returns(200) {bank_name: any, created_at: str(date-time), entity_id: str, excluded_at: any, fdic_certificate_number: any, id: str, idempotency_key: any, status: str, submitted_at: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /intrafi_exclusions/{intrafi_exclusion_id}/archive
+@required {intrafi_exclusion_id: str}
+@returns(200) {bank_name: any, created_at: str(date-time), entity_id: str, excluded_at: any, fdic_certificate_number: any, id: str, idempotency_key: any, status: str, submitted_at: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group lockboxes
+@endpoint GET /lockboxes
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /lockboxes
+@required {account_id: str}
+@optional {description: str, recipient_name: str}
+@returns(200) {account_id: str, address: map{city: str, line1: str, line2: str, postal_code: str, recipient: any, state: str}, check_deposit_behavior: str, created_at: str(date-time), description: any, id: str, idempotency_key: any, recipient_name: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /lockboxes/{lockbox_id}
+@required {lockbox_id: str}
+@returns(200) {account_id: str, address: map{city: str, line1: str, line2: str, postal_code: str, recipient: any, state: str}, check_deposit_behavior: str, created_at: str(date-time), description: any, id: str, idempotency_key: any, recipient_name: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /lockboxes/{lockbox_id}
+@required {lockbox_id: str}
+@optional {check_deposit_behavior: str(enabled/disabled/pend_for_processing), description: str, recipient_name: str}
+@returns(200) {account_id: str, address: map{city: str, line1: str, line2: str, postal_code: str, recipient: any, state: str}, check_deposit_behavior: str, created_at: str(date-time), description: any, id: str, idempotency_key: any, recipient_name: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group oauth
+@endpoint POST /oauth/tokens
+@required {grant_type: str(authorization_code/production_token)}
+@optional {client_id: str, client_secret: str, code: str, production_token: str}
+@returns(200) {access_token: str, group_id: str, token_type: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group oauth_applications
+@endpoint GET /oauth_applications
+@optional {cursor: str, limit: int, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /oauth_applications/{oauth_application_id}
+@required {oauth_application_id: str}
+@returns(200) {client_id: str, created_at: str(date-time), deleted_at: any, id: str, name: any, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group oauth_connections
+@endpoint GET /oauth_connections
+@optional {cursor: str, limit: int, status.in: [str], oauth_application_id: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /oauth_connections/{oauth_connection_id}
+@required {oauth_connection_id: str}
+@returns(200) {created_at: str(date-time), deleted_at: any, group_id: str, id: str, oauth_application_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group pending_transactions
+@endpoint GET /pending_transactions
+@optional {cursor: str, limit: int, account_id: str, route_id: str, category.in: [str], status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /pending_transactions
+@required {account_id: str, amount: int}
+@optional {description: str}
+@returns(200) {account_id: str, amount: int, completed_at: any, created_at: str(date-time), currency: str, description: str, held_amount: int, id: str, route_id: any, route_type: any, source: map{account_transfer_instruction: any, ach_transfer_instruction: any, blockchain_offramp_transfer_instruction: any, blockchain_onramp_transfer_instruction: any, card_authorization: any, card_push_transfer_instruction: any, category: str, check_deposit_instruction: any, check_transfer_instruction: any, fednow_transfer_instruction: any, inbound_funds_hold: any, inbound_wire_transfer_reversal: any, other: any, real_time_payments_transfer_instruction: any, swift_transfer_instruction: any, user_initiated_hold: any, wire_transfer_instruction: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /pending_transactions/{pending_transaction_id}
+@required {pending_transaction_id: str}
+@returns(200) {account_id: str, amount: int, completed_at: any, created_at: str(date-time), currency: str, description: str, held_amount: int, id: str, route_id: any, route_type: any, source: map{account_transfer_instruction: any, ach_transfer_instruction: any, blockchain_offramp_transfer_instruction: any, blockchain_onramp_transfer_instruction: any, card_authorization: any, card_push_transfer_instruction: any, category: str, check_deposit_instruction: any, check_transfer_instruction: any, fednow_transfer_instruction: any, inbound_funds_hold: any, inbound_wire_transfer_reversal: any, other: any, real_time_payments_transfer_instruction: any, swift_transfer_instruction: any, user_initiated_hold: any, wire_transfer_instruction: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /pending_transactions/{pending_transaction_id}/release
+@required {pending_transaction_id: str}
+@returns(200) {account_id: str, amount: int, completed_at: any, created_at: str(date-time), currency: str, description: str, held_amount: int, id: str, route_id: any, route_type: any, source: map{account_transfer_instruction: any, ach_transfer_instruction: any, blockchain_offramp_transfer_instruction: any, blockchain_onramp_transfer_instruction: any, card_authorization: any, card_push_transfer_instruction: any, category: str, check_deposit_instruction: any, check_transfer_instruction: any, fednow_transfer_instruction: any, inbound_funds_hold: any, inbound_wire_transfer_reversal: any, other: any, real_time_payments_transfer_instruction: any, swift_transfer_instruction: any, user_initiated_hold: any, wire_transfer_instruction: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group physical_card_profiles
+@endpoint GET /physical_card_profiles
+@optional {cursor: str, limit: int, status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /physical_card_profiles
+@required {carrier_image_file_id: str, contact_phone: str, description: str, front_image_file_id: str, program_id: str}
+@optional {front_text: map{line1!: str, line2: str}}
+@returns(200) {back_image_file_id: any, carrier_image_file_id: any, contact_phone: any, created_at: str(date-time), creator: str, description: str, front_image_file_id: any, id: str, idempotency_key: any, is_default: bool, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /physical_card_profiles/{physical_card_profile_id}
+@required {physical_card_profile_id: str}
+@returns(200) {back_image_file_id: any, carrier_image_file_id: any, contact_phone: any, created_at: str(date-time), creator: str, description: str, front_image_file_id: any, id: str, idempotency_key: any, is_default: bool, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /physical_card_profiles/{physical_card_profile_id}/archive
+@required {physical_card_profile_id: str}
+@returns(200) {back_image_file_id: any, carrier_image_file_id: any, contact_phone: any, created_at: str(date-time), creator: str, description: str, front_image_file_id: any, id: str, idempotency_key: any, is_default: bool, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /physical_card_profiles/{physical_card_profile_id}/clone
+@required {physical_card_profile_id: str}
+@optional {carrier_image_file_id: str, contact_phone: str, description: str, front_image_file_id: str, front_text: map{line1!: str, line2: str}, program_id: str}
+@returns(200) {back_image_file_id: any, carrier_image_file_id: any, contact_phone: any, created_at: str(date-time), creator: str, description: str, front_image_file_id: any, id: str, idempotency_key: any, is_default: bool, program_id: str, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group physical_cards
+@endpoint GET /physical_cards
+@optional {cursor: str, limit: int, card_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /physical_cards
+@required {card_id: str, cardholder: map{first_name!: str, last_name!: str}, shipment: map{address!: map{city!: str, country: str, line1!: str, line2: str, line3: str, name!: str, phone_number: str, postal_code!: str, state!: str}, method!: str, schedule: str}}
+@optional {physical_card_profile_id: str}
+@returns(200) {card_id: str, cardholder: map{first_name: str, last_name: str}, created_at: str(date-time), id: str, idempotency_key: any, physical_card_profile_id: any, shipment: map{address: map{city: str, country: str, line1: str, line2: any, line3: any, name: str, postal_code: str, state: str}, method: str, schedule: str, status: str, tracking: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /physical_cards/{physical_card_id}
+@required {physical_card_id: str}
+@returns(200) {card_id: str, cardholder: map{first_name: str, last_name: str}, created_at: str(date-time), id: str, idempotency_key: any, physical_card_profile_id: any, shipment: map{address: map{city: str, country: str, line1: str, line2: any, line3: any, name: str, postal_code: str, state: str}, method: str, schedule: str, status: str, tracking: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint PATCH /physical_cards/{physical_card_id}
+@required {physical_card_id: str, status: str(active/disabled/canceled)}
+@returns(200) {card_id: str, cardholder: map{first_name: str, last_name: str}, created_at: str(date-time), id: str, idempotency_key: any, physical_card_profile_id: any, shipment: map{address: map{city: str, country: str, line1: str, line2: any, line3: any, name: str, postal_code: str, state: str}, method: str, schedule: str, status: str, tracking: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group programs
+@endpoint GET /programs
+@optional {cursor: str, limit: int}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /programs/{program_id}
+@required {program_id: str}
+@returns(200) {bank: str, billing_account_id: any, created_at: str(date-time), default_digital_card_profile_id: any, id: str, interest_rate: str, lending: any, name: str, type: str, updated_at: str(date-time)}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group real_time_decisions
+@endpoint GET /real_time_decisions/{real_time_decision_id}
+@required {real_time_decision_id: str}
+@returns(200) {card_authentication: any, card_authentication_challenge: any, card_authorization: any, card_balance_inquiry: any, category: str, created_at: str(date-time), digital_wallet_authentication: any, digital_wallet_token: any, id: str, status: str, timeout_at: str(date-time), type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /real_time_decisions/{real_time_decision_id}/action
+@required {real_time_decision_id: str}
+@optional {card_authentication: map{decision!: str}, card_authentication_challenge: map{result!: str}, card_authorization: map{approval: map{cardholder_address_verification_result: map, partial_amount: int}, decision!: str, decline: map{reason!: str}}, card_balance_inquiry: map{approval: map{balance!: int}, decision!: str}, digital_wallet_authentication: map{result!: str, success: map{email: str(email), phone: str}}, digital_wallet_token: map{approval: map{email: str(email), phone: str}, decline: map{reason: str}}}
+@returns(200) {card_authentication: any, card_authentication_challenge: any, card_authorization: any, card_balance_inquiry: any, category: str, created_at: str(date-time), digital_wallet_authentication: any, digital_wallet_token: any, id: str, status: str, timeout_at: str(date-time), type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group real_time_payments_transfers
+@endpoint GET /real_time_payments_transfers
+@optional {cursor: str, limit: int, account_id: str, external_account_id: str, idempotency_key: str, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /real_time_payments_transfers
+@required {amount: int, creditor_name: str, remittance_information: str, source_account_number_id: str}
+@optional {debtor_name: str, destination_account_number: str, destination_routing_number: str, external_account_id: str, require_approval: bool, ultimate_creditor_name: str, ultimate_debtor_name: str}
+@returns(200) {account_id: str, acknowledgement: any, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor_name: str, currency: str, debtor_name: any, destination_account_number: str, destination_routing_number: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, remittance_information: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, ultimate_creditor_name: any, ultimate_debtor_name: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /real_time_payments_transfers/{real_time_payments_transfer_id}
+@required {real_time_payments_transfer_id: str}
+@returns(200) {account_id: str, acknowledgement: any, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor_name: str, currency: str, debtor_name: any, destination_account_number: str, destination_routing_number: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, remittance_information: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, ultimate_creditor_name: any, ultimate_debtor_name: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /real_time_payments_transfers/{real_time_payments_transfer_id}/approve
+@required {real_time_payments_transfer_id: str}
+@returns(200) {account_id: str, acknowledgement: any, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor_name: str, currency: str, debtor_name: any, destination_account_number: str, destination_routing_number: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, remittance_information: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, ultimate_creditor_name: any, ultimate_debtor_name: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /real_time_payments_transfers/{real_time_payments_transfer_id}/cancel
+@required {real_time_payments_transfer_id: str}
+@returns(200) {account_id: str, acknowledgement: any, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor_name: str, currency: str, debtor_name: any, destination_account_number: str, destination_routing_number: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, remittance_information: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, ultimate_creditor_name: any, ultimate_debtor_name: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group routing_numbers
+@endpoint GET /routing_numbers
+@required {routing_number: str}
+@optional {cursor: str, limit: int}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group simulations
+@endpoint POST /simulations/account_statements
+@required {account_id: str}
+@returns(200) {account_id: str, created_at: str(date-time), ending_balance: int, file_id: str, id: str, loan: any, starting_balance: int, statement_period_end: str(date-time), statement_period_start: str(date-time), type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/account_transfers/{account_transfer_id}/complete
+@required {account_transfer_id: str}
+@returns(200) {account_id: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, currency: str, description: str, destination_account_id: str, destination_transaction_id: any, id: str, idempotency_key: any, pending_transaction_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/ach_transfers/{ach_transfer_id}/acknowledge
+@required {ach_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/ach_transfers/{ach_transfer_id}/create_notification_of_change
+@required {ach_transfer_id: str, change_code: str(incorrect_account_number/incorrect_routing_number/incorrect_routing_number_and_account_number/incorrect_transaction_code/incorrect_account_number_and_transaction_code/incorrect_routing_number_account_number_and_transaction_code/incorrect_receiving_depository_financial_institution_identification/incorrect_individual_identification_number/addenda_format_error/incorrect_standard_entry_class_code_for_outbound_international_payment/misrouted_notification_of_change/incorrect_trace_number/incorrect_company_identification_number/incorrect_identification_number/incorrectly_formatted_corrected_data/incorrect_discretionary_data/routing_number_not_from_original_entry_detail_record/depository_financial_institution_account_number_not_from_original_entry_detail_record/incorrect_transaction_code_by_originating_depository_financial_institution), corrected_data: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/ach_transfers/{ach_transfer_id}/return
+@required {ach_transfer_id: str}
+@optional {reason: str(insufficient_fund/no_account/account_closed/invalid_account_number_structure/account_frozen_entry_returned_per_ofac_instruction/credit_entry_refused_by_receiver/unauthorized_debit_to_consumer_account_using_corporate_sec_code/corporate_customer_advised_not_authorized/payment_stopped/non_transaction_account/uncollected_funds/routing_number_check_digit_error/customer_advised_unauthorized_improper_ineligible_or_incomplete/amount_field_error/authorization_revoked_by_customer/invalid_ach_routing_number/file_record_edit_criteria/enr_invalid_individual_name/returned_per_odfi_request/limited_participation_dfi/incorrectly_coded_outbound_international_payment/account_sold_to_another_dfi/addenda_error/beneficiary_or_account_holder_deceased/customer_advised_not_within_authorization_terms/corrected_return/duplicate_entry/duplicate_return/enr_duplicate_enrollment/enr_invalid_dfi_account_number/enr_invalid_individual_id_number/enr_invalid_representative_payee_indicator/enr_invalid_transaction_code/enr_return_of_enr_entry/enr_routing_number_check_digit_error/entry_not_processed_by_gateway/field_error/foreign_receiving_dfi_unable_to_settle/iat_entry_coding_error/improper_effective_entry_date/improper_source_document_source_document_presented/invalid_company_id/invalid_foreign_receiving_dfi_identification/invalid_individual_id_number/item_and_rck_entry_presented_for_payment/item_related_to_rck_entry_is_ineligible/mandatory_field_error/misrouted_dishonored_return/misrouted_return/no_errors_found/non_acceptance_of_r62_dishonored_return/non_participant_in_iat_program/permissible_return_entry/permissible_return_entry_not_accepted/rdfi_non_settlement/rdfi_participant_in_check_truncation_program/representative_payee_deceased_or_unable_to_continue_in_that_capacity/return_not_a_duplicate/return_of_erroneous_or_reversing_debit/return_of_improper_credit_entry/return_of_improper_debit_entry/return_of_xck_entry/source_document_presented_for_payment/state_law_affecting_rck_acceptance/stop_payment_on_item_related_to_rck_entry/stop_payment_on_source_document/timely_original_return/trace_number_error/untimely_dishonored_return/untimely_return)}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/ach_transfers/{ach_transfer_id}/settle
+@required {ach_transfer_id: str}
+@optional {inbound_funds_hold_behavior: str(release_immediately/release_on_default_schedule)}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/ach_transfers/{ach_transfer_id}/submit
+@required {ach_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, acknowledgement: any, addenda: any, amount: int, approval: any, cancellation: any, company_descriptive_date: any, company_discretionary_data: any, company_entry_description: any, company_id: str, company_name: any, created_at: str(date-time), created_by: any, currency: str, destination_account_holder: str, external_account_id: any, funding: str, id: str, idempotency_key: any, inbound_funds_hold: any, individual_id: any, individual_name: any, network: str, notifications_of_change: [map], pending_transaction_id: any, preferred_effective_date: map{date: any, settlement_schedule: any}, return: any, routing_number: str, settlement: any, standard_entry_class_code: str, statement_descriptor: str, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_authorization_expirations
+@required {card_payment_id: str}
+@returns(200) {account_id: str, card_id: str, created_at: str(date-time), digital_wallet_token_id: any, elements: [map], id: str, physical_card_id: any, scheme_fees: [map], state: map{authorized_amount: int, fuel_confirmed_amount: int, incremented_amount: int, refund_authorized_amount: int, refunded_amount: int, reversed_amount: int, settled_amount: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_authorizations
+@required {amount: int}
+@optional {authenticated_card_payment_id: str, card_id: str, decline_reason: str(account_closed/card_not_active/card_canceled/physical_card_not_active/entity_not_active/group_locked/insufficient_funds/cvv2_mismatch/pin_mismatch/card_expiration_mismatch/transaction_not_allowed/breaches_limit/webhook_declined/webhook_timed_out/declined_by_stand_in_processing/invalid_physical_card/missing_original_authorization/failed_3ds_authentication/suspected_card_testing/suspected_fraud), digital_wallet_token_id: str, event_subscription_id: str, merchant_acceptor_id: str, merchant_category_code: str, merchant_city: str, merchant_country: str, merchant_descriptor: str, merchant_state: str, network_details: map{visa!: map{stand_in_processing_reason: str}}, network_risk_score: int, physical_card_id: str, processing_category: map{category!: str, refund: map{original_card_payment_id: str}}, terminal_id: str}
+@returns(200) {declined_transaction: any, pending_transaction: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_balance_inquiries
+@optional {balance: int, card_id: str, decline_reason: str(account_closed/card_not_active/card_canceled/physical_card_not_active/entity_not_active/group_locked/insufficient_funds/cvv2_mismatch/pin_mismatch/card_expiration_mismatch/transaction_not_allowed/breaches_limit/webhook_declined/webhook_timed_out/declined_by_stand_in_processing/invalid_physical_card/missing_original_authorization/failed_3ds_authentication/suspected_card_testing/suspected_fraud), digital_wallet_token_id: str, event_subscription_id: str, merchant_acceptor_id: str, merchant_category_code: str, merchant_city: str, merchant_country: str, merchant_descriptor: str, merchant_state: str, network_details: map{visa!: map{stand_in_processing_reason: str}}, network_risk_score: int, physical_card_id: str, terminal_id: str}
+@returns(200) {account_id: str, card_id: str, created_at: str(date-time), digital_wallet_token_id: any, elements: [map], id: str, physical_card_id: any, scheme_fees: [map], state: map{authorized_amount: int, fuel_confirmed_amount: int, incremented_amount: int, refund_authorized_amount: int, refunded_amount: int, reversed_amount: int, settled_amount: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_disputes/{card_dispute_id}/action
+@required {card_dispute_id: str, network: str}
+@optional {visa: map{accept_chargeback: map, accept_user_submission: map, action!: str, decline_user_prearbitration: map, receive_merchant_prearbitration: map, represent: map, request_further_information: map{reason!: str}, time_out_chargeback: map, time_out_merchant_prearbitration: map, time_out_representment: map, time_out_user_prearbitration: map}}
+@returns(200) {amount: int, card_id: str, created_at: str(date-time), disputed_transaction_id: str, id: str, idempotency_key: any, loss: any, network: str, status: str, type: str, user_submission_required_by: any, visa: any, win: any, withdrawal: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_fuel_confirmations
+@required {amount: int, card_payment_id: str}
+@returns(200) {account_id: str, card_id: str, created_at: str(date-time), digital_wallet_token_id: any, elements: [map], id: str, physical_card_id: any, scheme_fees: [map], state: map{authorized_amount: int, fuel_confirmed_amount: int, incremented_amount: int, refund_authorized_amount: int, refunded_amount: int, reversed_amount: int, settled_amount: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_increments
+@required {amount: int, card_payment_id: str}
+@optional {event_subscription_id: str}
+@returns(200) {account_id: str, card_id: str, created_at: str(date-time), digital_wallet_token_id: any, elements: [map], id: str, physical_card_id: any, scheme_fees: [map], state: map{authorized_amount: int, fuel_confirmed_amount: int, incremented_amount: int, refund_authorized_amount: int, refunded_amount: int, reversed_amount: int, settled_amount: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_refunds
+@optional {amount: int, pending_transaction_id: str, transaction_id: str}
+@returns(200) {account_id: str, amount: int, created_at: str(date-time), currency: str, description: str, id: str, route_id: any, route_type: any, source: map{account_revenue_payment: any, account_transfer_intention: any, ach_transfer_intention: any, ach_transfer_rejection: any, ach_transfer_return: any, blockchain_offramp_transfer_settlement: any, blockchain_onramp_transfer_intention: any, card_dispute_acceptance: any, card_dispute_financial: any, card_dispute_loss: any, card_financial: any, card_push_transfer_acceptance: any, card_refund: any, card_revenue_payment: any, card_settlement: any, cashback_payment: any, category: str, check_deposit_acceptance: any, check_deposit_return: any, check_transfer_deposit: any, fednow_transfer_acknowledgement: any, fee_payment: any, inbound_ach_transfer: any, inbound_ach_transfer_return_intention: any, inbound_check_adjustment: any, inbound_check_deposit_return_intention: any, inbound_fednow_transfer_confirmation: any, inbound_real_time_payments_transfer_confirmation: any, inbound_wire_reversal: any, inbound_wire_transfer: any, inbound_wire_transfer_reversal: any, interest_payment: any, internal_source: any, other: any, real_time_payments_transfer_acknowledgement: any, sample_funds: any, swift_transfer_intention: any, swift_transfer_return: any, wire_transfer_intention: any}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_reversals
+@required {card_payment_id: str}
+@optional {amount: int}
+@returns(200) {account_id: str, card_id: str, created_at: str(date-time), digital_wallet_token_id: any, elements: [map], id: str, physical_card_id: any, scheme_fees: [map], state: map{authorized_amount: int, fuel_confirmed_amount: int, incremented_amount: int, refund_authorized_amount: int, refunded_amount: int, reversed_amount: int, settled_amount: int}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_settlements
+@required {card_id: str, pending_transaction_id: str}
+@optional {amount: int}
+@returns(200) {account_id: str, amount: int, created_at: str(date-time), currency: str, description: str, id: str, route_id: any, route_type: any, source: map{account_revenue_payment: any, account_transfer_intention: any, ach_transfer_intention: any, ach_transfer_rejection: any, ach_transfer_return: any, blockchain_offramp_transfer_settlement: any, blockchain_onramp_transfer_intention: any, card_dispute_acceptance: any, card_dispute_financial: any, card_dispute_loss: any, card_financial: any, card_push_transfer_acceptance: any, card_refund: any, card_revenue_payment: any, card_settlement: any, cashback_payment: any, category: str, check_deposit_acceptance: any, check_deposit_return: any, check_transfer_deposit: any, fednow_transfer_acknowledgement: any, fee_payment: any, inbound_ach_transfer: any, inbound_ach_transfer_return_intention: any, inbound_check_adjustment: any, inbound_check_deposit_return_intention: any, inbound_fednow_transfer_confirmation: any, inbound_real_time_payments_transfer_confirmation: any, inbound_wire_reversal: any, inbound_wire_transfer: any, inbound_wire_transfer_reversal: any, interest_payment: any, internal_source: any, other: any, real_time_payments_transfer_acknowledgement: any, sample_funds: any, swift_transfer_intention: any, swift_transfer_return: any, wire_transfer_intention: any}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/card_tokens
+@optional {capabilities: [map{cross_border_push_transfers!: str, domestic_push_transfers!: str, route!: str}], expiration: str(date), last4: str, prefix: str, primary_account_number_length: int}
+@returns(200) {created_at: str(date-time), expiration_date: str(date), id: str, last4: str, length: int, prefix: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/check_deposits/{check_deposit_id}/reject
+@required {check_deposit_id: str}
+@returns(200) {account_id: str, amount: int, back_image_file_id: any, created_at: str(date-time), deposit_acceptance: any, deposit_rejection: any, deposit_return: any, deposit_submission: any, description: any, front_image_file_id: str, id: str, idempotency_key: any, inbound_funds_hold: any, inbound_mail_item_id: any, lockbox_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/check_deposits/{check_deposit_id}/return
+@required {check_deposit_id: str}
+@returns(200) {account_id: str, amount: int, back_image_file_id: any, created_at: str(date-time), deposit_acceptance: any, deposit_rejection: any, deposit_return: any, deposit_submission: any, description: any, front_image_file_id: str, id: str, idempotency_key: any, inbound_funds_hold: any, inbound_mail_item_id: any, lockbox_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/check_deposits/{check_deposit_id}/submit
+@required {check_deposit_id: str}
+@optional {scan: map{account_number!: str, auxiliary_on_us: str, routing_number!: str}}
+@returns(200) {account_id: str, amount: int, back_image_file_id: any, created_at: str(date-time), deposit_acceptance: any, deposit_rejection: any, deposit_return: any, deposit_submission: any, description: any, front_image_file_id: str, id: str, idempotency_key: any, inbound_funds_hold: any, inbound_mail_item_id: any, lockbox_id: any, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/check_transfers/{check_transfer_id}/mail
+@required {check_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, approved_inbound_check_deposit_id: any, balance_check: any, cancellation: any, check_number: str, created_at: str(date-time), created_by: any, currency: str, fulfillment_method: str, id: str, idempotency_key: any, mailing: any, pending_transaction_id: any, physical_check: any, routing_number: str, source_account_number_id: any, status: str, stop_payment_request: any, submission: any, third_party: any, type: str, valid_until_date: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/digital_wallet_token_requests
+@required {card_id: str}
+@returns(200) {decline_reason: any, digital_wallet_token_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/exports
+@required {category: str}
+@optional {form_1099_int: map{account_id!: str}}
+@returns(200) {account_statement_bai2: any, account_statement_ofx: any, account_verification_letter: any, balance_csv: any, bookkeeping_account_balance_csv: any, category: str, created_at: str(date-time), dashboard_table_csv: any, entity_csv: any, fee_csv: any, form_1099_int: any, form_1099_misc: any, funding_instructions: any, id: str, idempotency_key: any, result: any, status: str, transaction_csv: any, type: str, vendor_csv: any, voided_check: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_ach_transfers
+@required {account_number_id: str, amount: int}
+@optional {addenda: map{category!: str, freeform: map{entries!: [map]}}, company_descriptive_date: str, company_discretionary_data: str, company_entry_description: str, company_id: str, company_name: str, receiver_id_number: str, receiver_name: str, resolve_at: str(date-time), standard_entry_class_code: str(corporate_credit_or_debit/corporate_trade_exchange/prearranged_payments_and_deposit/internet_initiated/point_of_sale/telephone_initiated/customer_initiated/accounts_receivable/machine_transfer/shared_network_transaction/represented_check/back_office_conversion/point_of_purchase/check_truncation/destroyed_check/international_ach_transaction)}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, addenda: any, amount: int, automatically_resolves_at: str(date-time), created_at: str(date-time), decline: any, direction: str, effective_date: str(date), id: str, international_addenda: any, notification_of_change: any, originator_company_descriptive_date: any, originator_company_discretionary_data: any, originator_company_entry_description: str, originator_company_id: str, originator_company_name: str, originator_routing_number: str, receiver_id_number: any, receiver_name: any, settlement: map{settled_at: str(date-time), settlement_schedule: str}, standard_entry_class_code: str, status: str, trace_number: str, transfer_return: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_check_deposits
+@required {account_number_id: str, amount: int, check_number: str}
+@optional {payee_name_analysis: str(name_matches/does_not_match/not_evaluated)}
+@returns(200) {accepted_at: any, account_id: str, account_number_id: any, adjustments: [map], amount: int, back_image_file_id: any, bank_of_first_deposit_routing_number: any, check_number: any, check_transfer_id: any, created_at: str(date-time), currency: str, declined_at: any, declined_transaction_id: any, deposit_return: any, front_image_file_id: any, id: str, payee_name_analysis: str, status: str, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_fednow_transfers
+@required {account_number_id: str, amount: int}
+@optional {debtor_account_number: str, debtor_name: str, debtor_routing_number: str, unstructured_remittance_information: str}
+@returns(200) {account_id: str, account_number_id: str, amount: int, confirmation: any, created_at: str(date-time), creditor_name: str, currency: str, debtor_account_number: str, debtor_name: str, debtor_routing_number: str, decline: any, id: str, status: str, transaction_id: any, type: str, unstructured_remittance_information: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_mail_items
+@required {amount: int, lockbox_id: str}
+@optional {contents_file_id: str}
+@returns(200) {checks: [map], created_at: str(date-time), file_id: str, id: str, lockbox_id: any, recipient_name: any, rejection_reason: any, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_real_time_payments_transfers
+@required {account_number_id: str, amount: int}
+@optional {debtor_account_number: str, debtor_name: str, debtor_routing_number: str, remittance_information: str, request_for_payment_id: str}
+@returns(200) {account_id: str, account_number_id: str, amount: int, confirmation: any, created_at: str(date-time), creditor_name: str, currency: str, debtor_account_number: str, debtor_name: str, debtor_routing_number: str, decline: any, id: str, remittance_information: any, status: str, transaction_identification: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_wire_drawdown_requests
+@required {amount: int, creditor_account_number: str, creditor_routing_number: str, currency: str, recipient_account_number_id: str}
+@optional {creditor_address_line1: str, creditor_address_line2: str, creditor_address_line3: str, creditor_name: str, debtor_account_number: str, debtor_address_line1: str, debtor_address_line2: str, debtor_address_line3: str, debtor_name: str, debtor_routing_number: str, end_to_end_identification: str, instruction_identification: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@returns(200) {amount: int, created_at: str(date-time), creditor_account_number: str, creditor_address_line1: any, creditor_address_line2: any, creditor_address_line3: any, creditor_name: any, creditor_routing_number: str, currency: str, debtor_address_line1: any, debtor_address_line2: any, debtor_address_line3: any, debtor_name: any, end_to_end_identification: any, id: str, input_message_accountability_data: any, instruction_identification: any, recipient_account_number_id: str, type: str, unique_end_to_end_transaction_reference: any, unstructured_remittance_information: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/inbound_wire_transfers
+@required {account_number_id: str, amount: int}
+@optional {creditor_address_line1: str, creditor_address_line2: str, creditor_address_line3: str, creditor_name: str, debtor_address_line1: str, debtor_address_line2: str, debtor_address_line3: str, debtor_name: str, end_to_end_identification: str, instructing_agent_routing_number: str, instruction_identification: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str, wire_drawdown_request_id: str}
+@returns(200) {acceptance: any, account_id: str, account_number_id: str, amount: int, created_at: str(date-time), creditor_address_line1: any, creditor_address_line2: any, creditor_address_line3: any, creditor_name: any, debtor_address_line1: any, debtor_address_line2: any, debtor_address_line3: any, debtor_name: any, description: str, end_to_end_identification: any, id: str, input_message_accountability_data: any, instructing_agent_routing_number: any, instruction_identification: any, reversal: any, status: str, type: str, unique_end_to_end_transaction_reference: any, unstructured_remittance_information: any, wire_drawdown_request_id: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/interest_payments
+@required {account_id: str, amount: int}
+@optional {accrued_on_account_id: str, period_end: str(date-time), period_start: str(date-time)}
+@returns(200) {account_id: str, amount: int, created_at: str(date-time), currency: str, description: str, id: str, route_id: any, route_type: any, source: map{account_revenue_payment: any, account_transfer_intention: any, ach_transfer_intention: any, ach_transfer_rejection: any, ach_transfer_return: any, blockchain_offramp_transfer_settlement: any, blockchain_onramp_transfer_intention: any, card_dispute_acceptance: any, card_dispute_financial: any, card_dispute_loss: any, card_financial: any, card_push_transfer_acceptance: any, card_refund: any, card_revenue_payment: any, card_settlement: any, cashback_payment: any, category: str, check_deposit_acceptance: any, check_deposit_return: any, check_transfer_deposit: any, fednow_transfer_acknowledgement: any, fee_payment: any, inbound_ach_transfer: any, inbound_ach_transfer_return_intention: any, inbound_check_adjustment: any, inbound_check_deposit_return_intention: any, inbound_fednow_transfer_confirmation: any, inbound_real_time_payments_transfer_confirmation: any, inbound_wire_reversal: any, inbound_wire_transfer: any, inbound_wire_transfer_reversal: any, interest_payment: any, internal_source: any, other: any, real_time_payments_transfer_acknowledgement: any, sample_funds: any, swift_transfer_intention: any, swift_transfer_return: any, wire_transfer_intention: any}, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/pending_transactions/{pending_transaction_id}/release_inbound_funds_hold
+@required {pending_transaction_id: str}
+@returns(200) {account_id: str, amount: int, completed_at: any, created_at: str(date-time), currency: str, description: str, held_amount: int, id: str, route_id: any, route_type: any, source: map{account_transfer_instruction: any, ach_transfer_instruction: any, blockchain_offramp_transfer_instruction: any, blockchain_onramp_transfer_instruction: any, card_authorization: any, card_push_transfer_instruction: any, category: str, check_deposit_instruction: any, check_transfer_instruction: any, fednow_transfer_instruction: any, inbound_funds_hold: any, inbound_wire_transfer_reversal: any, other: any, real_time_payments_transfer_instruction: any, swift_transfer_instruction: any, user_initiated_hold: any, wire_transfer_instruction: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/physical_cards/{physical_card_id}/advance_shipment
+@required {physical_card_id: str, shipment_status: str(pending/canceled/submitted/acknowledged/rejected/shipped/returned/requires_attention)}
+@returns(200) {card_id: str, cardholder: map{first_name: str, last_name: str}, created_at: str(date-time), id: str, idempotency_key: any, physical_card_profile_id: any, shipment: map{address: map{city: str, country: str, line1: str, line2: any, line3: any, name: str, postal_code: str, state: str}, method: str, schedule: str, status: str, tracking: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/physical_cards/{physical_card_id}/tracking_updates
+@required {physical_card_id: str, category: str(in_transit/processed_for_delivery/delivered/delivery_issue/returned_to_sender)}
+@optional {carrier_estimated_delivery_at: str(date-time), city: str, postal_code: str, state: str}
+@returns(200) {card_id: str, cardholder: map{first_name: str, last_name: str}, created_at: str(date-time), id: str, idempotency_key: any, physical_card_profile_id: any, shipment: map{address: map{city: str, country: str, line1: str, line2: any, line3: any, name: str, postal_code: str, state: str}, method: str, schedule: str, status: str, tracking: any}, status: str, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/programs
+@required {name: str}
+@optional {bank: str(core_bank/first_internet_bank/grasshopper_bank/twin_city_bank), lending_maximum_extendable_credit: int, reserve_account_id: str}
+@returns(200) {bank: str, billing_account_id: any, created_at: str(date-time), default_digital_card_profile_id: any, id: str, interest_rate: str, lending: any, name: str, type: str, updated_at: str(date-time)}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/real_time_payments_transfers/{real_time_payments_transfer_id}/complete
+@required {real_time_payments_transfer_id: str}
+@optional {rejection: map{reject_reason_code!: str}}
+@returns(200) {account_id: str, acknowledgement: any, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor_name: str, currency: str, debtor_name: any, destination_account_number: str, destination_routing_number: str, external_account_id: any, id: str, idempotency_key: any, pending_transaction_id: any, rejection: any, remittance_information: str, source_account_number_id: str, status: str, submission: any, transaction_id: any, type: str, ultimate_creditor_name: any, ultimate_debtor_name: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/wire_drawdown_requests/{wire_drawdown_request_id}/refuse
+@required {wire_drawdown_request_id: str}
+@returns(200) {account_number_id: str, amount: int, created_at: str(date-time), creditor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, currency: str, debtor_account_number: str, debtor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_external_account_id: any, debtor_name: str, debtor_routing_number: str, fulfillment_inbound_wire_transfer_id: any, id: str, idempotency_key: any, status: str, submission: any, type: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/wire_drawdown_requests/{wire_drawdown_request_id}/submit
+@required {wire_drawdown_request_id: str}
+@returns(200) {account_number_id: str, amount: int, created_at: str(date-time), creditor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, currency: str, debtor_account_number: str, debtor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_external_account_id: any, debtor_name: str, debtor_routing_number: str, fulfillment_inbound_wire_transfer_id: any, id: str, idempotency_key: any, status: str, submission: any, type: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/wire_transfers/{wire_transfer_id}/reverse
+@required {wire_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor: any, currency: str, debtor: any, external_account_id: any, id: str, idempotency_key: any, inbound_wire_drawdown_request_id: any, network: str, pending_transaction_id: any, remittance: any, reversal: any, routing_number: str, source_account_number_id: any, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /simulations/wire_transfers/{wire_transfer_id}/submit
+@required {wire_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor: any, currency: str, debtor: any, external_account_id: any, id: str, idempotency_key: any, inbound_wire_drawdown_request_id: any, network: str, pending_transaction_id: any, remittance: any, reversal: any, routing_number: str, source_account_number_id: any, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group swift_transfers
+@endpoint GET /swift_transfers
+@optional {cursor: str, limit: int, account_id: str, idempotency_key: str, status.in: [str], created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /swift_transfers
+@required {account_id: str, account_number: str, bank_identification_code: str, creditor_address: map{city!: str, country!: str, line1!: str, line2: str, postal_code: str, state: str}, creditor_name: str, debtor_address: map{city!: str, country!: str, line1!: str, line2: str, postal_code: str, state: str}, debtor_name: str, instructed_amount: int, instructed_currency: str, source_account_number_id: str, unstructured_remittance_information: str}
+@optional {require_approval: bool, routing_number: str}
+@returns(200) {account_id: str, account_number: str, amount: int, bank_identification_code: str, created_at: str(date-time), created_by: map{api_key: any, category: str, oauth_application: any, user: any}, creditor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, debtor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_name: str, id: str, idempotency_key: any, instructed_amount: int, instructed_currency: str, pending_transaction_id: any, routing_number: any, source_account_number_id: str, status: str, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /swift_transfers/{swift_transfer_id}
+@required {swift_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, bank_identification_code: str, created_at: str(date-time), created_by: map{api_key: any, category: str, oauth_application: any, user: any}, creditor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, debtor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_name: str, id: str, idempotency_key: any, instructed_amount: int, instructed_currency: str, pending_transaction_id: any, routing_number: any, source_account_number_id: str, status: str, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /swift_transfers/{swift_transfer_id}/approve
+@required {swift_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, bank_identification_code: str, created_at: str(date-time), created_by: map{api_key: any, category: str, oauth_application: any, user: any}, creditor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, debtor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_name: str, id: str, idempotency_key: any, instructed_amount: int, instructed_currency: str, pending_transaction_id: any, routing_number: any, source_account_number_id: str, status: str, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /swift_transfers/{swift_transfer_id}/cancel
+@required {swift_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, bank_identification_code: str, created_at: str(date-time), created_by: map{api_key: any, category: str, oauth_application: any, user: any}, creditor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, debtor_address: map{city: any, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_name: str, id: str, idempotency_key: any, instructed_amount: int, instructed_currency: str, pending_transaction_id: any, routing_number: any, source_account_number_id: str, status: str, transaction_id: any, type: str, unique_end_to_end_transaction_reference: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group transactions
+@endpoint GET /transactions
+@optional {cursor: str, limit: int, account_id: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time), category.in: [str], route_id: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint GET /transactions/{transaction_id}
+@required {transaction_id: str}
+@returns(200) {account_id: str, amount: int, created_at: str(date-time), currency: str, description: str, id: str, route_id: any, route_type: any, source: map{account_revenue_payment: any, account_transfer_intention: any, ach_transfer_intention: any, ach_transfer_rejection: any, ach_transfer_return: any, blockchain_offramp_transfer_settlement: any, blockchain_onramp_transfer_intention: any, card_dispute_acceptance: any, card_dispute_financial: any, card_dispute_loss: any, card_financial: any, card_push_transfer_acceptance: any, card_refund: any, card_revenue_payment: any, card_settlement: any, cashback_payment: any, category: str, check_deposit_acceptance: any, check_deposit_return: any, check_transfer_deposit: any, fednow_transfer_acknowledgement: any, fee_payment: any, inbound_ach_transfer: any, inbound_ach_transfer_return_intention: any, inbound_check_adjustment: any, inbound_check_deposit_return_intention: any, inbound_fednow_transfer_confirmation: any, inbound_real_time_payments_transfer_confirmation: any, inbound_wire_reversal: any, inbound_wire_transfer: any, inbound_wire_transfer_reversal: any, interest_payment: any, internal_source: any, other: any, real_time_payments_transfer_acknowledgement: any, sample_funds: any, swift_transfer_intention: any, swift_transfer_return: any, wire_transfer_intention: any}, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group wire_drawdown_requests
+@endpoint GET /wire_drawdown_requests
+@optional {cursor: str, limit: int, status.in: [str], idempotency_key: str}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /wire_drawdown_requests
+@required {account_number_id: str, amount: int, creditor_address: map{city!: str, country!: str, line1!: str, line2: str, postal_code: str, state: str}, creditor_name: str, debtor_address: map{city!: str, country!: str, line1!: str, line2: str, postal_code: str, state: str}, debtor_name: str, unstructured_remittance_information: str}
+@optional {debtor_account_number: str, debtor_external_account_id: str, debtor_routing_number: str, end_to_end_identification: str}
+@returns(200) {account_number_id: str, amount: int, created_at: str(date-time), creditor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, currency: str, debtor_account_number: str, debtor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_external_account_id: any, debtor_name: str, debtor_routing_number: str, fulfillment_inbound_wire_transfer_id: any, id: str, idempotency_key: any, status: str, submission: any, type: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /wire_drawdown_requests/{wire_drawdown_request_id}
+@required {wire_drawdown_request_id: str}
+@returns(200) {account_number_id: str, amount: int, created_at: str(date-time), creditor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, creditor_name: str, currency: str, debtor_account_number: str, debtor_address: map{city: str, country: str, line1: str, line2: any, postal_code: any, state: any}, debtor_external_account_id: any, debtor_name: str, debtor_routing_number: str, fulfillment_inbound_wire_transfer_id: any, id: str, idempotency_key: any, status: str, submission: any, type: str, unstructured_remittance_information: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@group wire_transfers
+@endpoint GET /wire_transfers
+@optional {cursor: str, limit: int, account_id: str, external_account_id: str, idempotency_key: str, created_at.after: str(date-time), created_at.before: str(date-time), created_at.on_or_after: str(date-time), created_at.on_or_before: str(date-time)}
+@returns(200) {data: [map], next_cursor: any}
+@errors {4XX, 5XX}
+
+@endpoint POST /wire_transfers
+@required {account_id: str, amount: int, creditor: map{address: map{unstructured!: map}, name!: str}, remittance: map{category!: str, tax: map{date!: str(date), identification_number!: str, type_code!: str}, unstructured: map{message!: str}}}
+@optional {account_number: str, debtor: map{address: map{unstructured!: map}, name!: str}, external_account_id: str, inbound_wire_drawdown_request_id: str, require_approval: bool, routing_number: str, source_account_number_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor: any, currency: str, debtor: any, external_account_id: any, id: str, idempotency_key: any, inbound_wire_drawdown_request_id: any, network: str, pending_transaction_id: any, remittance: any, reversal: any, routing_number: str, source_account_number_id: any, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint GET /wire_transfers/{wire_transfer_id}
+@required {wire_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor: any, currency: str, debtor: any, external_account_id: any, id: str, idempotency_key: any, inbound_wire_drawdown_request_id: any, network: str, pending_transaction_id: any, remittance: any, reversal: any, routing_number: str, source_account_number_id: any, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /wire_transfers/{wire_transfer_id}/approve
+@required {wire_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor: any, currency: str, debtor: any, external_account_id: any, id: str, idempotency_key: any, inbound_wire_drawdown_request_id: any, network: str, pending_transaction_id: any, remittance: any, reversal: any, routing_number: str, source_account_number_id: any, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endpoint POST /wire_transfers/{wire_transfer_id}/cancel
+@required {wire_transfer_id: str}
+@returns(200) {account_id: str, account_number: str, amount: int, approval: any, cancellation: any, created_at: str(date-time), created_by: any, creditor: any, currency: str, debtor: any, external_account_id: any, id: str, idempotency_key: any, inbound_wire_drawdown_request_id: any, network: str, pending_transaction_id: any, remittance: any, reversal: any, routing_number: str, source_account_number_id: any, status: str, submission: any, transaction_id: any, type: str}
+@errors {4XX, 5XX}
+
+@endgroup
+
+@end

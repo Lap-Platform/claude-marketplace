@@ -1,0 +1,198 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Billingo API v3
+@base https://api.billingo.hu/v3
+@version 3.0.7
+@auth ApiKey X-API-KEY in header
+@endpoints 31
+@hint download_for_search
+@toc bank-accounts(5), currencies(1), document-blocks(1), documents(12), organization(1), partners(5), products(5), utils(1)
+
+@group bank-accounts
+@endpoint GET /bank-accounts
+@optional {page: int=1, per_page: int=25}
+@returns(200) {data: [map], total: int, per_page: int, current_page: int, last_page: int, prev_page_url: str, next_page_url: str}
+@errors {400, 401, 422, 500}
+
+@endpoint POST /bank-accounts
+@required {name: str, account_number: str, currency: str(AUD/BGN/BRL/CAD/CHF/CNY/CZK/DKK/EUR/GBP/HKD/HRK/HUF/IDR/ILS/INR/ISK/JPY/KRW/LTL/LVL/MXN/MYR/NOK/NZD/PHP/PLN/RON/RSD/RUB/SEK/SGD/THB/TRY/UAH/USD/ZAR)}
+@optional {id: int, account_number_iban: str, swift: str, need_qr: bool=false}
+@returns(201) {id: int, name: str, account_number: str, account_number_iban: str, swift: str, currency: str, need_qr: bool}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /bank-accounts/{id}
+@required {id: int}
+@returns(200) {id: int, name: str, account_number: str, account_number_iban: str, swift: str, currency: str, need_qr: bool}
+@errors {400, 401, 422, 500, 404}
+
+@endpoint PUT /bank-accounts/{id}
+@required {id: int, name: str, account_number: str, currency: str(AUD/BGN/BRL/CAD/CHF/CNY/CZK/DKK/EUR/GBP/HKD/HRK/HUF/IDR/ILS/INR/ISK/JPY/KRW/LTL/LVL/MXN/MYR/NOK/NZD/PHP/PLN/RON/RSD/RUB/SEK/SGD/THB/TRY/UAH/USD/ZAR)}
+@optional {id: int, account_number_iban: str, swift: str, need_qr: bool=false}
+@returns(200) {id: int, name: str, account_number: str, account_number_iban: str, swift: str, currency: str, need_qr: bool}
+@errors {400, 401, 403, 422, 500, 404}
+
+@endpoint DELETE /bank-accounts/{id}
+@required {id: int}
+@returns(204)
+@errors {400, 401, 403, 500, 404}
+
+@endgroup
+
+@group currencies
+@endpoint GET /currencies
+@required {from: str, to: str}
+@returns(200) {from_currency: str, to_currency: str, conversation_rate: num(float)}
+@errors {400, 401, 422, 500}
+
+@endgroup
+
+@group document-blocks
+@endpoint GET /document-blocks
+@optional {page: int=1, per_page: int=25}
+@returns(200) {data: [map], total: int, per_page: int, current_page: int, last_page: int, prev_page_url: str, next_page_url: str}
+@errors {400, 401, 422, 500}
+
+@endgroup
+
+@group documents
+@endpoint GET /documents
+@optional {page: int=1, per_page: int=25, block_id: int, partner_id: int, payment_method: str, payment_status: str, start_date: str(date), end_date: str(date), start_number: int, end_number: int, start_year: int, end_year: int}
+@returns(200) {data: [map], total: int, per_page: int, current_page: int, last_page: int, prev_page_url: str, next_page_url: str}
+@errors {400, 401, 422, 500}
+
+@endpoint POST /documents
+@required {partner_id: int, block_id: int, type: str(advance/draft/invoice/proforma), fulfillment_date: str(date), due_date: str(date), payment_method: str(aruhitel/bankcard/barion/barter/cash/cash_on_delivery/coupon/elore_utalas/ep_kartya/kompenzacio/levonas/online_bankcard/payoneer/paypal/paypal_utolag/payu/pick_pack_pont/postai_csekk/postautalvany/skrill/szep_card/transferwise/upwork/utalvany/valto/wire_transfer), language: str(de/en/fr/hr/hu/it/ro/sk), currency: str(AUD/BGN/BRL/CAD/CHF/CNY/CZK/DKK/EUR/GBP/HKD/HRK/HUF/IDR/ILS/INR/ISK/JPY/KRW/LTL/LVL/MXN/MYR/NOK/NZD/PHP/PLN/RON/RSD/RUB/SEK/SGD/THB/TRY/UAH/USD/ZAR)}
+@optional {vendor_id: str, bank_account_id: int, conversion_rate: num(float)=1, electronic: bool=False, paid: bool=False, items: [any], comment: str, settings: map{mediated_service: bool, without_financial_fulfillment: bool, online_payment: str, round: str, place_id: int}}
+@returns(201) {id: int, invoice_number: str, type: str, cancelled: bool, block_id: int, payment_status: str, payment_method: str, gross_total: num(float), currency: str, conversion_rate: num(float), invoice_date: str(date), fulfillment_date: str(date), due_date: str(date), paid_date: str(date), organization: map{name: str, tax_number: str, bank_account: map{id: int, name: str, account_number: str, account_number_iban: str, swift: str}, address: map{country_code: str, post_code: str, city: str, address: str}, small_taxpayer: bool, ev_number: str, eu_tax_number: str, cash_settled: bool}, partner: any, electronic: bool, comment: str, tags: [str], notification_status: str, language: str, items: [map], summary: map{net_amount: num(float), net_amount_local: num(float), gross_amount_local: num(float), vat_amount: num(float), vat_amount_local: num(float), vat_rate_summary: [map]}, settings: map{mediated_service: bool, without_financial_fulfillment: bool, online_payment: str, round: str, place_id: int}}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /documents/{id}
+@required {id: int}
+@returns(200) {id: int, invoice_number: str, type: str, cancelled: bool, block_id: int, payment_status: str, payment_method: str, gross_total: num(float), currency: str, conversion_rate: num(float), invoice_date: str(date), fulfillment_date: str(date), due_date: str(date), paid_date: str(date), organization: map{name: str, tax_number: str, bank_account: map{id: int, name: str, account_number: str, account_number_iban: str, swift: str}, address: map{country_code: str, post_code: str, city: str, address: str}, small_taxpayer: bool, ev_number: str, eu_tax_number: str, cash_settled: bool}, partner: any, electronic: bool, comment: str, tags: [str], notification_status: str, language: str, items: [map], summary: map{net_amount: num(float), net_amount_local: num(float), gross_amount_local: num(float), vat_amount: num(float), vat_amount_local: num(float), vat_rate_summary: [map]}, settings: map{mediated_service: bool, without_financial_fulfillment: bool, online_payment: str, round: str, place_id: int}}
+@errors {400, 401, 422, 500, 404}
+
+@endpoint POST /documents/{id}/cancel
+@required {id: int}
+@returns(200) {id: int, invoice_number: str, type: str, cancelled: bool, block_id: int, payment_status: str, payment_method: str, gross_total: num(float), currency: str, conversion_rate: num(float), invoice_date: str(date), fulfillment_date: str(date), due_date: str(date), paid_date: str(date), organization: map{name: str, tax_number: str, bank_account: map{id: int, name: str, account_number: str, account_number_iban: str, swift: str}, address: map{country_code: str, post_code: str, city: str, address: str}, small_taxpayer: bool, ev_number: str, eu_tax_number: str, cash_settled: bool}, partner: any, electronic: bool, comment: str, tags: [str], notification_status: str, language: str, items: [map], summary: map{net_amount: num(float), net_amount_local: num(float), gross_amount_local: num(float), vat_amount: num(float), vat_amount_local: num(float), vat_rate_summary: [map]}, settings: map{mediated_service: bool, without_financial_fulfillment: bool, online_payment: str, round: str, place_id: int}}
+@errors {400, 401, 403, 422, 500, 404}
+
+@endpoint POST /documents/{id}/create-from-proforma
+@required {id: int}
+@returns(201) {id: int, invoice_number: str, type: str, cancelled: bool, block_id: int, payment_status: str, payment_method: str, gross_total: num(float), currency: str, conversion_rate: num(float), invoice_date: str(date), fulfillment_date: str(date), due_date: str(date), paid_date: str(date), organization: map{name: str, tax_number: str, bank_account: map{id: int, name: str, account_number: str, account_number_iban: str, swift: str}, address: map{country_code: str, post_code: str, city: str, address: str}, small_taxpayer: bool, ev_number: str, eu_tax_number: str, cash_settled: bool}, partner: any, electronic: bool, comment: str, tags: [str], notification_status: str, language: str, items: [map], summary: map{net_amount: num(float), net_amount_local: num(float), gross_amount_local: num(float), vat_amount: num(float), vat_amount_local: num(float), vat_rate_summary: [map]}, settings: map{mediated_service: bool, without_financial_fulfillment: bool, online_payment: str, round: str, place_id: int}}
+@errors {400, 401, 403, 422, 500, 404}
+
+@endpoint GET /documents/{id}/download
+@required {id: int}
+@returns(200)
+@returns(202) {message: str}
+@errors {400, 401, 422, 500, 404}
+
+@endpoint GET /documents/{id}/online-szamla
+@required {id: int}
+@returns(200) {transaction_id: str, status: str, messages: [map]}
+@errors {400, 401, 422, 500, 404}
+
+@endpoint GET /documents/{id}/payments
+@required {id: int}
+@returns(200)
+@errors {400, 401, 422, 500, 404}
+
+@endpoint PUT /documents/{id}/payments
+@required {id: int}
+@returns(200)
+@errors {400, 401, 403, 422, 500, 404}
+
+@endpoint DELETE /documents/{id}/payments
+@required {id: int}
+@returns(200)
+@errors {400, 401, 403, 500, 404}
+
+@endpoint GET /documents/{id}/public-url
+@required {id: int}
+@returns(200) {public_url: str}
+@errors {400, 401, 422, 500, 404}
+
+@endpoint POST /documents/{id}/send
+@required {id: int}
+@optional {emails: [str]}
+@returns(200) {emails: [str]}
+@errors {400, 401, 403, 422, 500, 404}
+
+@endgroup
+
+@group organization
+@endpoint GET /organization
+@returns(200) {tax_code: str}
+@errors {400, 401, 422, 500}
+
+@endgroup
+
+@group partners
+@endpoint GET /partners
+@optional {page: int=1, per_page: int=25}
+@returns(200) {data: [any], total: int, per_page: int, current_page: int, last_page: int, prev_page_url: str, next_page_url: str}
+@errors {400, 401, 422, 500}
+
+@endpoint POST /partners
+@required {name: str, address: map{country_code!: str, post_code!: str, city!: str, address!: str}}
+@optional {emails: [str], taxcode: str, iban: str, swift: str, account_number: str, phone: str, general_ledger_number: str}
+@returns(201)
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /partners/{id}
+@required {id: int}
+@returns(200)
+@errors {400, 401, 422, 500, 404}
+
+@endpoint PUT /partners/{id}
+@required {id: int, name: str, address: map{country_code!: str, post_code!: str, city!: str, address!: str}}
+@optional {emails: [str], taxcode: str, iban: str, swift: str, account_number: str, phone: str, general_ledger_number: str}
+@returns(200)
+@errors {400, 401, 403, 422, 500, 404}
+
+@endpoint DELETE /partners/{id}
+@required {id: int}
+@returns(204)
+@errors {400, 401, 403, 500, 404}
+
+@endgroup
+
+@group products
+@endpoint GET /products
+@optional {page: int=1, per_page: int=25}
+@returns(200) {data: [map], total: int, per_page: int, current_page: int, last_page: int, prev_page_url: str, next_page_url: str}
+@errors {400, 401, 422, 500}
+
+@endpoint POST /products
+@required {name: str, currency: str(AUD/BGN/BRL/CAD/CHF/CNY/CZK/DKK/EUR/GBP/HKD/HRK/HUF/IDR/ILS/INR/ISK/JPY/KRW/LTL/LVL/MXN/MYR/NOK/NZD/PHP/PLN/RON/RSD/RUB/SEK/SGD/THB/TRY/UAH/USD/ZAR), vat: str(0%/1%/10%/11%/12%/13%/14%/15%/16%/17%/18%/19%/2%/20%/21%/22%/23%/24%/25%/26%/27%/3%/4%/5%/6%/7%/8%/9%/AAM/AM/EU/EUK/F.AFA/FAD/K.AFA/MAA/TAM/ÁKK/ÁTHK), unit: str}
+@optional {id: int, comment: str, net_unit_price: num(float), general_ledger_number: str, general_ledger_taxcode: str}
+@returns(201) {id: int, name: str, comment: str, currency: str, vat: str, net_unit_price: num(float), unit: str, general_ledger_number: str, general_ledger_taxcode: str}
+@errors {400, 401, 403, 422, 500}
+
+@endpoint GET /products/{id}
+@required {id: int}
+@returns(200) {id: int, name: str, comment: str, currency: str, vat: str, net_unit_price: num(float), unit: str, general_ledger_number: str, general_ledger_taxcode: str}
+@errors {400, 401, 422, 500, 404}
+
+@endpoint PUT /products/{id}
+@required {id: int, name: str, currency: str(AUD/BGN/BRL/CAD/CHF/CNY/CZK/DKK/EUR/GBP/HKD/HRK/HUF/IDR/ILS/INR/ISK/JPY/KRW/LTL/LVL/MXN/MYR/NOK/NZD/PHP/PLN/RON/RSD/RUB/SEK/SGD/THB/TRY/UAH/USD/ZAR), vat: str(0%/1%/10%/11%/12%/13%/14%/15%/16%/17%/18%/19%/2%/20%/21%/22%/23%/24%/25%/26%/27%/3%/4%/5%/6%/7%/8%/9%/AAM/AM/EU/EUK/F.AFA/FAD/K.AFA/MAA/TAM/ÁKK/ÁTHK), unit: str}
+@optional {id: int, comment: str, net_unit_price: num(float), general_ledger_number: str, general_ledger_taxcode: str}
+@returns(200) {id: int, name: str, comment: str, currency: str, vat: str, net_unit_price: num(float), unit: str, general_ledger_number: str, general_ledger_taxcode: str}
+@errors {400, 401, 403, 422, 500, 404}
+
+@endpoint DELETE /products/{id}
+@required {id: int}
+@returns(204)
+@errors {400, 401, 403, 500, 404}
+
+@endgroup
+
+@group utils
+@endpoint GET /utils/convert-legacy-id/{id}
+@required {id: int}
+@returns(200) {id: int, legacy_id: int}
+@errors {400, 401, 422, 500, 404}
+
+@endgroup
+
+@end

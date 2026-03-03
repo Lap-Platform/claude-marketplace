@@ -1,0 +1,535 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS SecurityHub
+@version 2018-10-26
+@auth AWS SigV4
+@endpoints 79
+@hint download_for_search
+@toc administrator(3), master(3), automationrules(5), standards(6), configurationPolicyAssociation(5), securityControls(2), associations(3), findings(4), actionTargets(4), configurationPolicy(5), findingAggregator(5), insights(5), members(6), invitations(4), accounts(4), organization(5), products(1), productSubscriptions(3), findingHistory(1), securityControl(2), tags(3)
+
+@group administrator
+@endpoint POST /administrator
+@required {AdministratorId: str, InvitationId: str}
+
+@endgroup
+
+@group master
+@endpoint POST /master
+@required {MasterId: str, InvitationId: str}
+
+@endgroup
+
+@group automationrules
+@endpoint POST /automationrules/delete
+@required {AutomationRulesArns: [str]}
+@returns(200) {ProcessedAutomationRules: [str]?, UnprocessedAutomationRules: [UnprocessedAutomationRule]?}
+
+@endgroup
+
+@group standards
+@endpoint POST /standards/deregister
+@required {StandardsSubscriptionArns: [str]}
+@returns(200) {StandardsSubscriptions: [StandardsSubscription]?}
+
+@endpoint POST /standards/register
+@required {StandardsSubscriptionRequests: [StandardsSubscriptionRequest]}
+@returns(200) {StandardsSubscriptions: [StandardsSubscription]?}
+
+@endgroup
+
+@group automationrules
+@endpoint POST /automationrules/get
+@required {AutomationRulesArns: [str]}
+@returns(200) {Rules: [AutomationRulesConfig]?, UnprocessedAutomationRules: [UnprocessedAutomationRule]?}
+
+@endgroup
+
+@group configurationPolicyAssociation
+@endpoint POST /configurationPolicyAssociation/batchget
+@required {ConfigurationPolicyAssociationIdentifiers: [ConfigurationPolicyAssociation]}
+@returns(200) {ConfigurationPolicyAssociations: [ConfigurationPolicyAssociationSummary]?, UnprocessedConfigurationPolicyAssociations: [UnprocessedConfigurationPolicyAssociation]?}
+
+@endgroup
+
+@group securityControls
+@endpoint POST /securityControls/batchGet
+@required {SecurityControlIds: [str]}
+@returns(200) {SecurityControls: [SecurityControl], UnprocessedIds: [UnprocessedSecurityControl]?}
+
+@endgroup
+
+@group associations
+@endpoint POST /associations/batchGet
+@required {StandardsControlAssociationIds: [StandardsControlAssociationId]}
+@returns(200) {StandardsControlAssociationDetails: [StandardsControlAssociationDetail], UnprocessedAssociations: [UnprocessedStandardsControlAssociation]?}
+
+@endgroup
+
+@group findings
+@endpoint POST /findings/import
+@required {Findings: [AwsSecurityFinding]}
+@returns(200) {FailedCount: int, SuccessCount: int, FailedFindings: [ImportFindingsError]?}
+
+@endgroup
+
+@group automationrules
+@endpoint PATCH /automationrules/update
+@required {UpdateAutomationRulesRequestItems: [UpdateAutomationRulesRequestItem]}
+@returns(200) {ProcessedAutomationRules: [str]?, UnprocessedAutomationRules: [UnprocessedAutomationRule]?}
+
+@endgroup
+
+@group findings
+@endpoint PATCH /findings/batchupdate
+@required {FindingIdentifiers: [AwsSecurityFindingIdentifier]}
+@optional {Note: NoteUpdate, Severity: SeverityUpdate, VerificationState: str, Confidence: int, Criticality: int, Types: [str], UserDefinedFields: map<str,str>, Workflow: WorkflowUpdate, RelatedFindings: [RelatedFinding]}
+@returns(200) {ProcessedFindings: [AwsSecurityFindingIdentifier], UnprocessedFindings: [BatchUpdateFindingsUnprocessedFinding]}
+
+@endgroup
+
+@group associations
+@endpoint PATCH /associations
+@required {StandardsControlAssociationUpdates: [StandardsControlAssociationUpdate]}
+@returns(200) {UnprocessedAssociationUpdates: [UnprocessedStandardsControlAssociationUpdate]?}
+
+@endgroup
+
+@group actionTargets
+@endpoint POST /actionTargets
+@required {Name: str, Description: str, Id: str}
+@returns(200) {ActionTargetArn: str}
+
+@endgroup
+
+@group automationrules
+@endpoint POST /automationrules/create
+@required {RuleOrder: int, RuleName: str, Description: str, Criteria: AutomationRulesFindingFilters, Actions: [AutomationRulesAction]}
+@optional {Tags: map<str,str>, RuleStatus: str, IsTerminal: bool}
+@returns(200) {RuleArn: str?}
+
+@endgroup
+
+@group configurationPolicy
+@endpoint POST /configurationPolicy/create
+@required {Name: str, ConfigurationPolicy: Policy}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {Arn: str?, Id: str?, Name: str?, Description: str?, UpdatedAt: str(timestamp)?, CreatedAt: str(timestamp)?, ConfigurationPolicy: Policy?{SecurityHub: SecurityHubPolicy?{ServiceEnabled: bool?, EnabledStandardIdentifiers: [str]?, SecurityControlsConfiguration: SecurityControlsConfiguration?{EnabledSecurityControlIdentifiers: [str]?, DisabledSecurityControlIdentifiers: [str]?, SecurityControlCustomParameters: [SecurityControlCustomParameter]?}}}}
+
+@endgroup
+
+@group findingAggregator
+@endpoint POST /findingAggregator/create
+@required {RegionLinkingMode: str}
+@optional {Regions: [str]}
+@returns(200) {FindingAggregatorArn: str?, FindingAggregationRegion: str?, RegionLinkingMode: str?, Regions: [str]?}
+
+@endgroup
+
+@group insights
+@endpoint POST /insights
+@required {Name: str, Filters: AwsSecurityFindingFilters, GroupByAttribute: str}
+@returns(200) {InsightArn: str}
+
+@endgroup
+
+@group members
+@endpoint POST /members
+@required {AccountDetails: [AccountDetails]}
+@returns(200) {UnprocessedAccounts: [Result]?}
+
+@endgroup
+
+@group invitations
+@endpoint POST /invitations/decline
+@required {AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [Result]?}
+
+@endgroup
+
+@group actionTargets
+@endpoint DELETE /actionTargets/{ActionTargetArn+}
+@required {ActionTargetArn: str}
+@returns(200) {ActionTargetArn: str}
+
+@endgroup
+
+@group configurationPolicy
+@endpoint DELETE /configurationPolicy/{Identifier}
+@required {Identifier: str}
+
+@endgroup
+
+@group findingAggregator
+@endpoint DELETE /findingAggregator/delete/{FindingAggregatorArn+}
+@required {FindingAggregatorArn: str}
+
+@endgroup
+
+@group insights
+@endpoint DELETE /insights/{InsightArn+}
+@required {InsightArn: str}
+@returns(200) {InsightArn: str}
+
+@endgroup
+
+@group invitations
+@endpoint POST /invitations/delete
+@required {AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [Result]?}
+
+@endgroup
+
+@group members
+@endpoint POST /members/delete
+@required {AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [Result]?}
+
+@endgroup
+
+@group actionTargets
+@endpoint POST /actionTargets/get
+@optional {ActionTargetArns: [str], NextToken: str, MaxResults: int}
+@returns(200) {ActionTargets: [ActionTarget], NextToken: str?}
+
+@endgroup
+
+@group accounts
+@endpoint GET /accounts
+@optional {HubArn: str}
+@returns(200) {HubArn: str?, SubscribedAt: str?, AutoEnableControls: bool?, ControlFindingGenerator: str?}
+
+@endgroup
+
+@group organization
+@endpoint GET /organization/configuration
+@returns(200) {AutoEnable: bool?, MemberAccountLimitReached: bool?, AutoEnableStandards: str?, OrganizationConfiguration: OrganizationConfiguration?{ConfigurationType: str?, Status: str?, StatusMessage: str?}}
+
+@endgroup
+
+@group products
+@endpoint GET /products
+@optional {NextToken: str, MaxResults: int, ProductArn: str}
+@returns(200) {Products: [Product], NextToken: str?}
+
+@endgroup
+
+@group standards
+@endpoint GET /standards
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Standards: [Standard]?, NextToken: str?}
+
+@endpoint GET /standards/controls/{StandardsSubscriptionArn+}
+@required {StandardsSubscriptionArn: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {Controls: [StandardsControl]?, NextToken: str?}
+
+@endgroup
+
+@group productSubscriptions
+@endpoint DELETE /productSubscriptions/{ProductSubscriptionArn+}
+@required {ProductSubscriptionArn: str}
+
+@endgroup
+
+@group organization
+@endpoint POST /organization/admin/disable
+@required {AdminAccountId: str}
+
+@endgroup
+
+@group accounts
+@endpoint DELETE /accounts
+
+@endgroup
+
+@group administrator
+@endpoint POST /administrator/disassociate
+
+@endgroup
+
+@group master
+@endpoint POST /master/disassociate
+
+@endgroup
+
+@group members
+@endpoint POST /members/disassociate
+@required {AccountIds: [str]}
+
+@endgroup
+
+@group productSubscriptions
+@endpoint POST /productSubscriptions
+@required {ProductArn: str}
+@returns(200) {ProductSubscriptionArn: str?}
+
+@endgroup
+
+@group organization
+@endpoint POST /organization/admin/enable
+@required {AdminAccountId: str}
+
+@endgroup
+
+@group accounts
+@endpoint POST /accounts
+@optional {Tags: map<str,str>, EnableDefaultStandards: bool, ControlFindingGenerator: str}
+
+@endgroup
+
+@group administrator
+@endpoint GET /administrator
+@returns(200) {Administrator: Invitation?{AccountId: str?, InvitationId: str?, InvitedAt: str(timestamp)?, MemberStatus: str?}}
+
+@endgroup
+
+@group configurationPolicy
+@endpoint GET /configurationPolicy/get/{Identifier}
+@required {Identifier: str}
+@returns(200) {Arn: str?, Id: str?, Name: str?, Description: str?, UpdatedAt: str(timestamp)?, CreatedAt: str(timestamp)?, ConfigurationPolicy: Policy?{SecurityHub: SecurityHubPolicy?{ServiceEnabled: bool?, EnabledStandardIdentifiers: [str]?, SecurityControlsConfiguration: SecurityControlsConfiguration?{EnabledSecurityControlIdentifiers: [str]?, DisabledSecurityControlIdentifiers: [str]?, SecurityControlCustomParameters: [SecurityControlCustomParameter]?}}}}
+
+@endgroup
+
+@group configurationPolicyAssociation
+@endpoint POST /configurationPolicyAssociation/get
+@required {Target: Target}
+@returns(200) {ConfigurationPolicyId: str?, TargetId: str?, TargetType: str?, AssociationType: str?, UpdatedAt: str(timestamp)?, AssociationStatus: str?, AssociationStatusMessage: str?}
+
+@endgroup
+
+@group standards
+@endpoint POST /standards/get
+@optional {StandardsSubscriptionArns: [str], NextToken: str, MaxResults: int}
+@returns(200) {StandardsSubscriptions: [StandardsSubscription]?, NextToken: str?}
+
+@endgroup
+
+@group findingAggregator
+@endpoint GET /findingAggregator/get/{FindingAggregatorArn+}
+@required {FindingAggregatorArn: str}
+@returns(200) {FindingAggregatorArn: str?, FindingAggregationRegion: str?, RegionLinkingMode: str?, Regions: [str]?}
+
+@endgroup
+
+@group findingHistory
+@endpoint POST /findingHistory/get
+@required {FindingIdentifier: AwsSecurityFindingIdentifier}
+@optional {StartTime: str(timestamp), EndTime: str(timestamp), NextToken: str, MaxResults: int}
+@returns(200) {Records: [FindingHistoryRecord]?, NextToken: str?}
+
+@endgroup
+
+@group findings
+@endpoint POST /findings
+@optional {Filters: AwsSecurityFindingFilters, SortCriteria: [SortCriterion], NextToken: str, MaxResults: int}
+@returns(200) {Findings: [AwsSecurityFinding], NextToken: str?}
+
+@endgroup
+
+@group insights
+@endpoint GET /insights/results/{InsightArn+}
+@required {InsightArn: str}
+@returns(200) {InsightResults: InsightResults{InsightArn: str, GroupByAttribute: str, ResultValues: [InsightResultValue]}}
+
+@endpoint POST /insights/get
+@optional {InsightArns: [str], NextToken: str, MaxResults: int}
+@returns(200) {Insights: [Insight], NextToken: str?}
+
+@endgroup
+
+@group invitations
+@endpoint GET /invitations/count
+@returns(200) {InvitationsCount: int?}
+
+@endgroup
+
+@group master
+@endpoint GET /master
+@returns(200) {Master: Invitation?{AccountId: str?, InvitationId: str?, InvitedAt: str(timestamp)?, MemberStatus: str?}}
+
+@endgroup
+
+@group members
+@endpoint POST /members/get
+@required {AccountIds: [str]}
+@returns(200) {Members: [Member]?, UnprocessedAccounts: [Result]?}
+
+@endgroup
+
+@group securityControl
+@endpoint GET /securityControl/definition
+@required {SecurityControlId: str}
+@returns(200) {SecurityControlDefinition: SecurityControlDefinition{SecurityControlId: str, Title: str, Description: str, RemediationUrl: str, SeverityRating: str, CurrentRegionAvailability: str, CustomizableProperties: [str]?, ParameterDefinitions: map<str,ParameterDefinition>?}}
+
+@endgroup
+
+@group members
+@endpoint POST /members/invite
+@required {AccountIds: [str]}
+@returns(200) {UnprocessedAccounts: [Result]?}
+
+@endgroup
+
+@group automationrules
+@endpoint GET /automationrules/list
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {AutomationRulesMetadata: [AutomationRulesMetadata]?, NextToken: str?}
+
+@endgroup
+
+@group configurationPolicy
+@endpoint GET /configurationPolicy/list
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {ConfigurationPolicySummaries: [ConfigurationPolicySummary]?, NextToken: str?}
+
+@endgroup
+
+@group configurationPolicyAssociation
+@endpoint POST /configurationPolicyAssociation/list
+@optional {NextToken: str, MaxResults: int, Filters: AssociationFilters}
+@returns(200) {ConfigurationPolicyAssociationSummaries: [ConfigurationPolicyAssociationSummary]?, NextToken: str?}
+
+@endgroup
+
+@group productSubscriptions
+@endpoint GET /productSubscriptions
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {ProductSubscriptions: [str]?, NextToken: str?}
+
+@endgroup
+
+@group findingAggregator
+@endpoint GET /findingAggregator/list
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {FindingAggregators: [FindingAggregator]?, NextToken: str?}
+
+@endgroup
+
+@group invitations
+@endpoint GET /invitations
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {Invitations: [Invitation]?, NextToken: str?}
+
+@endgroup
+
+@group members
+@endpoint GET /members
+@optional {OnlyAssociated: bool, MaxResults: int, NextToken: str}
+@returns(200) {Members: [Member]?, NextToken: str?}
+
+@endgroup
+
+@group organization
+@endpoint GET /organization/admin
+@optional {MaxResults: int, NextToken: str}
+@returns(200) {AdminAccounts: [AdminAccount]?, NextToken: str?}
+
+@endgroup
+
+@group securityControls
+@endpoint GET /securityControls/definitions
+@optional {StandardsArn: str, NextToken: str, MaxResults: int}
+@returns(200) {SecurityControlDefinitions: [SecurityControlDefinition], NextToken: str?}
+
+@endgroup
+
+@group associations
+@endpoint GET /associations
+@required {SecurityControlId: str}
+@optional {NextToken: str, MaxResults: int}
+@returns(200) {StandardsControlAssociationSummaries: [StandardsControlAssociationSummary], NextToken: str?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{ResourceArn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group configurationPolicyAssociation
+@endpoint POST /configurationPolicyAssociation/associate
+@required {ConfigurationPolicyIdentifier: str, Target: Target}
+@returns(200) {ConfigurationPolicyId: str?, TargetId: str?, TargetType: str?, AssociationType: str?, UpdatedAt: str(timestamp)?, AssociationStatus: str?, AssociationStatusMessage: str?}
+
+@endpoint POST /configurationPolicyAssociation/disassociate
+@required {ConfigurationPolicyIdentifier: str}
+@optional {Target: Target}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{ResourceArn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{ResourceArn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group actionTargets
+@endpoint PATCH /actionTargets/{ActionTargetArn+}
+@required {ActionTargetArn: str}
+@optional {Name: str, Description: str}
+
+@endgroup
+
+@group configurationPolicy
+@endpoint PATCH /configurationPolicy/{Identifier}
+@required {Identifier: str}
+@optional {Name: str, Description: str, UpdatedReason: str, ConfigurationPolicy: Policy}
+@returns(200) {Arn: str?, Id: str?, Name: str?, Description: str?, UpdatedAt: str(timestamp)?, CreatedAt: str(timestamp)?, ConfigurationPolicy: Policy?{SecurityHub: SecurityHubPolicy?{ServiceEnabled: bool?, EnabledStandardIdentifiers: [str]?, SecurityControlsConfiguration: SecurityControlsConfiguration?{EnabledSecurityControlIdentifiers: [str]?, DisabledSecurityControlIdentifiers: [str]?, SecurityControlCustomParameters: [SecurityControlCustomParameter]?}}}}
+
+@endgroup
+
+@group findingAggregator
+@endpoint PATCH /findingAggregator/update
+@required {FindingAggregatorArn: str, RegionLinkingMode: str}
+@optional {Regions: [str]}
+@returns(200) {FindingAggregatorArn: str?, FindingAggregationRegion: str?, RegionLinkingMode: str?, Regions: [str]?}
+
+@endgroup
+
+@group findings
+@endpoint PATCH /findings
+@required {Filters: AwsSecurityFindingFilters}
+@optional {Note: NoteUpdate, RecordState: str}
+
+@endgroup
+
+@group insights
+@endpoint PATCH /insights/{InsightArn+}
+@required {InsightArn: str}
+@optional {Name: str, Filters: AwsSecurityFindingFilters, GroupByAttribute: str}
+
+@endgroup
+
+@group organization
+@endpoint POST /organization/configuration
+@required {AutoEnable: bool}
+@optional {AutoEnableStandards: str, OrganizationConfiguration: OrganizationConfiguration}
+
+@endgroup
+
+@group securityControl
+@endpoint PATCH /securityControl/update
+@required {SecurityControlId: str, Parameters: map<str,ParameterConfiguration>}
+@optional {LastUpdateReason: str}
+
+@endgroup
+
+@group accounts
+@endpoint PATCH /accounts
+@optional {AutoEnableControls: bool, ControlFindingGenerator: str}
+
+@endgroup
+
+@group standards
+@endpoint PATCH /standards/control/{StandardsControlArn+}
+@required {StandardsControlArn: str}
+@optional {ControlStatus: str, DisabledReason: str}
+
+@endgroup
+
+@end

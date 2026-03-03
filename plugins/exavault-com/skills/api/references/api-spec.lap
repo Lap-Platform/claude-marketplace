@@ -1,0 +1,297 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api ExaVault API
+@base https://accountname.exavault.com/api/v2
+@version 2.0
+@auth ApiKey ev-api-key in header
+@common_fields {ev-api-key: str, ev-access-token: str}
+@endpoints 59
+@hint download_for_search
+@toc email-lists(5), forms(5), activity(2), notifications(5), users(5), resources(15), account(2), email(2), shares(6), recipients(1), ssh-keys(4), webhooks(7)
+
+@group email-lists
+@endpoint GET /email-lists
+@optional {include: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [map]}
+
+@endpoint POST /email-lists
+@required {name: str, emails: [str]}
+@returns(201) {responseStatus: int(int32), data: map{id: int, type: str, attributes: map{name: str, emails: [str], created: str(date-time), modified: str(date-time)}, relationships: map{ownerUser: map{data: map}}}, included: [map]}
+
+@endpoint GET /email-lists/{id}
+@required {id: int}
+@optional {include: str}
+@returns(200) {responseStatus: int(int32), data: map{id: int, type: str, attributes: map{name: str, emails: [str], created: str(date-time), modified: str(date-time)}, relationships: map{ownerUser: map{data: map}}}, included: [map]}
+
+@endpoint PATCH /email-lists/{id}
+@required {id: int}
+@optional {name: str, emails: [str]}
+@returns(200) {responseStatus: int(int32), data: map{id: int, type: str, attributes: map{name: str, emails: [str], created: str(date-time), modified: str(date-time)}, relationships: map{ownerUser: map{data: map}}}, included: [map]}
+
+@endpoint DELETE /email-lists/{id}
+@required {id: int}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endgroup
+
+@group forms
+@endpoint GET /forms
+@required {shareHash: str}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{type: str, id: int(int32), attributes: map{formDescription: str, submitButtonText: str, successMessage: str, cssStyles: str, elements: [map]}, relationships: map{share: map{data: map}}}, included: [map]}
+
+@endpoint GET /forms/{id}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{type: str, id: int(int32), attributes: map{formDescription: str, submitButtonText: str, successMessage: str, cssStyles: str, elements: [map]}, relationships: map{share: map{data: map}}}, included: [map]}
+
+@endpoint PATCH /forms/{id}
+@optional {formDescription: str, submitButtonText: str, successMessage: str, elements: [map{id: int, name: str, order: int, type: str, settings: map{isRequired: bool, senderEmail: bool, useAsFolderName: bool}}], cssStyles: str}
+@returns(200) {responseStatus: int, data: map{type: str, id: int(int32), attributes: map{formDescription: str, submitButtonText: str, successMessage: str, cssStyles: str, elements: [map]}, relationships: map{share: map{data: map}}}, included: [map]}
+
+@endpoint GET /forms/entries/{id}
+@required {id: int}
+@optional {limit: int, offset: int}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map]}
+
+@endpoint DELETE /forms/entries/{id}
+@required {id: int(int64)}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endgroup
+
+@group activity
+@endpoint GET /activity/session
+@optional {startDate: str(date-time), endDate: str(date-time), ipAddress: str, username: str, path: str, type: str, offset: int, limit: int, sort: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map]}
+
+@endpoint GET /activity/webhooks
+@optional {startDate: str(date-time), endDate: str(date-time), endpointUrl: str(uri), event: str, statusCode: int, resourcePath: str, username: str, offset: int, limit: int, sort: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map]}
+
+@endgroup
+
+@group notifications
+@endpoint PATCH /notifications/{id}
+@required {id: int}
+@optional {action: str(upload/download/delete/all), usernames: [str], sendEmail: bool, recipients: [str(email)], message: str}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{userId: str, type: str, path: str, name: str, action: str, usernames: [str], recipients: [map], sendEmail: bool, readableDescription: str, readableDescriptionWithoutPath: str, shareId: str, message: str, created: str(date-time), modified: str(date-time)}, relationships: map{resource: map{data: map}, share: map{data: map}, ownerUser: map{data: map}}}, included: [any]}
+
+@endpoint GET /notifications/{id}
+@required {id: int}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{userId: str, type: str, path: str, name: str, action: str, usernames: [str], recipients: [map], sendEmail: bool, readableDescription: str, readableDescriptionWithoutPath: str, shareId: str, message: str, created: str(date-time), modified: str(date-time)}, relationships: map{resource: map{data: map}, share: map{data: map}, ownerUser: map{data: map}}}, included: [any]}
+
+@endpoint DELETE /notifications/{id}
+@required {id: int(int32)}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endpoint POST /notifications
+@required {type: str(file/folder), resource: str, action: str(upload/download/delete/all), usernames: [str], sendEmail: bool}
+@optional {recipients: [str(email)], message: str}
+@returns(201) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{userId: str, type: str, path: str, name: str, action: str, usernames: [str], recipients: [map], sendEmail: bool, readableDescription: str, readableDescriptionWithoutPath: str, shareId: str, message: str, created: str(date-time), modified: str(date-time)}, relationships: map{resource: map{data: map}, share: map{data: map}, ownerUser: map{data: map}}}, included: [any]}
+
+@endpoint GET /notifications
+@optional {type: str(file/folder/shared_folder/send_receipt/share_receipt/file_drop), offset: int(int32)=0, sort: str, limit: int(int32)=25, include: str(resource/share/user), action: str(connect/download/upload/delete/all)}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endgroup
+
+@group users
+@endpoint POST /users
+@required {username: str, homeResource: str, email: str(email), password: str, role: str(user/admin), permissions: map{list: bool, download: bool, upload: bool, modify: bool, delete: bool, changePassword: bool, share: bool, notification: bool, viewFormData: bool, deleteFormData: bool}, timeZone: str}
+@optional {nickname: str, expiration: str, locked: bool, welcomeEmail: bool, onboarding: bool}
+@returns(201) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{status: int(int32), locked: bool, expiration: str, created: str(date-time), modified: str(date-time), accessTimestamp: str, accountName: str, username: str, nickname: str, email: str, homePath: str, permissions: map{download: bool, upload: bool, modify: bool, delete: bool, list: bool, changePassword: bool, share: bool, notification: bool, viewFormData: bool, deleteFormData: bool}, role: str, timeZone: str, onboarding: bool, firstLogin: bool}, relationships: map{homeResource: map{data: map}, ownerAccount: map{data: map}}}, included: [any]}
+
+@endpoint GET /users
+@optional {username: str, homeResource: str, nickname: str, email: str, role: str, status: int, search: str, offset: int(int32), sort: str, limit: int(int32), include: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endpoint GET /users/{id}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{status: int(int32), locked: bool, expiration: str, created: str(date-time), modified: str(date-time), accessTimestamp: str, accountName: str, username: str, nickname: str, email: str, homePath: str, permissions: map{download: bool, upload: bool, modify: bool, delete: bool, list: bool, changePassword: bool, share: bool, notification: bool, viewFormData: bool, deleteFormData: bool}, role: str, timeZone: str, onboarding: bool, firstLogin: bool}, relationships: map{homeResource: map{data: map}, ownerAccount: map{data: map}}}, included: [any]}
+
+@endpoint DELETE /users/{id}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endpoint PATCH /users/{id}
+@optional {username: str, nickname: str, homeResource: str, email: str(email), password: str, role: str(user/admin), permissions: map{download!: bool, upload!: bool, modify!: bool, delete!: bool, list!: bool, changePassword!: bool, share!: bool, notification!: bool, viewFormData!: bool, deleteFormData!: bool}, timeZone: str, expiration: str, locked: bool, onboarding: bool}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{status: int(int32), locked: bool, expiration: str, created: str(date-time), modified: str(date-time), accessTimestamp: str, accountName: str, username: str, nickname: str, email: str, homePath: str, permissions: map{download: bool, upload: bool, modify: bool, delete: bool, list: bool, changePassword: bool, share: bool, notification: bool, viewFormData: bool, deleteFormData: bool}, role: str, timeZone: str, onboarding: bool, firstLogin: bool}, relationships: map{homeResource: map{data: map}, ownerAccount: map{data: map}}}, included: [any]}
+
+@endgroup
+
+@group resources
+@endpoint GET /resources/list
+@required {resource: str}
+@optional {sort: str, offset: int(int32)=0, limit: int(int32), type: str, name: str, include: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endpoint GET /resources/{id}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, included: [any]}
+
+@endpoint PATCH /resources/{id}
+@optional {name: str}
+@returns(200) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, included: [any]}
+
+@endpoint DELETE /resources/{id}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endpoint DELETE /resources
+@required {resources: [str]}
+@returns(200) {responseStatus: int, data: [str]}
+@returns(207) {responses: [any]}
+
+@endpoint POST /resources
+@optional {path: str, name: str, parentResource: str}
+@returns(201) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, included: [any]}
+
+@endpoint GET /resources
+@required {resource: str}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, included: [any]}
+
+@endpoint GET /resources/list/{id}
+@required {id: int(int64)}
+@optional {sort: str, offset: int(int32)=0, limit: int(int32), type: str, include: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endpoint POST /resources/compress
+@required {resources: [str]}
+@optional {parentResource: str, archiveName: str}
+@returns(201) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, included: [any]}
+
+@endpoint POST /resources/extract
+@required {resource: str, parentResource: str}
+@returns(201) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endpoint POST /resources/copy
+@required {resources: [str], parentResource: str}
+@returns(200) {data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, meta: map}
+@returns(207) {responses: [any]}
+
+@endpoint POST /resources/move
+@required {resources: [str], parentResource: str}
+@returns(200) {data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, meta: map}
+@returns(207) {responses: [any]}
+
+@endpoint GET /resources/preview
+@required {resource: str, size: str(small/medium/large)}
+@optional {width: int(int32), height: int(int32), page: int(int32)=0}
+@returns(200) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{image: str, size: int(int64), imageHash: str, pageCount: int(int32)}}}
+
+@endpoint POST /resources/upload
+@required {path: str, fileSize: int}
+@optional {offsetBytes: int, resume: bool=true, allowOverwrite: bool=false}
+@returns(201) {responseStatus: int, data: map{id: int(int64), type: str, attributes: map{hash: str, name: str, extension: str, type: str, createdBy: str, uploadDate: str(date-time), createdAt: str(date-time), updatedAt: str(date-time), accessedAt: str(date-time), createdTime: int(int32), updatedTime: int(int32), accessedTime: int(int32), path: str, size: int(int64), fileCount: int, previewable: bool}, relationships: map{share: map{data: map}, notifications: [map], directFile: map{data: map}, parentResource: map{data: map}}}, included: [any]}
+
+@endpoint GET /resources/download
+@required {resources[]: [str]}
+@optional {downloadArchiveName: str}
+@returns(200)
+
+@endgroup
+
+@group account
+@endpoint GET /account
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{accountName: str, maxUsers: int(int32), userCount: int(int32), status: int(int32), branding: bool, customDomain: bool, quota: map{diskLimit: int(int64), diskUsed: int(int64), noticeEnabled: bool, noticeThreshold: int(int32), bandwidthLimit: int(int64), bandwidthUsed: int(int64), transactionsLimit: int(int32), transactionsNoticeEnabled: bool, transactionsNoticeThreshold: int(int32)}, secureOnly: bool, complexPasswords: bool, showReferralLinks: bool, externalDomains: [str], allowedIp: [map], brandingSettings: map{companyName: str, customEmail: str(email), logo: str, logoExt: str, theme: str, verifiedDomain: str, verifiedDomainId: str, verifiedDomainValid: bool}, planDetails: map{storageAddOn: int, ipWhitelist: bool, userExpiration: bool, userImport: bool, customDomain: bool, customName: bool, colorSchema: bool, apiKeys: int, apiTokens: int, sshKeys: int, directLinks: bool, sharingOptions: [str], webhookOptions: map, unlimitedUsers: bool}, clientId: int(int32), welcomeEmailContent: str, welcomeEmailSubject: str, customSignature: str, accountOnboarding: bool, created: str(date-time), modified: str(date-time)}, relationships: map{masterUser: map{data: map}}}, included: [map]}
+
+@endpoint PATCH /account
+@optional {secureOnly: bool, complexPasswords: bool, showReferralLinks: bool, externalDomain: str, emailContent: str, emailSubject: str, allowedIpRanges: [map{ipStart: str(ipv4), ipEnd: str(ipv4)}], brandingSettings: map{companyName: str, customEmail: str(email), theme: str}, accountOnboarding: bool, customSignature: str, quota: map{noticeEnabled: bool, noticeThreshold: int, transactionsNoticeEnabled: bool, transactionsNoticeThreshold: int}}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{accountName: str, maxUsers: int(int32), userCount: int(int32), status: int(int32), branding: bool, customDomain: bool, quota: map{diskLimit: int(int64), diskUsed: int(int64), noticeEnabled: bool, noticeThreshold: int(int32), bandwidthLimit: int(int64), bandwidthUsed: int(int64), transactionsLimit: int(int32), transactionsNoticeEnabled: bool, transactionsNoticeThreshold: int(int32)}, secureOnly: bool, complexPasswords: bool, showReferralLinks: bool, externalDomains: [str], allowedIp: [map], brandingSettings: map{companyName: str, customEmail: str(email), logo: str, logoExt: str, theme: str, verifiedDomain: str, verifiedDomainId: str, verifiedDomainValid: bool}, planDetails: map{storageAddOn: int, ipWhitelist: bool, userExpiration: bool, userImport: bool, customDomain: bool, customName: bool, colorSchema: bool, apiKeys: int, apiTokens: int, sshKeys: int, directLinks: bool, sharingOptions: [str], webhookOptions: map, unlimitedUsers: bool}, clientId: int(int32), welcomeEmailContent: str, welcomeEmailSubject: str, customSignature: str, accountOnboarding: bool, created: str(date-time), modified: str(date-time)}, relationships: map{masterUser: map{data: map}}}, included: [map]}
+
+@endgroup
+
+@group email
+@endpoint POST /email/welcome/{username}
+@required {username: str}
+@returns(201) {responseStatus: int, data: [str]}
+
+@endpoint POST /email/referral
+@required {emails: [str(email)], message: str}
+@returns(201) {responseStatus: int, data: [str]}
+
+@endgroup
+
+@group shares
+@endpoint POST /shares
+@required {type: str(shared_folder/receive/send), name: str}
+@optional {resources: [str], accessMode: map{download: bool, upload: bool, modify: bool, delete: bool}, embed: bool, recipients: [map{type: str, email: str(email)}], expiration: str(date-time), hasNotification: bool, isPublic: bool, messageBody: str, notificationEmails: [str(email)], password: str, requireEmail: bool, messageSubject: str, fileDropCreateFolders: bool, sendingLocalFiles: bool}
+@returns(201) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{name: str, hasPassword: bool, public: bool, accessMode: map{download: bool, upload: bool, modify: bool, delete: bool}, accessDescription: str, embed: bool, hash: str, ownerHash: str, expiration: str, expired: bool, resent: str(date-time), type: str, requireEmail: bool, fileDropCreateFolders: bool, paths: [str], recipients: [map], messages: [map], inherited: bool, status: int(int32), hasNotification: bool, created: str(date-time), modified: str(date-time), trackingStatus: str, formId: int}, relationships: map{messages: [map], owner: map{data: map}, resources: [map], notifications: [map]}}, included: [any]}
+
+@endpoint GET /shares
+@optional {offset: int, limit: int=100, scope: str(all/active/currentUser), sort: str(created/-created), type: str(receive/shared_folder/send), include: str, name: str, recipient: str, message: str, username: str, search: str}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endpoint GET /shares/{id}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{name: str, hasPassword: bool, public: bool, accessMode: map{download: bool, upload: bool, modify: bool, delete: bool}, accessDescription: str, embed: bool, hash: str, ownerHash: str, expiration: str, expired: bool, resent: str(date-time), type: str, requireEmail: bool, fileDropCreateFolders: bool, paths: [str], recipients: [map], messages: [map], inherited: bool, status: int(int32), hasNotification: bool, created: str(date-time), modified: str(date-time), trackingStatus: str, formId: int}, relationships: map{messages: [map], owner: map{data: map}, resources: [map], notifications: [map]}}, included: [any]}
+
+@endpoint PATCH /shares/{id}
+@optional {name: str, resources: [str], accessMode: map{download: bool, upload: bool, modify: bool, delete: bool}, embed: bool, recipients: [map{type: str, email: str(email)}], expiration: str(date-time), hasNotification: bool, isPublic: bool, messageBody: str, notificationEmails: [str(email)], password: str, requireEmail: bool, messageSubject: str, fileDropCreateFolders: bool, status: int}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{name: str, hasPassword: bool, public: bool, accessMode: map{download: bool, upload: bool, modify: bool, delete: bool}, accessDescription: str, embed: bool, hash: str, ownerHash: str, expiration: str, expired: bool, resent: str(date-time), type: str, requireEmail: bool, fileDropCreateFolders: bool, paths: [str], recipients: [map], messages: [map], inherited: bool, status: int(int32), hasNotification: bool, created: str(date-time), modified: str(date-time), trackingStatus: str, formId: int}, relationships: map{messages: [map], owner: map{data: map}, resources: [map], notifications: [map]}}, included: [any]}
+
+@endpoint DELETE /shares/{id}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endpoint POST /shares/complete-send/{id}
+@required {id: int}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{name: str, hasPassword: bool, public: bool, accessMode: map{download: bool, upload: bool, modify: bool, delete: bool}, accessDescription: str, embed: bool, hash: str, ownerHash: str, expiration: str, expired: bool, resent: str(date-time), type: str, requireEmail: bool, fileDropCreateFolders: bool, paths: [str], recipients: [map], messages: [map], inherited: bool, status: int(int32), hasNotification: bool, created: str(date-time), modified: str(date-time), trackingStatus: str, formId: int}, relationships: map{messages: [map], owner: map{data: map}, resources: [map], notifications: [map]}}, included: [any]}
+
+@endgroup
+
+@group recipients
+@endpoint POST /recipients/shares/invites/{shareId}
+@required {shareId: int}
+@optional {recipientId: int(int32)}
+@returns(201) {responseStatus: int, data: [str(email)]}
+
+@endgroup
+
+@group ssh-keys
+@endpoint GET /ssh-keys
+@optional {userId: str, limit: int, offset: int}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [map]}
+
+@endpoint POST /ssh-keys
+@required {userId: int, publicKey: str}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{fingerprint: str, lastLogin: str(date-time), created: str(date-time)}, relationships: map{ownerUser: map{data: map}}}, included: [map]}
+
+@endpoint GET /ssh-keys/{id}
+@returns(200) {responseStatus: int, data: map{id: int(int32), type: str, attributes: map{fingerprint: str, lastLogin: str(date-time), created: str(date-time)}, relationships: map{ownerUser: map{data: map}}}, included: [map]}
+
+@endpoint DELETE /ssh-keys/{id}
+@returns(200)
+
+@endgroup
+
+@group webhooks
+@endpoint GET /webhooks
+@optional {include: str, offset: int, limit: int}
+@returns(200) {responseStatus: int, totalResults: int, returnedResults: int, data: [map], included: [any]}
+
+@endpoint POST /webhooks
+@required {endpointUrl: str(uri)}
+@optional {triggers: map{resources: map{upload: bool, download: bool, delete: bool, rename: bool, copy: bool, move: bool, compress: bool, extract: bool, createFolder: bool}, shares: map{formSubmit: bool}}, resource: str, responseVersion: str(v1/v2)}
+@returns(201) {responseStatus: int, data: [map], included: [any]}
+
+@endpoint GET /webhooks/{id}
+@optional {include: str}
+@returns(200) {responseStatus: int, data: [map], included: [any]}
+
+@endpoint PATCH /webhooks/{id}
+@optional {endpointUrl: str(uri), triggers: map{resources: map{upload: bool, download: bool, delete: bool, rename: bool, copy: bool, move: bool, compress: bool, extract: bool, createFolder: bool}, shares: map{formSubmit: bool}}, resource: str, responseVersion: str(v2/v1)}
+@returns(200) {responseStatus: int, data: [map], included: [any]}
+
+@endpoint DELETE /webhooks/{id}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endpoint POST /webhooks/resend/{activityId}
+@returns(200) {responseStatus: int, data: [str]}
+
+@endpoint POST /webhooks/regenerate-token/{id}
+@returns(200) {responseStatus: int, data: [map], included: [any]}
+
+@endgroup
+
+@end

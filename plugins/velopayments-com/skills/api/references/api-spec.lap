@@ -1,0 +1,662 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Velo Payments APIs
+@base https://api.sandbox.velopayments.com/
+@version 2.38.183
+@auth OAuth2 | Bearer basic | OAuth2
+@endpoints 109
+@hint download_for_search
+@toc authenticate(1), logout(1), password(1), validate(1), users(17), payors(6), payorLinks(2), payees(27), sourceAccounts(11), fundingAccounts(3), deltas(2), fundings(1), transactions(3), paymentaudit(14), payments(2), payouts(8), paymentChannelRules(1), supportedCountries(2), currencies(1), webhooks(5)
+
+@group authenticate
+@endpoint POST /v1/authenticate
+@optional {grant_type: str=client_credentials}
+@returns(200) {access_token: str, token_type: str, expires_in: num, refresh_token: str, scope: str, entityIds: [str]}
+
+@endgroup
+
+@group logout
+@endpoint POST /v1/logout
+@returns(204)
+@errors {401, 403}
+
+@endgroup
+
+@group password
+@endpoint POST /v1/password/reset
+@required {email: str(email)}
+@returns(204)
+@errors {400}
+
+@endgroup
+
+@group validate
+@endpoint POST /v1/validate
+@required {otp: str}
+@optional {Authorization: str}
+@returns(200) {access_token: str, token_type: str, refresh_token: str, expires_in: int, scope: str, user_info: map{user_id: str(uuid), userType: str, mfa_details: map{mfa_type: str?, verified: bool}}, entityIds: [str]}
+@errors {401, 403}
+
+@endgroup
+
+@group users
+@endpoint GET /v2/users
+@optional {type: str, status: str, entityId: str(uuid), payeeType: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str=email:asc}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403}
+
+@endpoint DELETE /v2/users/{userId}
+@required {userId: str(uuid)}
+@returns(204)
+@errors {401, 403, 404}
+
+@endpoint GET /v2/users/{userId}
+@required {userId: str(uuid)}
+@returns(200) {id: str(uuid), status: str, email: str(email), smsNumber: str, primaryContactNumber: str, secondaryContactNumber: str, firstName: str, lastName: str, entityId: str(uuid), companyName: str, roles: [map], userType: str, mfaType: str, mfaStatus: str, lockedOut: bool, lockedOutTimestamp: str(date-time)?}
+@errors {401, 403, 404}
+
+@endpoint POST /v2/users/{userId}/disable
+@required {userId: str(uuid)}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/users/{userId}/enable
+@required {userId: str(uuid)}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/users/invite
+@required {email: str(email), mfaType: str(SMS/YUBIKEY/TOTP), smsNumber: str, primaryContactNumber: str, roles: [str]}
+@optional {secondaryContactNumber: str, firstName: str, lastName: str, entityId: str(uuid), userType: str(BACKOFFICE/PAYOR/PAYEE), verificationCode: str}
+@returns(204)
+@errors {400, 401, 403, 409, 412}
+
+@endpoint POST /v2/users/{userId}/roleUpdate
+@required {userId: str(uuid), roles: [str]}
+@optional {verificationCode: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/users/{userId}/mfa/unregister
+@required {userId: str(uuid), mfaType: str(YUBIKEY/TOTP)}
+@optional {verificationCode: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/users/{userId}/tokens
+@required {userId: str(uuid), tokenType: str(INVITE_MFA_USER/MFA_REGISTRATION)}
+@optional {verificationCode: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint POST /v2/users/{userId}/unlock
+@required {userId: str(uuid)}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/users/{userId}/userDetailsUpdate
+@required {userId: str(uuid)}
+@optional {primaryContactNumber: str, secondaryContactNumber: str, firstName: str, lastName: str, email: str(email), smsNumber: str, mfaType: str(SMS/YUBIKEY/TOTP), verificationCode: str}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint POST /v2/users/registration/sms
+@required {smsNumber: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint GET /v2/users/self
+@returns(200) {id: str(uuid), status: str, email: str(email), smsNumber: str, primaryContactNumber: str, secondaryContactNumber: str, firstName: str, lastName: str, entityId: str(uuid), companyName: str, roles: [map], userType: str, mfaType: str, mfaStatus: str, lockedOut: bool, lockedOutTimestamp: str(date-time)?}
+@errors {401, 403}
+
+@endpoint POST /v2/users/self/userDetailsUpdate
+@optional {primaryContactNumber: str, secondaryContactNumber: str, firstName: str, lastName: str, email: str(email), smsNumber: str}
+@returns(204)
+@errors {400, 401, 403, 409}
+
+@endpoint POST /v2/users/self/mfa/unregister
+@required {mfaType: str(SMS/YUBIKEY/TOTP)}
+@optional {Authorization: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint POST /v2/users/self/password
+@required {oldPassword: str, newPassword: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint POST /v2/users/self/password/validate
+@required {password: str}
+@returns(200) {score: int(int32), valid: bool, warning: str, suggestions: [str]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group payors
+@endpoint GET /v2/payors/{payorId}
+@required {payorId: str(uuid)}
+@returns(200) {payorId: str(uuid), payorName: str, payorXid: str, provider: str, address: map{line1: str, line2: str, line3: str, line4: str, city: str, countyOrProvince: str, zipOrPostcode: str, country: str}, primaryContactName: str, primaryContactPhone: str, primaryContactEmail: str(email), kycState: str, manualLockout: bool, openBankingEnabled: bool, payeeGracePeriodProcessingEnabled: bool, payeeGracePeriodDays: int, collectiveAlias: str, supportContact: str, dbaName: str, allowsLanguageChoice: bool, reminderEmailsOptOut: bool, language: str, includesReports: bool, wuCustomerId: str, maxMasterPayorAdmins: int, paymentRails: str, remoteSystemIds: [str], usdTxnValueReportingThreshold: int, managingPayees: bool, createdAt: str(date-time)}
+@errors {400, 403, 404}
+
+@endpoint POST /v1/payors/{payorId}/applications
+@required {payorId: str(uuid), name: str}
+@optional {description: str}
+@returns(201)
+@errors {400, 404, 403, 409}
+
+@endpoint POST /v1/payors/{payorId}/applications/{applicationId}/keys
+@required {payorId: str(uuid), applicationId: str(uuid), name: str, roles: [str]}
+@optional {description: str}
+@returns(200) {apiKey: str(uuid), apiSecret: str(uuid)}
+@errors {400, 403, 404}
+
+@endpoint POST /v1/payors/{payorId}/reminderEmailsUpdate
+@required {payorId: str(uuid), reminderEmailsOptOut: bool}
+@returns(202)
+@errors {400, 403, 404}
+
+@endpoint POST /v1/payors/{payorId}/branding/logos
+@required {payorId: str(uuid)}
+@returns(204)
+@errors {400, 403, 404}
+
+@endpoint GET /v1/payors/{payorId}/branding
+@required {payorId: str(uuid)}
+@returns(200) {payorName: str, logoUrl: str(uri), collectiveAlias: str, supportContact: str, dbaName: str}
+@errors {400, 403, 404}
+
+@endgroup
+
+@group payorLinks
+@endpoint GET /v1/payorLinks
+@optional {descendantsOfPayor: str(uuid), parentOfPayor: str(uuid), fields: str}
+@returns(200) {links: [any], payors: [any]}
+@errors {400, 404, 403}
+
+@endpoint POST /v1/payorLinks
+@required {fromPayorId: str(uuid), linkType: str, toPayorId: str(uuid)}
+@returns(201)
+@errors {400, 404, 403}
+
+@endgroup
+
+@group payees
+@endpoint DELETE /v3/payees/{payeeId}
+@required {payeeId: str(uuid)}
+@returns(204)
+@errors {400, 404}
+
+@endpoint GET /v3/payees/{payeeId}
+@required {payeeId: str(uuid)}
+@optional {sensitive: bool}
+@returns(200) {payeeId: str(uuid), payorRefs: [map]?, email: str(email)?, onboardedStatus: str, watchlistStatus: str, watchlistOverrideExpiresAtTimestamp: str(date-time)?, watchlistOverrideComment: str, language: str, created: str(date-time), country: str, displayName: str, payeeType: str, disabled: bool, disabledComment: str, disabledUpdatedTimestamp: str(date-time), address: map{line1: str, line2: str?, line3: str?, line4: str?, city: str, countyOrProvince: str?, zipOrPostcode: str?, country: str}, individual: map{name: any, nationalIdentification: str, dateOfBirth: str}, company: map?{name: str, taxId: str?, operatingName: str?}, cellphoneNumber: str, watchlistStatusUpdatedTimestamp: str(date_time)?, gracePeriodEndDate: str(date)?, enhancedKycCompleted: bool, kycCompletedTimestamp: str(date_time)?, pausePayment: bool, pausePaymentTimestamp: str(date_time)?, marketingOptInDecision: bool, marketingOptInTimestamp: str(date_time)?, acceptTermsAndConditionsTimestamp: str(date-time)?, challenge: map{value: str, description: str}}
+@errors {404}
+
+@endpoint GET /v3/payees
+@required {payorId: str(uuid)}
+@optional {watchlistStatus: str, disabled: bool, onboardedStatus: str, email: str(email), displayName: str, remoteId: str, payeeType: str, payeeCountry: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str=displayName:asc}
+@returns(200) {summary: any, page: any, links: [any], content: [map]}
+@errors {404, 400, 401, 403}
+
+@endpoint POST /v3/payees
+@required {payorId: str, payees: [map{payeeId: str(uuid), payorRefs: [map{payorId: str(uuid), remoteId: str, invitationStatus: str, invitationStatusTimestamp: str(date-time), paymentChannelId: str(uuid), payableStatus: bool, payableIssues: [map]}], email!: str(email), remoteId!: str, type!: str, address!: map{line1!: str, line2: str, line3: str, line4: str, city!: str, countyOrProvince: str, zipOrPostcode: str, country!: str}, paymentChannel: map{paymentChannelName: str, iban: str, accountNumber: str, routingNumber: str, countryCode!: str, currency!: str, accountName!: str}, challenge: map{value!: str, description!: str}, language: str, company: map{name!: str, taxId: str, operatingName: str}, individual: map{name!: any, nationalIdentification: str, dateOfBirth!: str(date)}}]}
+@returns(201) {batchId: str(uuid), rejectedCsvRows: [any]}
+@errors {404, 400, 401, 403}
+
+@endpoint GET /v3/payees/batch/{batchId}
+@required {batchId: str(uuid)}
+@returns(200) {status: str, failureCount: int(int64), pendingCount: int(int64), failures: [map]}
+@errors {404, 400, 401, 403}
+
+@endpoint POST /v3/payees/{payeeId}/invite
+@required {payeeId: str(uuid), payorId: str(uuid)}
+@returns(200)
+@errors {404, 400, 401, 403, 409}
+
+@endpoint GET /v3/payees/payors/{payorId}/invitationStatus
+@required {payorId: str(uuid)}
+@optional {payeeId: str(uuid), invitationStatus: str, page: int(int32)=1, pageSize: int(int32)=25}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {404, 400, 401, 403}
+
+@endpoint GET /v3/payees/deltas
+@required {payorId: str(uuid), updatedSince: str(date-time)}
+@optional {page: int(int32)=1, pageSize: int(int32)=100}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400}
+
+@endpoint POST /v3/payees/{payeeId}/remoteIdUpdate
+@required {payeeId: str(uuid), payorId: str(uuid), remoteId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint POST /v3/payees/{payeeId}/payeeDetailsUpdate
+@required {payeeId: str(uuid)}
+@optional {address: map{line1!: str, line2: str, line3: str, line4: str, city!: str, countyOrProvince: str, zipOrPostcode: str, country!: str}, individual: map{name!: any, nationalIdentification: str, dateOfBirth!: str}, company: map{name!: str, taxId: str, operatingName: str}, language: str, payeeType: str(Individual/Company), challenge: map{value!: str, description!: str}, email: str(email), contactSmsNumber: str}
+@returns(204)
+@errors {404, 400, 401, 403}
+
+@endpoint DELETE /v4/payees/{payeeId}
+@required {payeeId: str(uuid)}
+@returns(204)
+@errors {400, 404}
+
+@endpoint GET /v4/payees/{payeeId}
+@required {payeeId: str(uuid)}
+@optional {sensitive: bool}
+@returns(200) {payeeId: str(uuid), payorRefs: [map]?, paymentChannels: [map]?, email: str(email)?, onboardedStatus: str, watchlistStatus: str, watchlistOverrideExpiresAtTimestamp: str(date-time)?, watchlistOverrideComment: str, language: str, created: str(date-time), country: str, displayName: str, payeeType: str, disabled: bool, disabledComment: str, disabledUpdatedTimestamp: str(date-time), address: map{line1: str, line2: str?, line3: str?, line4: str?, city: str, countyOrProvince: str?, zipOrPostcode: str?, country: str}, individual: map{name: any, nationalIdentification: str, dateOfBirth: str}, company: map?{name: str, taxId: str?, operatingName: str?}, cellphoneNumber: str, managedByPayorId: str(uuid), watchlistStatusUpdatedTimestamp: str(date_time)?, gracePeriodEndDate: str(date)?, enhancedKycCompleted: bool, kycCompletedTimestamp: str(date_time)?, pausePayment: bool, pausePaymentTimestamp: str(date_time)?, marketingOptInDecision: bool, marketingOptInTimestamp: str(date_time)?, acceptTermsAndConditionsTimestamp: str(date-time)?, challenge: map{value: str, description: str}}
+@errors {404}
+
+@endpoint POST /v4/payees/{payeeId}/payeeDetailsUpdate
+@required {payeeId: str(uuid)}
+@optional {address: map{line1!: str, line2: str, line3: str, line4: str, city!: str, countyOrProvince: str, zipOrPostcode: str, country!: str}, individual: map{name!: any, nationalIdentification: str, dateOfBirth!: str}, company: map{name!: str, taxId: str, operatingName: str}, language: str, payeeType: str(Individual/Company), challenge: map{value!: str, description!: str}, email: str(email), contactSmsNumber: str}
+@returns(204)
+@errors {404, 400, 401, 403}
+
+@endpoint POST /v4/payees/{payeeId}/remoteIdUpdate
+@required {payeeId: str(uuid), payorId: str(uuid), remoteId: str}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint GET /v4/payees
+@required {payorId: str(uuid)}
+@optional {watchlistStatus: str, disabled: bool, onboardedStatus: str, email: str(email), displayName: str, remoteId: str, payeeType: str, payeeCountry: str, ofacStatus: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str=displayName:asc}
+@returns(200) {summary: any, page: any, links: [any], content: [map]}
+@errors {404, 400, 401, 403}
+
+@endpoint POST /v4/payees
+@required {payorId: str, payees: [map{email!: str(email), remoteId!: str, type!: str, address!: map{line1!: str, line2: str, line3: str, line4: str, city!: str, countyOrProvince: str, zipOrPostcode: str, country!: str}, paymentChannel: map{paymentChannelName: str, iban: str, accountNumber: str, routingNumber: str, countryCode!: str, currency!: str, accountName!: str}, challenge: map{value!: str, description!: str}, language: str, company: map{name!: str, taxId: str, operatingName: str}, individual: map{name!: any, nationalIdentification: str, dateOfBirth!: str(date)}}]}
+@returns(201) {batchId: str(uuid), rejectedCsvRows: [any]}
+@errors {404, 400, 401, 403}
+
+@endpoint GET /v4/payees/batch/{batchId}
+@required {batchId: str(uuid)}
+@returns(200) {status: str, failureCount: int(int64), pendingCount: int(int64), failures: [map]}
+@errors {404, 400, 401, 403}
+
+@endpoint POST /v4/payees/{payeeId}/invite
+@required {payeeId: str(uuid), payorId: str(uuid)}
+@returns(200)
+@errors {404, 400, 401, 403, 409}
+
+@endpoint GET /v4/payees/payors/{payorId}/invitationStatus
+@required {payorId: str(uuid)}
+@optional {payeeId: str(uuid), invitationStatus: str, page: int(int32)=1, pageSize: int(int32)=25}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {404, 400, 401, 403}
+
+@endpoint GET /v4/payees/deltas
+@required {payorId: str(uuid), updatedSince: str(date-time)}
+@optional {page: int(int32)=1, pageSize: int(int32)=100}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400}
+
+@endpoint GET /v4/payees/{payeeId}/paymentChannels/
+@required {payeeId: str(uuid)}
+@optional {payorId: str(uuid), payable: bool, sensitive: bool, ignorePayorInviteStatus: bool}
+@returns(200) {paymentChannels: [map], payorToPaymentChannelMappings: [map]}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v4/payees/{payeeId}/paymentChannels/
+@required {payeeId: str(uuid)}
+@optional {paymentChannelName: str, iban: str, accountNumber: str, routingNumber: str, countryCode: str, currency: str, accountName: str}
+@returns(201)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint DELETE /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}
+@required {payeeId: str(uuid), paymentChannelId: str(uuid)}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint GET /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}
+@required {payeeId: str(uuid), paymentChannelId: str(uuid)}
+@optional {payable: bool, sensitive: bool}
+@returns(200) {id: str(uuid), payeeId: str(uuid), paymentChannelName: str, accountName: str, channelType: str, countryCode: str, routingNumber: str, accountNumber: str, iban: str, currency: str, payorIds: [str(uuid)], payeeName: str, bankName: str, bankSwiftBic: str, bankAddress: map{line1: str, line2: str?, line3: str?, line4: str?, city: str, countyOrProvince: str?, zipOrPostcode: str?, country: str}, deleted: bool, enabled: bool, disabledReasonCode: str, disabledReason: str, payable: bool}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}
+@required {payeeId: str(uuid), paymentChannelId: str(uuid)}
+@optional {routingNumber: str, accountNumber: str, iban: str, paymentChannelName: str, countryCode: str, accountName: str, currency: str}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint POST /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}/enable
+@required {payeeId: str(uuid), paymentChannelId: str(uuid)}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint PUT /v4/payees/{payeeId}/paymentChannels/order
+@required {payeeId: str(uuid), paymentChannelIds: [str(uuid)]}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endgroup
+
+@group sourceAccounts
+@endpoint POST /v1/sourceAccounts/{sourceAccountId}/notifications
+@required {sourceAccountId: str(uuid), minimumBalance: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/sourceAccounts/{sourceAccountId}/fundingRequest
+@required {sourceAccountId: str(uuid), amount: int(int64)}
+@returns(202)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v2/sourceAccounts
+@optional {physicalAccountName: str, physicalAccountId: str(uuid), payorId: str(uuid), fundingAccountId: str(uuid), page: int(int32)=1, pageSize: int(int32)=25, sort: str=fundingRef:asc}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v2/sourceAccounts/{sourceAccountId}
+@required {sourceAccountId: str(uuid)}
+@returns(200) {id: str(uuid), balance: int(int64), currency: str, fundingRef: str, physicalAccountName: str, railsId: str, payorId: str(uuid), name: str, pooled: bool, balanceVisible: bool, customerId: str?, physicalAccountId: str(uuid), notifications: map{minimumBalance: int}, fundingAccountId: str(uuid)?, autoTopUpConfig: map{enabled: bool, minBalance: int(int64)?, targetBalance: int(int64)?}, accountType: str}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v2/sourceAccounts/{sourceAccountId}/transfers
+@required {sourceAccountId: str(uuid), toSourceAccountId: str(uuid), amount: int(int64), currency: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v3/sourceAccounts/{sourceAccountId}/fundingRequest
+@required {sourceAccountId: str(uuid), fundingAccountId: str(uuid), amount: int(int64)}
+@returns(202)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v3/sourceAccounts
+@optional {physicalAccountName: str, physicalAccountId: str(uuid), payorId: str(uuid), fundingAccountId: str(uuid), includeUserDeleted: str(boolean), type: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str=fundingRef:asc}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint DELETE /v3/sourceAccounts/{sourceAccountId}
+@required {sourceAccountId: str(uuid)}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint GET /v3/sourceAccounts/{sourceAccountId}
+@required {sourceAccountId: str(uuid)}
+@returns(200) {id: str(uuid), balance: int(int64), currency: str, fundingRef: str, physicalAccountName: str, railsId: str, payorId: str(uuid), name: str, pooled: bool, customerId: str?, physicalAccountId: str(uuid), notifications: map{minimumBalance: int}, autoTopUpConfig: map{enabled: bool, minBalance: int(int64)?, targetBalance: int(int64)?, fundingAccountId: str(uuid)}, type: str, country: str, deleted: bool, userDeleted: bool, deletedAt: str(date-time), transmissionTypes: [str]}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v3/sourceAccounts/{sourceAccountId}/transfers
+@required {sourceAccountId: str(uuid), toSourceAccountId: str(uuid), amount: int(int64), currency: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v3/sourceAccounts/{sourceAccountId}/notifications
+@required {sourceAccountId: str(uuid), minimumBalance: int(int64)}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group fundingAccounts
+@endpoint GET /v2/fundingAccounts
+@optional {payorId: str(uuid), name: str, countryCode: str, currency: str, type: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str=accountName:asc, sensitive: bool=False}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {403, 400}
+
+@endpoint POST /v2/fundingAccounts
+@required {type: str(FBO/PRIVATE), name: str, payorId: str(uuid), countryCode: str}
+@optional {accountName: str, accountNumber: str, routingNumber: str}
+@returns(202)
+@errors {400, 401, 403}
+
+@endpoint GET /v2/fundingAccounts/{fundingAccountId}
+@required {fundingAccountId: str(uuid)}
+@optional {sensitive: bool=False}
+@returns(200) {id: str(uuid), payorId: str(uuid), accountName: str, accountNumber: str, routingNumber: str, name: str, currency: str, countryCode: str, type: str, archived: bool}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group deltas
+@endpoint GET /v1/deltas/fundings
+@required {payorId: str(uuid), updatedSince: str(date-time)}
+@optional {page: int(int32)=1, pageSize: int(int32)=25}
+@returns(200) {links: [map], page: map{numberOfElements: int(int32), totalElements: int(int64), totalPages: int(int32), page: int(int32), pageSize: int(int32)}, content: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group fundings
+@endpoint GET /v1/fundings/{fundingId}
+@required {fundingId: str(uuid)}
+@returns(200) {fundingId: str(uuid), payorId: str(uuid), createdAt: str(date-time), detectedFundingRef: str, amount: int(int64), currency: str, text: str, physicalAccountName: str, sourceAccountId: str(uuid), allocationType: str, allocatedAt: str(date-time), allocationDate: str(date-time), reason: str, hiddenDate: str(date-time), fundingAccountType: str, status: str}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group transactions
+@endpoint GET /v1/transactions
+@optional {payorId: str, transactionReference: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str=createdAt:asc}
+@returns(200) {links: [map], page: map{numberOfElements: int(int32), totalElements: int(int64), totalPages: int(int32), page: int(int32), pageSize: int(int32)}, content: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/transactions
+@required {payorId: str(uuid), sourceAccountName: str, transactionReference: str}
+@optional {transactionMetadata: map}
+@returns(201) {transactionId: str(uuid), transactionShortCode: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/transactions/{transactionId}
+@required {transactionId: str(uuid)}
+@returns(200) {transactionId: str(uuid), transactionShortCode: str, payorId: str(uuid), sourceAccountName: str, sourceAccountId: str(uuid), transactionReference: str, transactionMetadata: map?, balance: int(int64), currency: str, createdAt: str(date-time)}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group paymentaudit
+@endpoint GET /v1/paymentaudit/fundings
+@required {payorId: str(uuid)}
+@optional {page: int(int32)=1, pageSize: int(int32)=25, sort: str}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v1/paymentaudit/payoutStatistics
+@optional {payorId: str(uuid)}
+@returns(200) {thisMonthPayoutsCount: int, thisMonthFailedPaymentsCount: int}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group deltas
+@endpoint GET /v1/deltas/payments
+@required {payorId: str(uuid), updatedSince: str(date-time)}
+@optional {page: int(int32)=1, pageSize: int(int32)=100}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400}
+
+@endgroup
+
+@group paymentaudit
+@endpoint GET /v3/paymentaudit/payouts
+@required {payorId: str(uuid)}
+@optional {payoutMemo: str, status: str(ACCEPTED/REJECTED/SUBMITTED/QUOTED/INSTRUCTED/COMPLETED/INCOMPLETE/CONFIRMED/WITHDRAWN), submittedDateFrom: str(date), submittedDateTo: str(date), page: int(int32)=1, pageSize: int(int32)=25, sort: str}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v3/paymentaudit/payouts/{payoutId}
+@required {payoutId: str(uuid)}
+@optional {remoteId: str, status: str(ACCEPTED/AWAITING_FUNDS/FUNDED/UNFUNDED/BANK_PAYMENT_REQUESTED/REJECTED/ACCEPTED_BY_RAILS/CONFIRMED/FAILED/RETURNED/WITHDRAWN), sourceAmountFrom: int(int32), sourceAmountTo: int(int32), paymentAmountFrom: int(int32), paymentAmountTo: int(int32), submittedDateFrom: str(date), submittedDateTo: str(date), page: int(int32)=1, pageSize: int(int32)=25, sort: str, sensitive: bool}
+@returns(200) {summary: any, page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v3/paymentaudit/payments
+@optional {payeeId: str(uuid), payorId: str(uuid), payorName: str, remoteId: str, status: str(ACCEPTED/AWAITING_FUNDS/FUNDED/UNFUNDED/BANK_PAYMENT_REQUESTED/REJECTED/ACCEPTED_BY_RAILS/CONFIRMED/FAILED/RETURNED/WITHDRAWN), sourceAccountName: str, sourceAmountFrom: int(int32), sourceAmountTo: int(int32), sourceCurrency: str, paymentAmountFrom: int(int32), paymentAmountTo: int(int32), paymentCurrency: str, submittedDateFrom: str(date), submittedDateTo: str(date), paymentMemo: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str, sensitive: bool}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v3/paymentaudit/payments/{paymentId}
+@required {paymentId: str(uuid)}
+@optional {sensitive: bool}
+@returns(200) {paymentId: str(uuid), payeeId: str(uuid), payorId: str(uuid), payorName: str, quoteId: str(uuid), sourceAccountId: str(uuid), sourceAccountName: str, remoteId: str, sourceAmount: int, sourceCurrency: str, paymentAmount: int, paymentCurrency: str, rate: num(float), invertedRate: num(float), submittedDateTime: str(date-time), status: str, fundingStatus: str, routingNumber: str, accountNumber: str, iban: str, paymentMemo: str, filenameReference: str, individualIdentificationNumber: str, traceNumber: str, payorPaymentId: str, paymentChannelId: str, paymentChannelName: str, accountName: str, railsId: str, countryCode: str, events: [map], returnCost: int, returnReason: str, railsPaymentId: str, railsBatchId: str, paymentScheme: str, rejectionReason: str}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v3/paymentaudit/transactions
+@optional {payorId: str(uuid), startDate: str(date), endDate: str(date)}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint GET /v4/paymentaudit/payouts
+@optional {payorId: str(uuid), payoutMemo: str, status: str(ACCEPTED/REJECTED/SUBMITTED/QUOTED/INSTRUCTED/COMPLETED/INCOMPLETE/CONFIRMED/WITHDRAWN), submittedDateFrom: str(date), submittedDateTo: str(date), fromPayorName: str, scheduledForDateFrom: str(date), scheduledForDateTo: str(date), scheduleStatus: str(ANY/SCHEDULED/EXECUTED/FAILED), page: int(int32)=1, pageSize: int(int32)=25, sort: str}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v4/paymentaudit/payouts/{payoutId}
+@required {payoutId: str(uuid)}
+@optional {railsId: str, remoteId: str, remoteSystemId: str, status: str(ACCEPTED/AWAITING_FUNDS/FUNDED/UNFUNDED/BANK_PAYMENT_REQUESTED/REJECTED/ACCEPTED_BY_RAILS/CONFIRMED/FAILED/RETURNED/WITHDRAWN), sourceAmountFrom: int(int32), sourceAmountTo: int(int32), paymentAmountFrom: int(int32), paymentAmountTo: int(int32), submittedDateFrom: str(date), submittedDateTo: str(date), transmissionType: str(ACH/SAME_DAY_ACH/WIRE/LOCAL/GACHO), page: int(int32)=1, pageSize: int(int32)=25, sort: str, sensitive: bool}
+@returns(200) {summary: any, page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v4/paymentaudit/payments
+@optional {payeeId: str(uuid), payorId: str(uuid), payorName: str, remoteId: str, remoteSystemId: str, status: str(ACCEPTED/AWAITING_FUNDS/FUNDED/UNFUNDED/BANK_PAYMENT_REQUESTED/REJECTED/ACCEPTED_BY_RAILS/CONFIRMED/FAILED/RETURNED/WITHDRAWN), transmissionType: str(ACH/SAME_DAY_ACH/WIRE/LOCAL/GACHO), sourceAccountName: str, sourceAmountFrom: int(int32), sourceAmountTo: int(int32), sourceCurrency: str, paymentAmountFrom: int(int32), paymentAmountTo: int(int32), paymentCurrency: str, submittedDateFrom: str(date), submittedDateTo: str(date), paymentMemo: str, payorPaymentId: str, railsId: str, scheduledForDateFrom: str(date), scheduledForDateTo: str(date), scheduleStatus: str(ANY/SCHEDULED/EXECUTED/FAILED), postInstructFxStatus: str(ANY/INITIATED/CANCELLED/EXECUTED/COMPLETED/RETURNED/RESUBMITTED/REFUNDED), transactionReference: str, transactionId: str(uuid), page: int(int32)=1, pageSize: int(int32)=25, sort: str, sensitive: bool}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v4/paymentaudit/payments/{paymentId}
+@required {paymentId: str(uuid)}
+@optional {sensitive: bool}
+@returns(200) {paymentId: str(uuid), payeeId: str(uuid), payorId: str(uuid), payorName: str, quoteId: str(uuid), sourceAccountId: str(uuid), sourceAccountName: str, remoteId: str, remoteSystemId: str, remoteSystemPaymentId: str, sourceAmount: int, sourceCurrency: str, paymentAmount: int, paymentCurrency: str, rate: num(double), invertedRate: num(double), isPaymentCcyBaseCcy: bool, submittedDateTime: str(date-time), status: str, fundingStatus: str, routingNumber: str, accountNumber: str, iban: str, paymentMemo: str, filenameReference: str, individualIdentificationNumber: str, traceNumber: str, payorPaymentId: str, paymentChannelId: str, paymentChannelName: str, accountName: str, railsId: str, countryCode: str, payeeAddressCountryCode: str, events: [map], returnCost: int, returnReason: str, railsPaymentId: str, railsBatchId: str, railsAccountId: str, paymentScheme: str, rejectionReason: str, railsRejectionInformation: str, withdrawnReason: str, withdrawable: bool, autoWithdrawnReasonCode: str, transmissionType: str, transmissionTypeRequested: str, paymentTrackingReference: str, paymentMetadata: str, transactionId: str(uuid), transactionReference: str, schedule: map{scheduleStatus: str, scheduledAt: str(date-time), scheduledFor: str(date-time), scheduledByPrincipalId: str, notificationsEnabled: bool, scheduledBy: str}, postInstructFxInfo: map{fxMode: str, fxStatus: str, fxStatusUpdatedAt: str(date-time), fxTransactionReference: str}, payout: any}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v4/paymentaudit/fundings
+@required {payorId: str(uuid)}
+@optional {sourceAccountName: str, page: int(int32)=1, pageSize: int(int32)=25, sort: str}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v4/paymentaudit/payoutStatistics
+@optional {payorId: str(uuid)}
+@returns(200) {thisMonthPayoutsCount: int, thisMonthFailedPaymentsCount: int}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group payments
+@endpoint GET /v4/payments/deltas
+@required {payorId: str(uuid), updatedSince: str(date-time)}
+@optional {page: int(int32)=1, pageSize: int(int32)=100}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {400}
+
+@endgroup
+
+@group paymentaudit
+@endpoint GET /v4/paymentaudit/transactions
+@optional {payorId: str(uuid), startDate: str(date), endDate: str(date), include: str(payorOnly/payorAndDescendants)}
+@returns(200)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group payouts
+@endpoint POST /v3/payouts
+@required {payments: [map{remoteId!: str, currency!: str, amount!: int(int64), paymentMemo: str, sourceAccountName: str, transactionId: str(uuid), payorPaymentId: str, transmissionType: str, remoteSystemId: str, paymentMetadata: str}]}
+@optional {payoutFromPayorId: str(uuid), payoutToPayorId: str(uuid), payoutMemo: str}
+@returns(202)
+@errors {400, 401, 403}
+
+@endpoint DELETE /v3/payouts/{payoutId}
+@required {payoutId: str(uuid)}
+@returns(202)
+@errors {400, 401, 403, 404}
+
+@endpoint GET /v3/payouts/{payoutId}
+@required {payoutId: str(uuid)}
+@returns(200) {payoutId: str(uuid), status: str, paymentsSubmitted: int, paymentsAccepted: int, paymentsRejected: int, paymentsWithdrawn: int, fxSummaries: [map], accounts: [map], acceptedPayments: [map], rejectedPayments: [map], schedule: map{scheduleStatus: str, scheduledAt: str(date-time), scheduledFor: str(date-time), scheduledByPrincipalId: str, notificationsEnabled: bool}}
+@errors {401, 403, 404}
+
+@endpoint POST /v3/payouts/{payoutId}
+@required {payoutId: str(uuid)}
+@optional {fxRateDegradationThresholdPercentage: num(float)}
+@returns(202)
+@errors {400, 401, 403, 404, 409}
+
+@endpoint POST /v3/payouts/{payoutId}/quote
+@required {payoutId: str(uuid)}
+@returns(200) {fxSummaries: [map]}
+@errors {404, 409}
+
+@endpoint GET /v3/payouts/{payoutId}/payments
+@required {payoutId: str(uuid)}
+@optional {status: str(ACCEPTED/REJECTED/WITHDRAWN/WITHDRAWABLE), remoteId: str, payorPaymentId: str, sourceAccountName: str, transmissionType: str, paymentMemo: str, pageSize: int(int32)=25, page: int(int32)=1}
+@returns(200) {page: any, links: [any], content: [map]}
+@errors {404}
+
+@endpoint DELETE /v3/payouts/{payoutId}/schedule
+@required {payoutId: str(uuid)}
+@returns(204)
+@errors {401, 403, 404, 409}
+
+@endpoint POST /v3/payouts/{payoutId}/schedule
+@required {payoutId: str(uuid), scheduledFor: str(date-time), notificationsEnabled: bool}
+@returns(204)
+@errors {400, 401, 403, 404, 409}
+
+@endgroup
+
+@group paymentChannelRules
+@endpoint GET /v1/paymentChannelRules
+@returns(200) {bank: [map]}
+@errors {401}
+
+@endgroup
+
+@group payments
+@endpoint POST /v1/payments/{paymentId}/withdraw
+@required {paymentId: str(uuid), reason: str}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@group supportedCountries
+@endpoint GET /v1/supportedCountries
+@returns(200) {countries: [map]}
+
+@endpoint GET /v2/supportedCountries
+@returns(200) {countries: [map]}
+
+@endgroup
+
+@group currencies
+@endpoint GET /v2/currencies
+@returns(200) {currencies: [map]}
+
+@endgroup
+
+@group webhooks
+@endpoint GET /v1/webhooks
+@required {payorId: str(uuid)}
+@optional {page: int(int32)=1, pageSize: int(int32)=25}
+@returns(200) {page: map{numberOfElements: int(int64), totalElements: int(int64), totalPages: int(int64), page: int(int64), pageSize: int(int64)}, links: [map], content: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/webhooks
+@required {payorId: str(uuid), webhookUrl: str, enabled: bool}
+@optional {authorizationHeader: str, categories: [str]}
+@returns(201)
+@errors {400, 401, 403}
+
+@endpoint GET /v1/webhooks/{webhookId}
+@required {webhookId: str(uuid)}
+@returns(200) {id: str(uuid), payorId: str(uuid), webhookUrl: str, authorizationHeader: str, enabled: bool, categories: [str]}
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v1/webhooks/{webhookId}
+@required {webhookId: str(uuid)}
+@optional {webhookUrl: str, authorizationHeader: str, enabled: bool, categories: [str]}
+@returns(204)
+@errors {400, 401, 403, 404}
+
+@endpoint POST /v1/webhooks/{webhookId}/ping
+@required {webhookId: str(uuid)}
+@returns(202) {id: str(uuid), webhookId: str(uuid)}
+@errors {400, 401, 403, 404}
+
+@endgroup
+
+@end

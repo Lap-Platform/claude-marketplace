@@ -1,0 +1,391 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Fire Financial Services Business API
+@base https://api.fire.com/business
+@version 1.0
+@auth Bearer bearer
+@endpoints 63
+@hint download_for_search
+@toc apps(5), accounts(8), activities(1), cards(2), me(3), paymentrequests(7), fx(1), limits(1), webhooks(2), batches(16), payments(1), aspsps(1), users(3), payees(3), directdebits(3), mandates(5), services(1)
+
+@group apps
+@endpoint POST /v1/apps/accesstokens
+@optional {clientId: str, refreshToken: str, nonce: int(int64), grantType: str, clientSecret: str}
+@returns(201) {businessId: int(int64), apiApplicationId: int(int64), expiry: str(date-time), permissions: [str], accessToken: str}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group accounts
+@endpoint GET /v1/accounts
+@returns(200) {accounts: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/accounts
+@optional {accountName: str, currency: str(EUR/GBP), acceptFeesAndCharges: bool}
+@returns(201) {ican: int(int64), name: str, colour: str, currency: map{code: str, description: str}, balance: int(int64), status: str, cbic: str, ciban: str, cnsc: str, ccan: str, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/accounts
+@returns(200) {activities: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/accounts/{ican}
+@required {ican: int(int64)}
+@returns(200) {ican: int(int64), name: str, currency: str, balance: int(int64), status: str, accountDetails: map{localDetails: map{nsc: str, accountNumber: str, bic: str, iban: str}, internationalDetails: map{status: str, swiftCode: str, iban: str}}, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool}
+@errors {400, 401, 403}
+
+@endpoint PUT /v2/accounts/{ican}
+@required {ican: str}
+@optional {accountName: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint PUT /v2/accounts/{ican}/internationaldetails
+@required {ican: int(int64)}
+@returns(204)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group activities
+@endpoint GET /v2/activities
+@returns(200) {activities: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group accounts
+@endpoint GET /v1/accounts/{ican}
+@required {ican: int(int64)}
+@returns(200) {ican: int(int64), name: str, colour: str, currency: map{code: str, description: str}, balance: int(int64), status: str, cbic: str, ciban: str, cnsc: str, ccan: str, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool}
+@errors {400, 401, 403}
+
+@endpoint GET /v3/accounts/{ican}/transactions
+@required {ican: int(int64)}
+@optional {limit: int(int64), dateRangeFrom: int(int64), dateRangeTo: int(int64), startAfter: str}
+@returns(200) {links: [map], content: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group cards
+@endpoint GET /v1/cards
+@returns(200) {cards: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/cards
+@optional {userId: int(int64), cardPin: str, eurIcan: int(int64), gbpIcan: int(int64), addressType: str(HOME/BUSINESS), acceptFeesAndCharges: bool}
+@returns(200) {cardId: int(int64), maskedPan: str, expiryDate: str(date-time), status: str}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group me
+@endpoint GET /v1/me/cards/{cardId}/transactions
+@required {cardId: int(int64)}
+@optional {limit: int(int64), offset: int(int64)}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint POST /v1/me/cards/{cardId}/block
+@required {cardId: int(int64)}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint POST /v1/me/cards/{cardId}/unblock
+@required {cardId: int(int64)}
+@returns(204)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group paymentrequests
+@endpoint POST /v1/paymentrequests
+@required {currency: str(EUR/GBP), type: str, icanTo: int(int64), myRef: str, description: str}
+@optional {amount: int(int64), maxNumberPayments: int, expiry: str(date-time), returnUrl: str, orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, collectFields: str, mandatoryFields: str, additionalFields: str}
+@returns(201) {code: str, type: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/paymentrequests/{paymentRequestCode}
+@required {paymentRequestCode: str}
+@returns(200) {code: str, type: str, direction: str, status: str, currency: str, accountName: str, amount: int(int64), description: str, myRef: str, dateCreated: str(date-time), icanTo: int(int64), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, countTimesViewedPaymentDetailsPage: int(int64), countTimesViewedSelectBankPage: int(int64), countTimesViewedConsentPage: int(int64), countTimesViewedResponsePage: int(int64), countTimesConsented: int(int64), countTimesAuthorised: int(int64), totalAmountAuthorised: int(int64), countTimesPaid: int(int64), totalAmountPaid: int(int64)}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/paymentrequests/{paymentRequestCode}/payments
+@required {paymentRequestCode: str}
+@returns(200) {type: str, paymentRequestCode: str, transactionType: str, endToEndId: str, paymentUuid: str, relatedPaymentUuid: str, status: str, reason: str, amountBeforeCharges: int(int64), feeAmount: int(int64), amountAfterCharges: int(int64), currency: map{code: str, description: str}, myRef: str, description: str, returnUrl: str, webhookUrl: str, relatedAccountTxnId: int(int64), relatedPayeeId: int(int64), dateFundsReceived: str(date-time), dateCreated: str(date-time), lastUpdated: str(date-time), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, to: map{type: str, account: map{type: str, account: map{id: int(int64), alias: str, bic: str, iban: str, nsc: str, accountNumber: str}}}, bank: map{aspspUuid: str, alias: str, logoUrl: str, country: map{code: str, description: str}, currency: map{code: str, description: str}, dateCreated: str(date-time), lastUpdated: str(date-time)}, domesticPaymentId: str, allowFopReceipt: bool}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/paymentrequests/{paymentRequestCode}/reports
+@required {paymentRequestCode: str}
+@returns(200) {currency: str, amount: int(int64), numberOfTimes: int(int64)}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/paymentrequests/sent
+@returns(200) {total: int(int64), dateRangeTo: int(int64), paymentRequests: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/paymentrequests/{paymentRequestCode}/public
+@required {paymentRequestCode: str}
+@returns(200) {code: str, pisp: str, status: str, currency: map{code: str, description: str}, amount: int(int64), description: str, dateCreated: str, mandatoryFields: str, sender: map{type: str, name: str, businessAddress: map{type: str, address1: str, city: str, country: map{code: str, description: str}}}}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group fx
+@endpoint GET /v2/fx/rate
+@required {sellCurrency: str, buyCurrency: str}
+@returns(200) {provider: str, buyCurrency: str, sellCurrency: str, fixedSide: str, buyAmount: int(int64), sellAmount: int(int64), rate4d: int(int64)}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group limits
+@endpoint GET /v2/limits
+@returns(200) {limitType: str, level: any, country: map{code: str, description: str}, currency: map{code: str, description: str}, value: int(int64), remainingValue: int(int64)}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group webhooks
+@endpoint GET /v2/webhooks/{webhookId}/events/{event}/test
+@required {webhookId: int(int64), event: str(LODGEMENT_RECEIVED/PAYMENT_RECEIVED/PAYMENT_REQUEST_PAYMENT_RECEIVED/ACCOUNT_CREATED/CARD_CREATED/CARD_AUTHORISATION/CARD_SETTLEMENT/PAYMENT_REQUEST_PAYMENT_AUTHORISED/PIS_LODGEMENT_RECEIVED)}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint GET /v2/webhooks
+@returns(200)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group batches
+@endpoint GET /v2/batches/{batchUuid}/newpayees
+@required {batchUuid: str}
+@returns(200) {total: int(int64), items: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group payments
+@endpoint GET /v2/payments/{paymentUuid}
+@required {paymentUuid: str}
+@returns(200) {type: str, paymentRequestCode: str, transactionType: str, endToEndId: str, paymentUuid: str, relatedPaymentUuid: str, status: str, reason: str, amountBeforeCharges: int(int64), feeAmount: int(int64), amountAfterCharges: int(int64), currency: map{code: str, description: str}, myRef: str, description: str, returnUrl: str, webhookUrl: str, relatedAccountTxnId: int(int64), relatedPayeeId: int(int64), dateFundsReceived: str(date-time), dateCreated: str(date-time), lastUpdated: str(date-time), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, to: map{type: str, account: map{type: str, account: map{id: int(int64), alias: str, bic: str, iban: str, nsc: str, accountNumber: str}}}, bank: map{aspspUuid: str, alias: str, logoUrl: str, country: map{code: str, description: str}, currency: map{code: str, description: str}, dateCreated: str(date-time), lastUpdated: str(date-time)}, domesticPaymentId: str, allowFopReceipt: bool}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group aspsps
+@endpoint GET /v1/aspsps
+@optional {currency: str}
+@returns(200) {total: int, aspsps: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group users
+@endpoint GET /v1/users
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint GET /v1/users/{userId}
+@required {userId: int(int64)}
+@returns(200) {id: int(int64), emailAddress: str, firstName: str, lastName: str, mobileNumber: str, role: str, status: str, lastlogin: str, userCvl: str, mobileApplicationDetails: map{businessUserId: int(int64), mobileApplicationId: int(int64), clientID: str, status: str, deviceName: str, OS: str, deviceOSVersion: str}}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group apps
+@endpoint GET /v1/apps
+@returns(200) {applications: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/apps
+@optional {ican: int(int64), enabled: bool, expiry: str(date-time), applicationName: str, numberOfPaymentApprovalsRequired: int, numberOfPayeeApprovalsRequired: int, permissions: [str]}
+@returns(201) {clientId: str, refreshToken: str, clientKey: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/apps/{applicationId}/permissions
+@required {applicationId: int(int64)}
+@returns(200) {permissions: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/apps/permissions
+@returns(200) {permissions: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group payees
+@endpoint GET /v1/payees
+@optional {limit: int(int64), offset: int(int64)}
+@returns(200) {total: int, fundingSources: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/payees/{payeeId}
+@required {payeeId: int(int64)}
+@returns(200) {id: int(int64), currency: map{code: str, description: str}, status: str, accountName: str, accountHolderName: str, bic: str, iban: str, nsc: str, accountNumber: str, combinedAccountNumbers: str, createdBy: str, dateCreated: str(date-time)}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/payees/{payeeId}/transactions
+@required {payeeId: int(int64)}
+@returns(200) {total: int(int64), dateRangeTo: int(int64), transactions: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group directdebits
+@endpoint GET /v1/directdebits
+@required {mandateUuid: str}
+@returns(200) {total: int(int64), directdebits: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/directdebits/{directDebitUuid}
+@required {directDebitUuid: str}
+@returns(200) {directDebitUuid: str, currency: map{code: str, description: str}, status: str, type: str, mandateUUid: str, originatorReference: str, originatorName: str, originatorAlias: str, directDebitReference: str, targetIcan: int(int64), targetPayeeId: int(int64), isDDIC: bool, amount: int(int64), schemeRejectReason: str, schemeRejectReasonCode: str, lastUpdated: str(date-time), dateCreated: str(date-time)}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/directdebits/{directDebitUuid}/reject
+@required {directDebitUuid: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group mandates
+@endpoint GET /v1/mandates
+@returns(200) {total: int(int64), mandates: [map]}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/mandates/{mandateUuid}
+@required {mandateUuid: str}
+@returns(200) {mandateUuid: str, currency: map{code: str, description: str}, status: str, originatorReference: str, originatorName: str, originatorAlias: str, originatorLogoUrlSmall: str, originatorLogoUrlLarge: str, mandateReference: str, alias: str, targetIcan: int(int64), numberOfDirectDebitCollected: int(int64), valueOfDirectDebitCollected: int(int64), latestDirectDebitAmount: int(int64), latestDirectDebitDate: str(date-time), fireRejectionReason: str, schemeCancelReason: str, schemeCancelReasonCode: str, lastUpdated: str(date-time), dateCreated: str(date-time), dateCompleted: str(date-time), dateCancelled: str(date-time)}
+@errors {400, 401, 403}
+
+@endpoint PUT /v1/mandates/{mandateUuid}
+@required {mandateUuid: str}
+@optional {alias: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint POST /v1/mandates/{mandateUuid}/cancel
+@required {mandateUuid: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint POST /v1/mandates/{mandateUuid}/activate
+@required {mandateUuid: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group batches
+@endpoint POST /v1/batches
+@optional {type: str(BANK_TRANSFER/INTERNAL_TRANSFER/INTERNATIONAL_TRANSFER), currency: str, batchName: str, jobNumber: str, callbackUrl: str}
+@returns(200) {batchUuid: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/batches
+@optional {batchTypes: str(INTERNAL_TRANSFER/BANK_TRANSFER/INTERNATIONAL_TRANSFER/NEW_PAYEE), orderBy: str, order: str(DESC/ASC), offset: int(int64), limit: int(int64)}
+@returns(200) {total: int(int64), batchRequests: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/batches/{batchUuid}/internaltransfers
+@required {batchUuid: str}
+@optional {icanFrom: int(int64), icanTo: int(int64), amount: int(int64), ref: str}
+@returns(200) {batchItemUuid: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/batches/{batchUuid}/internaltransfers
+@required {batchUuid: str}
+@optional {offset: int(int64), limit: int(int64)}
+@returns(200) {total: int(int64), items: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v1/batches/{batchUuid}/banktransfers
+@required {batchUuid: str}
+@returns(200) {batchItemUuid: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v1/batches/{batchUuid}/banktransfers
+@required {batchUuid: str}
+@optional {offset: int(int64), limit: int(int64)}
+@returns(200) {total: int(int64), items: [map]}
+@errors {400, 401, 403}
+
+@endpoint POST /v2/batches/{batchUuid}/internationaltransfers
+@required {batchUuid: str}
+@optional {icanFrom: int(int64), payeeId: int(int64), amount: int(int64), myRef: str, yourRef: str, paymentReason: str}
+@returns(200) {batchItemUuid: str}
+@errors {400, 401, 403}
+
+@endpoint GET /v2/batches/{batchUuid}/internationaltransfers
+@required {batchUuid: str}
+@optional {offset: int(int64), limit: int(int64)}
+@returns(200) {total: int(int64), items: [map]}
+@errors {400, 401, 403}
+
+@endpoint DELETE /v1/batches/{batchUuid}/internaltransfers/{itemUuid}
+@required {batchUuid: str, itemUuid: str}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint DELETE /v1/batches/{batchUuid}/banktransfers/{itemUuid}
+@required {batchUuid: str, itemUuid: str}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint DELETE /v2/batches/{batchUuid}/internationaltransfers/{itemUuid}
+@required {batchUuid: str, itemUuid: str}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint DELETE /v1/batches/{batchUuid}
+@required {batchUuid: str}
+@returns(200)
+@errors {400, 401, 403}
+
+@endpoint GET /v1/batches/{batchUuid}
+@required {batchUuid: str}
+@returns(200) {batchUuid: str, type: str, status: str, sourceName: str, batchName: str, jobNumber: str, callbackUrl: str, currency: str, numberOfItemsSubmitted: int(int64), valueOfItemsSubmitted: int(int64), numberOfItemsFailed: int(int64), valueOfItemsFailed: int(int64), numberOfItemsSucceeded: int(int64), valueOfItemsSucceeded: int(int64), lastUpdated: str(date-time), dateCreated: str(date-time)}
+@errors {400, 401, 403}
+
+@endpoint PUT /v1/batches/{batchUuid}
+@required {batchUuid: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endpoint GET /v1/batches/{batchUuid}/approvals
+@required {batchUuid: str}
+@returns(200) {approvals: [map]}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group users
+@endpoint GET /v2/users/{userId}/address
+@required {userId: int(int64)}
+@returns(200) {type: str, address1: str, city: str, country: map{code: str, description: str}, postcode: str}
+@errors {400, 401, 403}
+
+@endgroup
+
+@group services
+@endpoint GET /v2/services
+@returns(200)
+@errors {400, 401, 403}
+
+@endgroup
+
+@group paymentrequests
+@endpoint PUT /v2/paymentrequests/{paymentRequestCode}/status
+@required {paymentRequestCode: str}
+@optional {status: str}
+@returns(204)
+@errors {400, 401, 403}
+
+@endgroup
+
+@end

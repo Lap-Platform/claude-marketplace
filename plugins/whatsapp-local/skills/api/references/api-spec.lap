@@ -1,0 +1,264 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api WhatsApp Business API
+@base http://example.com/v1
+@version 1.0
+@auth Bearer basic | Bearer bearer
+@endpoints 55
+@hint download_for_search
+@toc users(6), settings(17), account(3), contacts(1), messages(2), groups(13), health(1), media(3), stats(2), metrics(1), support(1), certificates(5)
+
+@group users
+@endpoint POST /users/login
+@required {new_password: str}
+@returns(200)
+
+@endpoint POST /users
+@required {username: str, password: str}
+@returns(200)
+
+@endpoint GET /users/{UserUsername}
+@required {UserUsername: str}
+@returns(200)
+
+@endpoint PUT /users/{UserUsername}
+@required {UserUsername: str, password: str}
+@returns(200)
+
+@endpoint DELETE /users/{UserUsername}
+@required {UserUsername: str}
+@returns(200)
+
+@endpoint POST /users/logout
+@returns(200)
+
+@endgroup
+
+@group settings
+@endpoint GET /settings/application
+@returns(200) {callback_backoff_delay_ms: str, max_callback_backoff_delay_ms: str, callback_persist: bool, media: map{auto_download: [str]}, webhooks: map{url: str, max_concurrent_requests: int(int32)}, on_call_pager: str, pass_through: bool, sent_status: bool, unhealthy_interval: int, heartbeat_interval: int}
+
+@endpoint DELETE /settings/application
+@returns(200)
+
+@endpoint PATCH /settings/application
+@optional {callback_backoff_delay_ms: str=3000, max_callback_backoff_delay_ms: str=900000, callback_persist: bool=True, media: map{auto_download!: [str]}, webhooks: map{url: str, max_concurrent_requests: int(int32)}, on_call_pager: str, pass_through: bool=True, sent_status: bool=False, unhealthy_interval: int=30, heartbeat_interval: int=5}
+@returns(200) {meta: map{version: str, api_status: str}, errors: [map]}
+
+@endgroup
+
+@group account
+@endpoint POST /account/shards
+@required {cc: str, phone_number: str, shards: int(int32)(1/2/4/8/16/32), pin: str}
+@returns(200)
+
+@endgroup
+
+@group settings
+@endpoint GET /settings/application/media/providers
+@returns(200)
+
+@endpoint POST /settings/application/media/providers
+@returns(200)
+
+@endpoint DELETE /settings/application/media/providers/{ProviderName}
+@required {ProviderName: str}
+@returns(200)
+
+@endpoint POST /settings/backup
+@required {password: str}
+@returns(200) {settings: map{data: str}}
+
+@endpoint POST /settings/restore
+@required {password: str, data: str}
+@returns(200)
+
+@endpoint GET /settings/business/profile
+@returns(200)
+
+@endpoint POST /settings/business/profile
+@required {address: str, description: str, email: str, vertical: str, websites: [str]}
+@returns(200)
+
+@endpoint GET /settings/profile/about
+@returns(200) {settings: map{profile: map{about: map{text: str}}}}
+
+@endpoint PATCH /settings/profile/about
+@required {text: str}
+@returns(200)
+
+@endpoint POST /settings/account/two-step
+@required {pin: str}
+@returns(200)
+
+@endpoint DELETE /settings/account/two-step
+@returns(200)
+
+@endgroup
+
+@group account
+@endpoint POST /account/verify
+@required {code: str}
+@returns(200)
+
+@endgroup
+
+@group contacts
+@endpoint POST /contacts
+@required {contacts: [str]}
+@optional {blocking: str(no_wait/wait)=no_wait}
+@returns(200)
+
+@endgroup
+
+@group messages
+@endpoint POST /messages
+@required {to: str}
+@optional {type: str(audio/contacts/document/hsm/image/location/text/video/voice/unknown)=text, recipient_type: str(individual/group)=individual, text: map{body!: str}, audio: map, image: map, document: map, video: map, hsm: map{namespace!: str, element_name!: str, language!: map{policy!: str, code!: str}, localizable_params!: [map{default!: str, currency: map, date_time: map}]}, ttl: map, contacts: [map{addresses: [map{city!: str, country!: str, country_code!: str, state!: str, street!: str, type!: str, zip!: str}], birthday: str, emails: [map{email!: str, type!: str}], ims: [str], name: map{first_name: str, formatted_name!: str, last_name: str, suffix: str, prefix: str}, org: map{company!: str, department: str, title: str}, phones: [map{phone: str, type: str, wa_id: str}], urls: [map{url: str, type: str}]}], location: map{longitude!: str, latitude!: str, name!: str, address!: str}, preview_url: bool}
+@returns(200)
+
+@endpoint PUT /messages/{MessageID}
+@required {MessageID: str, status: str=read}
+@returns(200)
+
+@endgroup
+
+@group groups
+@endpoint GET /groups
+@returns(200)
+
+@endpoint POST /groups
+@required {subject: str}
+@returns(200)
+
+@endpoint GET /groups/{GroupId}
+@required {GroupId: str}
+@returns(200)
+
+@endpoint PUT /groups/{GroupId}
+@required {GroupId: str, subject: str}
+@returns(200)
+
+@endpoint GET /groups/{GroupId}/invite
+@required {GroupId: str}
+@returns(200)
+
+@endpoint DELETE /groups/{GroupId}/invite
+@required {GroupId: str}
+@returns(200)
+
+@endpoint DELETE /groups/{GroupId}/participants
+@required {GroupId: str, wa_ids: [str]}
+@returns(200)
+
+@endpoint POST /groups/{GroupId}/leave
+@required {GroupId: str}
+@returns(200)
+
+@endpoint GET /groups/{GroupId}/icon
+@required {GroupId: str}
+@returns(200)
+
+@endpoint POST /groups/{GroupId}/icon
+@required {GroupId: str}
+@returns(200)
+
+@endpoint DELETE /groups/{GroupId}/icon
+@required {GroupId: str}
+@returns(200)
+
+@endpoint DELETE /groups/{GroupId}/admins
+@required {GroupId: str, wa_ids: [str]}
+@returns(200)
+
+@endpoint PATCH /groups/{GroupId}/admins
+@required {GroupId: str, wa_ids: [str]}
+@returns(200)
+
+@endgroup
+
+@group health
+@endpoint GET /health
+@returns(200)
+
+@endgroup
+
+@group settings
+@endpoint GET /settings/profile/photo
+@optional {format: str}
+@returns(200) {settings: map{profile: map{photo: map{link: str}}}}
+
+@endpoint POST /settings/profile/photo
+@returns(200)
+
+@endpoint DELETE /settings/profile/photo
+@returns(200)
+
+@endgroup
+
+@group account
+@endpoint POST /account
+@required {cc: str, phone_number: str, method: str(sms/voice), cert: str}
+@optional {pin: str}
+@returns(201)
+@returns(202) {account: [map]}
+
+@endgroup
+
+@group media
+@endpoint POST /media
+@returns(200)
+
+@endpoint GET /media/{MediaId}
+@required {MediaId: str}
+@returns(200)
+
+@endpoint DELETE /media/{MediaId}
+@required {MediaId: str}
+@returns(200)
+
+@endgroup
+
+@group stats
+@endpoint GET /stats/app
+@optional {format: str}
+@returns(200)
+
+@endpoint GET /stats/db
+@optional {format: str}
+@returns(200)
+
+@endgroup
+
+@group metrics
+@endpoint GET /metrics
+@optional {format: str}
+@returns(200)
+
+@endgroup
+
+@group support
+@endpoint GET /support
+@returns(200)
+
+@endgroup
+
+@group certificates
+@endpoint GET /certificates/external/ca
+@returns(200)
+
+@endpoint POST /certificates/external
+@returns(200)
+
+@endpoint GET /certificates/webhooks/ca
+@returns(200)
+
+@endpoint POST /certificates/webhooks/ca
+@returns(200)
+
+@endpoint DELETE /certificates/webhooks/ca
+@returns(200)
+
+@endgroup
+
+@end

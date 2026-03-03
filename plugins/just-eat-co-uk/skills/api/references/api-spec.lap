@@ -1,0 +1,626 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Just Eat API
+@base https://uk.api.just-eat.io
+@version 1.0.0
+@auth ApiKey Authorization in header | Bearer basic | Bearer bearer | openIdConnect | Bearer bearer
+@endpoints 98
+@hint download_for_search
+@toc {tenant}(4), attempted-delivery-query-resolved(1), delivery-failed(1), checkout(3), orders(20), late-order-compensation-query(1), late-order-query(1), consumers(7), delivery-fees(1), delivery(12), acceptance-requested(1), order-accepted(1), order-cancelled(1), order-rejected(1), redelivery-requested(1), driver-assigned-to-delivery(1), driver-at-delivery-address(1), driver-at-restaurant(1), driver-has-delivered-order(1), driver-location(1), driver-on-their-way-to-delivery-address(1), order-is-ready-for-pickup(1), order-requires-delivery-acceptance(1), order-ready-for-preparation-async(1), order-ready-for-preparation-sync(1), send-to-pos-failed(1), restaurants(24), restaurant-offline-status(1), restaurant-online-status(1), order-eligible-for-restaurant-compensation(1), menu-ingestion-complete(1), order-time-updated(1), search(2)
+
+@group {tenant}
+@endpoint POST /{tenant}/orders/{orderId}/queries/attempteddelivery
+@required {tenant: str, orderId: str, Authorization: str}
+@optional {ReasonCode: str(problem_with_address/no_answer)}
+@returns(200)
+@errors {400, 401, 404, 500}
+
+@endpoint POST /{tenant}/orders/{orderId}/queries/attempteddelivery/resolution/redeliverorder
+@required {tenant: str, orderId: str, Authorization: str}
+@optional {Status: str(driver_at_address/repreparing), NewDueDate: str(date-time)}
+@returns(200)
+@errors {400, 401, 404, 500}
+
+@endgroup
+
+@group attempted-delivery-query-resolved
+@endpoint PUT /attempted-delivery-query-resolved
+@optional {OrderId: str, Tenant: str(uk/dk/es/ie/it/no/au/nz), Resolution: map{Type: str, Cancellation: map{Reason: str}, Redelivery: map{Status: str, NewDueDate: str(date-time), CustomerTimeZone: str}}}
+@returns(200)
+
+@endgroup
+
+@group delivery-failed
+@endpoint PUT /delivery-failed
+@optional {OrderId: str, RestaurantId: num, Reason: str, Tenant: str}
+@returns(200)
+
+@endgroup
+
+@group checkout
+@endpoint GET /checkout/{tenant}/{checkoutId}
+@required {tenant: str, checkoutId: str, User-Agent: str}
+@returns(200) {restaurant: map{id: str, availabilityId: str}, serviceType: str, customer: map{firstName: str?, lastName: str?, phoneNumber: str?}, fulfilment: map{time: map?{asap: bool, scheduled: map?{from: str, to: str}}, location: map?{address: map?{lines: [str], locality: str?, administrativeArea: str?, postalCode: str?}, geolocation: map?{latitude: num(decimal), longitude: num(decimal)}}}, isFulfillable: bool, issues: [map]}
+@errors {400, 401, 403, 404, 409, 429, 500, 503}
+
+@endpoint PATCH /checkout/{tenant}/{checkoutId}
+@required {tenant: str, checkoutId: str, User-Agent: str}
+@returns(200) {isFulfillable: bool, issues: [map]}
+@errors {400, 401, 403, 404, 409, 429, 500, 503}
+
+@endpoint GET /checkout/{tenant}/{checkoutId}/fulfilment/availabletimes
+@required {tenant: str, checkoutId: str, User-Agent: str}
+@returns(200) {times: [map], asapAvailable: bool}
+@errors {400, 404, 409, 429, 500, 503}
+
+@endgroup
+
+@group orders
+@endpoint POST /orders/{tenant}/{orderId}/consumerqueries/lateorder/restaurantresponse
+@required {tenant: str, orderId: str, Authorization: str}
+@optional {lateOrderStatus: str(Preparing/OnItsWay/Delivered), additionalDeliveryTimeToAddMinutes: int}
+@returns(202)
+@errors {400, 401, 404, 409, 500}
+
+@endpoint POST /orders/{tenant}/{orderId}/consumerqueries/lateordercompensation/restaurantresponse
+@required {tenant: str, orderId: str, Authorization: str}
+@optional {orderId: str, isAccepted: bool, acceptedAmount: int, rejectedReasonCode: str(BadTraffic/BadWeather/BusierThanExpected/CompensatedWithItem/NoReason)}
+@returns(202)
+@errors {400, 401, 404, 409, 500}
+
+@endgroup
+
+@group late-order-compensation-query
+@endpoint POST /late-order-compensation-query
+@optional {restaurantId: str, orderId: str, tenant: str, compensationOptions: [map{amount: num(decimal), isRecommended: bool}]}
+@returns(200)
+
+@endgroup
+
+@group late-order-query
+@endpoint POST /late-order-query
+@optional {restaurantId: str, orderId: str, tenant: str}
+@returns(200)
+
+@endgroup
+
+@group consumers
+@endpoint POST /consumers/{tenant}
+@required {tenant: str, emailAddress: str(email), firstName: str, lastName: str}
+@optional {password: str, registrationSource: str(Native/Guest)=Native, marketingPreferences: [map{channelName: str, isSubscribed: bool, dateUpdated: str(date-time)}]}
+@returns(201) {type: str, token: str}
+@errors {400, 403, 404, 409, 500}
+
+@endpoint GET /consumers/{tenant}
+@required {tenant: str, emailAddress: str, accountType: str=registered, count: str}
+@returns(200)
+@errors {400, 404, 500, 501}
+
+@endpoint GET /consumers/{tenant}/me/communication-preferences
+@required {tenant: str}
+@returns(200) {marketing: map{isDefault: bool, subscribedChannels: [str]}}
+@errors {401, 403, 404, 500}
+
+@endpoint GET /consumers/{tenant}/me/communication-preferences/{type}
+@required {tenant: str, type: str}
+@returns(200) {isDefault: bool, subscribedChannels: [str]}
+@errors {401, 403, 404, 500}
+
+@endpoint PUT /consumers/{tenant}/me/communication-preferences/{type}
+@required {tenant: str, type: str}
+@optional {subscribedChannels: [str]}
+@returns(204)
+@errors {401, 404, 500}
+
+@endpoint POST /consumers/{tenant}/me/communication-preferences/{type}/subscribedChannels/{channel}
+@required {tenant: str, type: str, channel: str}
+@returns(204)
+@errors {401, 403, 404, 500}
+
+@endpoint DELETE /consumers/{tenant}/me/communication-preferences/{type}/subscribedChannels/{channel}
+@required {tenant: str, type: str, channel: str}
+@returns(204)
+@errors {401, 404, 500}
+
+@endgroup
+
+@group delivery-fees
+@endpoint GET /delivery-fees/{tenant}
+@required {tenant: str, restaurantIds: [str], deliveryTime: str(date-time)}
+@optional {zone: str, latlong: [num(double)]}
+@returns(200) {restaurants: [map]}
+@errors {400, 404}
+
+@endgroup
+
+@group delivery
+@endpoint GET /delivery/pools
+@returns(200) {delivery-pool-id: map{name: str, restaurants: [num(int32)]}}
+@errors {500}
+
+@endpoint POST /delivery/pools
+@required {name: str}
+@optional {restaurants: [num(int32)]}
+@returns(201)
+@errors {400, 500}
+
+@endpoint GET /delivery/pools/{deliveryPoolId}
+@returns(200) {name: str, restaurants: [num(int32)]}
+@errors {404, 500}
+
+@endpoint DELETE /delivery/pools/{deliveryPoolId}
+@returns(200)
+@errors {404, 500}
+
+@endpoint PATCH /delivery/pools/{deliveryPoolId}
+@optional {name: str, restaurants: [num(int32)]}
+@returns(202) {name: str, restaurants: [num(int32)]}
+@errors {400, 404, 409, 500}
+
+@endpoint PUT /delivery/pools/{deliveryPoolId}
+@required {name: str}
+@optional {restaurants: [num(int32)]}
+@returns(202) {name: str, restaurants: [num(int32)]}
+@errors {400, 404, 409, 500}
+
+@endpoint GET /delivery/pools/{deliveryPoolId}/availability/relative
+@returns(200) {bestGuess: str}
+@errors {404}
+
+@endpoint PUT /delivery/pools/{deliveryPoolId}/availability/relative
+@optional {bestGuess: str}
+@returns(202)
+@errors {404}
+
+@endpoint PUT /delivery/pools/{deliveryPoolId}/hours
+@required {monday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, tuesday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, wednesday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, thursday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, friday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, saturday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, sunday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}}
+@returns(200)
+@errors {404}
+
+@endpoint PUT /delivery/pools/{deliveryPoolId}/restaurants
+@returns(200) {restaurants: [num(int32)]}
+@errors {400, 404, 409}
+
+@endpoint DELETE /delivery/pools/{deliveryPoolId}/restaurants
+@optional {restaurants: [num(int32)]}
+@returns(200)
+@errors {400, 404}
+
+@endgroup
+
+@group orders
+@endpoint PUT /orders/{orderId}/accept
+@required {orderId: str}
+@optional {TimeAcceptedFor: str(date-time)}
+@returns(200)
+@errors {404, 409}
+
+@endpoint PUT /orders/{orderId}/cancel
+@required {orderId: str}
+@optional {Message: str}
+@returns(200)
+@errors {404, 409}
+
+@endpoint POST /orders/{orderId}/complete
+@required {orderId: str}
+@returns(204)
+@errors {404, 409, 500}
+
+@endpoint PUT /orders/{orderId}/duedate
+@required {orderId: str}
+@optional {DueDate: str(date-time)}
+@returns(200)
+@errors {400, 404}
+
+@endpoint PUT /orders/{orderId}/ignore
+@required {orderId: str}
+@returns(200)
+@errors {404, 409}
+
+@endpoint POST /orders/{orderId}/readyforcollection
+@required {orderId: str}
+@returns(204)
+@errors {400, 404, 409, 500}
+
+@endpoint PUT /orders/{orderId}/reject
+@required {orderId: str}
+@optional {Message: str}
+@returns(200)
+@errors {404, 409}
+
+@endgroup
+
+@group acceptance-requested
+@endpoint POST /acceptance-requested
+@optional {OrderId: str, FriendlyOrderReference: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, PhoneNumber: str, PhoneMaskingCode: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: num, Name: str, PreviousRestaurantOrderCount: num, PreviousTotalOrderCount: num}, Restrictions: [map{Type: str}], Items: [map{Reference: str, Name: str, Quantity: num, UnitPrice: num(money), TotalPrice: num(money), Items: [map{Reference: str, Name: str, Quantity: num, UnitPrice: num(money), TotalPrice: num(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, PlacedDate: str(date-time), CustomerNotes: map, Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, TimeZone: str, PhoneNumber: str}, IsTest: bool}
+@returns(200)
+
+@endgroup
+
+@group order-accepted
+@endpoint POST /order-accepted
+@optional {OrderId: str, AcceptedFor: str(date-time), Event: str}
+@returns(200)
+
+@endgroup
+
+@group order-cancelled
+@endpoint POST /order-cancelled
+@optional {OrderId: str, Event: str, Reason: str(cust_cancelled_changed_mind/cust_cancelled_delivery_too_long/cust_cancelled_made_mistake/cust_cancelled_other/delivery_partner_cancelled/rest_cancelled_customer_absent/rest_cancelled_customer_requested/rest_cancelled_declined/rest_cancelled_drivers_unavailable/rest_cancelled_fake_order/rest_cancelled_other/rest_cancelled_out_of_stock/rest_cancelled_too_busy/system_cancelled_other/system_cancelled_test_order)}
+@returns(200)
+
+@endgroup
+
+@group order-rejected
+@endpoint POST /order-rejected
+@optional {RejectedAt: str(date-time), RejectedBy: str, RejectedReason: str, Event: str}
+@returns(200)
+
+@endgroup
+
+@group redelivery-requested
+@endpoint PUT /redelivery-requested
+@optional {OrderId: str, Tenant: str, Update: str, Notes: str}
+@returns(200)
+
+@endgroup
+
+@group delivery
+@endpoint GET /delivery/estimate
+@required {restaurantReference: str}
+@optional {toLat: str, toLon: str, toPostcode: str}
+@returns(200) {RestaurantReference: str, DurationInMinutes: str}
+
+@endgroup
+
+@group orders
+@endpoint PUT /orders/{orderId}/deliverystate/atdeliveryaddress
+@required {orderId: str}
+@optional {Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/{orderId}/deliverystate/atrestaurant
+@required {orderId: str}
+@optional {EtaAtDeliveryAddress: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/{orderId}/deliverystate/atrestauranteta
+@required {orderId: str}
+@optional {estimatedAt: str(date-time), bestGuess: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/{orderId}/deliverystate/delivered
+@required {orderId: str}
+@optional {Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/{orderId}/deliverystate/driverassigned
+@required {orderId: str}
+@optional {DriverName: str, DriverContactNumber: str, VehicleDetails: map{Vehicle: str, VehicleRegistration: str}, EtaAtRestaurant: str(date-time), EtaAtDeliveryAddress: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/{orderId}/deliverystate/driverlocation
+@required {orderId: str}
+@optional {EtaAtDeliveryAddress: str(date-time), EtaAtRestaurant: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/{orderId}/deliverystate/driverunassigned
+@required {orderId: str}
+@optional {Comment: str, DriverContactNumber: str, DriverName: str, EtaAtDeliveryAddress: str(date-time), EtaAtRestaurant: str(date-time), Location:: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, Reason: str, TimeStampWithUtcOffset: str(date-time), UnassignedBy: str}
+@returns(200)
+@errors {400}
+
+@endpoint PUT /orders/{orderId}/deliverystate/onitsway
+@required {orderId: str}
+@optional {EstimatedArrivalTime: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
+@returns(200)
+
+@endpoint PUT /orders/deliverystate/driverlocation
+@returns(200)
+
+@endgroup
+
+@group driver-assigned-to-delivery
+@endpoint PUT /driver-assigned-to-delivery
+@optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group driver-at-delivery-address
+@endpoint PUT /driver-at-delivery-address
+@optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group driver-at-restaurant
+@endpoint PUT /driver-at-restaurant
+@optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group driver-has-delivered-order
+@endpoint PUT /driver-has-delivered-order
+@optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group driver-location
+@endpoint PUT /driver-location
+@optional {TimeStamp: str(date-time), OrderId: str, Location: map{Latitude!: num(double), Longitude!: num(double)}}
+@returns(200)
+
+@endgroup
+
+@group driver-on-their-way-to-delivery-address
+@endpoint PUT /driver-on-their-way-to-delivery-address
+@optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group order-is-ready-for-pickup
+@endpoint PUT /order-is-ready-for-pickup
+@optional {Event: str, Timestamp: str(date-time)}
+@returns(200)
+
+@endgroup
+
+@group order-requires-delivery-acceptance
+@endpoint PUT /order-requires-delivery-acceptance
+@returns(201)
+
+@endgroup
+
+@group orders
+@endpoint POST /orders
+@required {OrderReference: str, TotalPrice: num(double), Restaurant: any, Customer: map{Name!: str, Email: str, PhoneNumber!: str, DisplayPhoneNumber: str, Address!: map{Lines!: [str], City!: str, PostalCode!: str, GeoLocation: map}}, Fulfilment: map{Method!: str, DueDate!: str(date-time), DueAsap: bool}, Payment: map{PaidDate: str(date-time), Tips: [map{Value: num(money), Type: str}], Fees: [map{Value: num(money), Type: str}], Taxes: [map{Value!: num(money), Type!: str, Percentage!: num(double)}], Lines!: [map{Type!: str, Value: num(money), Paid: bool, LastCardDigits: str, ServiceFee: num(double)}]}, Items: [map{TotalPrice!: num(money), Reference!: str, Name!: str, Quantity!: int, UnitPrice: int(money), Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map]}]}]}
+@optional {x-je-api-version: num=1, FriendlyOrderReference: str, CustomerNotes: map{NoteForRestaurant: str, NoteForDelivery: str}, IsTest: bool}
+@returns(201) {OrderId: str}
+@errors {400, 409}
+
+@endgroup
+
+@group order-ready-for-preparation-async
+@endpoint POST /order-ready-for-preparation-async
+@optional {OrderId: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PrepareFor: str(date-time), PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: str, Name: str}, Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, CustomerNotes: map, PlacedDate: str(date-time), Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, IsTest: bool}
+@returns(202)
+@errors {400}
+
+@endgroup
+
+@group order-ready-for-preparation-sync
+@endpoint POST /order-ready-for-preparation-sync
+@optional {OrderId: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PrepareFor: str(date-time), PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: str, Name: str}, Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, CustomerNotes: map, PlacedDate: str(date-time), Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, IsTest: bool}
+@returns(200)
+
+@endgroup
+
+@group send-to-pos-failed
+@endpoint POST /send-to-pos-failed
+@optional {OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group restaurants
+@endpoint GET /restaurants/{tenant}/{restaurantId}/customerclaims
+@required {tenant: str, restaurantId: str}
+@optional {fromDate: str(date-time), toDate: str(date-time), limit: int(int32)=20, offset: int(int32), Accept: str}
+@returns(200) {claims: [map]}
+@errors {400, 401, 403, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/customerclaims/{id}
+@required {tenant: str, restaurantId: str, id: str}
+@optional {Accept: str}
+@returns(200) {id: str, orderId: str, friendlyOrderReference: str, issueType: str, submittedDate: str(date-time), expirationDate: str(date-time), currency: str, totalClaimed: num, state: str, resolution: map?{decision: str, totalClaimedAccepted: num, resolvedDate: str(date-time), resolvedChannel: str}, restaurantResponse: map?{decision: str, items: [map]?, justification: map?{reason: str, comments: str?}}, affectedItems: [map]?}
+@errors {401, 403, 404, 500}
+
+@endpoint POST /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse
+@required {tenant: str, restaurantId: str, id: str, Content-Type: str}
+@optional {decision: str(Accepted/Rejected/PartiallyAccepted), items: [map{id: str, decision: str}], justification: map{reason: str, comments: str}}
+@returns(201)
+@errors {400, 401, 403, 404, 409, 422, 500}
+
+@endpoint PUT /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse/justification
+@required {tenant: str, restaurantId: str, id: str, Content-Type: str}
+@optional {reason: str(AlreadyRefunded/ItemReplaced/PartialRefundRequired/WasNotMissing/WillRedeliver/OrderWasHot/OrderWasOnTime/OrderWasPacked/FoodWasIntact/AddExtraItem/Other), comments: str}
+@returns(204)
+@errors {400, 401, 403, 404, 409, 500}
+
+@endgroup
+
+@group {tenant}
+@endpoint DELETE /v1/{tenant}/restaurants/{id}/event/offline
+@required {tenant: str, id: str, X-JE-Requester: str, X-JE-User-Role: str}
+@returns(200)
+@returns(202)
+@errors {400, 500}
+
+@endpoint POST /v1/{tenant}/restaurants/event/offline
+@required {tenant: str, X-JE-Requester: str, X-JE-User-Role: str, restaurantIds: str, name: str, reason: str, startDate: str(date-time), allowRestaurantOverride: bool}
+@optional {endDate: str(date-time), duration: str, legacyTempOfflineType: str(Unset/None/TempOffline/ClosedToday/ClosedDueToEvent/FailedJctConnection/NoTrOverride/IgnoredOrders)=ClosedDueToEvent, category: str}
+@returns(201) {restaurantEventId: str, restaurantIds: str}
+@errors {400, 500}
+
+@endgroup
+
+@group restaurant-offline-status
+@endpoint PUT /restaurant-offline-status
+@optional {Tenant: str(enum)(au/dk/es/ie/it/no/uk/nz), RestaurantId: str, IsOffline: bool, AllowRestaurantOverride: bool}
+@returns(200)
+
+@endgroup
+
+@group restaurant-online-status
+@endpoint PUT /restaurant-online-status
+@optional {Tenant: str(enum)(au/dk/es/ie/it/no/uk/nz), RestaurantId: str, IsOffline: bool, AllowRestaurantOverride: bool}
+@returns(200)
+
+@endgroup
+
+@group orders
+@endpoint POST /orders/{tenant}/{orderId}/restaurantqueries/compensation
+@required {tenant: str, orderId: str, Authorization: str}
+@optional {ReasonCode: str(NotSet/BeingPrepared/OnItsWay/Delivered/Unknown), Comments: str}
+@returns(201)
+@errors {400, 401, 403, 404, 409, 500}
+
+@endgroup
+
+@group order-eligible-for-restaurant-compensation
+@endpoint POST /order-eligible-for-restaurant-compensation
+@optional {IsEligible: bool, OrderId: str}
+@returns(200)
+
+@endgroup
+
+@group restaurants
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue
+@required {tenant: str, restaurantId: str}
+@returns(200) {restaurantId: str, name: str, description: str, currency: str}
+@errors {404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/availabilities
+@required {tenant: str, restaurantId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/categories
+@required {tenant: str, restaurantId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/categories/{categoryId}/items
+@required {tenant: str, restaurantId: str, categoryId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items
+@required {tenant: str, restaurantId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/dealgroups
+@required {tenant: str, restaurantId: str, itemId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/dealgroups/{dealGroupId}/dealitemvariations
+@required {tenant: str, restaurantId: str, itemId: str, dealGroupId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/modifiergroups
+@required {tenant: str, restaurantId: str, itemId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/variations
+@required {tenant: str, restaurantId: str, itemId: str, limit: int(int32)}
+@optional {after: str}
+@returns(200)
+@errors {400, 404, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/fees
+@required {tenant: str, restaurantId: str}
+@optional {User-Agent: str}
+@returns(200) {bagFee: map{description: str, serviceTypes: map{default: map{amount: num(integer)}, collection: map{amount: num(integer)}, delivery: map{amount: num(integer)}}}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint PUT /restaurants/{tenant}/{restaurantId}/fees
+@required {tenant: str, restaurantId: str}
+@optional {User-Agent: str, bagFee: map{description: str, serviceTypes: map{default: map, collection: map, delivery: map}}}
+@returns(200) {bagFee: map{description: str, serviceTypes: map{default: map{amount: num(integer)}, collection: map{amount: num(integer)}, delivery: map{amount: num(integer)}}}}
+@errors {400, 401, 403, 404, 500}
+
+@endpoint PUT /restaurants/{tenant}/{restaurantId}/menu
+@required {tenant: str, restaurantId: str, Authorization: str}
+@optional {Content-Type: str}
+@returns(202) {correlationId: str}
+@errors {400, 401, 403, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/menu
+@required {tenant: str, restaurantId: str, Authorization: str}
+@errors {301, 400, 401, 403, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/ordertimes
+@required {tenant: str, restaurantId: str, Authorization: str}
+@returns(200)
+@errors {401, 403, 500}
+
+@endpoint PUT /restaurants/{tenant}/{restaurantId}/ordertimes/{dayOfWeek}/{serviceType}
+@required {tenant: str, restaurantId: str, dayOfWeek: str(Sunday/Monday/Tuesday/Wednesday/Thursday/Friday/Saturday), serviceType: str(Delivery/Collection), Authorization: str}
+@optional {lowerBoundMinutes: int(int32), upperBoundMinutes: int(int32)}
+@returns(204)
+@errors {400, 401, 403, 500}
+
+@endpoint GET /restaurants/{tenant}/{restaurantId}/servicetimes
+@required {tenant: str, restaurantId: str}
+@returns(200) {serviceTimes: map}
+@errors {403, 404, 500}
+
+@endpoint PUT /restaurants/{tenant}/{restaurantId}/servicetimes
+@required {tenant: str, restaurantId: str}
+@optional {serviceTimes: map}
+@returns(200) {serviceTimes: map}
+@errors {400, 403, 500}
+
+@endpoint GET /restaurants/bylatlong
+@required {Authorization: str, latitude: num, longitude: num}
+@optional {Accept-Tenant: str, cuisine: str, restaurantName: str, brandName: str}
+@returns(200)
+@errors {400, 401, 500}
+
+@endpoint GET /restaurants/bypostcode/{postcode}
+@required {postcode: str}
+@optional {Authorization: str, Accept-Tenant: str, cuisine: str, restaurantName: str, brandName: str}
+@returns(200)
+@errors {400, 401, 500}
+
+@endpoint PUT /restaurants/driver/eta
+@returns(202) {ignoredRestaurantIds: [str]}
+@errors {400}
+
+@endgroup
+
+@group menu-ingestion-complete
+@endpoint POST /menu-ingestion-complete
+@optional {tenant: str(enum)(au/dk/es/ie/it/no/uk/nz), restaurantId: str, timestamp: str(date-time), result: str(enum)(success/fail), correlationId: str, fault: map{id: str, errors: [map{code: str, description: str}]}}
+@returns(200)
+
+@endgroup
+
+@group order-time-updated
+@endpoint POST /order-time-updated
+@optional {restaurantId: str, serviceType: str(enum)(Delivery/Collection), dayOfWeek: str(enum)(Sunday/Monday/Tuesday/Wednesday/Thursday/Friday/Saturday), lowerBoundMinutes: int(int32), upperBoundMinutes: int(int32)}
+@returns(200)
+
+@endgroup
+
+@group search
+@endpoint GET /search/autocomplete/{tenant}
+@required {tenant: str, searchTerm: str, latlong: [num(decimal)]}
+@optional {limit: num(integer)}
+@returns(200) {terms: [map]}
+@errors {400, 401, 500, 503}
+
+@endpoint GET /search/restaurants/{tenant}
+@required {tenant: str, searchTerm: str, latlong: [num(decimal)]}
+@optional {limit: num(integer)}
+@returns(200) {restaurants: [map]}
+@errors {400, 401, 422, 500, 503}
+
+@endgroup
+
+@end

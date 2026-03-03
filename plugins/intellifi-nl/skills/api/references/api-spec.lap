@@ -1,0 +1,372 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Brain Web API
+@base {protocol}://{customer}.intellifi.{tld}/api
+@version 2.27.2+0.gd5006bf.dirty
+@auth ApiKey key in query | ApiKey X-Api-Key in header | ApiKey brain.sid in cookie
+@endpoints 77
+@hint download_for_search
+@toc authinfo(1), blobs(6), events(2), items(5), keys(5), kvpairs(5), locations(5), locationrules(5), presences(2), services(3), sets(16), spots(7), spotsets(4), subscriptions(6), users(5)
+
+@group authinfo
+@endpoint GET /authinfo
+@returns(200) {api_key_id: str, auth_method: str, authenticated: bool, permissions: map{mutate: bool}, url: str, user_id: str}
+
+@endgroup
+
+@group blobs
+@endpoint GET /blobs
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), hash: str, blob_key: str, content_type: str, filename: str, time_last_accessed: str}
+@returns(200)
+
+@endpoint POST /blobs
+@optional {content_type: str, download_url: str, filename: str, hash: str, id: str, blob_key: str, time_created: str(dateTime), time_last_accessed: str(dateTime), time_updated: str(dateTime), upload_url: str, url: str}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /blobs/{id}
+@required {id: str}
+@returns(200) {content_type: str, download_url: str, filename: str, hash: str, id: str, blob_key: str, time_created: str(dateTime), time_last_accessed: str(dateTime), time_updated: str(dateTime), upload_url: str, url: str}
+
+@endpoint DELETE /blobs/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /blobs/{id}/download/{filename}
+@required {id: str, filename: str}
+@returns(200)
+
+@endpoint POST /blobs/{id}/upload
+@required {id: str}
+@returns(200)
+
+@endgroup
+
+@group events
+@endpoint GET /events
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), topic.resource_type: str, topic.action: str, topic.resource: str, time_event: str(dateTime), time_expire: str(dateTime)}
+@returns(200)
+
+@endpoint GET /events/{id}
+@required {id: str}
+@returns(200) {id: str, payload: any, time_created: str(dateTime), time_event: str(dateTime), time_expire: str(dateTime), topic: map{action: str, arguments: any, resource_id: str, resource_type: str, resource_url: str}, url: str}
+
+@endgroup
+
+@group items
+@endpoint GET /items
+@optional {after: str(date-time), after_id: str, after_code: str, before: str(dateTime), before_id: str, before_code: str, from: str(dateTime), from_id: str, from_code: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, until_code: str, id: str, time_created: str(dateTime), time_updated: str(dateTime), code_hex: str, is_present: bool, label: str, location: str, metadata: str, move_count: int, protocol: str, sets: str, technology: str, text: str, time_last_present: str, time_moved: str(dateTime), type: str}
+@returns(200)
+
+@endpoint POST /items
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /items/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint PUT /items/{id}
+@required {id: str}
+@optional {config_request: map, custom: any, label: str, location_request: str, metadata: map}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /items/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@group keys
+@endpoint GET /keys
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), secret: str, label: str, is_read_only: bool}
+@returns(200)
+
+@endpoint POST /keys
+@optional {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /keys/{id}
+@required {id: str}
+@returns(200) {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+
+@endpoint PUT /keys/{id}
+@required {id: str}
+@optional {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /keys/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@group kvpairs
+@endpoint GET /kvpairs
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), kv_key: str}
+@returns(200)
+
+@endpoint POST /kvpairs
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /kvpairs/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint PUT /kvpairs/{id}
+@required {id: str}
+@optional {kv_value: any}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /kvpairs/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@group locations
+@endpoint GET /locations
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, metadata: str, text: str}
+@returns(200)
+
+@endpoint POST /locations
+@optional {custom: any, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /locations/{id}
+@required {id: str}
+@returns(200) {custom: any?, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+
+@endpoint PUT /locations/{id}
+@required {id: str}
+@optional {custom: any, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /locations/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@group locationrules
+@endpoint GET /locationrules
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, type: str, enabled: bool}
+@returns(200)
+
+@endpoint POST /locationrules
+@optional {conditions: map{from_location: str, to_location: str}, enabled: bool, label: str, parameters: map, type: str(allow/disallow/disappeared/debounce)}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /locationrules/{id}
+@required {id: str}
+@returns(200) {conditions: any, enabled: bool, id: str, label: str, parameters: map, time_created: str(dateTime), time_updated: str(dateTime), type: str, url: str}
+
+@endpoint PUT /locationrules/{id}
+@required {id: str}
+@optional {conditions: map{from_location: str, to_location: str}, enabled: bool, label: str, parameters: map, type: str(allow/disallow/disappeared/debounce)}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /locationrules/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@group presences
+@endpoint GET /presences
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), item: str, location: str, proximity: str, technology: str}
+@returns(200)
+
+@endpoint GET /presences/{id}
+@required {id: str}
+@returns(200) {id: str, item: any, item_id: str, item_url: str, location: map{custom: any?, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}, location_id: str, location_url: str, proximity: str, technology: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+
+@endgroup
+
+@group services
+@endpoint GET /services
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), name: str}
+@returns(200)
+
+@endpoint GET /services/{id}
+@required {id: str}
+@returns(200) {boot_count: int, config: map, config_request: map, id: str, name: str, restart_request: bool, time_created: str(dateTime), time_updated: str(dateTime), url: str, version: str}
+
+@endpoint PUT /services/{id}
+@required {id: str}
+@optional {boot_count: int, config: map, config_request: map, id: str, name: str, restart_request: bool, time_created: str(dateTime), time_updated: str(dateTime), url: str, version: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@group sets
+@endpoint GET /sets/itemlists
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, metadata: str, text: str, total: int, sha1: str}
+@returns(200)
+
+@endpoint POST /sets/itemlists
+@optional {custom: any, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /sets/itemlists/{id}
+@required {id: str}
+@returns(200) {custom: any?, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+
+@endpoint PUT /sets/itemlists/{id}
+@required {id: str}
+@optional {custom: any, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /sets/itemlists/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /sets/itemlists/{id}/ids
+@required {id: str}
+@returns(200)
+
+@endpoint POST /sets/itemlists/{id}/ids
+@required {id: str}
+@returns(200) {status: int, total: int}
+
+@endpoint DELETE /sets/itemlists/{id}/ids/{itemId}
+@required {id: str, itemId: str}
+@returns(200) {status: int, total: int}
+
+@endpoint GET /sets/spotlists
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, metadata: str, text: str, total: int}
+@returns(200)
+
+@endpoint POST /sets/spotlists
+@optional {custom: any, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /sets/spotlists/{id}
+@required {id: str}
+@returns(200) {custom: any?, id: str, label: str, list: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+
+@endpoint PUT /sets/spotlists/{id}
+@required {id: str}
+@optional {custom: any, id: str, label: str, list: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /sets/spotlists/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /sets/spotlists/{id}/ids
+@required {id: str}
+@returns(200)
+
+@endpoint POST /sets/spotlists/{id}/ids
+@required {id: str}
+@returns(200) {status: int, total: int}
+
+@endpoint DELETE /sets/spotlists/{id}/ids/{itemId}
+@required {id: str, itemId: str}
+@returns(200) {status: int, total: int}
+
+@endgroup
+
+@group spots
+@endpoint GET /spots
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), is_online: bool, request_counter: int, serial_number: int}
+@returns(200)
+
+@endpoint GET /spots/{id}
+@required {id: str}
+@returns(200)
+
+@endpoint PUT /spots/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /spots/{id}/sets
+@required {id: str}
+@returns(200)
+
+@endpoint POST /spots/{id}/sets
+@required {id: str}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint PUT /spots/{id}/sets/{setId}
+@required {id: str, setId: str}
+@optional {delete: bool}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /spots/{id}/sets/{setId}
+@required {id: str, setId: str}
+@returns(200)
+
+@endgroup
+
+@group spotsets
+@endpoint GET /spotsets
+@returns(200)
+
+@endpoint POST /spotsets
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint PUT /spotsets/{id}
+@required {id: str}
+@optional {delete: bool}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /spotsets/{id}
+@required {id: str}
+@returns(200)
+
+@endgroup
+
+@group subscriptions
+@endpoint GET /subscriptions
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, description: str, database_hold_time_h: int, populate_events: bool, verify_target_certificate: bool}
+@returns(200)
+
+@endpoint POST /subscriptions
+@optional {custom: any, database_hold_time_h: int, description: str, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /subscriptions/{id}
+@required {id: str}
+@returns(200) {custom: any?, database_hold_time_h: int, description: str?, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool}
+
+@endpoint PUT /subscriptions/{id}
+@required {id: str}
+@optional {custom: any, database_hold_time_h: int, description: str, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /subscriptions/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /subscriptions/{id}/events
+@required {id: str}
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), topic.resource_type: str, topic.action: str, topic.resource: str, time_event: str(dateTime), time_expire: str(dateTime)}
+@returns(200)
+
+@endgroup
+
+@group users
+@endpoint GET /users
+@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), email: str, first_name: str, last_name: str, is_admin: bool, is_locked: bool}
+@returns(200)
+
+@endpoint POST /users
+@optional {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@returns(201) {resource: map{id: str, url: str}, status: int}
+
+@endpoint GET /users/{id}
+@required {id: str}
+@returns(200) {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+
+@endpoint PUT /users/{id}
+@required {id: str}
+@optional {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endpoint DELETE /users/{id}
+@required {id: str}
+@returns(200) {resource: map{id: str, url: str}, status: int}
+
+@endgroup
+
+@end

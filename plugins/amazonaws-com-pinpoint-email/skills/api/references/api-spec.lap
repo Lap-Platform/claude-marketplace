@@ -1,0 +1,168 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Amazon Pinpoint Email Service
+@version 2018-07-26
+@auth AWS SigV4
+@endpoints 42
+@hint download_for_search
+@toc email(42)
+
+@endpoint POST /v1/email/configuration-sets
+@required {ConfigurationSetName: str}
+@optional {TrackingOptions: TrackingOptions, DeliveryOptions: DeliveryOptions, ReputationOptions: ReputationOptions, SendingOptions: SendingOptions, Tags: [Tag]}
+
+@endpoint POST /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations
+@required {ConfigurationSetName: str, EventDestinationName: str, EventDestination: EventDestinationDefinition}
+
+@endpoint POST /v1/email/dedicated-ip-pools
+@required {PoolName: str}
+@optional {Tags: [Tag]}
+
+@endpoint POST /v1/email/deliverability-dashboard/test
+@required {FromEmailAddress: str, Content: EmailContent}
+@optional {ReportName: str, Tags: [Tag]}
+@returns(200) {ReportId: str, DeliverabilityTestStatus: str}
+
+@endpoint POST /v1/email/identities
+@required {EmailIdentity: str}
+@optional {Tags: [Tag]}
+@returns(200) {IdentityType: str?, VerifiedForSendingStatus: bool?, DkimAttributes: DkimAttributes?{SigningEnabled: bool?, Status: str?, Tokens: [str]?}}
+
+@endpoint DELETE /v1/email/configuration-sets/{ConfigurationSetName}
+@required {ConfigurationSetName: str}
+
+@endpoint DELETE /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName}
+@required {ConfigurationSetName: str, EventDestinationName: str}
+
+@endpoint DELETE /v1/email/dedicated-ip-pools/{PoolName}
+@required {PoolName: str}
+
+@endpoint DELETE /v1/email/identities/{EmailIdentity}
+@required {EmailIdentity: str}
+
+@endpoint GET /v1/email/account
+@returns(200) {SendQuota: SendQuota?{Max24HourSend: num(f64)?, MaxSendRate: num(f64)?, SentLast24Hours: num(f64)?}, SendingEnabled: bool?, DedicatedIpAutoWarmupEnabled: bool?, EnforcementStatus: str?, ProductionAccessEnabled: bool?}
+
+@endpoint GET /v1/email/deliverability-dashboard/blacklist-report
+@required {BlacklistItemNames: [str]}
+@returns(200) {BlacklistReport: map<str,[BlacklistEntry]>}
+
+@endpoint GET /v1/email/configuration-sets/{ConfigurationSetName}
+@required {ConfigurationSetName: str}
+@returns(200) {ConfigurationSetName: str?, TrackingOptions: TrackingOptions?{CustomRedirectDomain: str}, DeliveryOptions: DeliveryOptions?{TlsPolicy: str?, SendingPoolName: str?}, ReputationOptions: ReputationOptions?{ReputationMetricsEnabled: bool?, LastFreshStart: str(timestamp)?}, SendingOptions: SendingOptions?{SendingEnabled: bool?}, Tags: [Tag]?}
+
+@endpoint GET /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations
+@required {ConfigurationSetName: str}
+@returns(200) {EventDestinations: [EventDestination]?}
+
+@endpoint GET /v1/email/dedicated-ips/{IP}
+@required {Ip: str}
+@returns(200) {DedicatedIp: DedicatedIp?{Ip: str, WarmupStatus: str, WarmupPercentage: int, PoolName: str?}}
+
+@endpoint GET /v1/email/dedicated-ips
+@optional {PoolName: str, NextToken: str, PageSize: int}
+@returns(200) {DedicatedIps: [DedicatedIp]?, NextToken: str?}
+
+@endpoint GET /v1/email/deliverability-dashboard
+@returns(200) {DashboardEnabled: bool, SubscriptionExpiryDate: str(timestamp)?, AccountStatus: str?, ActiveSubscribedDomains: [DomainDeliverabilityTrackingOption]?, PendingExpirationSubscribedDomains: [DomainDeliverabilityTrackingOption]?}
+
+@endpoint GET /v1/email/deliverability-dashboard/test-reports/{ReportId}
+@required {ReportId: str}
+@returns(200) {DeliverabilityTestReport: DeliverabilityTestReport{ReportId: str?, ReportName: str?, Subject: str?, FromEmailAddress: str?, CreateDate: str(timestamp)?, DeliverabilityTestStatus: str?}, OverallPlacement: PlacementStatistics{InboxPercentage: num(f64)?, SpamPercentage: num(f64)?, MissingPercentage: num(f64)?, SpfPercentage: num(f64)?, DkimPercentage: num(f64)?}, IspPlacements: [IspPlacement], Message: str?, Tags: [Tag]?}
+
+@endpoint GET /v1/email/deliverability-dashboard/campaigns/{CampaignId}
+@required {CampaignId: str}
+@returns(200) {DomainDeliverabilityCampaign: DomainDeliverabilityCampaign{CampaignId: str?, ImageUrl: str?, Subject: str?, FromAddress: str?, SendingIps: [str]?, FirstSeenDateTime: str(timestamp)?, LastSeenDateTime: str(timestamp)?, InboxCount: int(i64)?, SpamCount: int(i64)?, ReadRate: num(f64)?, DeleteRate: num(f64)?, ReadDeleteRate: num(f64)?, ProjectedVolume: int(i64)?, Esps: [str]?}}
+
+@endpoint GET /v1/email/deliverability-dashboard/statistics-report/{Domain}
+@required {Domain: str, StartDate: str(timestamp), EndDate: str(timestamp)}
+@returns(200) {OverallVolume: OverallVolume{VolumeStatistics: VolumeStatistics?{InboxRawCount: int(i64)?, SpamRawCount: int(i64)?, ProjectedInbox: int(i64)?, ProjectedSpam: int(i64)?}, ReadRatePercent: num(f64)?, DomainIspPlacements: [DomainIspPlacement]?}, DailyVolumes: [DailyVolume]}
+
+@endpoint GET /v1/email/identities/{EmailIdentity}
+@required {EmailIdentity: str}
+@returns(200) {IdentityType: str?, FeedbackForwardingStatus: bool?, VerifiedForSendingStatus: bool?, DkimAttributes: DkimAttributes?{SigningEnabled: bool?, Status: str?, Tokens: [str]?}, MailFromAttributes: MailFromAttributes?{MailFromDomain: str, MailFromDomainStatus: str, BehaviorOnMxFailure: str}, Tags: [Tag]?}
+
+@endpoint GET /v1/email/configuration-sets
+@optional {NextToken: str, PageSize: int}
+@returns(200) {ConfigurationSets: [str]?, NextToken: str?}
+
+@endpoint GET /v1/email/dedicated-ip-pools
+@optional {NextToken: str, PageSize: int}
+@returns(200) {DedicatedIpPools: [str]?, NextToken: str?}
+
+@endpoint GET /v1/email/deliverability-dashboard/test-reports
+@optional {NextToken: str, PageSize: int}
+@returns(200) {DeliverabilityTestReports: [DeliverabilityTestReport], NextToken: str?}
+
+@endpoint GET /v1/email/deliverability-dashboard/domains/{SubscribedDomain}/campaigns
+@required {StartDate: str(timestamp), EndDate: str(timestamp), SubscribedDomain: str}
+@optional {NextToken: str, PageSize: int}
+@returns(200) {DomainDeliverabilityCampaigns: [DomainDeliverabilityCampaign], NextToken: str?}
+
+@endpoint GET /v1/email/identities
+@optional {NextToken: str, PageSize: int}
+@returns(200) {EmailIdentities: [IdentityInfo]?, NextToken: str?}
+
+@endpoint GET /v1/email/tags
+@required {ResourceArn: str}
+@returns(200) {Tags: [Tag]}
+
+@endpoint PUT /v1/email/account/dedicated-ips/warmup
+@optional {AutoWarmupEnabled: bool}
+
+@endpoint PUT /v1/email/account/sending
+@optional {SendingEnabled: bool}
+
+@endpoint PUT /v1/email/configuration-sets/{ConfigurationSetName}/delivery-options
+@required {ConfigurationSetName: str}
+@optional {TlsPolicy: str, SendingPoolName: str}
+
+@endpoint PUT /v1/email/configuration-sets/{ConfigurationSetName}/reputation-options
+@required {ConfigurationSetName: str}
+@optional {ReputationMetricsEnabled: bool}
+
+@endpoint PUT /v1/email/configuration-sets/{ConfigurationSetName}/sending
+@required {ConfigurationSetName: str}
+@optional {SendingEnabled: bool}
+
+@endpoint PUT /v1/email/configuration-sets/{ConfigurationSetName}/tracking-options
+@required {ConfigurationSetName: str}
+@optional {CustomRedirectDomain: str}
+
+@endpoint PUT /v1/email/dedicated-ips/{IP}/pool
+@required {Ip: str, DestinationPoolName: str}
+
+@endpoint PUT /v1/email/dedicated-ips/{IP}/warmup
+@required {Ip: str, WarmupPercentage: int}
+
+@endpoint PUT /v1/email/deliverability-dashboard
+@required {DashboardEnabled: bool}
+@optional {SubscribedDomains: [DomainDeliverabilityTrackingOption]}
+
+@endpoint PUT /v1/email/identities/{EmailIdentity}/dkim
+@required {EmailIdentity: str}
+@optional {SigningEnabled: bool}
+
+@endpoint PUT /v1/email/identities/{EmailIdentity}/feedback
+@required {EmailIdentity: str}
+@optional {EmailForwardingEnabled: bool}
+
+@endpoint PUT /v1/email/identities/{EmailIdentity}/mail-from
+@required {EmailIdentity: str}
+@optional {MailFromDomain: str, BehaviorOnMxFailure: str}
+
+@endpoint POST /v1/email/outbound-emails
+@required {Destination: Destination, Content: EmailContent}
+@optional {FromEmailAddress: str, ReplyToAddresses: [str], FeedbackForwardingEmailAddress: str, EmailTags: [MessageTag], ConfigurationSetName: str}
+@returns(200) {MessageId: str?}
+
+@endpoint POST /v1/email/tags
+@required {ResourceArn: str, Tags: [Tag]}
+
+@endpoint DELETE /v1/email/tags
+@required {ResourceArn: str, TagKeys: [str]}
+
+@endpoint PUT /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName}
+@required {ConfigurationSetName: str, EventDestinationName: str, EventDestination: EventDestinationDefinition}
+
+@end

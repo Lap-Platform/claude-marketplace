@@ -1,0 +1,202 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Schemas
+@version 2019-12-02
+@auth AWS SigV4
+@endpoints 31
+@hint download_for_search
+@toc discoverers(7), registries(17), policy(3), discover(1), tags(3)
+
+@group discoverers
+@endpoint POST /v1/discoverers
+@required {SourceArn: str}
+@optional {Description: str, CrossAccount: bool, Tags: map<str,str>}
+@returns(200) {Description: str?, DiscovererArn: str?, DiscovererId: str?, SourceArn: str?, State: str?, CrossAccount: bool?, Tags: map<str,str>?}
+
+@endgroup
+
+@group registries
+@endpoint POST /v1/registries/name/{registryName}
+@required {RegistryName: str}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {Description: str?, RegistryArn: str?, RegistryName: str?, Tags: map<str,str>?}
+
+@endpoint POST /v1/registries/name/{registryName}/schemas/name/{schemaName}
+@required {RegistryName: str, SchemaName: str, Content: str, Type: str}
+@optional {Description: str, Tags: map<str,str>}
+@returns(200) {Description: str?, LastModified: str(timestamp)?, SchemaArn: str?, SchemaName: str?, SchemaVersion: str?, Tags: map<str,str>?, Type: str?, VersionCreatedDate: str(timestamp)?}
+
+@endgroup
+
+@group discoverers
+@endpoint DELETE /v1/discoverers/id/{discovererId}
+@required {DiscovererId: str}
+
+@endgroup
+
+@group registries
+@endpoint DELETE /v1/registries/name/{registryName}
+@required {RegistryName: str}
+
+@endgroup
+
+@group policy
+@endpoint DELETE /v1/policy
+@optional {registryName: str}
+
+@endgroup
+
+@group registries
+@endpoint DELETE /v1/registries/name/{registryName}/schemas/name/{schemaName}
+@required {RegistryName: str, SchemaName: str}
+
+@endpoint DELETE /v1/registries/name/{registryName}/schemas/name/{schemaName}/version/{schemaVersion}
+@required {RegistryName: str, SchemaName: str, SchemaVersion: str}
+
+@endpoint GET /v1/registries/name/{registryName}/schemas/name/{schemaName}/language/{language}
+@required {Language: str, RegistryName: str, SchemaName: str}
+@optional {schemaVersion: str}
+@returns(200) {CreationDate: str(timestamp)?, LastModified: str(timestamp)?, SchemaVersion: str?, Status: str?}
+
+@endgroup
+
+@group discoverers
+@endpoint GET /v1/discoverers/id/{discovererId}
+@required {DiscovererId: str}
+@returns(200) {Description: str?, DiscovererArn: str?, DiscovererId: str?, SourceArn: str?, State: str?, CrossAccount: bool?, Tags: map<str,str>?}
+
+@endgroup
+
+@group registries
+@endpoint GET /v1/registries/name/{registryName}
+@required {RegistryName: str}
+@returns(200) {Description: str?, RegistryArn: str?, RegistryName: str?, Tags: map<str,str>?}
+
+@endpoint GET /v1/registries/name/{registryName}/schemas/name/{schemaName}
+@required {RegistryName: str, SchemaName: str}
+@optional {schemaVersion: str}
+@returns(200) {Content: str?, Description: str?, LastModified: str(timestamp)?, SchemaArn: str?, SchemaName: str?, SchemaVersion: str?, Tags: map<str,str>?, Type: str?, VersionCreatedDate: str(timestamp)?}
+
+@endpoint GET /v1/registries/name/{registryName}/schemas/name/{schemaName}/export
+@required {RegistryName: str, SchemaName: str, type: str}
+@optional {schemaVersion: str}
+@returns(200) {Content: str?, SchemaArn: str?, SchemaName: str?, SchemaVersion: str?, Type: str?}
+
+@endpoint GET /v1/registries/name/{registryName}/schemas/name/{schemaName}/language/{language}/source
+@required {Language: str, RegistryName: str, SchemaName: str}
+@optional {schemaVersion: str}
+@returns(200) {Body: bytes?}
+
+@endgroup
+
+@group discover
+@endpoint POST /v1/discover
+@required {Events: [str], Type: str}
+@returns(200) {Content: str?}
+
+@endgroup
+
+@group policy
+@endpoint GET /v1/policy
+@optional {registryName: str}
+@returns(200) {Policy: str?, RevisionId: str?}
+
+@endgroup
+
+@group discoverers
+@endpoint GET /v1/discoverers
+@optional {discovererIdPrefix: str, limit: int, nextToken: str, sourceArnPrefix: str}
+@returns(200) {Discoverers: [DiscovererSummary]?, NextToken: str?}
+
+@endgroup
+
+@group registries
+@endpoint GET /v1/registries
+@optional {limit: int, nextToken: str, registryNamePrefix: str, scope: str}
+@returns(200) {NextToken: str?, Registries: [RegistrySummary]?}
+
+@endpoint GET /v1/registries/name/{registryName}/schemas/name/{schemaName}/versions
+@required {RegistryName: str, SchemaName: str}
+@optional {limit: int, nextToken: str}
+@returns(200) {NextToken: str?, SchemaVersions: [SchemaVersionSummary]?}
+
+@endpoint GET /v1/registries/name/{registryName}/schemas
+@required {RegistryName: str}
+@optional {limit: int, nextToken: str, schemaNamePrefix: str}
+@returns(200) {NextToken: str?, Schemas: [SchemaSummary]?}
+
+@endgroup
+
+@group tags
+@endpoint GET /tags/{resource-arn}
+@required {ResourceArn: str}
+@returns(200) {Tags: map<str,str>?}
+
+@endgroup
+
+@group registries
+@endpoint POST /v1/registries/name/{registryName}/schemas/name/{schemaName}/language/{language}
+@required {Language: str, RegistryName: str, SchemaName: str}
+@optional {schemaVersion: str}
+@returns(200) {CreationDate: str(timestamp)?, LastModified: str(timestamp)?, SchemaVersion: str?, Status: str?}
+
+@endgroup
+
+@group policy
+@endpoint PUT /v1/policy
+@required {Policy: str}
+@optional {registryName: str, RevisionId: str}
+@returns(200) {Policy: str?, RevisionId: str?}
+
+@endgroup
+
+@group registries
+@endpoint GET /v1/registries/name/{registryName}/schemas/search
+@required {keywords: str, RegistryName: str}
+@optional {limit: int, nextToken: str}
+@returns(200) {NextToken: str?, Schemas: [SearchSchemaSummary]?}
+
+@endgroup
+
+@group discoverers
+@endpoint POST /v1/discoverers/id/{discovererId}/start
+@required {DiscovererId: str}
+@returns(200) {DiscovererId: str?, State: str?}
+
+@endpoint POST /v1/discoverers/id/{discovererId}/stop
+@required {DiscovererId: str}
+@returns(200) {DiscovererId: str?, State: str?}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/{resource-arn}
+@required {ResourceArn: str, Tags: map<str,str>}
+
+@endpoint DELETE /tags/{resource-arn}
+@required {ResourceArn: str, tagKeys: [str]}
+
+@endgroup
+
+@group discoverers
+@endpoint PUT /v1/discoverers/id/{discovererId}
+@required {DiscovererId: str}
+@optional {Description: str, CrossAccount: bool}
+@returns(200) {Description: str?, DiscovererArn: str?, DiscovererId: str?, SourceArn: str?, State: str?, CrossAccount: bool?, Tags: map<str,str>?}
+
+@endgroup
+
+@group registries
+@endpoint PUT /v1/registries/name/{registryName}
+@required {RegistryName: str}
+@optional {Description: str}
+@returns(200) {Description: str?, RegistryArn: str?, RegistryName: str?, Tags: map<str,str>?}
+
+@endpoint PUT /v1/registries/name/{registryName}/schemas/name/{schemaName}
+@required {RegistryName: str, SchemaName: str}
+@optional {ClientTokenId: str, Content: str, Description: str, Type: str}
+@returns(200) {Description: str?, LastModified: str(timestamp)?, SchemaArn: str?, SchemaName: str?, SchemaVersion: str?, Tags: map<str,str>?, Type: str?, VersionCreatedDate: str(timestamp)?}
+
+@endgroup
+
+@end

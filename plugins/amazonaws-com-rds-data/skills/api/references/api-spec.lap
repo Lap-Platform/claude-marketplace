@@ -1,0 +1,55 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api AWS RDS DataService
+@version 2018-08-01
+@auth AWS SigV4
+@endpoints 6
+@toc BatchExecute(1), BeginTransaction(1), CommitTransaction(1), ExecuteSql(1), Execute(1), RollbackTransaction(1)
+
+@group BatchExecute
+@endpoint POST /BatchExecute
+@required {resourceArn: str, secretArn: str, sql: str}
+@optional {database: str, schema: str, parameterSets: [[SqlParameter]], transactionId: str}
+@returns(200) {updateResults: [UpdateResult]?}
+
+@endgroup
+
+@group BeginTransaction
+@endpoint POST /BeginTransaction
+@required {resourceArn: str, secretArn: str}
+@optional {database: str, schema: str}
+@returns(200) {transactionId: str?}
+
+@endgroup
+
+@group CommitTransaction
+@endpoint POST /CommitTransaction
+@required {resourceArn: str, secretArn: str, transactionId: str}
+@returns(200) {transactionStatus: str?}
+
+@endgroup
+
+@group ExecuteSql
+@endpoint POST /ExecuteSql
+@required {dbClusterOrInstanceArn: str, awsSecretStoreArn: str, sqlStatements: str}
+@optional {database: str, schema: str}
+@returns(200) {sqlStatementResults: [SqlStatementResult]?}
+
+@endgroup
+
+@group Execute
+@endpoint POST /Execute
+@required {resourceArn: str, secretArn: str, sql: str}
+@optional {database: str, schema: str, parameters: [SqlParameter], transactionId: str, includeResultMetadata: bool, continueAfterTimeout: bool, resultSetOptions: ResultSetOptions, formatRecordsAs: str}
+@returns(200) {records: [[Field]]?, columnMetadata: [ColumnMetadata]?, numberOfRecordsUpdated: int(i64)?, generatedFields: [Field]?, formattedRecords: str?}
+
+@endgroup
+
+@group RollbackTransaction
+@endpoint POST /RollbackTransaction
+@required {resourceArn: str, secretArn: str, transactionId: str}
+@returns(200) {transactionStatus: str?}
+
+@endgroup
+
+@end
